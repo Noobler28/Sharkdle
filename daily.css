@@ -1,261 +1,233 @@
-body{
-
-font-family:'Montserrat',sans-serif;
-margin:0;
-background:radial-gradient(circle at top,#0f3c54,#071a25);
-color:white;
-min-height:100vh;
-
-display:flex;
-flex-direction:column;
-align-items:center;
-
+body {
+    font-family: 'Montserrat', sans-serif;
+    margin: 0;
+    min-height: 100vh;
+    padding: 0 18px 32px;
+    color: #f4fdff;
+    background:
+        radial-gradient(circle at top, rgba(77, 208, 225, 0.14), transparent 28%),
+        linear-gradient(180deg, #0c2d42 0%, #081a28 100%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
 }
 
-
-.topbar{
-
-text-align:center;
-margin-top:30px;
-
+.topbar {
+    text-align: center;
+    margin-top: 34px;
+    margin-bottom: 12px;
 }
 
-.topbar h1{
-
-font-size:3rem;
-letter-spacing:4px;
-margin:0;
-
+.mode-kicker,
+.panel-kicker {
+    display: inline-flex;
+    align-items: center;
+    padding: 7px 12px;
+    border-radius: 999px;
+    background: rgba(77, 208, 225, 0.12);
+    border: 1px solid rgba(77, 208, 225, 0.2);
+    color: #9beeff;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
 }
 
-.topbar p{
-
-opacity:.7;
-margin-top:5px;
-
+.topbar h1 {
+    margin: 14px 0 8px;
+    font-size: clamp(2.2rem, 5vw, 3.3rem);
+    letter-spacing: 2px;
 }
 
-
-.game-container{
-
-width:95%;
-max-width:700px;
-
-background:rgba(0,0,0,.35);
-backdrop-filter:blur(10px);
-
-border-radius:18px;
-padding:25px;
-
-box-shadow:0 20px 60px rgba(0,0,0,.5);
-
-margin-top:20px;
-
+.topbar p {
+    margin: 0;
+    max-width: 620px;
+    color: #bcefff;
+    opacity: 0.82;
+    line-height: 1.6;
 }
 
-/* INPUT */
-
-.input-panel{
-
-display:flex;
-flex-direction:column;
-align-items:center;
-gap:10px;
-
+.mode-subtitle {
+    margin: 0 0 18px;
+    max-width: 620px;
+    text-align: center;
+    color: #bcefff;
+    opacity: 0.82;
+    line-height: 1.6;
 }
 
-
-input{
-
-width:90%;
-max-width:500px;
-
-padding:16px;
-
-border-radius:10px;
-border:2px solid transparent;
-
-font-size:16px;
-
-transition: all 0.3s ease;
-
+.game-container {
+    width: min(920px, 95%);
+    margin-top: 18px;
+    padding: 26px;
+    border-radius: 26px;
+    background:
+        radial-gradient(circle at top right, rgba(77, 208, 225, 0.12), transparent 28%),
+        linear-gradient(180deg, rgba(9, 28, 43, 0.96), rgba(6, 20, 32, 0.98));
+    border: 1px solid rgba(77, 208, 225, 0.14);
+    box-shadow: 0 24px 70px rgba(0, 0, 0, 0.42);
 }
 
-input:focus{
-
-outline:none;
-border-color:#00bcd4;
-box-shadow:0 0 12px rgba(0, 188, 212, 0.4);
-background:rgba(255,255,255,0.95);
-color:#000;
-
+.input-panel,
+#guesses {
+    border-radius: 20px;
+    border: 1px solid rgba(77, 208, 225, 0.1);
 }
 
-
-button{
-
-padding:10px 18px;
-border:none;
-border-radius:10px;
-
-background:#00bcd4;
-color:white;
-
-font-weight:600;
-
-cursor:pointer;
-
-transition:.2s;
-
+.input-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    padding: 20px;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.02));
 }
 
-button:hover{
-
-background:#0097a7;
-
+.panel-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 14px;
+    flex-wrap: wrap;
 }
 
+.panel-header h2 {
+    margin: 10px 0 0;
+    font-size: 24px;
+    color: #f3fdff;
+}
+
+.status-pill {
+    display: inline-flex;
+    align-items: center;
+    padding: 10px 14px;
+    border-radius: 999px;
+    background: rgba(77, 208, 225, 0.1);
+    border: 1px solid rgba(77, 208, 225, 0.18);
+    color: #dff9ff;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+}
+
+.input-panel > div[style*="position: relative"] {
+    width: 100%;
+}
+
+input {
+    width: 100%;
+    max-width: none;
+    padding: 16px;
+    border-radius: 14px;
+    border: 1px solid rgba(77, 208, 225, 0.16);
+    font-size: 16px;
+    background: rgba(255, 255, 255, 0.96);
+    box-sizing: border-box;
+    transition: all 0.3s ease;
+}
+
+input:focus {
+    outline: none;
+    border-color: #00bcd4;
+    box-shadow: 0 0 0 4px rgba(0, 188, 212, 0.14);
+    background: rgba(255, 255, 255, 1);
+    color: #000;
+}
+
+button {
+    padding: 12px 20px;
+    border: none;
+    border-radius: 14px;
+    background: linear-gradient(135deg, #00bcd4, #29d2ee);
+    color: white;
+    font-weight: 700;
+    font-size: 15px;
+    cursor: pointer;
+    transition: 0.2s;
+    box-shadow: 0 12px 22px rgba(0, 188, 212, 0.22);
+}
+
+button:hover {
+    background: linear-gradient(135deg, #00a6bc, #16c5e4);
+}
+
+#show-results-btn {
+    border-radius: 14px !important;
+    box-shadow: 0 14px 26px rgba(0, 188, 212, 0.24);
+}
 
 #message {
-
-margin-top: 10px;
-
-color: #ffcc33;
-
-text-align: center;
-
+    color: #ffcc33;
+    text-align: center;
+    min-height: 20px;
 }
 
-
-#attempts-left{
-
-opacity:.8;
-
+#guesses {
+    margin-top: 18px;
+    padding: 22px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    background: linear-gradient(180deg, rgba(6, 25, 38, 0.86), rgba(7, 22, 34, 0.98));
 }
 
-/* GUESS CARDS */
-
-#guesses{
-
-margin-top:20px;
-display:flex;
-flex-direction:column;
-gap:10px;
-
+.guess-card {
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.025));
+    padding: 16px;
+    border-radius: 14px;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    transition: 0.25s;
+    cursor: pointer;
 }
 
-
-.guess-card{
-
-background:rgba(255,255,255,.07);
-padding:14px;
-border-radius:10px;
-
-transition:.25s;
-
-cursor:pointer;
-
+.guess-card:hover {
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.035));
+    border-color: rgba(77, 208, 225, 0.16);
 }
 
-.guess-card:hover{
-
-background:rgba(255,255,255,.12);
-
+.feedback {
+    margin-top: 10px;
+    display: none;
+    flex-direction: column;
+    gap: 7px;
 }
 
-
-.feedback{
-
-margin-top:8px;
-display:none;
-flex-direction:column;
-gap:5px;
-
+.category {
+    padding: 8px 10px;
+    border-radius: 10px;
+    font-size: 0.92rem;
+    background: rgba(255, 255, 255, 0.08);
 }
 
-
-.category{
-
-padding:5px 8px;
-border-radius:6px;
-font-size:.9rem;
-
-background:#444;
-
+.correct {
+    background: #43e97b;
+    color: black;
 }
 
-.correct{
-
-background:#43e97b;
-color:black;
-
-}
-
-/* PREVIOUS PANEL */
-
-.previous-panel{
-
-margin-top:10px;
-margin-bottom:20px;
-
-}
-
-.previous-header{
-
-cursor:pointer;
-font-weight:700;
-opacity:.85;
-
-}
-
-#previous-guesses{
-
-margin-top:10px;
-
-display:none;
-
-flex-direction:column;
-gap:8px;
-
-}
-
-/* WIN SCREEN */
-
-#win-screen{
-
-display:none;
-
-position:fixed;
-
-top:50%;
-left:50%;
-
-transform:translate(-50%,-50%);
-
-background:#0b2230;
-
-padding:30px;
-
-border-radius:15px;
-
-box-shadow:0 20px 60px rgba(0,0,0,.7);
-
-text-align:center;
-
-z-index:1000;
-
+#win-screen {
+    display: none;
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: #0b2230;
+    padding: 30px;
+    border-radius: 22px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.7);
+    text-align: center;
+    z-index: 1000;
+    border: 1px solid rgba(77, 208, 225, 0.14);
 }
 
 #win-screen.win {
     background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
     color: #0a2342;
 }
+
 #win-screen.lose {
     background: linear-gradient(135deg, #ff5858 0%, #f09819 100%);
     color: #fff;
 }
 
-/* Bubble animation for win screen */
 .bubble {
     position: absolute;
     background: rgba(255, 255, 255, 0.6);
@@ -275,8 +247,6 @@ z-index:1000;
     }
 }
 
-/* AUTOCOMPLETE SUGGESTIONS */
-
 .suggestions-dropdown {
     position: absolute;
     top: 100%;
@@ -286,8 +256,8 @@ z-index:1000;
     margin-top: 5px;
     background: rgba(10, 35, 66, 0.95);
     backdrop-filter: blur(10px);
-    border: 2px solid rgba(0, 188, 212, 0.4);
-    border-radius: 12px;
+    border: 1px solid rgba(77, 208, 225, 0.28);
+    border-radius: 16px;
     max-height: 280px;
     overflow-y: auto;
     display: none;
@@ -349,20 +319,10 @@ z-index:1000;
     color: rgba(255, 255, 255, 0.4);
 }
 
-/* MOBILE MEDIA QUERIES */
-
 @media (max-width: 768px) {
-    .topbar {
-        margin-top: 20px;
-    }
-
     .topbar h1 {
         font-size: 2.2rem;
         letter-spacing: 2px;
-    }
-
-    .topbar p {
-        font-size: 14px;
     }
 
     .game-container {
@@ -371,9 +331,12 @@ z-index:1000;
         margin-top: 15px;
     }
 
+    .panel-header {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
     input {
-        width: 100%;
-        max-width: 100%;
         padding: 14px;
         font-size: 16px;
     }
@@ -384,12 +347,8 @@ z-index:1000;
         min-height: 44px;
     }
 
-    #message {
-        margin-top: 8px;
-        font-size: 14px;
-    }
-
-    #attempts-left {
+    #message,
+    .status-pill {
         font-size: 14px;
     }
 
@@ -409,84 +368,49 @@ z-index:1000;
         max-width: 400px;
     }
 
-    #win-screen h1 {
-        font-size: 26px;
-    }
-
-    #win-screen p {
-        font-size: 14px;
-    }
-
     .suggestions-dropdown {
         max-height: 200px;
-    }
-
-    .suggestion-item {
-        padding: 12px 14px;
-        font-size: 14px;
     }
 }
 
 @media (max-width: 480px) {
+    body {
+        padding: 0 10px 22px;
+    }
+
     .topbar {
-        margin-top: 15px;
+        margin-top: 18px;
     }
 
     .topbar h1 {
-        font-size: 1.6rem;
+        font-size: 1.7rem;
         letter-spacing: 1px;
-        margin: 0;
     }
 
     .topbar p {
-        font-size: 12px;
-        margin-top: 3px;
+        font-size: 13px;
     }
 
     .game-container {
         width: 95%;
         padding: 15px;
         margin-top: 10px;
-        border-radius: 12px;
+        border-radius: 18px;
     }
 
-    .input-panel {
-        gap: 8px;
-    }
-
-    input {
-        width: 100%;
-        padding: 12px;
-        font-size: 16px;
-        border-radius: 8px;
+    .input-panel,
+    #guesses {
+        padding: 14px;
     }
 
     button {
-        padding: 10px 20px;
-        font-size: 14px;
         width: 100%;
         min-height: 44px;
-        border-radius: 8px;
-    }
-
-    #message {
-        margin-top: 6px;
-        font-size: 12px;
-    }
-
-    #attempts-left {
-        font-size: 12px;
-    }
-
-    #guesses {
-        margin-top: 15px;
-        gap: 8px;
     }
 
     .guess-card {
         padding: 10px;
         font-size: 12px;
-        border-radius: 8px;
     }
 
     .feedback {
@@ -495,54 +419,159 @@ z-index:1000;
     }
 
     .category {
-        padding: 3px 5px;
         font-size: 0.75rem;
-        border-radius: 4px;
-    }
-
-    .previous-panel {
-        margin-top: 8px;
-        margin-bottom: 15px;
-    }
-
-    .previous-header {
-        font-size: 14px;
+        border-radius: 8px;
     }
 
     #win-screen {
         padding: 20px;
         width: 90%;
         max-width: 100%;
-        border-radius: 12px;
-    }
-
-    #win-screen h1 {
-        font-size: 22px;
-        margin-bottom: 8px;
-    }
-
-    #win-screen p {
-        font-size: 13px;
-        margin: 6px 0;
-    }
-
-    .bubble {
-        width: 20px;
-        height: 20px;
+        border-radius: 16px;
     }
 
     .suggestions-dropdown {
         max-height: 150px;
-        border-radius: 10px;
-        margin-top: 3px;
+        border-radius: 12px;
     }
 
     .suggestion-item {
         padding: 10px 12px;
         font-size: 12px;
     }
+}
 
-    .suggestion-item:hover {
-        padding-left: 14px;
+@media (max-width: 768px) {
+    body {
+        padding: 0 12px 24px;
+    }
+
+    .topbar {
+        margin-top: 24px;
+        margin-bottom: 10px;
+    }
+
+    .mode-subtitle {
+        margin-bottom: 14px;
+        padding: 0 6px;
+        font-size: 13px;
+    }
+
+    .game-container {
+        width: 100%;
+        margin-top: 12px;
+        padding: 15px 12px;
+        border-radius: 18px;
+    }
+
+    .input-panel,
+    #guesses {
+        border-radius: 16px;
+        padding-left: 12px;
+        padding-right: 12px;
+    }
+
+    .topbar h1 {
+        font-size: 2rem;
+        letter-spacing: 1px;
+    }
+
+    .panel-header h2 {
+        font-size: 20px;
+    }
+
+    input {
+        padding: 13px;
+        font-size: 15px;
+        border-radius: 12px;
+    }
+
+    button {
+        padding: 10px 16px;
+        font-size: 14px;
+        border-radius: 12px;
+    }
+
+    .status-pill {
+        padding: 8px 12px;
+        font-size: 12px;
+    }
+
+    .guess-card {
+        padding: 12px;
+    }
+
+    .category {
+        font-size: 0.8rem;
+    }
+
+    #show-results-btn {
+        left: 12px !important;
+        right: 12px !important;
+        bottom: 12px !important;
+        width: auto;
+        border-radius: 14px !important;
+    }
+}
+
+@media (max-width: 480px) {
+    body {
+        padding: 0 8px 18px;
+    }
+
+    .topbar h1 {
+        font-size: 1.6rem;
+        letter-spacing: 1px;
+    }
+
+    .mode-subtitle {
+        font-size: 12px;
+        line-height: 1.5;
+    }
+
+    .game-container {
+        padding: 12px 8px;
+        border-radius: 16px;
+    }
+
+    .input-panel,
+    #guesses {
+        padding: 10px 8px;
+        border-radius: 14px;
+    }
+
+    .panel-header h2 {
+        font-size: 18px;
+        margin-top: 4px;
+    }
+
+    input,
+    button {
+        font-size: 14px;
+    }
+
+    input {
+        padding: 11px;
+    }
+
+    .status-pill,
+    #message {
+        font-size: 11px;
+    }
+
+    .guess-card {
+        padding: 9px;
+        font-size: 11px;
+    }
+
+    .category {
+        font-size: 0.7rem;
+        padding: 6px 8px;
+    }
+
+    #show-results-btn {
+        left: 8px !important;
+        right: 8px !important;
+        bottom: 8px !important;
     }
 }
