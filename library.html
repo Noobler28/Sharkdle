@@ -1,11 +1,15 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<link rel="icon" type="image/png" href="images/favicon.png">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sharkdle Library</title>
+    <title>Sharchive</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
     <style>
         * {
             margin: 0;
@@ -100,26 +104,149 @@
             position: relative;
             z-index: 1;
         }
+        .library-shell {
+            position: relative;
+            z-index: 1;
+            max-width: 1380px;
+            margin: 0 auto;
+            padding: 0 24px 70px;
+        }
+        .library-hero {
+            margin: 24px auto 18px;
+            padding: 24px 26px 20px;
+            max-width: 1040px;
+            background:
+                radial-gradient(circle at top right, rgba(77, 208, 225, 0.09), transparent 32%),
+                linear-gradient(135deg, rgba(8, 28, 44, 0.82), rgba(8, 43, 64, 0.74));
+            border: 1px solid rgba(77, 208, 225, 0.11);
+            border-radius: 24px;
+            box-shadow: 0 14px 34px rgba(0, 0, 0, 0.22);
+            overflow: hidden;
+        }
+        .library-kicker {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 12px;
+            border-radius: 999px;
+            background: rgba(77, 208, 225, 0.08);
+            border: 1px solid rgba(77, 208, 225, 0.12);
+            color: #93e9f7;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+        .library-hero p {
+            max-width: 700px;
+            margin: 10px auto 0;
+            color: rgba(233, 247, 255, 0.68);
+            text-align: center;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+        .library-summary {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 12px;
+            margin-top: 18px;
+        }
+        .summary-card {
+            padding: 14px 16px 13px;
+            border-radius: 16px;
+            background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02));
+            border: 1px solid rgba(77, 208, 225, 0.1);
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.03);
+        }
+        .summary-label {
+            color: rgba(156, 239, 255, 0.72);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            font-size: 11px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+        .summary-value {
+            font-size: 24px;
+            font-weight: 800;
+            color: #f3fdff;
+            line-height: 1;
+        }
+        .summary-note {
+            margin-top: 6px;
+            color: rgba(226, 243, 249, 0.62);
+            font-size: 12px;
+            line-height: 1.45;
+        }
         /* SEARCH BAR */
         .search-container {
             display: flex;
-            justify-content: center;
-            margin: 30px 0 40px 0;
-            padding: 0 20px;
+            flex-direction: column;
+            gap: 18px;
+            margin: 0 0 26px 0;
+            padding: 24px;
             position: relative;
             z-index: 1;
+            border-radius: 24px;
+            background:
+                linear-gradient(180deg, rgba(8, 28, 44, 0.88), rgba(10, 34, 50, 0.92));
+            border: 1px solid rgba(77, 208, 225, 0.14);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.26);
+            backdrop-filter: blur(16px);
+        }
+        .search-top-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+        .search-heading h2 {
+            font-size: 24px;
+            font-weight: 800;
+            color: #f1fcff;
+            margin: 0;
+        }
+        .search-heading p {
+            margin: 6px 0 0;
+            color: rgba(220, 241, 247, 0.72);
+            font-size: 14px;
+        }
+        .search-actions {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .filter-status {
+            padding: 10px 14px;
+            border-radius: 999px;
+            background: rgba(77, 208, 225, 0.08);
+            border: 1px solid rgba(77, 208, 225, 0.14);
+            color: #a9f4ff;
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+        }
+        .search-input-row {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            flex-wrap: wrap;
         }
         .search-bar {
-            width: 100%;
-            max-width: 500px;
+            flex: 1;
+            min-width: 260px;
             display: flex;
             align-items: center;
             background: rgba(11, 34, 51, 0.6);
-            border: 2px solid #00b4d8;
-            border-radius: 8px;
-            padding: 12px 18px;
+            border: 1px solid rgba(77, 208, 225, 0.24);
+            border-radius: 16px;
+            padding: 14px 18px;
             transition: all 0.3s;
             backdrop-filter: blur(10px);
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.03);
         }
         .search-bar:focus-within {
             border-color: #4dd0e1;
@@ -144,16 +271,17 @@
             color: rgba(255, 255, 255, 0.5);
         }
         .filter-btn {
-            margin-left: 20px;
-            padding: 12px 18px;
+            padding: 13px 18px;
             background: rgba(11, 34, 51, 0.6);
-            border: 2px solid #00b4d8;
-            border-radius: 8px;
+            border: 1px solid rgba(77, 208, 225, 0.24);
+            border-radius: 16px;
             color: white;
             font-size: 14px;
             cursor: pointer;
             transition: all 0.3s;
             backdrop-filter: blur(10px);
+            font-weight: 700;
+            min-height: 52px;
         }
         .filter-btn:hover {
             border-color: #4dd0e1;
@@ -165,19 +293,36 @@
             color: #fff;
             border-color: #4dd0e1;
         }
+        .clear-filters-btn {
+            padding: 13px 18px;
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            background: rgba(255, 255, 255, 0.05);
+            color: #edfafd;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            min-height: 52px;
+        }
+        .clear-filters-btn:hover {
+            transform: translateY(-1px);
+            background: rgba(255, 255, 255, 0.08);
+            border-color: rgba(77, 208, 225, 0.24);
+        }
         /* Filter Groups */
         .filters-container {
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 30px;
+            gap: 22px;
             justify-content: center;
-            padding: 20px;
+            padding: 22px;
             background: linear-gradient(135deg, rgba(0, 180, 216, 0.08) 0%, rgba(0, 180, 216, 0.03) 100%);
-            margin: 20px auto;
-            max-width: 1200px;
-            border-radius: 12px;
-            border: 1px solid rgba(0, 180, 216, 0.2);
+            margin: 0;
+            max-width: none;
+            border-radius: 20px;
+            border: 1px solid rgba(0, 180, 216, 0.14);
             backdrop-filter: blur(10px);
             position: relative;
             z-index: 1;
@@ -188,6 +333,7 @@
             justify-content: center;
             gap: 12px;
             width: 100%;
+            text-align: center;
         }
         .filter-group label {
             color: #4dd0e1;
@@ -200,6 +346,7 @@
             display: flex;
             gap: 8px;
             flex-wrap: wrap;
+            justify-content: center;
         }
         .filter-option {
             padding: 8px 14px;
@@ -260,27 +407,46 @@
         }
         /* SPECIES COUNT */
         #species-count {
-            text-align: center;
-            font-size: 1.1em;
-            color: #4dd0e1;
-            margin-bottom: 20px;
-            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.98em;
+            color: #a5f3ff;
+            margin: 0 0 18px 0;
+            font-weight: 700;
+            padding: 10px 14px;
+            border-radius: 999px;
+            background: rgba(77, 208, 225, 0.08);
+            border: 1px solid rgba(77, 208, 225, 0.14);
             position: relative;
             z-index: 1;
         }
+        .results-toolbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            flex-wrap: wrap;
+            margin-bottom: 14px;
+        }
+        .results-note {
+            color: rgba(220, 241, 247, 0.6);
+            font-size: 13px;
+        }
         .gallery {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
             gap: 24px;
-            padding: 0 3vw 60px 3vw;
+            padding: 6px 10px 18px;
             max-width: 1600px;
             margin: 0 auto;
             position: relative;
             z-index: 1;
         }
         .shark-card {
-            width: 220px;
-            height: 320px;
+            width: 100%;
+            max-width: 270px;
+            height: 340px;
             margin: 0 auto;
             background: none;
             border: none;
@@ -323,6 +489,16 @@
             align-items: center;
             justify-content: center;
         }
+        .heart-cluster {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 8px;
+            z-index: 2;
+        }
         .heart-btn:hover {
             background: rgba(0, 0, 0, 0.8);
             transform: scale(1.15);
@@ -331,6 +507,29 @@
         .heart-btn.hearted {
             background: rgba(255, 0, 0, 0.75);
             box-shadow: 0 0 12px rgba(255, 0, 0, 0.5);
+        }
+        .heart-count {
+            position: absolute;
+            top: 50px;
+            right: 8px;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 10px;
+            border-radius: 999px;
+            background: rgba(8, 24, 37, 0.82);
+            border: 1px solid rgba(77, 208, 225, 0.16);
+            color: #dffaff;
+            font-size: 11px;
+            font-weight: 700;
+            line-height: 1;
+            box-shadow: 0 8px 18px rgba(0, 0, 0, 0.18);
+            backdrop-filter: blur(8px);
+            z-index: 2;
+        }
+        .heart-count i {
+            color: #ff8eb0;
+            font-size: 10px;
         }
         .card-inner {
             width: 100%;
@@ -365,19 +564,64 @@
             background: linear-gradient(135deg, #0a1f2e 0%, #0b2233 60%, rgba(0, 180, 216, 0.15) 100%);
             display: flex;
             align-items: center;
-            justify-content: center;
-            padding: 20px;
+            justify-content: space-between;
+            padding: 20px 18px 18px;
+            text-align: left;
+        }
+        .card-front-content {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            gap: 18px;
+            min-height: 100%;
+        }
+        .card-front-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            padding-right: 34px;
+        }
+        .shark-chip {
+            padding: 6px 10px;
+            border-radius: 999px;
+            background: rgba(77, 208, 225, 0.12);
+            border: 1px solid rgba(77, 208, 225, 0.18);
+            color: #bbf8ff;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
         }
         .card-front .shark-name {
-            font-size: 1.6em;
+            font-size: 1.8em;
             font-weight: 700;
-            color: #4dd0e1;
+            color: #eafcff;
             text-shadow: 0 3px 12px rgba(0, 180, 216, 0.4), 0 1px 0 rgba(0, 0, 0, 0.6);
-            text-align: center;
+            text-align: left;
             width: 100%;
             line-height: 1.25;
             letter-spacing: 0.5px;
             word-wrap: break-word;
+        }
+        .shark-subtitle {
+            color: rgba(155, 236, 248, 0.82);
+            font-size: 13px;
+            line-height: 1.5;
+        }
+        .flip-hint {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            align-self: flex-start;
+            padding: 7px 11px;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.06);
+            color: rgba(235, 248, 255, 0.84);
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
         }
         .card-back {
             z-index: 1;
@@ -444,28 +688,51 @@
         .order-section {
             margin-bottom: 36px;
             background: linear-gradient(135deg, rgba(11, 34, 51, 0.6) 0%, rgba(0, 180, 216, 0.05) 100%);
-            border-radius: 12px;
+            border-radius: 22px;
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
             overflow: hidden;
-            border: 1px solid rgba(0, 180, 216, 0.2);
+            border: 1px solid rgba(0, 180, 216, 0.14);
             backdrop-filter: blur(10px);
             position: relative;
             z-index: 1;
+        }
+        .order-section::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(circle at top right, rgba(77, 208, 225, 0.08), transparent 32%);
+            pointer-events: none;
         }
         .order-header {
             display: flex;
             align-items: center;
             justify-content: space-between;
             cursor: pointer;
-            padding: 22px 36px 22px 28px;
-            font-size: 1.3em;
+            padding: 24px 30px 22px 26px;
+            font-size: 1.2em;
             font-weight: 700;
-            color: #4dd0e1;
+            color: #effcff;
             background: linear-gradient(90deg, rgba(15, 45, 68, 0.8) 80%, rgba(0, 180, 216, 0.1) 100%);
             border: none;
             outline: none;
             transition: all 0.3s;
             user-select: none;
+        }
+        .order-title {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 6px;
+        }
+        .order-name {
+            font-size: 1.18em;
+            font-weight: 800;
+            color: #f4fdff;
+        }
+        .order-meta {
+            color: rgba(157, 239, 255, 0.74);
+            font-size: 13px;
+            font-weight: 600;
         }
         .order-header:hover, .order-header:focus {
             background: linear-gradient(90deg, rgba(15, 45, 68, 1) 60%, rgba(0, 180, 216, 0.2) 100%);
@@ -495,8 +762,25 @@
             padding: 60px 20px;
             color: #4dd0e1;
             font-size: 1.2em;
+            background: linear-gradient(180deg, rgba(8, 28, 44, 0.76), rgba(8, 28, 44, 0.5));
+            border: 1px solid rgba(77, 208, 225, 0.14);
+            border-radius: 24px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.22);
         }
         @media (max-width: 768px) {
+            .library-shell {
+                padding: 0 14px 48px;
+            }
+            .library-hero {
+                padding: 20px 18px 18px;
+                border-radius: 22px;
+            }
+            .library-hero p {
+                font-size: 13px;
+            }
+            .library-summary {
+                grid-template-columns: 1fr;
+            }
             .navbar {
                 padding: 12px 15px;
                 gap: 8px;
@@ -531,21 +815,19 @@
             }
             h1 { 
                 font-size: 2.2em; 
-                margin: 30px 0 10px 0;
+                margin: 18px 0 10px 0;
             }
             .search-bar {
-                max-width: 95%;
-                min-width: 200px;
+                min-width: 100%;
             }
             .filters-container {
                 flex-direction: column;
                 gap: 15px;
-                padding: 20px;
-                margin: 20px 15px;
+                padding: 18px;
             }
             .filter-group {
                 flex-direction: column;
-                align-items: flex-start;
+                align-items: center;
                 gap: 8px;
                 width: 100%;
             }
@@ -562,16 +844,33 @@
                 font-size: 12px;
             }
             .gallery {
-                padding: 0 1vw 30px 1vw;
+                padding: 6px 0 12px;
                 gap: 12px;
                 grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
             }
             .shark-card, .card-inner {
-                height: 210px;
+                height: 250px;
             }
             .card-front, .card-back {
                 padding: 14px 8px 10px 8px;
                 font-size: 0.9em;
+            }
+            .search-container {
+                padding: 18px;
+                border-radius: 20px;
+            }
+            .search-top-row,
+            .search-input-row {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            .search-actions {
+                width: 100%;
+                justify-content: center;
+            }
+            .filter-btn,
+            .clear-filters-btn {
+                width: 100%;
             }
         }
         @media (max-width: 600px) {
@@ -617,28 +916,51 @@
             .filters-container {
                 flex-direction: column;
                 gap: 12px;
-                padding: 15px;
-                margin: 15px;
+                padding: 14px;
+                margin: 0;
             }
             .filter-group {
                 flex-direction: column;
-                align-items: flex-start;
+                align-items: center;
                 gap: 8px;
                 width: 100%;
             }
             .filter-buttons {
                 width: 100%;
+                justify-content: center;
             }
             .filter-option {
-                flex: 1;
-                min-width: 65px;
+                flex: 1 1 calc(50% - 8px);
+                min-width: 0;
+                font-size: 11px;
+                padding: 7px 8px;
             }
             h1 { 
-                font-size: 1.8em; 
+                font-size: 1.55em; 
                 margin: 20px 0 10px 0; 
             }
-            .search-bar {
-                max-width: 90%;
+            .library-hero {
+                padding: 16px 14px 14px;
+            }
+            .summary-card {
+                padding: 11px 12px 10px;
+                border-radius: 14px;
+            }
+            .summary-value {
+                font-size: 20px;
+            }
+            .summary-note {
+                font-size: 11px;
+            }
+            .search-container {
+                padding: 14px;
+                border-radius: 18px;
+            }
+            .search-heading h2 {
+                font-size: 20px;
+            }
+            .search-heading p {
+                font-size: 12px;
             }
             .filter-btn {
                 margin-left: 0;
@@ -649,30 +971,30 @@
                 gap: 12px;
             }
             .gallery {
-                padding: 0 1vw 30px 1vw;
-                gap: 10px;
-                grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+                padding: 0 0 26px;
+                gap: 12px;
+                grid-template-columns: repeat(2, minmax(0, 1fr));
             }
             .shark-card, .card-inner {
-                width: 98vw;
-                max-width: 170px;
-                height: 200px;
+                width: 100%;
+                max-width: none;
+                height: 182px;
                 min-height: 0;
             }
             .card-front .shark-name {
-                font-size: 1.1em;
+                font-size: 0.95em;
             }
             .card-front, .card-back {
-                padding: 16px 6px 12px 6px;
-                font-size: 0.95em;
+                padding: 12px 6px 10px 6px;
+                font-size: 0.82em;
                 border-radius: 12px;
             }
             .card-back {
-                padding: 14px 8px 10px 8px;
+                padding: 11px 7px 9px 7px;
             }
             .card-back .stat {
                 margin: 4px 0;
-                font-size: 0.85em;
+                font-size: 0.76em;
             }
             .order-section {
                 margin-bottom: 18px;
@@ -730,66 +1052,72 @@
                 font-size: 8px;
             }
             h1 { 
-                font-size: 1.5em; 
+                font-size: 1.35em; 
                 margin: 15px 0 8px 0;
             }
             .search-bar {
-                max-width: 95%;
-                min-width: 150px;
-                padding: 8px 12px;
+                max-width: none;
+                min-width: 0;
+                padding: 7px 10px;
+                border-radius: 13px;
             }
             .search-bar input {
-                font-size: 14px;
+                font-size: 13px;
             }
             .filter-btn {
                 width: 100%;
                 margin-left: 0;
-                min-height: 40px;
+                min-height: 36px;
+                font-size: 12px;
+                padding: 10px 12px;
             }
             .filters-container {
                 flex-direction: column;
                 gap: 12px;
-                padding: 12px;
-                margin: 12px;
+                padding: 10px;
+                margin: 0;
+                border-radius: 16px;
             }
             .filter-group {
                 width: 100%;
+                align-items: center;
             }
             .filter-buttons {
                 width: 100%;
                 display: flex;
                 flex-wrap: wrap;
                 gap: 6px;
+                justify-content: center;
             }
             .filter-option {
-                flex: 1;
-                min-width: 60px;
-                padding: 6px 8px;
-                font-size: 11px;
-                min-height: 36px;
+                flex: 1 1 calc(50% - 6px);
+                min-width: 0;
+                padding: 5px 7px;
+                font-size: 10px;
+                min-height: 32px;
             }
             .search-container {
                 flex-direction: column;
                 gap: 10px;
             }
             .gallery {
-                padding: 0 8px 30px 8px;
-                gap: 8px;
-                grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+                padding: 0 0 24px;
+                gap: 10px;
+                grid-template-columns: 1fr 1fr;
             }
             .shark-card, .card-inner {
-                max-width: 140px;
-                height: 150px;
+                max-width: none;
+                height: 160px;
             }
             .card-front .shark-name {
-                font-size: 0.95em;
+                font-size: 0.82em;
             }
             .card-front, .card-back {
-                font-size: 0.85em;
+                font-size: 0.74em;
             }
             .card-back .stat {
-                font-size: 0.8em;
-                margin: 3px 0;
+                font-size: 0.69em;
+                margin: 2px 0;
             }
             .order-section {
                 margin: 10px 0;
@@ -807,16 +1135,23 @@
             }
         }
         @media (max-width: 400px) {
+            .library-shell {
+                padding: 0 10px 36px;
+            }
+            .library-hero,
+            .search-container {
+                border-radius: 18px;
+            }
             .shark-card, .card-inner {
-                max-width: 125px;
-                height: 140px;
+                max-width: none;
+                height: 148px;
             }
             .card-front .shark-name {
-                font-size: 0.9em;
+                font-size: 0.76em;
             }
             .card-back .stat {
-                font-size: 0.8em;
-                margin: 3px 0;
+                font-size: 0.64em;
+                margin: 2px 0;
             }
         }
         /* Touch-friendly tweaks */
@@ -835,18 +1170,53 @@
         </div>
     </header>
     
-    <h1>Shark Library</h1>
+    <main class="library-shell">
+        <section class="library-hero">
+            <div style="text-align:center;">
+                <h1>The Sharchive</h1>
+                <p>Browse every shark in the collection.  Help narrow down your target shark using the filter options.</p>
+            </div>
+            <div class="library-summary">
+                <div class="summary-card">
+                    <div class="summary-label">Species Logged</div>
+                    <div class="summary-value" id="summary-total-species">0</div>
+                    <div class="summary-note">Every species currently available in Sharkdle's archive.</div>
+                </div>
+                <div class="summary-card">
+                    <div class="summary-label">Orders Tracked</div>
+                    <div class="summary-value" id="summary-total-orders">0</div>
+                    <div class="summary-note">Browse by the order, flip cards to see more information.</div>
+                </div>
+                <div class="summary-card">
+                    <div class="summary-label">Favorites Saved</div>
+                    <div class="summary-value" id="summary-favorites">0</div>
+                    <div class="summary-note">Heart species to come back to them later.</div>
+                </div>
+            </div>
+        </section>
     
     <div class="search-container">
-        <div class="search-bar">
-            🔍
+        <div class="search-top-row">
+            <div class="search-heading">
+                <h2>Search The Sharchive</h2>
+                <p>Filter by name, family, order and genus.</p>
+            </div>
+            <div class="search-actions">
+                <div id="filter-status" class="filter-status">0 active filters</div>
+                <button id="clear-filters" class="clear-filters-btn" type="button">Reset Filters</button>
+            </div>
+        </div>
+        <div class="search-input-row">
+            <div class="search-bar">
+            <i class="fas fa-search" aria-hidden="true"></i>
             <input 
                 type="text" 
                 id="shark-search" 
-                placeholder="Search sharks by name, family, or order..."
+                placeholder="Search sharks by name, family, genus, or order..."
             >
+            </div>
+            <button id="heart-filter" class="filter-btn" title="Show only hearted sharks">Show Favorites</button>
         </div>
-        <button id="heart-filter" class="filter-btn" title="Show only hearted sharks">❤️ Show Favorites</button>
     </div>
 
     <!-- Size and Depth Filters -->
@@ -879,9 +1249,13 @@
         </div></div>
     </div>
     
-    <div id="species-count"></div>
+    <div class="results-toolbar">
+        <div id="species-count"></div>
+        <div class="results-note">Tap a card to flip it and inspect the species details.</div>
+    </div>
     <div id="orders-container"></div>
     <div id="no-results" class="no-results" style="display:none;">No sharks found matching your search.</div>
+    </main>
     <!-- Shark list -->
     <script src="sharks.js"></script>
     <script src="library.js"></script>
@@ -893,11 +1267,26 @@
         let allSharks = [];
         let filteredSharks = [];
         let heartedSharks = new Set();
+        let sharkLikeCounts = new Map();
         let collapsedSections = new Set();
         let showOnlyHearted = false;
+        let libraryAuth = null;
+        let libraryDb = null;
         let activeFilters = {
             size: null,
             habitat: null
+        };
+        window.activeFilters = activeFilters;
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyAS9l8O1jRMafPt3r0lF6mqjr2-gl-EbZ0",
+            authDomain: "sharkdle-leaderboard.firebaseapp.com",
+            databaseURL: "https://sharkdle-leaderboard-default-rtdb.firebaseio.com",
+            projectId: "sharkdle-leaderboard",
+            storageBucket: "sharkdle-leaderboard.firebasestorage.app",
+            messagingSenderId: "429123174628",
+            appId: "1:429123174628:web:42ae9baed69c4b087c2cf1",
+            measurementId: "G-HV5FFNKM5C"
         };
 
         // Common names mapping for orders and families
@@ -983,12 +1372,114 @@
         function loadHeartedSharks() {
             const stored = localStorage.getItem('heartedSharks');
             if (stored) {
-                heartedSharks = new Set(JSON.parse(stored));
+                try {
+                    heartedSharks = new Set(JSON.parse(stored));
+                } catch (error) {
+                    console.warn('Unable to parse saved favorites. Resetting favorites cache.', error);
+                    heartedSharks = new Set();
+                    localStorage.removeItem('heartedSharks');
+                }
             }
         }
 
         function saveHeartedSharks() {
             localStorage.setItem('heartedSharks', JSON.stringify([...heartedSharks]));
+        }
+
+        function getSharkLikeKey(sharkName) {
+            return (sharkName || '')
+                .toLowerCase()
+                .replace(/[^a-z0-9]+/g, '-')
+                .replace(/^-+|-+$/g, '');
+        }
+
+        function initializeLibraryFirebase() {
+            if (typeof firebase === 'undefined') return;
+            if (!firebase.apps.length) {
+                firebase.initializeApp(firebaseConfig);
+            }
+            libraryAuth = firebase.auth();
+            libraryDb = firebase.firestore();
+        }
+
+        async function loadGlobalSharkLikes() {
+            if (!libraryDb) return;
+            try {
+                const snapshot = await libraryDb.collection('sharkLikes').get();
+                sharkLikeCounts = new Map();
+                snapshot.forEach(doc => {
+                    const data = doc.data() || {};
+                    sharkLikeCounts.set(doc.id, Number(data.count) || 0);
+                });
+            } catch (error) {
+                console.warn('Unable to load global shark likes.', error);
+            }
+        }
+
+        async function syncRemoteHeartedSharks(user) {
+            if (!libraryDb || !user) return;
+            try {
+                const doc = await libraryDb.collection('userSharkLikes').doc(user.uid).get();
+                if (!doc.exists) return;
+                const data = doc.data() || {};
+                const likedKeys = Array.isArray(data.likedSharks) ? data.likedSharks : [];
+                const keyToName = new Map(allSharks.map(shark => [getSharkLikeKey(shark.name), shark.name]));
+                likedKeys.forEach(key => {
+                    const sharkName = keyToName.get(key);
+                    if (sharkName) heartedSharks.add(sharkName);
+                });
+                saveHeartedSharks();
+            } catch (error) {
+                console.warn('Unable to sync remote shark likes.', error);
+            }
+        }
+
+        async function syncSharkLikeToFirestore(sharkName, isLiked) {
+            if (!libraryDb || !libraryAuth?.currentUser) return;
+
+            const sharkKey = getSharkLikeKey(sharkName);
+            const likeRef = libraryDb.collection('sharkLikes').doc(sharkKey);
+            const userRef = libraryDb.collection('userSharkLikes').doc(libraryAuth.currentUser.uid);
+
+            try {
+                await libraryDb.runTransaction(async transaction => {
+                    const [likeDoc, userDoc] = await Promise.all([
+                        transaction.get(likeRef),
+                        transaction.get(userRef)
+                    ]);
+
+                    const likeData = likeDoc.exists ? (likeDoc.data() || {}) : {};
+                    const userData = userDoc.exists ? (userDoc.data() || {}) : {};
+                    const likedSharks = Array.isArray(userData.likedSharks) ? [...userData.likedSharks] : [];
+                    const alreadyLiked = likedSharks.includes(sharkKey);
+                    let nextCount = Math.max(0, Number(likeData.count) || 0);
+
+                    if (isLiked && !alreadyLiked) {
+                        likedSharks.push(sharkKey);
+                        nextCount += 1;
+                    } else if (!isLiked && alreadyLiked) {
+                        const nextLiked = likedSharks.filter(key => key !== sharkKey);
+                        likedSharks.length = 0;
+                        likedSharks.push(...nextLiked);
+                        nextCount = Math.max(0, nextCount - 1);
+                    }
+
+                    transaction.set(likeRef, {
+                        name: sharkName,
+                        count: nextCount,
+                        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                    }, { merge: true });
+
+                    transaction.set(userRef, {
+                        likedSharks,
+                        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                    }, { merge: true });
+
+                    sharkLikeCounts.set(sharkKey, nextCount);
+                });
+            } catch (error) {
+                console.warn('Unable to sync shark like globally.', error);
+            }
         }
 
         function loadCollapsedSections() {
@@ -1001,13 +1492,70 @@
             // Collapsed sections reset when page is reloaded
         }
 
+        function getActiveFilterCount() {
+            let count = 0;
+            if (showOnlyHearted) count += 1;
+            if (activeFilters.size) count += 1;
+            if (activeFilters.habitat) count += 1;
+            if (document.getElementById('year-earliest')?.value) count += 1;
+            if (document.getElementById('year-latest')?.value) count += 1;
+            if (document.getElementById('shark-search')?.value.trim()) count += 1;
+            return count;
+        }
+
+        function updateLibrarySummary() {
+            const totalSpecies = document.getElementById('summary-total-species');
+            const totalOrders = document.getElementById('summary-total-orders');
+            const totalFavorites = document.getElementById('summary-favorites');
+            const filterStatus = document.getElementById('filter-status');
+
+            if (totalSpecies) totalSpecies.textContent = allSharks.length;
+            if (totalOrders) totalOrders.textContent = new Set(allSharks.map(shark => shark.order)).size;
+            if (totalFavorites) totalFavorites.textContent = heartedSharks.size;
+            if (filterStatus) {
+                const count = getActiveFilterCount();
+                filterStatus.textContent = `${count} active filter${count === 1 ? '' : 's'}`;
+            }
+        }
+
+        function resetAllFilters() {
+            showOnlyHearted = false;
+            activeFilters.size = null;
+            activeFilters.habitat = null;
+
+            const searchInput = document.getElementById('shark-search');
+            const yearEarliest = document.getElementById('year-earliest');
+            const yearLatest = document.getElementById('year-latest');
+            const filterBtn = document.getElementById('heart-filter');
+
+            if (searchInput) searchInput.value = '';
+            if (yearEarliest) yearEarliest.value = '';
+            if (yearLatest) yearLatest.value = '';
+            if (filterBtn) {
+                filterBtn.classList.remove('active');
+                filterBtn.textContent = 'Show Favorites';
+            }
+
+            document.querySelectorAll('.filter-option').forEach(btn => btn.classList.remove('active'));
+            filteredSharks = [...allSharks];
+            renderSharkGalleryByOrder();
+            updateSpeciesCount();
+        }
+
         function toggleHeart(sharkName) {
+            const wasHearted = heartedSharks.has(sharkName);
             if (heartedSharks.has(sharkName)) {
                 heartedSharks.delete(sharkName);
             } else {
                 heartedSharks.add(sharkName);
             }
             saveHeartedSharks();
+            if (libraryAuth?.currentUser) {
+                const sharkKey = getSharkLikeKey(sharkName);
+                const currentCount = sharkLikeCounts.get(sharkKey) || 0;
+                sharkLikeCounts.set(sharkKey, wasHearted ? Math.max(0, currentCount - 1) : currentCount + 1);
+                syncSharkLikeToFirestore(sharkName, !wasHearted);
+            }
             renderSharkGalleryByOrder();
         }
 
@@ -1015,7 +1563,7 @@
             showOnlyHearted = !showOnlyHearted;
             const filterBtn = document.getElementById('heart-filter');
             filterBtn.classList.toggle('active');
-            filterBtn.textContent = showOnlyHearted ? '🦈 Show All' : '❤️ Show Favorites';
+            filterBtn.textContent = showOnlyHearted ? 'Show All' : 'Show Favorites';
             const searchTerm = document.getElementById('shark-search').value;
             filterSharks(searchTerm);
         }
@@ -1023,7 +1571,7 @@
         function filterSharks(searchTerm) {
             const yearEarliest = document.getElementById('year-earliest')?.value;
             const yearLatest = document.getElementById('year-latest')?.value;
-            const term = searchTerm.toLowerCase().trim();
+            const term = String(searchTerm || '').toLowerCase().trim();
             let baseSharks = [...allSharks];
             if (showOnlyHearted) {
                 baseSharks = baseSharks.filter(shark => heartedSharks.has(shark.name));
@@ -1065,12 +1613,16 @@
             if (!term) {
                 filteredSharks = baseSharks;
             } else {
-                filteredSharks = baseSharks.filter(shark => 
-                    shark.name.toLowerCase().includes(term) ||
-                    shark.family.toLowerCase().includes(term) ||
-                    shark.order.toLowerCase().includes(term) ||
-                    shark.genus.toLowerCase().includes(term) ||
-                    (shark.yod && shark.yod.toString() === term)
+                filteredSharks = baseSharks.filter(shark =>
+                    typeof window.sharkMatchesLibrarySearch === 'function'
+                        ? window.sharkMatchesLibrarySearch(shark, term)
+                        : (
+                            shark.name.toLowerCase().includes(term) ||
+                            shark.family.toLowerCase().includes(term) ||
+                            shark.order.toLowerCase().includes(term) ||
+                            shark.genus.toLowerCase().includes(term) ||
+                            (shark.yod && shark.yod.toString() === term)
+                        )
                 );
             }
             renderSharkGalleryByOrder();
@@ -1084,13 +1636,14 @@
                 noResults.style.display = 'block';
                 ordersContainer.innerHTML = '';
                 document.getElementById('species-count').textContent = '';
+                updateLibrarySummary();
                 return;
             }
             
             noResults.style.display = 'none';
             
             // Show species count
-            document.getElementById('species-count').textContent = `Showing ${filteredSharks.length} shark${filteredSharks.length !== 1 ? 's' : ''}`;
+            document.getElementById('species-count').textContent = `Showing ${filteredSharks.length} of ${allSharks.length} sharks`;
             
             ordersContainer.innerHTML = '';
             const orderGroups = {};
@@ -1110,7 +1663,13 @@
                 const header = document.createElement('button');
                 header.className = 'order-header';
                 header.type = 'button';
-                header.innerHTML = `<span>${order}</span><span class="order-arrow">&#9660;</span>`;
+                header.innerHTML = `
+                    <div class="order-title">
+                        <span class="order-name">${order}</span>
+                        <span class="order-meta">${getCommonName(order) || 'Shark order archive'} • ${orderGroups[order].length} species</span>
+                    </div>
+                    <span class="order-arrow">&#9660;</span>
+                `;
                 header.addEventListener('click', () => {
                     section.classList.toggle('collapsed');
                     if (section.classList.contains('collapsed')) {
@@ -1132,11 +1691,23 @@
                     card.className = 'shark-card';
                     card.tabIndex = 0;
                     card.setAttribute('aria-label', `Shark card for ${shark.name}`);
+                    const sharkKey = getSharkLikeKey(shark.name);
+                    const globalLikes = sharkLikeCounts.get(sharkKey) || 0;
                     card.innerHTML = `
                         <div class="card-inner">
                             <div class="card-front">
                                 <button class="heart-btn ${heartedSharks.has(shark.name) ? 'hearted' : ''}" data-shark="${shark.name}" title="Add to favorites">${heartedSharks.has(shark.name) ? '❤️' : '🤍'}</button>
-                                <div class="shark-name">${shark.name}</div>
+                                <div class="card-front-content">
+                                    <div class="card-front-meta">
+                                        <span class="shark-chip">${shark.size}</span>
+                                        <span class="shark-chip">${shark.habitat}</span>
+                                    </div>
+                                    <div>
+                                        <div class="shark-name">${shark.name}</div>
+                                        <div class="shark-subtitle">${getCommonName(shark.family) || shark.family}</div>
+                                    </div>
+                                    <div class="flip-hint">Tap To Inspect</div>
+                                </div>
                             </div>
                             <div class="card-back">
                                 <div class="stat"><strong>Name:</strong> ${shark.name}</div>
@@ -1151,6 +1722,14 @@
                     `;
                     // Add heart button event listener
                     const heartBtn = card.querySelector('.heart-btn');
+                    const cardFront = card.querySelector('.card-front');
+                    const heartCount = document.createElement('div');
+                    heartCount.className = 'heart-count';
+                    heartCount.title = 'Global likes';
+                    heartCount.innerHTML = `<i class="fas fa-heart"></i><span>${globalLikes}</span>`;
+                    if (cardFront) {
+                        cardFront.appendChild(heartCount);
+                    }
                     heartBtn.addEventListener('click', (e) => {
                         e.stopPropagation();
                         toggleHeart(shark.name);
@@ -1169,29 +1748,74 @@
                 section.appendChild(content);
                 ordersContainer.appendChild(section);
             });
+            updateLibrarySummary();
         }
 
         function updateSpeciesCount() {
-            document.getElementById('species-count').textContent = `Showing ${filteredSharks.length} shark${filteredSharks.length !== 1 ? 's' : ''}`;
+            document.getElementById('species-count').textContent = `Showing ${filteredSharks.length} of ${allSharks.length} sharks`;
+            updateLibrarySummary();
         }
 
-        document.addEventListener('DOMContentLoaded', function() {
+        function startLibraryApp() {
+            initializeLibraryFirebase();
             loadHeartedSharks();
             loadCollapsedSections();
             allSharks = Array.isArray(sharks) ? [...sharks] : [];
             filteredSharks = [...allSharks];
             renderSharkGalleryByOrder();
-            
+            updateSpeciesCount();
+
+            if (libraryAuth) {
+                libraryAuth.onAuthStateChanged(async (user) => {
+                    await loadGlobalSharkLikes();
+                    if (user) {
+                        await syncRemoteHeartedSharks(user);
+                    }
+                    renderSharkGalleryByOrder();
+                    updateSpeciesCount();
+                });
+            } else {
+                loadGlobalSharkLikes().then(() => {
+                    renderSharkGalleryByOrder();
+                    updateSpeciesCount();
+                });
+            }
+
             // Setup search listener
             const searchInput = document.getElementById('shark-search');
-            searchInput.addEventListener('input', (e) => {
-                filterSharks(e.target.value);
-                updateSpeciesCount();
-            });
+            if (searchInput) {
+                searchInput.addEventListener('input', function() {
+                    filterSharks(this.value);
+                    updateSpeciesCount();
+                });
+            }
+        }
+
+        // Retry Firebase initialization if not ready
+        let libraryInitRetries = 0;
+        const MAX_LIBRARY_INIT_RETRIES = 10;
+        function tryStartLibraryApp() {
+            if (typeof firebase === 'undefined') {
+                if (libraryInitRetries < MAX_LIBRARY_INIT_RETRIES) {
+                    libraryInitRetries++;
+                    setTimeout(tryStartLibraryApp, 100);
+                } else {
+                    console.error('Firebase failed to initialize for library after max retries');
+                }
+                return;
+            }
+            startLibraryApp();
+        }
+        document.addEventListener('DOMContentLoaded', tryStartLibraryApp);
             
             // Setup heart filter listener
             const filterBtn = document.getElementById('heart-filter');
             filterBtn.addEventListener('click', toggleHeartFilter);
+
+            const clearFiltersBtn = document.getElementById('clear-filters');
+            if (clearFiltersBtn) {
+                clearFiltersBtn.addEventListener('click', resetAllFilters);
+            }
             
             // Setup size and habitat filter listeners
             const filterOptions = document.querySelectorAll('.filter-option');
@@ -1230,7 +1854,12 @@
                     updateSpeciesCount();
                 });
             });
-        });
+
+            updateLibrarySummary();
     </script>
 </body>
 </html>
+
+
+
+
