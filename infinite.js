@@ -39,7 +39,13 @@ const common_names = [
     {"scientific": "Haploblepharus", "Common": "ShySharks"},
 ];
 
-let targetShark = sharks[Math.floor(Math.random() * sharks.length)];
+let lastFamily = localStorage.getItem('infiniteLastFamily');
+let targetIndex;
+do {
+  targetIndex = Math.floor(Math.random() * sharks.length);
+} while (lastFamily && sharks[targetIndex].family === lastFamily);
+let targetShark = sharks[targetIndex];
+localStorage.setItem('infiniteLastFamily', targetShark.family);
 let attempts = 12;
 // practice mode removed; always count down and store stats
 
@@ -75,7 +81,9 @@ function updateStats(isWin, guessesTaken = 0) {
     if (!firebase.auth().currentUser) return;
 
     // Load current profileData
-    let profileData = JSON.parse(localStorage.getItem("userProfile") || "{}");
+    let profileData = typeof getBestLocalProfile === 'function'
+        ? getBestLocalProfile()
+        : JSON.parse(localStorage.getItem("userProfile") || "{}");
 
     profileData.gamesPlayed = (profileData.gamesPlayed || 0) + 1;
     if (isWin) {
@@ -98,7 +106,14 @@ function updateStats(isWin, guessesTaken = 0) {
     }
 
     // Save to localStorage
-    localStorage.setItem("userProfile", JSON.stringify(profileData));
+    if (typeof saveUserProfileLocally === 'function') {
+        saveUserProfileLocally({
+            ...profileData,
+            uid: window.currentUser?.uid || firebase.auth().currentUser?.uid || profileData.uid
+        });
+    } else {
+        localStorage.setItem("userProfile", JSON.stringify(profileData));
+    }
 
     // Add to recent games
     const recentGames = JSON.parse(localStorage.getItem('recentGames') || '[]');
@@ -133,7 +148,12 @@ function makeGuess() {
     const attemptsLeftDiv = document.getElementById("attempts-left");
     const winLoseScreen = document.getElementById("win-lose-screen");
 
-    const guessedShark = sharks.find(s => normalizeInput(s.name).startsWith(guessInput));
+    if (!guessInput) {
+        messageDiv.textContent = "Enter a shark name.";
+        return;
+    }
+
+    const guessedShark = sharks.find(s => normalizeInput(s.name) === guessInput);
     if (!guessedShark) {
         messageDiv.textContent = "Shark not found in the list.";
         return;
@@ -178,15 +198,32 @@ function makeGuess() {
     
     if (normalizeInput(guessedShark.name) === normalizeInput(targetShark.name)) {
         const guessesTaken = 12 - attempts;
-        const xpGain = Math.max(50, 170 - guessesTaken * 10);
+        const baseXpGain = Math.max(50, 170 - guessesTaken * 10);
+        const xpAward = typeof window.applyLimitedTimeXpBonus === 'function'
+            ? window.applyLimitedTimeXpBonus(baseXpGain)
+            : { totalXp: baseXpGain };
+        const xpGain = xpAward.totalXp;
         
         if (firebase.auth().currentUser) {
-            let profileData = JSON.parse(localStorage.getItem("userProfile") || "{}");
+            let profileData = typeof getBestLocalProfile === 'function'
+                ? getBestLocalProfile()
+                : JSON.parse(localStorage.getItem("userProfile") || "{}");
             profileData.totalXP = (profileData.totalXP || 0) + xpGain;
-            localStorage.setItem("userProfile", JSON.stringify(profileData));
+            if (typeof saveUserProfileLocally === 'function') {
+                saveUserProfileLocally({
+                    ...profileData,
+                    uid: window.currentUser?.uid || firebase.auth().currentUser?.uid || profileData.uid
+                });
+            } else {
+                localStorage.setItem("userProfile", JSON.stringify(profileData));
+            }
         }
 
         updateStats(true, guessesTaken);
+
+        if (typeof window.maybeAwardCrateDrop === 'function') {
+            window.maybeAwardCrateDrop('infinite win');
+        }
         
         // Check achievements for win conditions
         if (window.checkAchievements) {
@@ -389,8 +426,8 @@ function selectShark(sharkName) {
 
 // Console command for testing: revealShark() - Dev only
 window.revealShark = function() {
-    const DEV_UID = 'ETPtQC0VA2NiSnX67rS2P2ma2tC2';
-    if (!firebase.auth().currentUser || firebase.auth().currentUser.uid !== DEV_UID) {
+    const DEV_UIDS = ['ETPtQC0VA2NiSnX67rS2P2ma2tC2', 'gOcPqOuyPJRWisE4dxvFkGTOl5g2'];
+    if (!firebase.auth().currentUser || !DEV_UIDS.includes(firebase.auth().currentUser.uid)) {
         console.log("Access denied. This command is for developers only.");
         return;
     }
