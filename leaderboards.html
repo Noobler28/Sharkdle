@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<link rel="icon" type="image/png" href="images/favicon.png">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sharkdle Leaderboards</title>
@@ -25,7 +26,9 @@ box-sizing:border-box;
 
 body{
 font-family:Poppins, sans-serif;
-background:linear-gradient(135deg,#061a40,#0b3c5d);
+background:
+radial-gradient(circle at top, rgba(77,208,225,0.10), transparent 30%),
+linear-gradient(135deg,#061a40,#0b3c5d);
 color:white;
 min-height:100vh;
 display:flex;
@@ -88,31 +91,109 @@ background-clip:text;
 /* CONTAINER */
 
 .leaderboard-container{
-
-background:rgba(11,34,51,0.95);
-
-border-radius:20px;
-
-margin-top:60px;
-
-padding:40px;
-
+background:
+radial-gradient(circle at top right, rgba(77,208,225,0.10), transparent 28%),
+linear-gradient(180deg, rgba(11,34,51,0.96), rgba(8,25,39,0.96));
+border:1px solid rgba(77,208,225,0.14);
+border-radius:28px;
+margin-top:46px;
+padding:30px;
 width:95%;
-max-width:750px;
+max-width:980px;
+box-shadow:0 22px 58px rgba(0,0,0,0.42);
+overflow:hidden;
 
-box-shadow:0 15px 40px rgba(0,0,0,0.6);
+}
 
+.leaderboard-hero{
+display:flex;
+align-items:flex-end;
+justify-content:space-between;
+gap:18px;
+flex-wrap:wrap;
+margin-bottom:18px;
+padding-bottom:18px;
+border-bottom:1px solid rgba(255,255,255,0.08);
+}
+
+.leaderboard-copy{
+max-width:620px;
+}
+
+.leaderboard-kicker{
+display:inline-flex;
+align-items:center;
+padding:6px 12px;
+border-radius:999px;
+background:rgba(77,208,225,0.10);
+border:1px solid rgba(77,208,225,0.16);
+color:#99f3ff;
+font-size:11px;
+font-weight:700;
+letter-spacing:0.08em;
+text-transform:uppercase;
+margin-bottom:12px;
+}
+
+.leaderboard-subtitle{
+color:rgba(214,240,247,0.72);
+font-size:14px;
+line-height:1.6;
+margin-top:8px;
+}
+
+.leaderboard-stats{
+display:flex;
+gap:10px;
+flex-wrap:wrap;
+justify-content:flex-end;
+}
+
+.leaderboard-stat{
+min-width:110px;
+padding:12px 14px;
+border-radius:18px;
+background:rgba(255,255,255,0.04);
+border:1px solid rgba(77,208,225,0.12);
+text-align:left;
+}
+
+.leaderboard-stat-label{
+font-size:11px;
+text-transform:uppercase;
+letter-spacing:0.08em;
+color:rgba(156,239,255,0.72);
+font-weight:700;
+margin-bottom:6px;
+}
+
+.leaderboard-stat-value{
+font-size:20px;
+font-weight:800;
+color:#f4fdff;
+}
+
+.leaderboard-table-shell{
+border-radius:22px;
+overflow:hidden;
+border:1px solid rgba(77,208,225,0.12);
+background:rgba(5,18,28,0.36);
+box-shadow:inset 0 1px 0 rgba(255,255,255,0.03);
+}
+
+.leaderboard-container > h1{
+display:none;
 }
 
 /* TITLE */
 
 h1{
 
-text-align:center;
+text-align:left;
 
 font-size:2.3rem;
 
-margin-bottom:10px;
+margin-bottom:0;
 
 background:linear-gradient(135deg,#00b4d8,#4dd0e1);
 
@@ -127,13 +208,13 @@ color:transparent;
 
 .loading{
 
-text-align:center;
+text-align:left;
 
 color:#b3e5fc;
 
 font-size:1.1rem;
 
-margin-top:15px;
+margin:14px 0 4px;
 
 }
 
@@ -145,11 +226,7 @@ width:100%;
 
 border-collapse:collapse;
 
-margin-top:20px;
-
-overflow-x:auto;
-
-display:block;
+overflow:hidden;
 
 }
 
@@ -157,17 +234,18 @@ display:block;
 
 .leaderboard-table th{
 
-background:#071c2c;
+background:rgba(6,22,35,0.92);
 
 color:#4dd0e1;
 
-padding:12px;
+padding:14px 12px;
 
-font-size:1rem;
+font-size:0.82rem;
 
 text-transform:uppercase;
 
-letter-spacing:1px;
+letter-spacing:1.2px;
+font-weight:800;
 
 }
 
@@ -175,13 +253,13 @@ letter-spacing:1px;
 
 .leaderboard-table td{
 
-padding:12px;
+padding:14px 12px;
 
 text-align:center;
 
 color:white;
 
-border-bottom:1px solid rgba(255,255,255,0.08);
+border-bottom:1px solid rgba(255,255,255,0.06);
 
 }
 
@@ -189,15 +267,98 @@ border-bottom:1px solid rgba(255,255,255,0.08);
 
 background:#0b2233;
 
-transition:0.2s;
+transition:transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
 
+}
+
+.leaderboard-table tr.lb-theme-default{
+background:
+radial-gradient(circle at top right, rgba(108,236,255,0.08), transparent 32%),
+linear-gradient(135deg, rgba(14,131,173,0.16), rgba(11,34,51,0.96) 65%);
+}
+
+.leaderboard-table tr.lb-theme-tidal-blue{
+background:
+radial-gradient(circle at 18% 18%, rgba(126,233,255,0.12), transparent 24%),
+radial-gradient(circle at 82% 20%, rgba(89,153,255,0.12), transparent 28%),
+linear-gradient(140deg, rgba(33,114,238,0.20), rgba(10,34,74,0.96) 55%, rgba(4,17,42,0.98));
+}
+
+.leaderboard-table tr.lb-theme-sunken-gold{
+background:
+radial-gradient(circle at 82% 18%, rgba(255,221,133,0.14), transparent 24%),
+radial-gradient(circle at 15% 80%, rgba(255,159,67,0.10), transparent 30%),
+linear-gradient(140deg, rgba(161,113,31,0.20), rgba(35,24,62,0.96) 54%, rgba(16,18,35,0.98));
+}
+
+.leaderboard-table tr.lb-theme-coral-bloom{
+background:
+radial-gradient(circle at 18% 22%, rgba(255,191,161,0.18), transparent 22%),
+radial-gradient(circle at 82% 18%, rgba(255,121,154,0.18), transparent 24%),
+radial-gradient(circle at 55% 78%, rgba(111,243,229,0.10), transparent 28%),
+linear-gradient(140deg, rgba(190,74,118,0.26), rgba(255,155,106,0.14) 34%, rgba(12,82,103,0.96) 72%, rgba(8,29,43,0.99));
+}
+
+.leaderboard-table tr.lb-theme-deep-abyss{
+background:
+radial-gradient(circle at 14% 18%, rgba(109,255,223,0.10), transparent 20%),
+radial-gradient(circle at 86% 24%, rgba(53,214,189,0.08), transparent 22%),
+radial-gradient(circle at 50% 82%, rgba(123,255,238,0.06), transparent 26%),
+linear-gradient(150deg, rgba(6,54,62,0.26), rgba(4,18,31,0.97) 38%, rgba(2,8,18,0.99) 74%, rgba(0,2,8,1));
+}
+
+.leaderboard-table tr.lb-theme-storm-current{
+background:
+radial-gradient(circle at 18% 18%, rgba(166,223,255,0.18), transparent 22%),
+radial-gradient(circle at 78% 16%, rgba(127,159,255,0.14), transparent 24%),
+linear-gradient(115deg, rgba(195,223,255,0.08) 0 8%, transparent 8% 14%, rgba(146,201,255,0.08) 14% 20%, transparent 20% 100%),
+linear-gradient(145deg, rgba(52,102,233,0.22), rgba(14,30,78,0.97) 54%, rgba(6,14,36,1));
+}
+
+.leaderboard-table tr.lb-theme-pearl-reef{
+background:
+radial-gradient(circle at 18% 22%, rgba(255,247,226,0.20), transparent 24%),
+radial-gradient(circle at 82% 18%, rgba(181,251,239,0.12), transparent 25%),
+radial-gradient(circle at 50% 78%, rgba(255,216,173,0.10), transparent 28%),
+linear-gradient(140deg, rgba(214,232,220,0.18), rgba(103,190,179,0.12) 36%, rgba(20,87,110,0.94) 70%, rgba(9,39,52,0.98));
+}
+
+.leaderboard-table tr.lb-theme-volcanic-ember{
+background:
+radial-gradient(circle at 18% 18%, rgba(255,194,122,0.16), transparent 22%),
+radial-gradient(circle at 80% 22%, rgba(255,102,102,0.18), transparent 24%),
+radial-gradient(circle at 48% 82%, rgba(255,149,0,0.10), transparent 28%),
+linear-gradient(140deg, rgba(171,37,37,0.22), rgba(255,120,70,0.10) 36%, rgba(44,10,24,0.98) 72%, rgba(16,5,14,1));
+}
+
+.leaderboard-table tr.lb-theme-kelp-canopy{
+background:
+radial-gradient(circle at 16% 18%, rgba(184,239,144,0.12), transparent 24%),
+radial-gradient(circle at 82% 20%, rgba(72,179,121,0.12), transparent 26%),
+radial-gradient(circle at 46% 80%, rgba(225,255,181,0.08), transparent 28%),
+linear-gradient(145deg, rgba(58,122,59,0.18), rgba(22,72,56,0.97) 48%, rgba(8,30,24,1));
+}
+
+.leaderboard-table tr.lb-theme-glacier-shine{
+background:
+radial-gradient(circle at 18% 18%, rgba(255,255,255,0.14), transparent 22%),
+radial-gradient(circle at 78% 16%, rgba(155,228,255,0.14), transparent 24%),
+radial-gradient(circle at 50% 82%, rgba(195,235,255,0.10), transparent 28%),
+linear-gradient(145deg, rgba(221,245,255,0.16), rgba(93,170,219,0.10) 36%, rgba(33,82,120,0.94) 72%, rgba(10,31,52,1));
+}
+
+.leaderboard-table tr.current-user-row{
+outline:2px solid rgba(255,215,0,0.92);
+outline-offset:-2px;
+box-shadow:inset 0 0 0 1px rgba(255,241,194,0.28);
 }
 
 .leaderboard-table tr:hover{
 
 background:#0f2d44;
 
-transform:scale(1.01);
+transform:translateY(-1px);
+box-shadow:inset 0 1px 0 rgba(255,255,255,0.04);
 
 }
 
@@ -223,6 +384,61 @@ object-fit:cover;
 
 font-size:1.2em;
 
+}
+
+.leaderboard-player{
+display:flex;
+flex-direction:column;
+align-items:center;
+gap:6px;
+text-align:center;
+}
+
+.leaderboard-player-name{
+font-weight:700;
+color:#ffffff;
+}
+
+.leaderboard-player-title{
+font-size:0.78em;
+font-weight:700;
+letter-spacing:0.08em;
+text-transform:uppercase;
+color:#96ecff;
+}
+
+.rank-pill{
+display:inline-flex;
+align-items:center;
+justify-content:center;
+min-width:38px;
+height:38px;
+padding:0 10px;
+border-radius:999px;
+background:rgba(255,255,255,0.05);
+border:1px solid rgba(255,255,255,0.08);
+font-weight:800;
+color:#f6fcff;
+}
+
+.rank-pill.rank-top-1{
+background:rgba(255,215,0,0.14);
+border-color:rgba(255,215,0,0.28);
+}
+
+.rank-pill.rank-top-2{
+background:rgba(204,219,230,0.14);
+border-color:rgba(204,219,230,0.28);
+}
+
+.rank-pill.rank-top-3{
+background:rgba(205,127,50,0.18);
+border-color:rgba(205,127,50,0.30);
+}
+
+.leaderboard-metric{
+font-weight:700;
+color:#f2fbff;
 }
 
 /* BACK BUTTON */
@@ -338,9 +554,17 @@ box-shadow:0 20px 50px rgba(0,0,0,0.7);
 }
 
 .leaderboard-container{
-    padding:30px;
-    margin-top:40px;
+    padding:24px 18px;
+    margin-top:24px;
     width:98%;
+}
+
+.leaderboard-hero{
+    align-items:flex-start;
+}
+
+.leaderboard-stats{
+    justify-content:flex-start;
 }
 
 h1{
@@ -349,8 +573,8 @@ h1{
 
 .leaderboard-table th,
 .leaderboard-table td{
-    padding:10px;
-    font-size:0.9rem;
+    padding:10px 8px;
+    font-size:0.88rem;
 }
 
 .leaderboard-table img{
@@ -409,26 +633,65 @@ h1{
 }
 
 .leaderboard-container{
-    padding:20px;
-    margin-top:20px;
+    padding:18px 12px;
+    margin-top:16px;
     width:96%;
     max-width:100%;
 }
 
+.leaderboard-hero{
+    gap:14px;
+    margin-bottom:14px;
+    padding-bottom:14px;
+}
+
+.leaderboard-copy,
+.leaderboard-stats{
+    width:100%;
+}
+
+.leaderboard-stats{
+    justify-content:flex-start;
+}
+
+.leaderboard-stat{
+    min-width:96px;
+    flex:1 1 96px;
+}
+
+.leaderboard-stat-value{
+    font-size:17px;
+}
+
 h1{
-    font-size:1.6rem;
+    font-size:1.45rem;
     margin-bottom:8px;
 }
 
 .leaderboard-table th,
 .leaderboard-table td{
-    padding:8px 4px;
-    font-size:0.8rem;
+    padding:7px 4px;
+    font-size:0.74rem;
+}
+
+.leaderboard-table-shell{
+    overflow-x:auto;
+    -webkit-overflow-scrolling:touch;
+}
+
+.leaderboard-table{
+    min-width:580px;
+}
+
+.rank-pill{
+    min-width:32px;
+    height:32px;
+    font-size:0.85rem;
 }
 
 .leaderboard-table img{
-    width:32px;
-    height:32px;
+    width:28px;
+    height:28px;
 }
 
 .back-btn{
@@ -479,24 +742,33 @@ h1{
 }
 
 .leaderboard-container{
-    padding:15px;
+    padding:14px 10px;
     margin-top:15px;
     width:100%;
 }
 
+.leaderboard-stat{
+    min-width:0;
+    width:100%;
+}
+
 h1{
-    font-size:1.3rem;
+    font-size:1.16rem;
 }
 
 .leaderboard-table th,
 .leaderboard-table td{
-    padding:6px 2px;
-    font-size:0.75rem;
+    padding:5px 2px;
+    font-size:0.68rem;
+}
+
+.leaderboard-table{
+    min-width:540px;
 }
 
 .leaderboard-table img{
-    width:28px;
-    height:28px;
+    width:24px;
+    height:24px;
 }
 
 .back-btn{
@@ -527,8 +799,26 @@ h1{
         </div>
     </header>
     <div class="leaderboard-container">
+        <div class="leaderboard-hero">
+            <div class="leaderboard-copy">
+                <div class="leaderboard-kicker">Competitive Waters</div>
+                <h1>Sharkdle Global Leaderboards</h1>
+                <div class="leaderboard-subtitle">View the TOP 25 sharkdle players. Can you reach number 1?</div>
+            </div>
+            <div class="leaderboard-stats">
+                <div class="leaderboard-stat">
+                    <div class="leaderboard-stat-label">Board Size</div>
+                    <div class="leaderboard-stat-value">Top 25</div>
+                </div>
+                <div class="leaderboard-stat">
+                    <div class="leaderboard-stat-label">Primary Rank</div>
+                    <div class="leaderboard-stat-value">Wins</div>
+                </div>
+            </div>
+        </div>
         <h1>🏆 Sharkdle Global Leaderboards</h1>
         <div id="leaderboard-loading" class="loading">Loading leaderboard...</div>
+        <div class="leaderboard-table-shell">
         <table class="leaderboard-table" id="leaderboard-table" style="display:none;">
             <thead>
                 <tr>
@@ -545,6 +835,7 @@ h1{
                 <!-- Leaderboard rows will be inserted here -->
             </tbody>
         </table>
+        </div>
         <button class="back-btn" onclick="window.location.href='index.html'">
             ← Back to Main Menu
         </button>
@@ -641,12 +932,34 @@ h1{
                 // Badge system config (must match script.js)
                 const allBadges = [
                     { id: "starter", name: "Starter", emoji: "🦈", description: "Default badge for all players." },
-                    { id: "dev", name: "Developer", emoji: "💻", description: "Awarded only to the developer.", devOnly: true },
+                    { id: "dev", name: "Developer", emoji: "🖥️", description: "Awarded only to the developer.", devOnly: true },
                     { id: "tester", name: "Tester", emoji: "🎮", description: "Awarded for testing via code redeem.", codeUnlock: true }
                 ];
+                const currentPassBadgeDefs = [
+                    { id: "reef-scout", name: "Shiver", emoji: "🦈", description: "A Shark Pass badge for reaching level 3.", passLevel: 3 },
+                    { id: "bronze-fin", name: "Pup", emoji: "🪸", description: "A Shark Pass badge for reaching level 5.", passLevel: 5 },
+                    { id: "night-diver", name: "Juvenile", emoji: "🌙", description: "A Shark Pass badge for reaching level 8.", passLevel: 8 },
+                    { id: "abyss-explorer", name: "Oceanic", emoji: "💙", description: "A Shark Pass badge for reaching level 10.", passLevel: 10 },
+                    { id: "open-water-ace", name: "Subadult", emoji: "✨", description: "A Shark Pass badge for reaching level 12.", passLevel: 12 },
+                    { id: "storm-tracker", name: "Prime", emoji: "⚡", description: "A Shark Pass badge for reaching level 18.", passLevel: 18 },
+                    { id: "apex-voyager", name: "Apex", emoji: "👑", description: "A Shark Pass badge for reaching level 20.", passLevel: 20 }
+                ];
+                for (let i = allBadges.length - 1; i >= 0; i--) {
+                    if (currentPassBadgeDefs.some(badge => badge.id === allBadges[i].id)) {
+                        allBadges.splice(i, 1);
+                    }
+                }
+                allBadges.push(...currentPassBadgeDefs);
+                allBadges.push(
+                    { id: "reef-glint", name: "Driftwood", emoji: "🪵", description: "A badge found in Cosmetic Crates." },
+                    { id: "kelp-warden", name: "Smelly Boot", emoji: "🥾", description: "A badge found in Cosmetic Crates." },
+                    { id: "trench-myth", name: "Message Bottle", emoji: "🍾", description: "A badge found in Cosmetic Crates." },
+                    { id: "aurora-fin", name: "Doubloon", emoji: "🪙", description: "A badge found in Cosmetic Crates." }
+                );
                 snapshot.forEach(doc => {
                     const data = doc.data();
                     const tr = document.createElement('tr');
+                    tr.classList.add(`lb-theme-${data.equippedCardTheme || 'default'}`);
                     // Check if this is the current user - use multiple methods including cached profile
                     const isCurrentUser = (currentUserUID && doc.id === currentUserUID) || 
                         (currentUserEmail && data.email && data.email === currentUserEmail) ||
@@ -658,13 +971,14 @@ h1{
                         ));
                     // Profile picture logic
                     let profilePicPath = 'images/pfp/shark1.png';
-                    if (data.profilePic) {
-                        if (data.profilePic.startsWith('images/')) {
-                            profilePicPath = data.profilePic;
-                        } else if (data.profilePic.includes('/')) {
-                            profilePicPath = `images/${data.profilePic}`;
+                    const storedProfilePic = data.profilePicture || data.profilePic;
+                    if (storedProfilePic) {
+                        if (storedProfilePic.startsWith('images/')) {
+                            profilePicPath = storedProfilePic;
+                        } else if (storedProfilePic.includes('/')) {
+                            profilePicPath = `images/${storedProfilePic}`;
                         } else {
-                            profilePicPath = `images/pfp/${data.profilePic}`;
+                            profilePicPath = `images/pfp/${storedProfilePic}`;
                         }
                     }
                     // Determine rarity border color
@@ -682,23 +996,33 @@ h1{
                     } else if (/levelPfp\//.test(profilePicPath)) {
                         borderColor = '#4caf50'; // other level rewards - green
                     }
-                    // Add hover tooltip for profile image (obtainment method)
-                    let pfpObtainment = 'Default Profile Icon';
-                    if (/leaderPfp\/Shark19\.png$/.test(profilePicPath)) {
-                        pfpObtainment = 'Leaderboard Top 3 Reward';
-                    } else if (/codePfp\/Shark17\.png$/.test(profilePicPath)) {
-                        pfpObtainment = 'Obtained from a code';
-                    } else if (/codePfp\/Shark18\.png$/.test(profilePicPath)) {
-                        pfpObtainment = 'Obtained from a code';
-                    } else if (/levelPfp\/Shark(\d+)\.png$/.test(profilePicPath)) {
-                        // Try to match by levelRewards
-                        const match = /levelPfp\/Shark(\d+)\.png$/.exec(profilePicPath);
-                        if (match && match[1]) {
-                            pfpObtainment = `Shark Pass Level ${parseInt(match[1]) - 4}`;
-                            if (parseInt(match[1]) === 15) pfpObtainment = 'Shark Pass Level 15';
-                            if (parseInt(match[1]) === 16) pfpObtainment = 'Shark Pass Level 20';
-                        }
+                    if (isCurrentUser) {
+                        borderColor = '#FFD700';
                     }
+                    // Add hover tooltip for profile image (obtainment method)
+                    const pfpObtainmentMap = {
+                        'images/leaderPfp/Shark19.png': 'Leaderboard Top 3 Reward',
+                        'images/codePfp/Shark17.png': 'Redeem Code Reward',
+                        'images/codePfp/Shark18.png': 'Redeem Code Reward',
+                        'images/codePfp/Shark19.png': 'Redeem Code Reward',
+                        'images/loginPfp/Shark20.png': 'Day 7 Login Streak Reward',
+                        'images/cratePfp/Shark22.png': 'Cosmetic Crate Reward',
+                        'images/cratePfp/Shark23.png': 'Cosmetic Crate Reward',
+                        'images/cratePfp/Shark24.png': 'Cosmetic Crate Reward',
+                        'images/cratePfp/Shark25.png': 'Cosmetic Crate Reward',
+                        'images/levelPfp/Shark6.png': 'Shark Pass Level 2',
+                        'images/levelPfp/Shark7.png': 'Shark Pass Level 3',
+                        'images/levelPfp/Shark8.png': 'Shark Pass Level 4',
+                        'images/levelPfp/Shark9.png': 'Shark Pass Level 5',
+                        'images/levelPfp/Shark10.png': 'Shark Pass Level 6',
+                        'images/levelPfp/Shark11.png': 'Shark Pass Level 7',
+                        'images/levelPfp/Shark12.png': 'Shark Pass Level 8',
+                        'images/levelPfp/Shark13.png': 'Shark Pass Level 9',
+                        'images/levelPfp/Shark14.png': 'Shark Pass Level 10',
+                        'images/levelPfp/Shark15.png': 'Shark Pass Level 15',
+                        'images/levelPfp/Shark16.png': 'Shark Pass Level 20'
+                    };
+                    let pfpObtainment = pfpObtainmentMap[profilePicPath] || 'Default Profile Icon';
                     const profilePicImg = `<img src="${profilePicPath}" alt="Profile" title="${pfpObtainment}" style="width:38px;height:38px;border-radius:50%;border:2px solid ${borderColor};background:#18304a;object-fit:cover;box-shadow:0 1px 4px rgba(30,41,59,0.12);">`;
                     const username = data.username ? data.username : 'Anonymous';
                     let rankCell = '';
@@ -711,35 +1035,72 @@ h1{
                     } else {
                         rankCell = rank;
                     }
-                    let titleLine = '';
-                    if (data.selectedTitle) {
-                        titleLine = `<div style="font-size:0.85em;color:#fdd835;">${data.selectedTitle}</div>`;
+                    if (rank === 1) {
+                        rankCell = `<span class="rank-pill rank-top-1">🏆</span>`;
+                    } else if (rank === 2) {
+                        rankCell = `<span class="rank-pill rank-top-2">🥈</span>`;
+                    } else if (rank === 3) {
+                        rankCell = `<span class="rank-pill rank-top-3">🥉</span>`;
+                    } else {
+                        rankCell = `<span class="rank-pill">${rank}</span>`;
                     }
                     // Badge logic: get equipped badge id, fallback to starter
                     let badgeId = data.equippedBadge || "starter";
                     let badge = allBadges.find(b => b.id === badgeId) || allBadges[0];
-                    // Add arrow after username if current user
                     let usernameDisplay = `${username}`;
-                    if (isCurrentUser) {
-                        usernameDisplay = `${username} <span style=\"color:#00bcd4; font-size: 1.2em;\">←</span>`;
-                    }
-                    usernameDisplay = `${usernameDisplay}${titleLine}`;
-                    if (isCurrentUser) {
-                        usernameDisplay = `${usernameDisplay} <span style=\"color:#00b4d8; font-weight: bold;\">(You)</span>`;
-                    }
+                    usernameDisplay = `<div class="leaderboard-player"><div class="leaderboard-player-name">${usernameDisplay}</div></div>`;
                     // Badge rarity colors
+                    let badgeRarity = 'Common';
                     let badgeBorder = '#00b4d8';
                     let badgeBg = 'rgba(0,180,216,0.10)';
                     let badgeText = '#00b4d8';
                     if (badge.id === 'dev') {
+                        badgeRarity = 'Special';
                         badgeBorder = '#FFD700';
                         badgeBg = 'rgba(255,215,0,0.13)';
                         badgeText = '#FFD700';
                     } else if (badge.id === 'tester') {
-                        badgeBorder = '#a259e6';
-                        badgeBg = 'rgba(162,89,230,0.13)';
-                        badgeText = '#a259e6';
+                        badgeRarity = 'Code';
+                        badgeBorder = '#ff8a3d';
+                        badgeBg = 'rgba(255,138,61,0.15)';
+                        badgeText = '#ffc18d';
                     } else if (badge.id === 'starter') {
+                        badgeRarity = 'Core';
+                        badgeBorder = '#00b4d8';
+                        badgeBg = 'rgba(0,180,216,0.10)';
+                        badgeText = '#00b4d8';
+                    } else if (badge.id === 'night-diver') {
+                        badgeRarity = 'Rare';
+                        badgeBorder = '#6ee7ff';
+                        badgeBg = 'rgba(77,208,225,0.14)';
+                        badgeText = '#9cf4ff';
+                    } else if (badge.id === 'kelp-warden') {
+                        badgeRarity = 'Rare';
+                        badgeBorder = '#6ee7ff';
+                        badgeBg = 'rgba(77,208,225,0.14)';
+                        badgeText = '#9cf4ff';
+                    } else if (badge.id === 'abyss-explorer' || badge.id === 'open-water-ace') {
+                        badgeRarity = 'Epic';
+                        badgeBorder = '#a99bff';
+                        badgeBg = 'rgba(120,119,255,0.16)';
+                        badgeText = '#d2cbff';
+                    } else if (badge.id === 'trench-myth') {
+                        badgeRarity = 'Epic';
+                        badgeBorder = '#a99bff';
+                        badgeBg = 'rgba(120,119,255,0.16)';
+                        badgeText = '#d2cbff';
+                    } else if (badge.id === 'storm-tracker' || badge.id === 'apex-voyager') {
+                        badgeRarity = 'Legendary';
+                        badgeBorder = '#ffd47f';
+                        badgeBg = 'rgba(255,196,87,0.18)';
+                        badgeText = '#ffe3ad';
+                    } else if (badge.id === 'aurora-fin') {
+                        badgeRarity = 'Legendary';
+                        badgeBorder = '#ffd47f';
+                        badgeBg = 'rgba(255,196,87,0.18)';
+                        badgeText = '#ffe3ad';
+                    } else if (badge.id === 'reef-glint') {
+                        badgeRarity = 'Common';
                         badgeBorder = '#00b4d8';
                         badgeBg = 'rgba(0,180,216,0.10)';
                         badgeText = '#00b4d8';
@@ -750,16 +1111,16 @@ h1{
                     </div>`;
                     // Highlight row for current user
                     if (isCurrentUser) {
-                        tr.style.backgroundColor = 'rgba(0, 188, 212, 0.15)';
+                        tr.classList.add('current-user-row');
                     }
                     tr.innerHTML = `
                         <td>${rankCell}</td>
                         <td>${profilePicImg}</td>
                         <td>${usernameDisplay}${badgeDisplay}</td> 
-                        <td>${data.wins || 0}</td>
-                        <td>${data.currentLevel || 0}</td>
-                        <td>${data.currentStreak || 0}</td>
-                        <td>${data.gamesPlayed || 0}</td>
+                        <td class="leaderboard-metric">${data.wins || 0}</td>
+                        <td class="leaderboard-metric">${data.currentLevel || 0}</td>
+                        <td class="leaderboard-metric">${data.currentStreak || 0}</td>
+                        <td class="leaderboard-metric">${data.gamesPlayed || 0}</td>
                     `;
                     tbody.appendChild(tr);
                     if (rank <= 3) {
@@ -785,21 +1146,41 @@ h1{
                         leaderCrown: true
                     };
                     // --- Directly update Firestore and localStorage, then update modal UI ---
-                    let profileData = JSON.parse(localStorage.getItem("userProfile") || "{}" );
+                    const scopedProfileKey = `userProfile_${currentUserUID}`;
+                    const scopedBackupKey = `userProfileBackup_${currentUserUID}`;
+                    let profileData = {};
+                    try {
+                        profileData = JSON.parse(localStorage.getItem(scopedProfileKey) || localStorage.getItem("userProfile") || "{}" );
+                    } catch (error) {
+                        console.warn("Unable to parse cached leaderboard profile. Rebuilding reward cache from defaults.", error);
+                        profileData = {};
+                    }
                     if (!profileData.earnedCosmetics) profileData.earnedCosmetics = [];
                     let newlyEarned = false;
                     // Add to localStorage if not present
                     if (!profileData.earnedCosmetics.some(c => c.name === PORTJACKSON_PFP.name)) {
                         profileData.earnedCosmetics.push(PORTJACKSON_PFP);
                         localStorage.setItem("userProfile", JSON.stringify(profileData));
+                        localStorage.setItem(scopedProfileKey, JSON.stringify(profileData));
+                        localStorage.setItem("userProfileBackup", JSON.stringify(profileData));
+                        localStorage.setItem(scopedBackupKey, JSON.stringify(profileData));
                         newlyEarned = true;
                     }
                     // Always update Firestore directly, then update localStorage and modal UI
                     db.collection('userStats').doc(currentUserUID).set({ earnedCosmetics: profileData.earnedCosmetics }, { merge: true }).then(() => {
                         // Also update localStorage to match Firestore
-                        let updatedProfile = JSON.parse(localStorage.getItem("userProfile") || "{}" );
+                        let updatedProfile = {};
+                        try {
+                            updatedProfile = JSON.parse(localStorage.getItem(scopedProfileKey) || localStorage.getItem("userProfile") || "{}" );
+                        } catch (error) {
+                            console.warn("Unable to parse cached leaderboard profile after reward sync. Rebuilding cache from reward payload.", error);
+                            updatedProfile = {};
+                        }
                         updatedProfile.earnedCosmetics = profileData.earnedCosmetics;
                         localStorage.setItem("userProfile", JSON.stringify(updatedProfile));
+                        localStorage.setItem(scopedProfileKey, JSON.stringify(updatedProfile));
+                        localStorage.setItem("userProfileBackup", JSON.stringify(updatedProfile));
+                        localStorage.setItem(scopedBackupKey, JSON.stringify(updatedProfile));
                         // Now update modal UI
                         if (typeof loadAvailablePFPs === 'function') loadAvailablePFPs();
                         if (typeof loadEarnedCosmetics === 'function') loadEarnedCosmetics();
@@ -856,3 +1237,5 @@ h1{
     </script>
 </body>
 </html>
+
+
