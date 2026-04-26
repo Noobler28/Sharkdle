@@ -2,6 +2,7 @@
 <html lang="en">
 
 <head>
+<link rel="icon" type="image/png" href="images/favicon.png">
 
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -24,6 +25,7 @@
 <h1>🦈 Sharkdle - Daily</h1>
 
 </header>
+<p class="mode-subtitle">One shark. Twelve attempts. A fresh challenge every day.</p>
 
 
 <div class="game-container">
@@ -32,6 +34,7 @@
 <!-- INPUT -->
 
 <div class="input-panel">
+<div class="panel-header"><div><h2>Submit Your Guess</h2></div></div>
 
 <div style="position: relative;">
 <input id="sharkGuess" placeholder="Enter shark name..." autocomplete="off">
@@ -40,7 +43,7 @@
 
 <button id="guessBtn">Guess</button>
 
-<div id="attempts-left">Attempts left: 12</div>
+<div id="attempts-left" class="status-pill">Attempts left: 12</div>
 
 <div id="message"></div>
 
@@ -70,3 +73,4 @@
 </body>
 
 </html>
+
