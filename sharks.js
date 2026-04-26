@@ -22,7 +22,7 @@ const sharks = [
             { "name": "Gulper Shark", "family": "Centrophoridae", "order": "Squaliformes", "genus": "Centrophorus", "size": "Small","habitat": "Mesopelagic", "yod": 1801 },
             { "name": "Dumb Gulper Shark", "family": "Centrophoridae", "order": "Squaliformes", "genus": "Centrophorus", "size": "Small","habitat": "Mesopelagic", "yod": 1915 },
             { "name": "African Gulper Shark", "family": "Centrophoridae", "order": "Squaliformes", "genus": "Centrophorus", "size": "Small","habitat": "Mesopelagic", "yod": 2017 },
-            { "name": "Lowfin Gulper Shark", "family": "Centrophoridae", "order": "Squaliformes", "genus": "Centrophorus", "size": "Small","habitat": "Mesopelagic", "yod": 2017 }, 
+            { "name": "Lowfin Gulper Shark", "family": "Centrophoridae", "order": "Squaliformes", "genus": "Centrophorus", "size": "Small","habitat": "Mesopelagic", "yod": 2017 },
             { "name": "Small-fin Gulper Shark", "family": "Centrophoridae", "order": "Squaliformes", "genus": "Centrophorus", "size": "Small","habitat": "Mesopelagic", "yod": 1860 },
             { "name": "Seychelles Gulper Shark", "family": "Centrophoridae", "order": "Squaliformes", "genus": "Centrophorus", "size": "Tiny","habitat": "Mesopelagic", "yod": 2003 },
             { "name": "Leaf-scale Gulper Shark", "family": "Centrophoridae", "order": "Squaliformes", "genus": "Centrophorus", "size": "Small","habitat": "Mesopelagic", "yod": 1788 },
@@ -213,7 +213,6 @@ const sharks = [
             { "name": "Japanese Angel Shark","family": "Squatinidae", "order": "Squantiniformes", "genus": "Squatina", "size": "Medium","habitat": "Epipelagic", "yod": 1858},
             { "name": "Leas Angel Shark","family": "Squatinidae", "order": "Squantiniformes", "genus": "Squatina", "size": "Medium","habitat": "Epipelagic", "yod": 2023},
             { "name": "Indonesian Angel Shark","family": "Squatinidae", "order": "Squantiniformes", "genus": "Squatina", "size": "Medium","habitat": "Epipelagic", "yod": 2008},
-            { "name": "Short Crested Angel Shark","family": "Squatinidae", "order": "Squantiniformes", "genus": "Squatina", "size": "Medium","habitat": "Epipelagic", "yod": 2021},
             { "name": "Mexican Angel Shark","family": "Squatinidae", "order": "Squantiniformes", "genus": "Squatina", "size": "Medium","habitat": "Epipelagic", "yod": 2007},
             { "name": "SmoothBack Angel Shark","family": "Squatinidae", "order": "Squantiniformes", "genus": "Squatina", "size": "Medium","habitat": "Epipelagic", "yod": 1840},
             { "name": "Western Angel Shark","family": "Squatinidae", "order": "Squantiniformes", "genus": "Squatina", "size": "Medium","habitat": "Epipelagic", "yod": 2008},
@@ -660,3 +659,4 @@ const sharks = [
 
 // Make available globally
 window.sharks = sharks;
+console.log('sharks.js loaded, window.sharks length:', window.sharks ? window.sharks.length : 'undefined');
