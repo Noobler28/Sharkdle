@@ -1274,6 +1274,9 @@ let crateOpeningInProgress = false;
 let pendingProfileSyncTimeout = null;
 let globalXpEventOverride = null;
 let globalXpEventUnsubscribe = null;
+let cloudProfileReloadTimeouts = [];
+let lastServerHydratedProfileUid = null;
+const CLOUD_PROFILE_RELOAD_DELAYS_MS = [1200, 4000, 9000];
 
 const sharkPassRewards = [
     { level: 2, type: "pfp", name: "Angel Shark", imagePath: "images/levelPfp/Shark6.png", rarity: "common", blurb: "A fresh portrait reward for early progress." },
@@ -2698,6 +2701,72 @@ function getXPInCurrentLevel(totalXP) {
 // Authentication State
 var currentUser = null;
 
+function clearPendingProfileSyncTimeout() {
+    if (!pendingProfileSyncTimeout) return;
+    clearTimeout(pendingProfileSyncTimeout);
+    pendingProfileSyncTimeout = null;
+}
+
+function clearCloudProfileReloadTimeouts() {
+    cloudProfileReloadTimeouts.forEach(timeoutId => clearTimeout(timeoutId));
+    cloudProfileReloadTimeouts = [];
+}
+
+function setLoadCloudStatsButtonState(isLoading) {
+    const loadBtn = document.getElementById("load-cloud-stats-btn");
+    if (!loadBtn) return;
+    if (!loadBtn.dataset.defaultText) {
+        loadBtn.dataset.defaultText = loadBtn.textContent;
+    }
+    loadBtn.disabled = isLoading;
+    loadBtn.textContent = isLoading ? "Loading..." : loadBtn.dataset.defaultText;
+}
+
+async function loadCloudStats(options = {}) {
+    const { manual = false, showSuccessToast = false } = options;
+    if (!currentUser) {
+        if (manual) {
+            showNotification("Please login first.", "error");
+        }
+        return false;
+    }
+
+    if (manual) {
+        setLoadCloudStatsButtonState(true);
+    }
+
+    try {
+        const loadedProfile = await loadUserProfile({ rethrowErrors: manual });
+        if (manual && showSuccessToast && loadedProfile) {
+            showNotification("Cloud stats loaded.", "success");
+        }
+        return Boolean(loadedProfile);
+    } catch (error) {
+        console.warn("Manual cloud stats reload failed:", error);
+        if (manual) {
+            showNotification("Couldn't load cloud stats right now. Try again.", "error");
+        }
+        return false;
+    } finally {
+        if (manual) {
+            setLoadCloudStatsButtonState(false);
+        }
+    }
+}
+
+function scheduleCloudProfileReloads() {
+    clearCloudProfileReloadTimeouts();
+    if (!currentUser) return;
+
+    CLOUD_PROFILE_RELOAD_DELAYS_MS.forEach(delayMs => {
+        const timeoutId = setTimeout(() => {
+            if (!currentUser) return;
+            loadCloudStats().catch(error => console.warn("Auto cloud stats reload failed:", error));
+        }, delayMs);
+        cloudProfileReloadTimeouts.push(timeoutId);
+    });
+}
+
 // Set up auth state listener
 function setupAuthStateListener() {
     if (!auth) {
@@ -2711,6 +2780,11 @@ function setupAuthStateListener() {
         const previousUid = currentUser?.uid || null;
         currentUser = user;
         window.currentUser = user;
+        clearPendingProfileSyncTimeout();
+        clearCloudProfileReloadTimeouts();
+        if (!user || previousUid !== user.uid) {
+            lastServerHydratedProfileUid = null;
+        }
         if (!user || (previousUid && user.uid !== previousUid)) {
             clearCachedProfileState();
         }
@@ -2810,6 +2884,7 @@ async function updateAuthUI() {
 
         // Load user profile - need to await so redeemed codes and login streak load first
         await loadUserProfile();
+        scheduleCloudProfileReloads();
         await ensureLoginStreakRewards();
         ensureNavProfileButton();
         // Sync local stats to Firebase
@@ -2820,6 +2895,8 @@ async function updateAuthUI() {
         // User is logged out
         if (loginWarning) loginWarning.classList.remove("hidden");
         if (loginBtn) loginBtn.style.display = "block";
+        clearPendingProfileSyncTimeout();
+        clearCloudProfileReloadTimeouts();
         
         const profileBtn = document.getElementById("profile-btn-nav");
         if (profileBtn) {
@@ -2992,10 +3069,12 @@ function getStoredDailyLoginModalShownDate(uid = null) {
 
 async function getUserStatsSnapshot(statsRef) {
     try {
-        return await statsRef.get({ source: "server" });
+        const snapshot = await statsRef.get({ source: "server" });
+        return { snapshot, fromServer: true };
     } catch (error) {
         console.warn("Falling back to cached userStats snapshot:", error);
-        return statsRef.get();
+        const snapshot = await statsRef.get();
+        return { snapshot, fromServer: false };
     }
 }
 
@@ -3013,7 +3092,9 @@ function cachePreferredUsername(username, uidOverride = null) {
 }
 
 function scheduleRemoteProfileSync(delayMs = 150) {
-    if (!currentUser || !db || typeof syncStatsToFirebase !== "function") return;
+    if (typeof firebase === "undefined" || typeof firebase.auth !== "function") return;
+    const authUser = firebase.auth().currentUser;
+    if (!currentUser || !authUser || currentUser.uid !== authUser.uid || !db || typeof syncStatsToFirebase !== "function") return;
     if (pendingProfileSyncTimeout) {
         clearTimeout(pendingProfileSyncTimeout);
     }
@@ -3082,9 +3163,18 @@ function showCrateOverlayDuplicateReward(reward, xpAward) {
 window.saveUserProfileLocally = saveUserProfileLocally;
 
 function clearCachedProfileState() {
+    clearPendingProfileSyncTimeout();
+    lastServerHydratedProfileUid = null;
     localStorage.removeItem("userProfile");
     localStorage.removeItem("userProfileBackup");
     localStorage.removeItem("lastViewedStats");
+    localStorage.removeItem("games");
+    localStorage.removeItem("wins");
+    localStorage.removeItem("losses");
+    localStorage.removeItem("totalXP");
+    localStorage.removeItem("lastLoginDate");
+    localStorage.removeItem("loginStreak");
+    localStorage.removeItem("currentLoginDay");
     // Note: We intentionally do NOT clear claimedAchievements/unlockedAchievements here
     // because those are synced to Firebase and should persist across logout/login
     // They will be properly loaded when the user logs back in
@@ -3093,15 +3183,43 @@ function clearCachedProfileState() {
 function getBestLocalProfile() {
     const scopedPrimaryKey = getScopedUserProfileStorageKey();
     const scopedBackupKey = getScopedUserProfileBackupKey();
-    const primaryRaw = (scopedPrimaryKey && localStorage.getItem(scopedPrimaryKey)) || localStorage.getItem("userProfile") || "{}";
-    const backupRaw = (scopedBackupKey && localStorage.getItem(scopedBackupKey)) || localStorage.getItem("userProfileBackup") || "{}";
-    const primaryProfile = JSON.parse(primaryRaw);
-    const backupProfile = JSON.parse(backupRaw);
-    const selectedProfile = hasMeaningfulProfileData(primaryProfile) ? primaryProfile : backupProfile;
-    if (currentUser && selectedProfile?.uid && selectedProfile.uid !== currentUser.uid) {
+    const parseStoredProfile = raw => {
+        try {
+            const parsed = JSON.parse(raw || "{}");
+            return parsed && typeof parsed === "object" ? parsed : {};
+        } catch (error) {
+            return {};
+        }
+    };
+    const chooseBestCandidate = (primary, backup) => {
+        if (hasMeaningfulProfileData(primary)) return primary;
+        if (hasMeaningfulProfileData(backup)) return backup;
+        if (hasPersistedProfileIdentity(primary)) return primary;
+        if (hasPersistedProfileIdentity(backup)) return backup;
         return {};
+    };
+
+    const scopedPrimary = parseStoredProfile(scopedPrimaryKey ? localStorage.getItem(scopedPrimaryKey) : "{}");
+    const scopedBackup = parseStoredProfile(scopedBackupKey ? localStorage.getItem(scopedBackupKey) : "{}");
+    const genericPrimary = parseStoredProfile(localStorage.getItem("userProfile"));
+    const genericBackup = parseStoredProfile(localStorage.getItem("userProfileBackup"));
+
+    if (currentUser) {
+        let selectedProfile = chooseBestCandidate(scopedPrimary, scopedBackup);
+        if (!Object.keys(selectedProfile).length) {
+            const genericMatchesCurrentUser =
+                genericPrimary?.uid === currentUser.uid || genericBackup?.uid === currentUser.uid;
+            if (genericMatchesCurrentUser) {
+                selectedProfile = chooseBestCandidate(genericPrimary, genericBackup);
+            }
+        }
+        if (selectedProfile?.uid && selectedProfile.uid !== currentUser.uid) {
+            return {};
+        }
+        return selectedProfile;
     }
-    return selectedProfile;
+
+    return chooseBestCandidate(genericPrimary, genericBackup);
 }
 
 function mergeProfilesSafely(localProfile, firebaseData) {
@@ -3165,13 +3283,21 @@ function mergeProfilesSafely(localProfile, firebaseData) {
     };
 }
 
-async function loadUserProfile() {
+async function loadUserProfile(options = {}) {
+    const { rethrowErrors = false } = options;
     try {
-        if (!currentUser) return;
+        const authUser = firebase.auth().currentUser;
+        if (!currentUser || !authUser || currentUser.uid !== authUser.uid) {
+            console.warn("Skipped loadUserProfile: auth state not settled.");
+            return null;
+        }
         const localProfile = getBestLocalProfile();
         // Load from userStats collection
-        const statsRef = db.collection("userStats").doc(currentUser.uid);
-        const statsSnap = await getUserStatsSnapshot(statsRef);
+        const statsRef = db.collection("userStats").doc(authUser.uid);
+        const { snapshot: statsSnap, fromServer } = await getUserStatsSnapshot(statsRef);
+        if (fromServer) {
+            lastServerHydratedProfileUid = authUser.uid;
+        }
         let userData = {};
         let firebaseData = null;
         // If Firestore doc exists and has at least one stat field, use it as source of truth
@@ -3229,14 +3355,20 @@ async function loadUserProfile() {
             }
         } else if (hasMeaningfulProfileData(localProfile)) {
             userData = mergeProfilesSafely(localProfile, {});
-            await statsRef.set(userData, { merge: true });
+            // Only seed remote stats if we positively confirmed from the server that the doc was empty.
+            // This prevents cache-fallback reads from clobbering real cloud stats on login.
+            if (fromServer) {
+                await statsRef.set(userData, { merge: true });
+            } else {
+                console.warn("Skipped seeding userStats from local profile because snapshot was cache-fallback.");
+            }
             saveUserProfileLocally(userData, { skipRemoteSync: true });
         } else {
             const cachedPreferredUsername = getStoredPreferredUsername();
             userData = {
-                uid: currentUser.uid,
-                username: cachedPreferredUsername || localProfile.username || currentUser.email.split("@")[0],
-                email: currentUser.email,
+                uid: authUser.uid,
+                username: cachedPreferredUsername || localProfile.username || authUser.email.split("@")[0],
+                email: authUser.email,
                 profilePicture: "images/pfp/shark1.png",
                 avatar: "🦈",
                 totalGuesses: 0,
@@ -3282,8 +3414,11 @@ async function loadUserProfile() {
         if (typeof loadAvailablePFPs === "function") {
             loadAvailablePFPs();
         }
+        return userData;
     } catch (error) {
         console.error("Error loading profile:", error);
+        if (rethrowErrors) throw error;
+        return null;
     }
 }
 
@@ -3701,10 +3836,16 @@ async function signupUser() {
 function logoutUser() {
     auth.signOut().then(() => {
         currentUser = null;
+        clearPendingProfileSyncTimeout();
+        clearCloudProfileReloadTimeouts();
         clearCachedProfileState();
         closeProfileModal();
         updateAuthUI();
     });
+}
+
+async function manualLoadCloudStats() {
+    await loadCloudStats({ manual: true, showSuccessToast: true });
 }
 
 function openLoginModal() {
@@ -4301,7 +4442,19 @@ async function syncEarnedCosmetics() {
 
 // Save stats to Firebase when they update
 async function syncStatsToFirebase() {
-    if (!firebase.auth().currentUser) return;
+    const authUser = firebase.auth().currentUser;
+    if (!authUser) return;
+    if (!currentUser || currentUser.uid !== authUser.uid) {
+        console.warn("Skipping sync: auth state mismatch during account transition.");
+        scheduleRemoteProfileSync(800);
+        return;
+    }
+    if (lastServerHydratedProfileUid !== authUser.uid) {
+        console.warn("Skipping sync: waiting for server profile hydration.");
+        loadCloudStats().catch(error => console.warn("Hydration retry failed:", error));
+        scheduleRemoteProfileSync(1200);
+        return;
+    }
 
     // Prevent race condition: queue sync if one is already in progress
     if (isSyncing) {
@@ -4314,9 +4467,26 @@ async function syncStatsToFirebase() {
     try {
         const profileData = getBestLocalProfile();
 
-        const statsRef = db.collection("userStats").doc(firebase.auth().currentUser.uid);
-        const remoteSnap = await getUserStatsSnapshot(statsRef);
+        const statsRef = db.collection("userStats").doc(authUser.uid);
+        const { snapshot: remoteSnap, fromServer } = await getUserStatsSnapshot(statsRef);
         const remoteData = remoteSnap.exists ? (remoteSnap.data() || {}) : {};
+        const remoteHasData = remoteSnap.exists && Object.keys(remoteData).length > 0;
+
+        // Safety valve: never write profile stats when our remote read is cache-fallback only.
+        // Waiting for a server-backed read avoids accidental cloud resets on login.
+        if (!fromServer) {
+            console.warn("Skipping sync: userStats read was cache-fallback (server not confirmed).");
+            scheduleRemoteProfileSync(3000);
+            return;
+        }
+
+        // If remote appears empty, only allow sync when local has meaningful numeric progress.
+        // This prevents identity-only local profiles from pushing zeroed stats.
+        if (!remoteHasData && !hasMeaningfulProfileData(profileData)) {
+            console.warn("Skipping sync: remote profile empty and local profile has no meaningful stats.");
+            scheduleRemoteProfileSync(3000);
+            return;
+        }
 
         // Never let a fresh/blank local cache clobber a real Firestore profile.
         if (!hasMeaningfulProfileData(profileData) && hasRecoverableRemoteProfile(remoteData)) {
@@ -4345,8 +4515,8 @@ async function syncStatsToFirebase() {
         
         // base stats
         const stats = {
-            uid: currentUser.uid,
-            email: currentUser.email,
+            uid: authUser.uid,
+            email: authUser.email,
             avatar: mergedProfile.avatar || "🦈",
             totalXP: mergedProfile.totalXP || 0,
             // keep totalGuesses for backwards compatibility/analytics
@@ -4363,7 +4533,7 @@ async function syncStatsToFirebase() {
             cratesOpened: mergedProfile.cratesOpened || 0,
             cratesSinceLegendary: getCratesSinceLegendary(mergedProfile),
             instantCrateOpen: getCrateInstantOpenEnabled(mergedProfile),
-            username: mergedProfile.username || getStoredPreferredUsername() || currentUser.email.split("@")[0],
+            username: mergedProfile.username || getStoredPreferredUsername() || authUser.email.split("@")[0],
             profilePic: mergedProfile.profilePicture || "images/pfp/shark1.png",
             profilePicture: mergedProfile.profilePicture || "images/pfp/shark1.png",
             earnedCosmetics: Array.isArray(mergedProfile.earnedCosmetics) ? mergedProfile.earnedCosmetics : [],
