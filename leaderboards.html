@@ -1096,21 +1096,28 @@ h1{
         function getLeaderboardMetricValue(data, rangeKey) {
             const config = getRangeConfig(rangeKey);
             const metricValue = Number(data?.[config.metricField]) || 0;
+            const totalWins = Number(data?.wins) || 0;
             const winPeriodVersion = Number(data?.winPeriodVersion) || 0;
             if (config.id === "daily") {
                 const todayKey = getLocalDateKey();
                 const dailyDate = normalizeStoredDateValue(data?.dailyWinsDate);
                 if (dailyDate !== todayKey) return 0;
-                // Ignore legacy period fields until this user is on v2 period tracking.
-                if (winPeriodVersion < 2) return 0;
+                if (metricValue <= 0) return 0;
+                if (winPeriodVersion < 2) {
+                    if (totalWins > 0 && metricValue > totalWins) return 0;
+                    if (totalWins >= 25 && metricValue === totalWins) return 0;
+                }
                 return metricValue;
             }
             if (config.id === "monthly") {
                 const monthKey = getCurrentMonthKey();
                 const monthlyKey = normalizeStoredMonthValue(data?.monthlyWinsKey);
                 if (monthlyKey !== monthKey) return 0;
-                // Ignore legacy period fields until this user is on v2 period tracking.
-                if (winPeriodVersion < 2) return 0;
+                if (metricValue <= 0) return 0;
+                if (winPeriodVersion < 2) {
+                    if (totalWins > 0 && metricValue > totalWins) return 0;
+                    if (totalWins >= 40 && metricValue === totalWins) return 0;
+                }
                 return metricValue;
             }
             return metricValue;
