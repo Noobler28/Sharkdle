@@ -4714,10 +4714,25 @@ async function syncStatsToFirebase() {
         let monthlyBaseWins = remoteMonthlyWinsKey === monthKey ? remoteMonthlyWins : 0;
 
         if (!hasWinPeriodV2) {
-            // Legacy rows may have seeded period wins from all-time totals.
-            // Reset period baselines and rebuild from new wins only.
-            dailyBaseWins = 0;
-            monthlyBaseWins = 0;
+            // Keep plausible legacy period values so players don't disappear from boards,
+            // while stripping obvious all-time-seeded values on high-win accounts.
+            dailyBaseWins = (
+                remoteDailyWinsDate === todayKey
+                && remoteDailyWins > 0
+                && remoteDailyWins <= currentWins
+            ) ? remoteDailyWins : 0;
+            monthlyBaseWins = (
+                remoteMonthlyWinsKey === monthKey
+                && remoteMonthlyWins > 0
+                && remoteMonthlyWins <= currentWins
+            ) ? remoteMonthlyWins : 0;
+
+            if (remoteDailyWinsDate === todayKey && remoteDailyWins === currentWins && currentWins >= 25) {
+                dailyBaseWins = 0;
+            }
+            if (remoteMonthlyWinsKey === monthKey && remoteMonthlyWins === currentWins && currentWins >= 40) {
+                monthlyBaseWins = 0;
+            }
         }
 
         let nextDailyWins = dailyBaseWins + winsDelta;
