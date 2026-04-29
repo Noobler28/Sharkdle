@@ -1272,6 +1272,7 @@ const crateRewardPool = [
 
 let crateOpeningInProgress = false;
 let pendingProfileSyncTimeout = null;
+let pendingAuthStateClearTimeout = null;
 let globalXpEventOverride = null;
 let globalXpEventUnsubscribe = null;
 let cloudProfileReloadTimeouts = [];
@@ -2707,6 +2708,12 @@ function clearPendingProfileSyncTimeout() {
     pendingProfileSyncTimeout = null;
 }
 
+function clearPendingAuthStateClearTimeout() {
+    if (!pendingAuthStateClearTimeout) return;
+    clearTimeout(pendingAuthStateClearTimeout);
+    pendingAuthStateClearTimeout = null;
+}
+
 function clearCloudProfileReloadTimeouts() {
     cloudProfileReloadTimeouts.forEach(timeoutId => clearTimeout(timeoutId));
     cloudProfileReloadTimeouts = [];
@@ -2778,6 +2785,7 @@ function setupAuthStateListener() {
     // Listen for auth state changes
     auth.onAuthStateChanged(user => {
         const previousUid = currentUser?.uid || null;
+        clearPendingAuthStateClearTimeout();
         currentUser = user;
         window.currentUser = user;
         clearPendingProfileSyncTimeout();
@@ -2785,8 +2793,17 @@ function setupAuthStateListener() {
         if (!user || previousUid !== user.uid) {
             lastServerHydratedProfileUid = null;
         }
-        if (!user || (previousUid && user.uid !== previousUid)) {
+        if (previousUid && user && user.uid !== previousUid) {
             clearCachedProfileState();
+        } else if (!user) {
+            // During reload, auth can briefly emit null before the persisted session user.
+            // Delay clearing local stats so we don't wipe login streak keys during that race.
+            pendingAuthStateClearTimeout = setTimeout(() => {
+                pendingAuthStateClearTimeout = null;
+                if (!currentUser) {
+                    clearCachedProfileState();
+                }
+            }, 1500);
         }
         unsubscribeFriendNetworkListener();
         if (user && db) {
@@ -3067,6 +3084,89 @@ function getStoredDailyLoginModalShownDate(uid = null) {
     return localStorage.getItem(getDailyLoginModalShownStorageKey(uid)) || "";
 }
 
+function getLocalDateKey(dateValue = new Date()) {
+    const date = dateValue instanceof Date ? dateValue : new Date(dateValue);
+    if (Number.isNaN(date.getTime())) return "";
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+}
+
+function parseDateLikeValue(rawValue) {
+    if (rawValue === null || rawValue === undefined || rawValue === "") return null;
+
+    if (rawValue instanceof Date) {
+        return Number.isNaN(rawValue.getTime()) ? null : rawValue;
+    }
+
+    if (typeof rawValue === "number" && Number.isFinite(rawValue)) {
+        const numericDate = new Date(rawValue);
+        return Number.isNaN(numericDate.getTime()) ? null : numericDate;
+    }
+
+    if (typeof rawValue === "object") {
+        if (typeof rawValue.toDate === "function") {
+            const timestampDate = rawValue.toDate();
+            return timestampDate instanceof Date && !Number.isNaN(timestampDate.getTime()) ? timestampDate : null;
+        }
+        if (typeof rawValue.seconds === "number") {
+            const millis = rawValue.seconds * 1000 + Math.floor((rawValue.nanoseconds || 0) / 1000000);
+            const timestampDate = new Date(millis);
+            return Number.isNaN(timestampDate.getTime()) ? null : timestampDate;
+        }
+        if (typeof rawValue._seconds === "number") {
+            const millis = rawValue._seconds * 1000 + Math.floor((rawValue._nanoseconds || 0) / 1000000);
+            const timestampDate = new Date(millis);
+            return Number.isNaN(timestampDate.getTime()) ? null : timestampDate;
+        }
+        const objectString = typeof rawValue.toString === "function" ? rawValue.toString() : "";
+        if (!objectString || objectString === "[object Object]") return null;
+        return parseDateLikeValue(objectString);
+    }
+
+    if (typeof rawValue !== "string") return null;
+    const value = rawValue.trim();
+    if (!value || value === "[object Object]" || value.toLowerCase() === "invalid date") return null;
+
+    if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+        const [year, month, day] = value.split("-").map(Number);
+        return new Date(year, month - 1, day);
+    }
+
+    if (/^\d+$/.test(value)) {
+        let asNumber = Number(value);
+        // Treat 10-digit unix timestamps as seconds.
+        if (value.length <= 10) {
+            asNumber *= 1000;
+        }
+        if (Number.isFinite(asNumber)) {
+            const numericDate = new Date(asNumber);
+            if (!Number.isNaN(numericDate.getTime())) {
+                return numericDate;
+            }
+        }
+    }
+
+    const parsedDate = new Date(value);
+    return Number.isNaN(parsedDate.getTime()) ? null : parsedDate;
+}
+
+function normalizeStoredDateValue(rawValue) {
+    const parsedDate = parseDateLikeValue(rawValue);
+    return parsedDate ? getLocalDateKey(parsedDate) : "";
+}
+
+function getCalendarDayDifference(fromDateKey, toDateKey) {
+    if (!fromDateKey || !toDateKey) return NaN;
+    const fromDate = parseDateLikeValue(fromDateKey);
+    const toDate = parseDateLikeValue(toDateKey);
+    if (!fromDate || !toDate) return NaN;
+    const fromUtc = Date.UTC(fromDate.getFullYear(), fromDate.getMonth(), fromDate.getDate());
+    const toUtc = Date.UTC(toDate.getFullYear(), toDate.getMonth(), toDate.getDate());
+    return Math.round((toUtc - fromUtc) / 86400000);
+}
+
 async function getUserStatsSnapshot(statsRef) {
     try {
         const snapshot = await statsRef.get({ source: "server" });
@@ -3320,8 +3420,9 @@ async function loadUserProfile(options = {}) {
             } else {
                 localStorage.removeItem("loginStreak");
             }
-            if (firebaseData.lastLoginDate) {
-                localStorage.setItem("lastLoginDate", firebaseData.lastLoginDate);
+            const normalizedLastLoginDate = normalizeStoredDateValue(firebaseData.lastLoginDate);
+            if (normalizedLastLoginDate) {
+                localStorage.setItem("lastLoginDate", normalizedLastLoginDate);
             } else {
                 localStorage.removeItem("lastLoginDate");
             }
@@ -3330,8 +3431,11 @@ async function loadUserProfile(options = {}) {
             } else {
                 localStorage.removeItem("currentLoginDay");
             }
-            if (firebaseData.dailyLoginModalShownToday) {
-                localStorage.setItem(getDailyLoginModalShownStorageKey(currentUser.uid), firebaseData.dailyLoginModalShownToday);
+            const normalizedModalShownDate = normalizeStoredDateValue(firebaseData.dailyLoginModalShownToday);
+            if (normalizedModalShownDate) {
+                localStorage.setItem(getDailyLoginModalShownStorageKey(currentUser.uid), normalizedModalShownDate);
+            } else {
+                localStorage.removeItem(getDailyLoginModalShownStorageKey(currentUser.uid));
             }
             // Merge achievements instead of letting a stale Firestore snapshot clear local claims.
             const mergedClaimedAchievements = getMergedUniqueIds(
@@ -4568,8 +4672,22 @@ async function syncStatsToFirebase() {
         stats.currentLoginDay = localStorage.getItem("currentLoginDay") !== null
             ? parseInt(localStorage.getItem("currentLoginDay")) || 0
             : (Number(remoteData.currentLoginDay) || 0);
-        stats.lastLoginDate = localStorage.getItem("lastLoginDate") || remoteData.lastLoginDate || "";
-        stats.dailyLoginModalShownToday = getStoredDailyLoginModalShownDate() || remoteData.dailyLoginModalShownToday || "";
+        const normalizedLastLoginDate = normalizeStoredDateValue(localStorage.getItem("lastLoginDate"))
+            || normalizeStoredDateValue(remoteData.lastLoginDate);
+        if (normalizedLastLoginDate) {
+            localStorage.setItem("lastLoginDate", normalizedLastLoginDate);
+        } else {
+            localStorage.removeItem("lastLoginDate");
+        }
+        stats.lastLoginDate = normalizedLastLoginDate;
+        const normalizedModalShownDate = normalizeStoredDateValue(getStoredDailyLoginModalShownDate())
+            || normalizeStoredDateValue(remoteData.dailyLoginModalShownToday);
+        if (normalizedModalShownDate) {
+            localStorage.setItem(getDailyLoginModalShownStorageKey(), normalizedModalShownDate);
+        } else {
+            localStorage.removeItem(getDailyLoginModalShownStorageKey());
+        }
+        stats.dailyLoginModalShownToday = normalizedModalShownDate;
 
         // Save stats to userStats collection
         await statsRef.set(stats, { merge: true });
@@ -4686,12 +4804,22 @@ async function ensureLoginStreakRewards() {
 async function initializeDailyLogin() {
     if (!currentUser) return;
 
-    const today = new Date().toDateString();
-    const lastLoginDate = localStorage.getItem("lastLoginDate");
+    const today = getLocalDateKey();
+    const storedLastLoginDate = localStorage.getItem("lastLoginDate");
+    const lastLoginDate = normalizeStoredDateValue(storedLastLoginDate);
     const dailyLoginModalShownStorageKey = getDailyLoginModalShownStorageKey();
-    const dailyLoginModalShownToday = getStoredDailyLoginModalShownDate() === today;
+    const storedModalShownDate = getStoredDailyLoginModalShownDate();
+    const normalizedModalShownDate = normalizeStoredDateValue(storedModalShownDate);
+    const dailyLoginModalShownToday = normalizedModalShownDate === today;
     const currentLoginDay = parseInt(localStorage.getItem("currentLoginDay")) || 1;
     const totalXP = parseInt(localStorage.getItem("totalXP")) || 0;
+
+    if (storedLastLoginDate && lastLoginDate && storedLastLoginDate !== lastLoginDate) {
+        localStorage.setItem("lastLoginDate", lastLoginDate);
+    }
+    if (storedModalShownDate && normalizedModalShownDate && storedModalShownDate !== normalizedModalShownDate) {
+        localStorage.setItem(dailyLoginModalShownStorageKey, normalizedModalShownDate);
+    }
 
     // Check if user has already logged in today
     if (lastLoginDate !== today) {
@@ -4700,9 +4828,7 @@ async function initializeDailyLogin() {
         let streak = 1;
         
         if (lastLoginDate) {
-            const lastDate = new Date(lastLoginDate);
-            const todayObj = new Date(today);
-            const daysDiff = Math.floor((todayObj - lastDate) / (1000 * 60 * 60 * 24));
+            const daysDiff = getCalendarDayDifference(lastLoginDate, today);
             
             if (daysDiff === 1) {
                 // User logged in yesterday, advance the day
@@ -4712,7 +4838,18 @@ async function initializeDailyLogin() {
                 // User missed days, reset to day 1
                 nextDay = 1;
                 streak = 1;
+            } else if (!Number.isFinite(daysDiff)) {
+                // Recover from legacy/invalid date formats without wiping streak progress.
+                nextDay = currentLoginDay + 1;
+                streak = (parseInt(localStorage.getItem("loginStreak")) || 1) + 1;
+            } else {
+                // Same day/future date edge cases should keep existing streak.
+                streak = parseInt(localStorage.getItem("loginStreak")) || 1;
             }
+        } else if (storedLastLoginDate) {
+            // We had legacy unparseable data - preserve momentum once and rewrite in normalized format.
+            nextDay = currentLoginDay + 1;
+            streak = (parseInt(localStorage.getItem("loginStreak")) || 1) + 1;
         }
 
         // Get reward for this day using modulo to cycle through 7-day rewards
@@ -5242,12 +5379,12 @@ async function addLoginDays(days) {
         const loginStreak = parseInt(localStorage.getItem("loginStreak")) || 1;
         const nextLoginDay = currentLoginDay + Math.floor(amount);
         const nextLoginStreak = loginStreak + Math.floor(amount);
-        const today = new Date().toDateString();
+        const today = getLocalDateKey();
 
         localStorage.setItem("currentLoginDay", String(nextLoginDay));
         localStorage.setItem("loginStreak", String(nextLoginStreak));
         localStorage.setItem("lastLoginDate", today);
-        localStorage.setItem("dailyLoginModalShownToday", "false");
+        localStorage.removeItem(getDailyLoginModalShownStorageKey());
 
         await db.collection("userStats").doc(currentUser.uid).set({
             currentLoginDay: nextLoginDay,
@@ -5266,6 +5403,56 @@ async function addLoginDays(days) {
         }
     } catch (error) {
         console.error("❌ Error adding login days:", error);
+    }
+}
+
+async function skipLoginDay(days = 1) {
+    if (!firebase.auth().currentUser || !isDeveloperUid(firebase.auth().currentUser.uid)) {
+        console.log("❌ Access denied. This command is for developers only.");
+        return;
+    }
+    if (!currentUser) {
+        console.log("❌ Error: User must be logged in");
+        return;
+    }
+
+    const amount = Number(days);
+    if (!Number.isFinite(amount) || amount <= 0) {
+        console.log("❌ Usage: skipLoginDay(1)");
+        return;
+    }
+
+    const skippedDays = Math.floor(amount);
+
+    try {
+        const simulatedLastLogin = new Date();
+        simulatedLastLogin.setHours(12, 0, 0, 0);
+        // Skip N calendar days means the previous login was N+1 days ago.
+        simulatedLastLogin.setDate(simulatedLastLogin.getDate() - (skippedDays + 1));
+        const simulatedLastLoginDate = getLocalDateKey(simulatedLastLogin);
+        if (!simulatedLastLoginDate) {
+            console.log("❌ Could not generate a valid simulated login date.");
+            return;
+        }
+
+        localStorage.setItem("lastLoginDate", simulatedLastLoginDate);
+        localStorage.removeItem(getDailyLoginModalShownStorageKey());
+
+        await db.collection("userStats").doc(currentUser.uid).set({
+            lastLoginDate: simulatedLastLoginDate,
+            dailyLoginModalShownToday: ""
+        }, { merge: true });
+
+        await initializeDailyLogin();
+        await loadUserProfile();
+
+        const currentLoginDay = parseInt(localStorage.getItem("currentLoginDay")) || 1;
+        const loginStreak = parseInt(localStorage.getItem("loginStreak")) || 1;
+        console.log(`✅ Simulated skipping ${skippedDays} day(s).`);
+        console.log(`   lastLoginDate set to ${simulatedLastLoginDate}`);
+        console.log(`   Post-check login day: ${currentLoginDay}, login streak: ${loginStreak}`);
+    } catch (error) {
+        console.error("❌ Error skipping login day:", error);
     }
 }
 
@@ -5438,6 +5625,7 @@ function showCommands() {
     console.log("addLoss() - Add 1 loss");
     console.log("addGuesses(10) - Add guesses");
     console.log("addLoginDays(7) - Add login days/streak and test login rewards");
+    console.log("skipLoginDay(1) - Simulate missing 1 day and re-run daily login logic");
     console.log("addCrates(3) - Add Cosmetic Crates for testing");
     console.log("addTestStats() - Quick test add (500 XP, 10 wins, 5 losses, 15 games, 75 guesses)");
     console.log("revealShark() - Reveal the currently open duel shark");
