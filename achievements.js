@@ -41,6 +41,30 @@ const achievementDefinitions = {
             type: 'special'
         },
         {
+            id: 'summer_crate_opened',
+            name: 'First Summer Unboxing',
+            description: 'Open a Summer Crate',
+            icon: '☀️',
+            points: 40,
+            type: 'special'
+        },
+        {
+            id: 'halloween_crate_opened',
+            name: 'First Halloween Unboxing',
+            description: 'Open a Halloween Crate',
+            icon: '🎃',
+            points: 40,
+            type: 'special'
+        },
+        {
+            id: 'christmas_crate_opened',
+            name: 'First Christmas Unboxing',
+            description: 'Open a Christmas Crate',
+            icon: '🎁',
+            points: 40,
+            type: 'special'
+        },
+        {
             id: 'secret_prestige_1',
             name: 'First Renown',
             description: 'Prestige once in Shark Rescue Command',
@@ -396,6 +420,15 @@ async function retroactivelyUnlockAchievements(profileData, unlockedAchievements
     }
     if (typeof window.getOpenedCrateCount === 'function' && window.getOpenedCrateCount(profileData) >= 1 && !unlockedAchievements.includes('crate_opened')) {
         unlockedAchievements.push('crate_opened');
+    }
+    if (typeof window.getOpenedCrateCount === 'function' && window.getOpenedCrateCount(profileData, 'summer') >= 1 && !unlockedAchievements.includes('summer_crate_opened')) {
+        unlockedAchievements.push('summer_crate_opened');
+    }
+    if (typeof window.getOpenedCrateCount === 'function' && window.getOpenedCrateCount(profileData, 'halloween') >= 1 && !unlockedAchievements.includes('halloween_crate_opened')) {
+        unlockedAchievements.push('halloween_crate_opened');
+    }
+    if (typeof window.getOpenedCrateCount === 'function' && window.getOpenedCrateCount(profileData, 'christmas') >= 1 && !unlockedAchievements.includes('christmas_crate_opened')) {
+        unlockedAchievements.push('christmas_crate_opened');
     }
     const secretState = getSecretCommandState();
     if ((secretState.prestigeCount || 0) >= 1 && !unlockedAchievements.includes('secret_prestige_1')) {
