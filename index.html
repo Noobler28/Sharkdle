@@ -123,10 +123,10 @@
     <i class="fa-solid fa-ranking-star"></i>
     <h2>Leaderboards</h2>
     <p>See the top Sharkdle players.</p>
-</div>
+  </div>
 
-</section>
-</section>
+ </section>
+ </section>
 
 
 </main>
@@ -134,7 +134,7 @@
 <footer class="home-footer">
 
 
-<p>Made with <span style="color:#ff6b6b;font-weight:bold;">❤️</span> by the Sharkdle Team - thanks for playing!</p>
+<p>Made with <a href="rng.html" style="color:#ff6b6b;font-weight:bold;text-decoration:none;cursor:pointer;">❤️</a> by the Sharkdle Team - thanks for playing!</p>
 <div style="margin: 10px 0 8px 0;">
     <button onclick="openDevModal()" style="background:none;border:none;background:linear-gradient(45deg,#f6d365,#fda085);-webkit-background-clip:text;background-clip:text;color:transparent;cursor:pointer;font-weight:600;text-decoration:underline;font-size:inherit;margin:0 8px;">Meet the Dev</button>
 </div>
@@ -157,12 +157,16 @@
         </a>
         <h3 style="margin:10px 0 6px 0;font-size:1.15em;color:#4dd0e1;">Noobler28 (Connor)</h3>
         <p style="color:#bbb;font-size:14px;margin-bottom:12px;">Hi! I'm Connor, a college student studying marine biology and the solo developer behind Sharkdle. I started this project out of my love for sharks and ocean science. What began as a passion project has grown thanks to your support, and it motivates me to keep building new features and sharing my love for the ocean with you all. Thank you for playing and being part of the Sharkdle community!</p>
-        <div style="margin-bottom:12px;">
-            <a href="https://github.com/Noobler28" target="_blank" style="background:linear-gradient(45deg,#333,#6e6e6e);-webkit-background-clip:text;background-clip:text;color:transparent;text-decoration:underline;margin:0 8px;">GitHub</a>
-            <a href="https://instagram.com/sharkdle.dev" target="_blank" style="background:linear-gradient(45deg,#feda75,#fa7e1e,#d62976,#962fbf,#4f5bd5);-webkit-background-clip:text;background-clip:text;color:transparent;text-decoration:underline;margin:0 8px;">Instagram</a>
-            <a href="https://discord.gg/V97Y8545Ve" target="_blank" style="background:linear-gradient(45deg,#5865F2,#7289da);-webkit-background-clip:text;background-clip:text;color:transparent;text-decoration:underline;margin:0 8px;">Discord</a>
-        </div>
-        <button onclick="closeDevModal()" style="width:100%;padding:10px;margin-top:8px;background:#ccc;color:#333;border:none;border-radius:6px;cursor:pointer;font-weight:600;">Close</button>
+<div style="margin-bottom:12px;">
+             <a href="https://github.com/Noobler28" target="_blank" style="background:linear-gradient(45deg,#333,#6e6e6e);-webkit-background-clip:text;background-clip:text;color:transparent;text-decoration:underline;margin:0 8px;">GitHub</a>
+             <a href="https://instagram.com/sharkdle.dev" target="_blank" style="background:linear-gradient(45deg,#feda75,#fa7e1e,#d62976,#962fbf,#4f5bd5);-webkit-background-clip:text;background-clip:text;color:transparent;text-decoration:underline;margin:0 8px;">Instagram</a>
+             <a href="https://discord.gg/V97Y8545Ve" target="_blank" style="background:linear-gradient(45deg,#5865F2,#7289da);-webkit-background-clip:text;background-clip:text;color:transparent;text-decoration:underline;margin:0 8px;">Discord</a>
+         </div>
+         <div style="margin-bottom:12px;padding-top:8px;border-top:1px solid #333;">
+             <p style="color:#888;font-size:13px;margin-bottom:6px;">☕ Support the Dev</p>
+             <a href="https://buymeacoffee.com/sharkdle" target="_blank" style="background:linear-gradient(45deg,#ffdd00,#ff9e00);-webkit-background-clip:text;background-clip:text;color:transparent;text-decoration:underline;margin:0 6px;font-size:14px;">Donate!</a>
+         </div>
+         <button onclick="closeDevModal()" style="width:100%;padding:10px;margin-top:8px;background:#ccc;color:#333;border:none;border-radius:6px;cursor:pointer;font-weight:600;">Close</button>
     </div>
 </div>
 
@@ -228,7 +232,7 @@
 </div>
 <div class="profile-badge-panel" style="margin-left:30px; text-align:center;">
     <div class="profile-badge-kicker">Equipped Badge</div>
-    <img id="profile-badge-img" src="images/badges/starter.png" alt="Badge" class="profile-badge-image" style="width:48px;height:48px;border-radius:8px;border:2px solid #00b4d8;display:block;margin:0 auto 4px;">
+    <img id="profile-badge-img" class="profile-badge-image" src="" alt="Badge" style="display:none;">
     <span id="profile-badge-label" class="profile-badge-name" style="font-size:13px;font-weight:600;">Starter</span>
     <button onclick="openBadgeModal()" class="profile-badge-btn" style="margin-top:10px;padding:8px 12px;background:#00b4d8;color:white;border:none;border-radius:10px;cursor:pointer;font-weight:600;font-size:12px;">Edit Badge</button>
 </div>
@@ -597,26 +601,45 @@
 
 <!-- Profile Picture Modal -->
 <div id="profilePicModal" class="modal hidden">
-<div class="modal-content picker-modal-content profile-pic-modal-content" style="width: 95%; max-width: 800px; max-height: 85vh; overflow-y: auto; display: flex; flex-direction: column;">
+<div class="modal-content picker-modal-content pfp-picker-modal-content">
 <div class="picker-modal-heading">
 <div class="picker-modal-kicker">Cosmetics</div>
-<h2 style="margin-top: 0; margin-bottom: 20px;">Choose Profile Picture</h2>
+<h2>Profile Picture</h2>
+<p class="pfp-picker-subtitle">Choose a portrait for your profile, friends list, and leaderboards.</p>
 </div>
 
-<div class="picker-section" style="margin: 10px 0; flex: 1; min-height: 0;">
-<h3 style="font-size: 16px; margin-bottom: 12px;">🎨 Available Profile Pictures</h3>
-<div class="avatar-selector" id="available-pfps" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(95px, 1fr)); gap: 12px; margin: 10px 0; padding: 8px;">
+<div class="pfp-picker-preview" id="pfp-picker-preview">
+<div class="pfp-picker-preview-frame">
+<img id="pfp-picker-preview-img" src="images/pfp/shark1.png" alt="Selected profile picture">
+<span class="pfp-picker-preview-crown hidden" id="pfp-picker-preview-crown" aria-hidden="true">👑</span>
+</div>
+<div class="pfp-picker-preview-copy">
+<div class="pfp-picker-preview-label">Equipped portrait</div>
+<div class="pfp-picker-preview-name" id="pfp-picker-preview-name">Whale Shark</div>
+<div class="pfp-picker-preview-source" id="pfp-picker-preview-source">Starter shark</div>
 </div>
 </div>
 
-<div class="picker-section picker-section-earned" style="margin: 15px 0; border-top: 1px solid #444; padding-top: 15px; flex: 1; min-height: 0;">
-<h3 style="font-size: 16px; margin-bottom: 12px;">🏆 Shark Pass Profile Pictures</h3>
-<div class="avatar-selector" id="earned-pfps" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(95px, 1fr)); gap: 12px; margin: 10px 0; padding: 8px;">
+<div class="pfp-picker-toolbar">
+<input type="search" id="pfp-picker-search" class="pfp-picker-search" placeholder="Search sharks..." autocomplete="off" spellcheck="false">
+<div class="pfp-picker-tabs picker-modal-tabs" id="pfp-picker-tabs" role="tablist">
+<button type="button" class="picker-modal-tab active" data-pfp-filter="all" role="tab" aria-selected="true">All</button>
+<button type="button" class="picker-modal-tab" data-pfp-filter="starter" role="tab">Starter</button>
+<button type="button" class="picker-modal-tab" data-pfp-filter="pass" role="tab">Shark Pass</button>
+<button type="button" class="picker-modal-tab" data-pfp-filter="reward" role="tab">Rewards</button>
+<button type="button" class="picker-modal-tab" data-pfp-filter="crate" role="tab">Crates</button>
 </div>
-<p id="no-earned" style="text-align: center; color: #888; font-size: 14px; margin: 15px 0;">No cosmetics earned yet. Check Shark Pass for rewards!</p>
 </div>
 
-<button onclick="closeProfilePicModal()" style="width: 100%; padding: 10px; margin-top: 12px; background: #ccc; color: #333; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; flex-shrink: 0;">Close</button>
+<div class="pfp-picker-meta">
+<span id="pfp-picker-count">0 portraits</span>
+<span id="pfp-picker-unlocked-count">0 unlocked</span>
+</div>
+
+<div id="pfp-picker-grid" class="pfp-picker-grid" role="list"></div>
+<p id="pfp-picker-empty" class="pfp-picker-empty hidden">No portraits match your search. Try another filter or clear the search box.</p>
+
+<button type="button" class="pfp-picker-close-btn" onclick="closeProfilePicModal()">Done</button>
 </div>
 </div>
 
@@ -667,16 +690,19 @@
 <div id="admin-xp-status" class="admin-abuse-status">No event update yet.</div>
     </section>
 
+<section class="picker-section admin-abuse-section">
+<h3>Online Users</h3>
+<div class="admin-abuse-row">
+<div id="admin-online-users-display" class="admin-online-users-display" title="Hover to view online users.">Online users: 0</div>
+</div>
+<div class="admin-abuse-status"></div>
+</section>
+
     <section class="picker-section admin-abuse-section">
         <h3>Global Item Grants</h3>
 <p style="margin:0 0 10px 0;color:#9fd9ea;font-size:12px;">Grants only apply to players active in the last 5 minutes.</p>
 <div class="admin-abuse-grid">
-<div class="admin-abuse-card">
-<div class="admin-abuse-card-title">Crates</div>
-<div class="admin-abuse-row">
-<input id="admin-grant-crates-count" type="number" min="1" max="99" step="1" value="1" class="admin-abuse-input" placeholder="Amount">
-<button class="admin-abuse-btn" onclick="adminGrantGlobalCrates()">Grant</button>
-</div>
+
 </div>
 <div class="admin-abuse-card">
 <div class="admin-abuse-card-title">Streak Shields</div>
@@ -724,51 +750,159 @@
 <div class="picker-modal-heading">
 <p>Win games for a 35% shot at earning a crate.</p>
 </div>
-
+<div class="picker-modal-tabs">
+  <button id="inventory-tab" class="picker-modal-tab active">Inventory</button>
+  <button id="crafting-tab" class="picker-modal-tab">Crafting</button>
+</div>
+<div id="inventory-panel" class="picker-modal-tab-panel active">
 <div class="crates-layout">
-<section class="picker-section crate-inventory-panel">
-<div class="crate-panel-topline">
-<div>
-<h3>Cosmetic Crate</h3>
-</div>
-<button class="crate-inspect-btn" onclick="openCrateDropsModal()" aria-label="View possible drops">
-<i class="fa-solid fa-eye"></i>
-</button>
-<div class="crate-count-badge"><span id="crate-count-value">0</span> ready</div>
-</div>
-<div class="crate-showcase">
-<div class="crate-visual">
-<i class="fa-solid fa-box-open"></i>
-</div>
-<div class="crate-odds">
-<div class="crate-odds-row"><span>Common</span><strong>58%</strong></div>
-<div class="crate-odds-row"><span>Rare</span><strong>28%</strong></div>
-<div class="crate-odds-row"><span>Epic</span><strong>10%</strong></div>
-<div class="crate-odds-row"><span>Legendary</span><strong>4%</strong></div>
-</div>
-</div>
-<div class="crate-action-row">
-<button id="open-crate-btn" class="primary-btn crate-open-btn" onclick="openCrate('reef')">Open Cosmetic Crate</button>
-<div id="crate-status-copy" class="crate-status-copy"></div>
-</div>
-<div class="crate-settings-row">
-<label class="crate-toggle" for="crate-instant-toggle">
-<input id="crate-instant-toggle" type="checkbox" onchange="toggleCrateInstantOpen(this.checked)">
-<span class="crate-toggle-slider" aria-hidden="true"></span>
-<span class="crate-toggle-copy">
-<strong>Instant open</strong>
-<small>Skip the crate animation.</small>
-</span>
-</label>
-<div id="crate-pity-copy" class="crate-pity-copy"></div>
-<div id="streak-shield-copy" class="crate-pity-copy"></div>
-</div>
-<div class="crate-action-row">
-</div>
+   <section class="picker-section crate-inventory-panel">
+     <!-- Cosmetic Crate Panel -->
+     <div class="crate-panel-topline">
+       <div>
+         <h3>Cosmetic Crate</h3>
+       </div>
+       <button class="crate-inspect-btn" onclick="openCrateDropsModal()" aria-label="View possible drops">
+         <i class="fa-solid fa-eye"></i>
+       </button>
+       <div class="crate-count-badge"><span id="crate-count-value">0</span> ready</div>
+     </div>
+     <div class="crate-showcase">
+       <div class="crate-visual">
+         <i class="fa-solid fa-box-open"></i>
+       </div>
+       <div class="crate-odds">
+         <div class="crate-odds-row"><span>Common</span><strong>58%</strong></div>
+         <div class="crate-odds-row"><span>Rare</span><strong>28%</strong></div>
+         <div class="crate-odds-row"><span>Epic</span><strong>10%</strong></div>
+         <div class="crate-odds-row"><span>Legendary</span><strong>4%</strong></div>
+       </div>
+     </div>
+     <div class="crate-action-row">
+       <button id="open-crate-btn" class="primary-btn crate-open-btn" onclick="openCrate('reef')">Open Cosmetic Crate</button>
+     </div>
+   </section>
+   <!-- Summer Crate Panel: Only show if summer theme is active, displayed beside reef crate -->
+   <section id="summer-crate-panel" class="picker-section crate-inventory-panel" style="display:none;">
+     <div class="crate-panel-topline">
+       <div>
+         <h3>Summer Crate <span style="font-size:14px;color:#ffeb3b;">(Limited!)</span></h3>
+       </div>
+       <button class="crate-inspect-btn" onclick="openCrateDropsModal('summer')" aria-label="View possible drops">
+         <i class="fa-solid fa-umbrella-beach"></i>
+       </button>
+       <div class="crate-count-badge"><span id="summer-crate-count-value">0</span> ready</div>
+     </div>
+     <div class="crate-showcase">
+       <div class="crate-visual">
+         <i class="fa-solid fa-umbrella-beach"></i>
+       </div>
+       <div class="crate-odds">
+        <div class="crate-odds-row"><span>Common</span><strong>58%</strong></div>
+         <div class="crate-odds-row"><span>Rare</span><strong>28%</strong></div>
+         <div class="crate-odds-row"><span>Epic</span><strong>10%</strong></div>
+         <div class="crate-odds-row"><span>Legendary</span><strong>4%</strong></div>
+       </div>
+     </div>
+      <div class="crate-action-row">
+        <button id="open-summer-crate-btn" class="primary-btn crate-open-btn" onclick="openCrate('summer')">Open Summer Crate</button>
+      </div>
 </section>
-
+    <!-- Christmas Crate Panel: Only show if christmas theme is active -->
+    <section id="christmas-crate-panel" class="picker-section crate-inventory-panel" style="display:none;">
+      <div class="crate-panel-topline">
+        <div>
+          <h3>Christmas Crate <span style="font-size:14px;color:#ff6b6b;">(Limited!)</span></h3>
+        </div>
+        <button class="crate-inspect-btn" onclick="openCrateDropsModal('christmas')" aria-label="View possible drops">
+          <i class="fa-solid fa-gift"></i>
+        </button>
+        <div class="crate-count-badge"><span id="christmas-crate-count-value">0</span> ready</div>
+      </div>
+      <div class="crate-showcase">
+        <div class="crate-visual">
+          <i class="fa-solid fa-gift"></i>
+        </div>
+        <div class="crate-odds">
+         <div class="crate-odds-row"><span>Common</span><strong>58%</strong></div>
+          <div class="crate-odds-row"><span>Rare</span><strong>28%</strong></div>
+          <div class="crate-odds-row"><span>Epic</span><strong>10%</strong></div>
+          <div class="crate-odds-row"><span>Legendary</span><strong>4%</strong></div>
+        </div>
+      </div>
+      <div class="crate-action-row">
+        <button id="open-christmas-crate-btn" class="primary-btn crate-open-btn" onclick="openCrate('christmas')">Open Christmas Crate</button>
+      </div>
+     </section>
+    <!-- Halloween Crate Panel: Only show if halloween theme is active -->
+    <section id="halloween-crate-panel" class="picker-section crate-inventory-panel" style="display:none;">
+      <div class="crate-panel-topline">
+        <div>
+          <h3>Halloween Crate <span style="font-size:14px;color:#ff6b6b;">(Limited!)</span></h3>
+        </div>
+        <button class="crate-inspect-btn" onclick="openCrateDropsModal('halloween')" aria-label="View possible drops">
+          <i class="fa-solid fa-ghost"></i>
+        </button>
+        <div class="crate-count-badge"><span id="halloween-crate-count-value">0</span> ready</div>
+      </div>
+      <div class="crate-showcase">
+        <div class="crate-visual">
+          <i class="fa-solid fa-ghost"></i>
+        </div>
+        <div class="crate-odds">
+         <div class="crate-odds-row"><span>Common</span><strong>58%</strong></div>
+          <div class="crate-odds-row"><span>Rare</span><strong>28%</strong></div>
+          <div class="crate-odds-row"><span>Epic</span><strong>10%</strong></div>
+          <div class="crate-odds-row"><span>Legendary</span><strong>4%</strong></div>
+        </div>
+      </div>
+      <div class="crate-action-row">
+        <button id="open-halloween-crate-btn" class="primary-btn crate-open-btn" onclick="openCrate('halloween')">Open Halloween Crate</button>
+      </div>
+     </section>
+   </div>
+  <div class="crate-settings-row">
+    <label class="crate-toggle" for="crate-instant-toggle">
+      <input id="crate-instant-toggle" type="checkbox" onchange="toggleCrateInstantOpen(this.checked)">
+      <span class="crate-toggle-slider" aria-hidden="true"></span>
+      <span class="crate-toggle-copy">
+        <strong>Instant Open</strong>
+        <small>Skip crate animations and reveal rewards instantly.</small>
+      </span>
+    </label>
+    <div id="crate-pity-copy" class="crate-pity-copy"></div>
+    <div id="streak-shield-copy" class="crate-pity-copy"></div>
+  </div>
+  <div id="crate-status-copy" class="crate-status-copy"></div>
 </div>
-
+<div id="crafting-panel" class="picker-modal-tab-panel">
+  <section class="picker-section crate-crafting-panel">
+    <div class="crate-crafting-recipe">
+      <article class="crate-crafting-slot">
+        <div class="crate-crafting-icon cosmetic">
+          <i class="fa-solid fa-box-open" aria-hidden="true"></i>
+        </div>
+        <h4>Cosmetic Crate</h4>
+        <p><span id="craft-reef-owned">0</span> owned · need 2</p>
+      </article>
+      <div class="crate-crafting-arrow" aria-hidden="true">
+        <i class="fa-solid fa-arrow-right"></i>
+      </div>
+      <article class="crate-crafting-slot output">
+        <div class="crate-crafting-icon summer">
+          <i class="fa-solid fa-umbrella-beach" aria-hidden="true"></i>
+        </div>
+        <h4>Summer Crate</h4>
+        <p><span id="craft-summer-owned">0</span> owned</p>
+      </article>
+    </div>
+    <p class="crate-crafting-copy">Combine 2 Cosmetic Crates into 1 Summer Crate.</p>
+    <div class="crate-crafting-actions">
+      <button id="craft-summer-crate-btn" type="button" class="primary-btn crate-craft-btn" onclick="craftSummerCrate()">Craft Summer Crate</button>
+      <button type="button" class="secondary-btn" onclick="openCrateDropsModal('summer')">View Summer Drops</button>
+    </div>
+  </section>
+</div>
 <button onclick="closeCratesModal()" style="width: 100%; padding: 10px; margin-top: 16px; background: #ccc; color: #333; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; flex-shrink: 0;">Close</button>
 </div>
 </div>
@@ -787,13 +921,22 @@
 </div>
 </div>
 
-<div id="crateUnboxOverlay" class="crate-unbox-overlay hidden">
+<div id="crateUnboxOverlay" class="crate-unbox-overlay hidden crate-theme-reef">
 <div class="crate-unbox-backdrop"></div>
-<div class="crate-unbox-stage">
+<div id="crate-unbox-stage" class="crate-unbox-stage">
+<div id="crate-unbox-fx" class="crate-unbox-fx" aria-hidden="true">
+  <div class="crate-unbox-sun"></div>
+  <div class="crate-unbox-rays"></div>
+  <div class="crate-unbox-waves"></div>
+  <div class="crate-unbox-sparkles">
+    <span></span><span></span><span></span><span></span><span></span><span></span>
+  </div>
+</div>
 <div id="crate-unbox-burst" class="crate-unbox-burst"></div>
+<div id="crate-unbox-splash" class="crate-unbox-splash" aria-hidden="true"></div>
 <div id="crate-unbox-crate" class="crate-unbox-crate">
-<div class="crate-unbox-crate-lid"></div>
-<div class="crate-unbox-crate-body"><i class="fa-solid fa-box-open"></i></div>
+<div class="crate-unbox-crate-lid"><span class="crate-unbox-lid-accent" aria-hidden="true"></span></div>
+<div class="crate-unbox-crate-body"><i id="crate-unbox-icon" class="fa-solid fa-box-open" aria-hidden="true"></i></div>
 </div>
 <div id="crate-unbox-copy" class="crate-unbox-copy">The cosmetic crate is opening...</div>
 <div id="crate-overlay-reveal" class="crate-overlay-reveal hidden"></div>
