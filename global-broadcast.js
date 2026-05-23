@@ -15,7 +15,7 @@
     const MESSAGE_CACHE_KEY = "globalBroadcastMessageCache";
     const THEME_CACHE_KEY = "globalUiThemeCache";
     const THEME_DISABLE_KEY = "disableSeasonalTheme";
-    const THEME_IDS = ["default", "summer", "birthday", "christmas", "halloween"];
+    const THEME_IDS = ["default", "summer", "birthday", "christmas", "halloween", "northpole"];
     const THEME_CLASS_PREFIX = "global-ui-theme-";
     const STYLE_ID = "global-broadcast-style";
     const BANNER_ID = "global-broadcast-banner";
@@ -260,6 +260,70 @@
                 --global-theme-navbar-bg: #1e1133;
                 --global-theme-surface-bg: linear-gradient(180deg, rgba(35, 19, 54, 0.96), rgba(86, 40, 14, 0.9));
                 --global-theme-surface-border: rgba(255, 193, 142, 0.3);
+            }
+            /* North Pole: icy blues + animated snowflakes */
+            body.${THEME_CLASS_PREFIX}northpole {
+                --global-theme-body-bg: linear-gradient(135deg, #0a2f4a, #1a5a7a, #2a7fa0);
+                --global-theme-navbar-bg: #08293d;
+                --global-theme-surface-bg: linear-gradient(180deg, rgba(10, 47, 74, 0.96), rgba(26, 95, 122, 0.92));
+                --global-theme-surface-border: rgba(179, 224, 255, 0.25);
+            }
+            body.${THEME_CLASS_PREFIX}northpole {
+                position: relative;
+            }
+            body.${THEME_CLASS_PREFIX}northpole::before {
+                content: "";
+                position: fixed;
+                inset: 0;
+                pointer-events: none;
+                z-index: 2;
+                opacity: 0.7;
+                background:
+                    radial-gradient(circle at 20px 40px, rgba(255, 255, 255, 0.9) 0 2px, transparent 3px),
+                    radial-gradient(circle at 120px 80px, rgba(255, 255, 255, 0.8) 0 1.8px, transparent 2.8px),
+                    radial-gradient(circle at 220px 30px, rgba(255, 255, 255, 0.9) 0 2.2px, transparent 3.2px),
+                    radial-gradient(circle at 80px 180px, rgba(255, 255, 255, 0.85) 0 1.6px, transparent 2.6px),
+                    radial-gradient(circle at 200px 150px, rgba(255, 255, 255, 0.9) 0 2px, transparent 3px),
+                    radial-gradient(circle at 320px 100px, rgba(255, 255, 255, 0.8) 0 1.8px, transparent 2.8px),
+                    radial-gradient(circle at 400px 50px, rgba(255, 255, 255, 0.9) 0 2.4px, transparent 3.4px),
+                    radial-gradient(circle at 500px 120px, rgba(255, 255, 255, 0.85) 0 1.7px, transparent 2.7px),
+                    radial-gradient(circle at 600px 70px, rgba(255, 255, 255, 0.9) 0 2px, transparent 3px),
+                    radial-gradient(circle at 700px 160px, rgba(255, 255, 255, 0.8) 0 1.9px, transparent 2.9px);
+                background-size: 800px 800px;
+                animation: snowfall 20s linear infinite;
+            }
+            body.${THEME_CLASS_PREFIX}northpole .logo {
+                display: inline-flex;
+                align-items: center;
+                gap: 10px;
+                background: linear-gradient(135deg, #e6f7ff, #b3e0ff, #80d0ff);
+                -webkit-background-clip: text;
+                -webkit-text-fill-color: transparent;
+                background-clip: text;
+            }
+            body.${THEME_CLASS_PREFIX}northpole .logo::after {
+                content: "North Pole";
+                display: inline-block;
+                padding: 6px 10px;
+                border-radius: 999px;
+                font-size: 11px;
+                font-weight: 800;
+                letter-spacing: 0.1em;
+                text-transform: uppercase;
+                background: rgba(255, 255, 255, 0.10);
+                border: 1px solid rgba(179, 224, 255, 0.34);
+                color: #e6f7ff;
+                box-shadow: 0 10px 22px rgba(0, 0, 0, 0.18);
+                -webkit-text-fill-color: #e6f7ff;
+            }
+            @keyframes snowfall {
+                from { background-position: 0 0, 40px 20px, 120px 10px, 80px 80px, 200px 60px, 320px 40px, 400px 30px, 500px 100px, 600px 70px, 700px 140px; }
+                to { background-position: 0 800px, 40px 820px, 120px 810px, 80px 880px, 200px 860px, 320px 840px, 400px 830px, 500px 900px, 600px 870px, 700px 940px; }
+            }
+            @media (prefers-reduced-motion: reduce) {
+                body.${THEME_CLASS_PREFIX}northpole::before {
+                    animation: none;
+                }
             }
             body[class*="${THEME_CLASS_PREFIX}"] {
                 background: var(--global-theme-body-bg, linear-gradient(135deg, #061a40, #0b3c5d)) !important;
