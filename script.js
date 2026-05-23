@@ -301,6 +301,155 @@ function formatDuelStatus(status) {
     }
 }
 
+async function persistCrateProfileUpdate(profileData) {
+    profileData.lastUpdated = Date.now();
+    saveUserProfileLocally(profileData, { skipRemoteSync: true });
+
+    if (!currentUser || !db) return;
+    await db.collection("userStats").doc(currentUser.uid).set({
+        crateInventory: normalizeCrateInventory(profileData.crateInventory),
+        cratesOpened: Math.max(0, Number(profileData.cratesOpened) || 0),
+        cratesSinceLegendary: getCratesSinceLegendary(profileData),
+        streakShields: getStreakShieldCount(profileData),
+        instantCrateOpen: getCrateInstantOpenEnabled(profileData),
+        totalXP: Math.max(0, Number(profileData.totalXP) || 0),
+        earnedCosmetics: Array.isArray(profileData.earnedCosmetics) ? profileData.earnedCosmetics : [],
+        unlockedBadges: Array.isArray(profileData.unlockedBadges) ? profileData.unlockedBadges : ["starter"],
+        unlockedCardThemes: Array.isArray(profileData.unlockedCardThemes) ? profileData.unlockedCardThemes : ["default"],
+        lastUpdated: profileData.lastUpdated,
+        ...buildCosmeticSyncPayload(profileData)
+    }, { merge: true });
+}
+
+const SUMMER_CRATE_CRAFT_COST = 2;
+let summerCrateCraftingInProgress = false;
+
+function shouldShowSummerCratePanel(profileData = getCurrentProfileData()) {
+    const body = document.body;
+    if (body?.classList.contains("global-ui-theme-summer")) return true;
+    return getCrateInventory(profileData).summer > 0;
+}
+
+function updateSeasonalCratePanels(profileData = getCurrentProfileData()) {
+    const body = document.body;
+    const summerPanel = document.getElementById("summer-crate-panel");
+    if (summerPanel) {
+        summerPanel.style.display = shouldShowSummerCratePanel(profileData) ? "" : "none";
+    }
+
+    const christmasPanel = document.getElementById("christmas-crate-panel");
+    if (christmasPanel) {
+        christmasPanel.style.display = body?.classList.contains("global-ui-theme-christmas") ? "" : "none";
+    }
+
+    const halloweenPanel = document.getElementById("halloween-crate-panel");
+    if (halloweenPanel) {
+        halloweenPanel.style.display = body?.classList.contains("global-ui-theme-halloween") ? "" : "none";
+    }
+
+    const cratesLayout = document.querySelector("#cratesModal .crates-layout");
+    if (cratesLayout) {
+        const visiblePanels = [...cratesLayout.querySelectorAll(".crate-inventory-panel")]
+            .filter(panel => getComputedStyle(panel).display !== "none");
+        cratesLayout.classList.toggle("single-crate-layout", visiblePanels.length === 1);
+    }
+}
+
+function setCratesModalTab(tabId = "inventory") {
+    const inventoryTab = document.getElementById("inventory-tab");
+    const craftingTab = document.getElementById("crafting-tab");
+    const inventoryPanel = document.getElementById("inventory-panel");
+    const craftingPanel = document.getElementById("crafting-panel");
+    const showCrafting = tabId === "crafting";
+
+    inventoryTab?.classList.toggle("active", !showCrafting);
+    craftingTab?.classList.toggle("active", showCrafting);
+    inventoryPanel?.classList.toggle("active", !showCrafting);
+    craftingPanel?.classList.toggle("active", showCrafting);
+}
+
+function initCratesModalTabs() {
+    const inventoryTab = document.getElementById("inventory-tab");
+    const craftingTab = document.getElementById("crafting-tab");
+    if (!inventoryTab || !craftingTab || inventoryTab.dataset.crateTabsReady === "true") return;
+
+    inventoryTab.addEventListener("click", () => setCratesModalTab("inventory"));
+    craftingTab.addEventListener("click", () => setCratesModalTab("crafting"));
+    inventoryTab.dataset.crateTabsReady = "true";
+}
+
+function updateSummerCrateCraftingUI(profileData = getCurrentProfileData()) {
+    const inventory = getCrateInventory(profileData);
+    const reefOwned = inventory.reef || 0;
+    const summerOwned = inventory.summer || 0;
+    const canCraft = reefOwned >= SUMMER_CRATE_CRAFT_COST && !summerCrateCraftingInProgress;
+    const canOpenReef = reefOwned > 0 && !crateOpeningInProgress;
+    const canOpenSummer = summerOwned > 0 && !crateOpeningInProgress;
+
+    const reefOwnedEl = document.getElementById("craft-reef-owned");
+    if (reefOwnedEl) reefOwnedEl.textContent = reefOwned;
+
+    const summerOwnedEl = document.getElementById("craft-summer-owned");
+    if (summerOwnedEl) summerOwnedEl.textContent = summerOwned;
+
+    const craftBtn = document.getElementById("craft-summer-crate-btn");
+    if (craftBtn) {
+        craftBtn.disabled = !canCraft;
+        craftBtn.style.opacity = canCraft ? "1" : "0.5";
+        craftBtn.textContent = canCraft
+            ? "Craft Summer Crate"
+            : `Need ${SUMMER_CRATE_CRAFT_COST} Cosmetic Crates`;
+    }
+
+    const openReefBtn = document.getElementById("open-crate-btn");
+    if (openReefBtn) {
+        openReefBtn.disabled = !canOpenReef;
+        openReefBtn.style.opacity = canOpenReef ? "1" : "0.5";
+    }
+
+    const openSummerBtn = document.getElementById("open-summer-crate-btn");
+    if (openSummerBtn) {
+        openSummerBtn.disabled = !canOpenSummer;
+        openSummerBtn.style.opacity = canOpenSummer ? "1" : "0.5";
+    }
+}
+
+window.craftSummerCrate = async function() {
+    if (!currentUser) {
+        openLoginModal();
+        return;
+    }
+    if (summerCrateCraftingInProgress) return;
+
+    const profileData = getCurrentProfileData();
+    const inventory = getCrateInventory(profileData);
+
+    if ((inventory.reef || 0) < SUMMER_CRATE_CRAFT_COST) {
+        showNotification(`You need ${SUMMER_CRATE_CRAFT_COST} Cosmetic Crates to craft 1 Summer Crate.`, "error", 3000);
+        return;
+    }
+
+    summerCrateCraftingInProgress = true;
+    updateSummerCrateCraftingUI(profileData);
+
+    inventory.reef -= SUMMER_CRATE_CRAFT_COST;
+    inventory.summer = (inventory.summer || 0) + 1;
+    profileData.crateInventory = normalizeCrateInventory(inventory);
+
+    try {
+        await persistCrateProfileUpdate(profileData);
+        renderCratesModal();
+        showNotification("Crafted 1 Summer Crate from 2 Cosmetic Crates!", "success", 2500);
+    } catch (error) {
+        console.warn("Crafting sync failed:", error);
+        showNotification("Crafting saved locally but sync failed. Try again later.", "error", 3500);
+        renderCratesModal();
+    } finally {
+        summerCrateCraftingInProgress = false;
+        updateSummerCrateCraftingUI(getCurrentProfileData());
+    }
+};
+
 function getDuelStatusClass(status) {
     if (status === 'active' || status === 'completed' || status === 'declined') return status;
     return 'pending';
@@ -1185,28 +1334,6 @@ window.revealShark = function(duelId = null) {
     console.log(`TESTING ONLY: The duel target shark is: ${duel.sharkName}`);
 };
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 window.reset = async function(uid) {
     try {
         if (!currentUser || !isDeveloperUid(currentUser.uid)) {
@@ -1250,6 +1377,74 @@ window.reset = async function(uid) {
         console.error('Dev reset error:', err);
     }
 }
+
+// Dev-only: Apply summer theme locally (does not affect global theme)
+window.applySummerTheme = function() {
+    if (!currentUser || !isDeveloperUid(currentUser.uid)) {
+        showNotification('Dev command: Access denied.', 'error', 4000);
+        return;
+    }
+    applyIndexTheme('summer', true);
+    updateSeasonalCratePanels();
+    showNotification('Summer theme applied (local only)', 'success', 2500);
+};
+
+// Dev-only: Toggle summer theme on/off
+window.toggleSummerTheme = function() {
+    if (!currentUser || !isDeveloperUid(currentUser.uid)) {
+        showNotification('Dev command: Access denied.', 'error', 4000);
+        return;
+    }
+    const body = document.body;
+    const isSummer = body.classList.contains('global-ui-theme-summer');
+    applyIndexTheme(isSummer ? 'default' : 'summer', true);
+    updateSeasonalCratePanels();
+    showNotification(isSummer ? 'Summer theme disabled' : 'Summer theme enabled (local only)', 'success', 2500);
+};
+
+// Dev-only: Unlock all profile card themes for the current account
+window.giveProfileThemes = async function() {
+    if (!currentUser || !isDeveloperUid(currentUser.uid)) {
+        showNotification('Dev command: Access denied.', 'error', 4000);
+        return;
+    }
+    const profileData = getCurrentProfileData();
+    if (!profileData || typeof profileData !== 'object') {
+        showNotification('Unable to access profile data.', 'error', 4000);
+        return;
+    }
+
+    profileData.unlockedCardThemes = [...new Set(["default", ...sharkPassCardThemes.map(theme => theme.id)])];
+    saveUserProfileLocally(profileData, { skipRemoteSync: true });
+
+    if (db && currentUser) {
+        try {
+            await db.collection('userStats').doc(currentUser.uid).set({
+                unlockedCardThemes: profileData.unlockedCardThemes
+            }, { merge: true });
+        } catch (err) {
+            console.warn('Unable to sync theme grants:', err);
+        }
+    }
+
+    if (typeof renderThemeSelection === 'function') {
+        renderThemeSelection();
+    }
+    showNotification(`Unlocked ${profileData.unlockedCardThemes.length} profile themes`, 'success', 3500);
+};
+
+// Dev-only keyboard shortcut: Ctrl+Shift+S toggles summer theme locally
+document.addEventListener('keydown', function(e) {
+    if (e.ctrlKey && e.shiftKey && e.key === 'S') {
+        e.preventDefault();
+        if (currentUser && isDeveloperUid(currentUser.uid)) {
+            window.toggleSummerTheme();
+        } else {
+            console.log('Summer theme toggle: Developer access required.');
+        }
+    }
+});
+
 // ----- BADGE SYSTEM -----
 const DEV_UID = 'ETPtQC0VA2NiSnX67rS2P2ma2tC2'; // Primary dev UID kept for backwards compatibility
 const DEV_UIDS = ['ETPtQC0VA2NiSnX67rS2P2ma2tC2', 'gOcPqOuyPJRWisE4dxvFkGTOl5g2'];
@@ -1267,10 +1462,19 @@ const sharkPassCardThemes = [
     { id: "pearl-reef", name: "Pearl Reef", unlockAchievement: "secret_command_found", preview: "linear-gradient(135deg, rgba(250, 240, 214, 0.3), rgba(164, 244, 231, 0.18) 42%, rgba(24, 72, 92, 0.96))" },
     { id: "volcanic-ember", name: "Volcanic Ember", preview: "linear-gradient(135deg, rgba(255, 120, 70, 0.3), rgba(255, 66, 66, 0.18) 34%, rgba(44, 10, 24, 0.98) 72%, rgba(16, 5, 14, 1))" },
     { id: "kelp-canopy", name: "Kelp Canopy", preview: "linear-gradient(135deg, rgba(166, 223, 110, 0.18), rgba(65, 121, 70, 0.22) 34%, rgba(12, 49, 43, 0.98) 70%, rgba(6, 24, 21, 1))" },
-    { id: "glacier-shine", name: "Glacier Shine", preview: "linear-gradient(135deg, rgba(232, 247, 255, 0.34), rgba(132, 214, 255, 0.18) 36%, rgba(35, 80, 118, 0.92) 72%, rgba(10, 31, 52, 1))" }
+    { id: "glacier-shine", name: "Glacier Shine", preview: "linear-gradient(135deg, rgba(232, 247, 255, 0.34), rgba(132, 214, 255, 0.18) 36%, rgba(35, 80, 118, 0.92) 72%, rgba(10, 31, 52, 1))" },
+    { id: "ocean-breeze", name: "Ocean Breeze", preview: "linear-gradient(135deg, rgba(100, 200, 255, 0.3), rgba(50, 150, 200, 0.2) 42%, rgba(10, 50, 80, 0.96))" },
+    { id: "horizonflare", name: "Horizon", preview: "radial-gradient(circle at 50% 10%, rgba(255,255,255,0.06), transparent 30%), linear-gradient(to top, rgba(255,145,70,0.9) 0%, rgba(255,95,160,0.8) 55%, rgba(140,90,180,0.85) 100%)" },
+    { id: "solsticeglow", name: "Summer Glow", preview: "linear-gradient(135deg, rgba(255, 220, 100, 0.4), rgba(255, 180, 50, 0.25) 42%, rgba(40, 30, 10, 0.98))" },
+    { id: "candycane", name: "Candy Cane", preview: "repeating-linear-gradient(135deg, #fff5f5 0 11px, #ff6b6b 11px 22px)" },
+    { id: "elf", name: "Elf", preview: "linear-gradient(135deg, #228b22 0%, #32cd32 50%, #228b22 100%)" },
+    { id: "north-pole", name: "North Pole", preview: "linear-gradient(135deg, #e6f7ff 0%, #b3e0ff 50%, #80d0ff 100%)" },
+    { id: "pumpkin-patch", name: "Goo", preview: "radial-gradient(34px 22px at 8% 4px, rgba(138, 255, 112, 0.88) 0 68%, transparent 72%), radial-gradient(30px 40px at 23% -9px, rgba(122, 242, 96, 0.88) 0 66%, transparent 70%), radial-gradient(36px 26px at 41% 6px, rgba(144, 255, 120, 0.86) 0 68%, transparent 72%), radial-gradient(28px 38px at 58% -8px, rgba(113, 233, 89, 0.86) 0 66%, transparent 70%), radial-gradient(34px 24px at 74% 5px, rgba(132, 250, 108, 0.86) 0 68%, transparent 72%), radial-gradient(30px 42px at 90% -10px, rgba(120, 236, 94, 0.86) 0 66%, transparent 70%), linear-gradient(180deg, rgba(142, 255, 113, 0.34) 0 16%, transparent 29%), linear-gradient(180deg, rgba(154, 88, 228, 0.64), rgba(58, 24, 94, 0.98) 62%, rgba(20, 9, 38, 1))" },
+    { id: "haunted-abyss", name: "Witchlight", preview: "radial-gradient(circle at 18% 22%, rgba(250, 128, 114, 0.24), transparent 26%), radial-gradient(circle at 82% 18%, rgba(199, 121, 255, 0.26), transparent 28%), linear-gradient(145deg, rgba(97, 40, 154, 0.4), rgba(45, 22, 78, 0.98) 58%, rgba(18, 8, 34, 1))" },
+    { id: "nightmare-reef", name: "Phantom Fog", preview: "radial-gradient(circle at 20% 18%, rgba(170, 255, 230, 0.16), transparent 24%), radial-gradient(circle at 80% 24%, rgba(141, 224, 255, 0.14), transparent 26%), linear-gradient(150deg, rgba(41, 112, 120, 0.28), rgba(18, 42, 56, 0.98) 52%, rgba(9, 18, 31, 1))" }
 ];
 
-const CRATE_DROP_CHANCE = 0.35;
+const CRATE_DROP_CHANCE = 0.5;
 const GLOBAL_XP_EVENT_CONFIG_PATH = {
     collection: "globalConfig",
     doc: "xpEvent"
@@ -1289,7 +1493,8 @@ const INDEX_THEME_OPTIONS = [
     { id: "summer", name: "Summer Splash" },
     { id: "birthday", name: "Birthday Bash" },
     { id: "christmas", name: "Christmas Reef" },
-    { id: "halloween", name: "Halloween Depths" }
+    { id: "halloween", name: "Halloween Depths" },
+    { id: "northpole", name: "North Pole" }
 ];
 const limitedTimeXpEvent = {
     id: "june-2026-double-xp",
@@ -1303,7 +1508,29 @@ const crateDefinitions = {
         id: "reef",
         name: "Cosmetic Crate",
         icon: "fa-box-open"
+    },
+    summer: {
+        id: "summer",
+        name: "Summer Crate",
+        icon: "fa-umbrella-beach"
+    },
+    christmas: {
+        id: "christmas",
+        name: "Christmas Crate",
+        icon: "fa-gift"
+    },
+    halloween: {
+        id: "halloween",
+        name: "Halloween Crate",
+        icon: "fa-ghost"
     }
+};
+
+const crateAchievementIds = {
+    reef: "crate_opened",
+    summer: "summer_crate_opened",
+    christmas: "christmas_crate_opened",
+    halloween: "halloween_crate_opened"
 };
 
 const crateRarityWeights = {
@@ -1321,50 +1548,6 @@ const crateDuplicateXpRewards = {
     legendary: 320
 };
 const STREAK_SHIELD_ITEM_ID = "streak-shield";
-const XP_POTION_ITEM_ID = "xp-potion-2x-5m";
-const XP_POTION_LIGHT_ITEM_ID = "xp-potion-1-5x-15m";
-const XP_POTION_HEAVY_ITEM_ID = "xp-potion-3x-2m";
-const XP_POTION_STANDARD_MULTIPLIER = 2;
-const XP_POTION_STANDARD_DURATION_MS = 5 * 60 * 1000;
-const XP_POTION_DEFINITIONS = [
-    {
-        itemId: XP_POTION_LIGHT_ITEM_ID,
-        countField: "xpPotionLiteCount",
-        name: "Calm Booster",
-        shortLabel: "1.5x for 15m",
-        multiplier: 1.5,
-        durationMs: 15 * 60 * 1000,
-        emoji: "🧪",
-        rarity: "common",
-        blurb: "Applies a steady 1.5x XP boost for 15 minutes."
-    },
-    {
-        itemId: XP_POTION_ITEM_ID,
-        countField: "xpPotionCount",
-        name: "Tidal Booster",
-        shortLabel: "2x for 5m",
-        multiplier: XP_POTION_STANDARD_MULTIPLIER,
-        durationMs: XP_POTION_STANDARD_DURATION_MS,
-        emoji: "⚗️",
-        rarity: "rare",
-        blurb: "Applies a 2x XP boost for 5 minutes."
-    },
-    {
-        itemId: XP_POTION_HEAVY_ITEM_ID,
-        countField: "xpPotionMegaCount",
-        name: "Apex Booster",
-        shortLabel: "3x for 2m",
-        multiplier: 3,
-        durationMs: 2 * 60 * 1000,
-        emoji: "🧬",
-        rarity: "epic",
-        blurb: "Applies a burst 3x XP boost for 2 minutes."
-    }
-];
-const XP_POTION_DEFINITION_MAP = Object.fromEntries(
-    XP_POTION_DEFINITIONS.map(def => [def.itemId, def])
-);
-const XP_POTION_COUNT_FIELDS = XP_POTION_DEFINITIONS.map(def => def.countField);
 
 const crateRewardPool = [
     { id: "crate-pfp-pyjama", type: "pfp", name: "Pyjama Shark", imagePath: "images/cratePfp/Shark24.png", rarity: "common", blurb: "Unlock the Pyjama Shark profile picture." },
@@ -1379,6 +1562,48 @@ const crateRewardPool = [
     { id: "crate-pfp-megamouth", type: "pfp", name: "Megamouth Shark", imagePath: "images/cratePfp/Shark22.png", rarity: "legendary", blurb: "Unlock the Megamouth Shark profile picture." },
     { id: "crate-badge-aurora-fin", type: "badge", badgeId: "aurora-fin", name: "Doubloon", rarity: "legendary", blurb: "Unlock the Doubloon badge." },
     { id: "crate-theme-glacier-shine", type: "theme", themeId: "glacier-shine", name: "Glacier Shine", rarity: "legendary", blurb: "Unlock the Glacier Shine theme." }
+];
+
+const summerCrateRewardPool = [
+    { id: "crate-pfp-leopard", type: "pfp", name: "Leopard Shark", imagePath: "images/cratePfp/SummerPfp/Shark1.png", rarity: "common", blurb: "Unlock the Leopard Shark profile picture." },
+    { id: "crate-badge-tidepool", type: "badge", badgeId: "Tidepool", name: "Tidepool", rarity: "common", blurb: "Unlock the Tidepool badge from the summer crate." },
+    { id: "crate-pfp-whale", type: "pfp", name: "Whale Shark", imagePath: "images/cratePfp/SummerPfp/Shark2.png", rarity: "rare", blurb: "Unlock the Whale Shark profile picture." },
+    { id: "crate-badge-ice-cream", type: "badge", badgeId: "Ice Cream", name: "Ice Cream", rarity: "rare", blurb: "Unlock the Ice Cream badge from the summer crate." },
+    { id: "crate-theme-ocean-breeze", type: "theme", themeId: "ocean-breeze", name: "Ocean Breeze", rarity: "rare", blurb: "Unlock the Ocean Breeze theme." },
+    { id: "crate-pfp-sandTiger", type: "pfp", name: "Sand Tiger Shark", imagePath: "images/cratePfp/SummerPfp/Shark3.png", rarity: "epic", blurb: "Unlock the Sand Tiger Shark profile picture." },
+    { id: "crate-badge-horizon", type: "badge", badgeId: "Horizon", name: "Horizon", rarity: "epic", blurb: "Unlock the Horizon badge from the summer crate." },
+    { id: "crate-theme-horizonflare", type: "theme", themeId: "horizonflare", name: "Horizon Flare", rarity: "epic", blurb: "Unlock the Horizon Flare theme." },
+    { id: "crate-pfp-sandbar", type: "pfp", name: "Sandbar Shark", imagePath: "images/cratePfp/SummerPfp/Shark4.png", rarity: "legendary", blurb: "Unlock the Sandbar Shark profile picture." },
+    { id: "crate-badge-paradise", type: "badge", badgeId: "Paradise", name: "Paradise", rarity: "legendary", blurb: "Unlock the Paradise badge from the summer crate." },
+    { id: "crate-theme-solsticeglow", type: "theme", themeId: "solsticeglow", name: "Solstice Glow", rarity: "legendary", blurb: "Unlock the Solstice Glow theme." }
+];
+
+const christmasCrateRewardPool = [
+    { id: "crate-pfp-wobbegong", type: "pfp", name: "Wobbegong Shark", imagePath: "images/cratePfp/ChristmasPfp/Shark1.png", rarity: "common", blurb: "Unlock the Wobbegong Shark profile picture." },
+    { id: "crate-badge-christmas", type: "badge", badgeId: "Christmas", name: "Christmas", rarity: "common", blurb: "Unlock the Christmas badge from the christmas crate." },
+    { id: "crate-pfp-blind", type: "pfp", name: "Blind Shark", imagePath: "images/cratePfp/ChristmasPfp/Shark2.png", rarity: "rare", blurb: "Unlock the Blind Shark profile picture." },
+    { id: "crate-badge-present", type: "badge", badgeId: "Present", name: "Present", rarity: "rare", blurb: "Unlock the Present badge from the christmas crate." },
+    { id: "crate-theme-elf", type: "theme", themeId: "elf", name: "Elf", rarity: "rare", blurb: "Unlock the Elf Profile theme." },
+    { id: "crate-pfp-carribbean", type: "pfp", name: "Carribbean Reef Shark", imagePath: "images/cratePfp/ChristmasPfp/Shark3.png", rarity: "epic", blurb: "Unlock the Carribbean Reef Shark profile picture." },
+    { id: "crate-badge-snowflake", type: "badge", badgeId: "Snowflake", name: "Snowflake", rarity: "epic", blurb: "Unlock the Snowflake badge from the christmas crate." },
+    { id: "crate-theme-candycane", type: "theme", themeId: "candycane", name: "Candy Cane", rarity: "epic", blurb: "Unlock the Candy Cane Profile theme." },
+    { id: "crate-pfp-rough", type: "pfp", name: "Carribbean Rough Shark", imagePath: "images/cratePfp/ChristmasPfp/Shark4.png", rarity: "legendary", blurb: "Unlock the Carribbean Rough Shark profile picture." },
+    { id: "crate-badge-santa", type: "badge", badgeId: "Santa", name: "Santa", rarity: "legendary", blurb: "Unlock the Santa badge from the christmas crate." },
+    { id: "crate-theme-north-pole", type: "theme", themeId: "north-pole", name: "North Pole", rarity: "legendary", blurb: "Unlock the North Pole theme." }
+];
+
+const halloweenCrateRewardPool = [
+    { id: "crate-pfp-chain-cat", type: "pfp", name: "Chain Catshark", imagePath: "images/cratePfp/HalloweenPfp/Shark1.png", rarity: "common", blurb: "Unlock the Chain Catshark profile picture." },
+    { id: "crate-badge-pumpkin", type: "badge", badgeId: "Pumpkin", name: "Pumpkin", rarity: "common", blurb: "Unlock the Pumpkin badge from the halloween crate." },
+    { id: "crate-pfp-bamboo", type: "pfp", name: "Bamboo Shark", imagePath: "images/cratePfp/HalloweenPfp/Shark2.png", rarity: "rare", blurb: "Unlock the Bamboo Shark profile picture." },
+    { id: "crate-badge-bat", type: "badge", badgeId: "Bat", name: "Bat", rarity: "rare", blurb: "Unlock the Bat badge from the halloween crate." },
+    { id: "crate-theme-pumpkin-patch", type: "theme", themeId: "pumpkin-patch", name: "Goo", rarity: "rare", blurb: "Unlock the Goo profile theme." },
+    { id: "crate-pfp-white", type: "pfp", name: "White Shark", imagePath: "images/cratePfp/HalloweenPfp/Shark3.png", rarity: "epic", blurb: "Unlock the White Shark profile picture." },
+    { id: "crate-badge-ghost", type: "badge", badgeId: "Ghost", name: "Ghost", rarity: "epic", blurb: "Unlock the Ghost badge from the halloween crate." },
+    { id: "crate-theme-haunted-abyss", type: "theme", themeId: "haunted-abyss", name: "Witchlight", rarity: "epic", blurb: "Unlock the Witchlight profile theme." },
+    { id: "crate-pfp-cookie", type: "pfp", name: "Cookie Cutter Shark", imagePath: "images/cratePfp/HalloweenPfp/Shark4.png", rarity: "legendary", blurb: "Unlock the Cookie Cutter Shark profile picture." },
+    { id: "crate-badge-vampire", type: "badge", badgeId: "Vampire", name: "Vampire", rarity: "legendary", blurb: "Unlock the Vampire badge from the halloween crate." },
+    { id: "crate-theme-nightmare-reef", type: "theme", themeId: "nightmare-reef", name: "Phantom Fog", rarity: "legendary", blurb: "Unlock the Phantom Fog profile theme." }
 ];
 
 let crateOpeningInProgress = false;
@@ -1421,13 +1646,22 @@ const sharkPassBadgeMeta = {
     "reef-glint": { emoji: "🐚" },
     "kelp-warden": { emoji: "🌿" },
     "trench-myth": { emoji: "⚓" },
-    "aurora-fin": { emoji: "🌊" }
+    "aurora-fin": { emoji: "🌊" },
+    "Tidepool": { emoji: "🌀" },
+    "Ice Cream": { emoji: "🍦" },
+    "Horizon": { emoji: "🌅" },
+    "Summer": { emoji: "🌴" },
+    "Christmas": { emoji: "🎄" },
+    "Present": { emoji: "🎁" },
+    "Snowflake": { emoji: "❄️" },
+    "Santa": { emoji: "🎅" },
 };
 
 const badgeRarityMeta = {
     core: { label: "Core", className: "core" },
     code: { label: "Code", className: "code" },
     special: { label: "Special", className: "special" },
+    event: { label: "Event", className: "event" },
     common: { label: "Common", className: "common" },
     rare: { label: "Rare", className: "rare" },
     epic: { label: "Epic", className: "epic" },
@@ -1459,7 +1693,11 @@ Object.assign(sharkPassBadgeMeta, {
     "reef-glint": { emoji: "🐚" },
     "kelp-warden": { emoji: "🌿" },
     "trench-myth": { emoji: "⚓" },
-    "aurora-fin": { emoji: "🌊" }
+    "aurora-fin": { emoji: "🌊" },
+    "Beachball": { emoji: "🏖️" },
+    "SunHat": { emoji: "👒" },
+    "Pineapple": { emoji: "🍍" },
+    "Coconut": { emoji: "🥥" }
 });
 
 function getCurrentProfileData() {
@@ -1534,7 +1772,21 @@ function getStoredUnlockedBadgeIds(profileData = getCurrentProfileData()) {
 
 function normalizeCrateInventory(rawInventory) {
     return {
-        reef: Math.max(0, Number(rawInventory?.reef) || 0)
+        reef: Math.max(0, Number(rawInventory?.reef) || 0),
+        summer: Math.max(0, Number(rawInventory?.summer) || 0),
+        christmas: Math.max(0, Number(rawInventory?.christmas) || 0),
+        halloween: Math.max(0, Number(rawInventory?.halloween) || 0)
+    };
+}
+
+function mergeCrateInventory(localInventory, remoteInventory) {
+    const local = normalizeCrateInventory(localInventory);
+    const remote = normalizeCrateInventory(remoteInventory);
+    return {
+        reef: Math.max(local.reef, remote.reef),
+        summer: Math.max(local.summer, remote.summer),
+        christmas: Math.max(local.christmas, remote.christmas),
+        halloween: Math.max(local.halloween, remote.halloween)
     };
 }
 
@@ -1570,135 +1822,6 @@ function applyStreakShieldOnLoss(profileData, options = {}) {
         window.unlockAchievement("streak_shield_used");
     }
     return true;
-}
-
-function getXpPotionDefinition(itemId = XP_POTION_ITEM_ID) {
-    return XP_POTION_DEFINITION_MAP[itemId] || XP_POTION_DEFINITION_MAP[XP_POTION_ITEM_ID] || XP_POTION_DEFINITIONS[0];
-}
-
-function getXpPotionCount(profileData = getCurrentProfileData(), itemId = XP_POTION_ITEM_ID) {
-    const potionDef = getXpPotionDefinition(itemId);
-    return Math.max(0, Math.floor(Number(profileData?.[potionDef.countField]) || 0));
-}
-
-function setXpPotionCount(profileData, nextCount, itemId = XP_POTION_ITEM_ID) {
-    if (!profileData || typeof profileData !== "object") return 0;
-    const potionDef = getXpPotionDefinition(itemId);
-    const normalizedCount = Math.max(0, Math.floor(Number(nextCount) || 0));
-    profileData[potionDef.countField] = normalizedCount;
-    return normalizedCount;
-}
-
-function getTotalXpPotionCount(profileData = getCurrentProfileData()) {
-    return XP_POTION_DEFINITIONS.reduce((sum, potionDef) => sum + getXpPotionCount(profileData, potionDef.itemId), 0);
-}
-
-function getXpPotionInventory(profileData = getCurrentProfileData()) {
-    return XP_POTION_DEFINITIONS.map(potionDef => ({
-        ...potionDef,
-        count: getXpPotionCount(profileData, potionDef.itemId)
-    }));
-}
-
-function getXpPotionSyncPayload(profileData = getCurrentProfileData()) {
-    return XP_POTION_DEFINITIONS.reduce((payload, potionDef) => {
-        payload[potionDef.countField] = getXpPotionCount(profileData, potionDef.itemId);
-        return payload;
-    }, {});
-}
-
-function getPersonalXpBuffMultiplier(profileData = getCurrentProfileData()) {
-    return Math.max(1, Number(profileData?.personalXpBuffMultiplier) || 1);
-}
-
-function getPersonalXpBuffEndMs(profileData = getCurrentProfileData()) {
-    const parsed = Number(profileData?.personalXpBuffEndMs);
-    return Number.isFinite(parsed) ? Math.max(0, parsed) : 0;
-}
-
-function getPersonalXpBuffSourceItemId(profileData = getCurrentProfileData()) {
-    const rawItemId = profileData?.personalXpBuffSourceItemId;
-    return XP_POTION_DEFINITION_MAP[rawItemId] ? rawItemId : "";
-}
-
-function clearExpiredPersonalXpBuff(profileData, nowMs = Date.now()) {
-    if (!profileData || typeof profileData !== "object") return false;
-    const endMs = getPersonalXpBuffEndMs(profileData);
-    if (endMs <= 0 || endMs > nowMs) return false;
-    profileData.personalXpBuffMultiplier = 1;
-    profileData.personalXpBuffEndMs = 0;
-    profileData.personalXpBuffSourceItemId = "";
-    return true;
-}
-
-function getActivePersonalXpBuff(profileData = getCurrentProfileData(), nowMs = Date.now()) {
-    const multiplier = getPersonalXpBuffMultiplier(profileData);
-    const endMs = getPersonalXpBuffEndMs(profileData);
-    if (multiplier <= 1 || endMs <= nowMs) return null;
-    const sourceItemId = getPersonalXpBuffSourceItemId(profileData);
-    const sourceDefinition = sourceItemId ? XP_POTION_DEFINITION_MAP[sourceItemId] : null;
-    return {
-        id: sourceItemId || XP_POTION_ITEM_ID,
-        label: sourceDefinition ? sourceDefinition.name : `${multiplier}x XP Booster`,
-        multiplier,
-        endMs
-    };
-}
-
-async function useXpPotion(itemId = XP_POTION_ITEM_ID) {
-    if (!currentUser) {
-        openLoginModal();
-        return false;
-    }
-
-    const potionDef = getXpPotionDefinition(itemId);
-    const profileData = getCurrentProfileData();
-    clearExpiredPersonalXpBuff(profileData);
-    const availablePotions = getXpPotionCount(profileData, potionDef.itemId);
-    if (availablePotions <= 0) {
-        showNotification(`No ${potionDef.name} available.`, "error", 3200);
-        renderCratesModal();
-        if (typeof renderConsumablesPage === "function") {
-            renderConsumablesPage();
-        }
-        return false;
-    }
-
-    const nowMs = Date.now();
-    const activeBuff = getActivePersonalXpBuff(profileData, nowMs);
-    const currentBuffMultiplier = activeBuff ? activeBuff.multiplier : 1;
-    const currentBuffEndMs = activeBuff ? activeBuff.endMs : nowMs;
-    const nextBuffMultiplier = Math.max(currentBuffMultiplier, potionDef.multiplier);
-    const nextBuffEndMs = Math.max(currentBuffEndMs, nowMs) + potionDef.durationMs;
-    const nextBuffSourceItemId = nextBuffMultiplier === potionDef.multiplier
-        ? potionDef.itemId
-        : (activeBuff?.id || potionDef.itemId);
-    const remainingPotions = setXpPotionCount(profileData, availablePotions - 1, potionDef.itemId);
-
-    profileData.personalXpBuffMultiplier = nextBuffMultiplier;
-    profileData.personalXpBuffEndMs = nextBuffEndMs;
-    profileData.personalXpBuffSourceItemId = nextBuffSourceItemId;
-    profileData.lastUpdated = nowMs;
-
-    await persistCrateProfileUpdate(profileData).catch(error => console.warn("XP booster sync failed:", error));
-    renderCratesModal();
-    if (typeof renderConsumablesPage === "function") {
-        renderConsumablesPage();
-    }
-    ensureXpEventBannerTimer();
-
-    const actionLabel = activeBuff ? "extended" : "activated";
-    const durationMinutes = Math.max(1, Math.round(potionDef.durationMs / 60000));
-    showNotification(
-        `${potionDef.emoji} ${potionDef.name} ${actionLabel}. ${nextBuffMultiplier}x XP for +${durationMinutes}m. ${remainingPotions} left.`,
-        "success",
-        4200
-    );
-    return true;
-}
-
-async function useXpBooster(itemId = XP_POTION_ITEM_ID) {
-    return useXpPotion(itemId);
 }
 
 function getCrateInstantOpenEnabled(profileData = getCurrentProfileData()) {
@@ -1756,14 +1879,409 @@ function getAvailableCrateRewards(profileData = getCurrentProfileData()) {
     return crateRewardPool.filter(reward => !isCrateRewardOwned(profileData, reward));
 }
 
-function getCrateRewardsByRarity(rarity) {
-    return crateRewardPool.filter(reward => reward.rarity === rarity);
+function getCrateRewardsByRarity(rarity, crateId = "reef") {
+    const pool = getCratePoolById(crateId);
+    return pool.filter(reward => reward.rarity === rarity);
 }
 
-function getOpenedCrateCount(profileData = getCurrentProfileData()) {
+function getCratePoolById(crateId) {
+    switch (crateId) {
+        case "summer":
+            return summerCrateRewardPool;
+        case "christmas":
+            return christmasCrateRewardPool;
+        case "halloween":
+            return halloweenCrateRewardPool;
+        default:
+            return crateRewardPool;
+    }
+}
+
+const SPIN_WHEEL_LEGENDARY_PFP = {
+    name: "Wheel Shark",
+    imagePath: "images/spinPfp/Shark1.png",
+    spinReward: true,
+    rarity: "legendary"
+};
+
+const spinWheelRewards = [
+    { id: "spin_xp_250", type: "xp", amount: 250, weight: 18, label: "250 XP", rarity: "common", color: "#5adca5", icon: "✨" },
+    { id: "spin_xp_500", type: "xp", amount: 500, weight: 14, label: "500 XP", rarity: "common", color: "#78f0c5", icon: "✨" },
+    { id: "spin_xp_1000", type: "xp", amount: 1000, weight: 10, label: "1000 XP", rarity: "uncommon", color: "#6ee7ff", icon: "💫" },
+    { id: "spin_reef_crate", type: "crate", crateId: "reef", amount: 1, weight: 77, label: "Cosmetic Crate", rarity: "uncommon", color: "#ffb74d", icon: "📦" },
+    { id: "spin_summer_crate", type: "crate", crateId: "summer", amount: 1, weight: 6, label: "Summer Crate", rarity: "rare", color: "#ff8a65", icon: "☀️" },
+    { id: "spin_shield", type: "item", itemId: STREAK_SHIELD_ITEM_ID, quantity: 1, weight: 9, label: "Streak Shield", rarity: "rare", color: "#a99bff", icon: "🛡️" },
+    { id: "spin_pass_level", type: "pass_level", amount: 1, weight: 6, label: "Free Shark Pass Level", rarity: "epic", color: "#ffd47f", icon: "⬆️" },
+    { id: "spin_badge", type: "badge", badgeId: "lucky-fin", name: "Lucky Fin", weight: 7, label: "Lucky Fin Badge", rarity: "epic", color: "#c9a7ff", icon: "🍀" },
+    { id: "spin_theme", type: "theme", themeId: "volcanic-ember", weight: 5, label: "Volcanic Ember Theme", rarity: "epic", color: "#ff7b54", icon: "🎨" },
+    { id: "spin_pfp", type: "pfp", name: SPIN_WHEEL_LEGENDARY_PFP.name, imagePath: SPIN_WHEEL_LEGENDARY_PFP.imagePath, weight: 2, label: "Wheel Shark (Rare!)", rarity: "legendary", color: "#ffd47f", icon: "🦈" }
+];
+
+let spinWheelRotation = 0;
+let spinWheelSpinning = false;
+
+function getLastSpinWheelDateStorageKey(uid = currentUser?.uid) {
+    return uid ? `lastSpinWheelDate_${uid}` : "lastSpinWheelDate";
+}
+
+function getStoredLastSpinWheelDate(uid = currentUser?.uid) {
+    const profileData = getCurrentProfileData();
+    return normalizeStoredDateValue(
+        localStorage.getItem(getLastSpinWheelDateStorageKey(uid)) ||
+        profileData.lastSpinWheelDate
+    );
+}
+
+function canUseDailySpin(profileData = getCurrentProfileData()) {
+    if (!currentUser) return false;
+    return getStoredLastSpinWheelDate(currentUser.uid) !== getLocalDateKey();
+}
+
+function markDailySpinUsed(profileData = getCurrentProfileData()) {
+    const today = getLocalDateKey();
+    profileData.lastSpinWheelDate = today;
+    localStorage.setItem(getLastSpinWheelDateStorageKey(currentUser?.uid), today);
+    return profileData;
+}
+
+function pickSpinWheelReward() {
+    const totalWeight = spinWheelRewards.reduce((sum, reward) => sum + Math.max(0, Number(reward.weight) || 0), 0);
+    let roll = Math.random() * totalWeight;
+    for (const reward of spinWheelRewards) {
+        roll -= Math.max(0, Number(reward.weight) || 0);
+        if (roll <= 0) return reward;
+    }
+    return spinWheelRewards[0];
+}
+
+function grantSpinWheelReward(profileData, reward) {
+    let message = reward.label || "Reward";
+    let duplicate = false;
+
+    if (reward.type === "xp") {
+        const baseXp = Math.max(0, Number(reward.amount) || 0);
+        const xpAward = typeof window.applyLimitedTimeXpBonus === "function"
+            ? window.applyLimitedTimeXpBonus(baseXp)
+            : { totalXp: baseXp };
+        profileData.totalXP = (Number(profileData.totalXP) || 0) + xpAward.totalXp;
+        message = `${xpAward.totalXp} XP`;
+    } else if (reward.type === "crate") {
+        const inventory = getCrateInventory(profileData);
+        const crateId = reward.crateId || "reef";
+        const amount = Math.max(1, Math.floor(Number(reward.amount) || 1));
+        inventory[crateId] = (inventory[crateId] || 0) + amount;
+        profileData.crateInventory = normalizeCrateInventory(inventory);
+        message = `${amount} ${getCrateDefinition(crateId).name}${amount === 1 ? "" : "s"}`;
+    } else if (reward.type === "pass_level") {
+        const currentLevel = getLevelFromXP(profileData.totalXP || 0);
+        const targetXp = getXPForLevel(currentLevel + 1);
+        if ((profileData.totalXP || 0) < targetXp) {
+            profileData.totalXP = targetXp;
+            message = `Free Shark Pass level up! (Level ${currentLevel + 1})`;
+        } else {
+            profileData.totalXP = (profileData.totalXP || 0) + 1500;
+            message = "Max level reached — 1500 XP instead";
+        }
+    } else if (reward.type === "item" || reward.type === "badge" || reward.type === "theme" || reward.type === "pfp") {
+        const result = grantCrateReward(profileData, {
+            type: reward.type,
+            itemId: reward.itemId,
+            quantity: reward.quantity,
+            badgeId: reward.badgeId,
+            themeId: reward.themeId,
+            name: reward.name,
+            imagePath: reward.imagePath,
+            rarity: reward.rarity
+        });
+        duplicate = result.duplicateReward;
+        if (duplicate && reward.type === "item") {
+            message = "Streak Shield (already at max)";
+        } else if (duplicate) {
+            profileData.totalXP = (profileData.totalXP || 0) + 750;
+            message = `${reward.label} (owned) — 750 XP instead`;
+        }
+    }
+
+    return { profileData, message, duplicate };
+}
+
+function getSpinWheelSliceGeometry() {
+    const totalWeight = spinWheelRewards.reduce((sum, reward) => sum + Math.max(0, Number(reward.weight) || 0), 0);
+    let cursor = 0;
+    return spinWheelRewards.map(reward => {
+        const slice = (Math.max(0, Number(reward.weight) || 0) / totalWeight) * 360;
+        const start = cursor;
+        const mid = cursor + (slice / 2);
+        cursor += slice;
+        return { reward, start, end: cursor, mid, slice };
+    });
+}
+
+function buildSpinWheelGradient() {
+    const slices = getSpinWheelSliceGeometry();
+    const stops = slices.map(entry => `${entry.reward.color} ${entry.start}deg ${entry.end}deg`);
+    return `conic-gradient(from -90deg, ${stops.join(", ")})`;
+}
+
+function renderSpinWheelLegend() {
+    const legend = document.getElementById("spin-wheel-legend");
+    if (!legend) return;
+    legend.innerHTML = spinWheelRewards.map(reward => `
+        <li>
+            <span class="legend-swatch" style="background:${reward.color};"></span>
+            <span>${reward.icon} ${reward.label}</span>
+        </li>
+    `).join("");
+}
+
+function updateSpinWheelUI() {
+    const btn = document.getElementById("spin-wheel-btn");
+    const statusEl = document.getElementById("spin-wheel-status");
+    const actionBtn = document.getElementById("spin-wheel-action-btn");
+    const subtitle = document.getElementById("spin-wheel-subtitle");
+    const canSpin = canUseDailySpin();
+
+    if (btn) {
+        if (currentUser) {
+            btn.classList.remove("hidden");
+            btn.disabled = !canSpin;
+            btn.classList.toggle("spin-used", !canSpin);
+        } else {
+            btn.classList.add("hidden");
+        }
+    }
+    if (statusEl) {
+        statusEl.textContent = canSpin ? "Ready!" : "Used";
+    }
+    if (actionBtn) {
+        actionBtn.disabled = !canSpin || spinWheelSpinning;
+        actionBtn.textContent = canSpin ? "Spin the Wheel" : "Come Back Tomorrow";
+    }
+    if (subtitle) {
+        subtitle.textContent = canSpin
+            ? "You have 1 free spin today. Land the legendary slice for the exclusive Wheel Shark profile icon!"
+            : "You already used today's spin. Come back after midnight for another free spin.";
+    }
+}
+
+function openSpinWheelModal() {
+    if (!currentUser) {
+        openLoginModal();
+        return;
+    }
+    const modal = document.getElementById("spinWheelModal");
+    const disk = document.getElementById("spin-wheel-disk");
+    const result = document.getElementById("spin-wheel-result");
+    if (!modal || !disk) return;
+
+    disk.style.background = buildSpinWheelGradient();
+    disk.style.transform = `rotate(${spinWheelRotation}deg)`;
+    if (result) {
+        result.classList.add("hidden");
+        result.textContent = "";
+    }
+    renderSpinWheelLegend();
+    updateSpinWheelUI();
+    modal.classList.remove("hidden");
+}
+
+function closeSpinWheelModal() {
+    const modal = document.getElementById("spinWheelModal");
+    if (modal) modal.classList.add("hidden");
+}
+
+async function spinDailyWheel() {
+    if (!currentUser || spinWheelSpinning || !canUseDailySpin()) return;
+
+    const disk = document.getElementById("spin-wheel-disk");
+    const result = document.getElementById("spin-wheel-result");
+    const actionBtn = document.getElementById("spin-wheel-action-btn");
+    if (!disk) return;
+
+    spinWheelSpinning = true;
+    if (actionBtn) actionBtn.disabled = true;
+
+    const reward = pickSpinWheelReward();
+    const rewardIndex = Math.max(0, spinWheelRewards.findIndex(entry => entry.id === reward.id));
+    const slices = getSpinWheelSliceGeometry();
+    const winningSlice = slices[rewardIndex] || slices[0];
+    const extraTurns = 5 + Math.floor(Math.random() * 3);
+    const targetRotation = (extraTurns * 360) + (360 - winningSlice.mid);
+    spinWheelRotation += targetRotation;
+    disk.style.transform = `rotate(${spinWheelRotation}deg)`;
+
+    await new Promise(resolve => setTimeout(resolve, 4200));
+
+    let profileData = getCurrentProfileData();
+    const grantResult = grantSpinWheelReward(profileData, reward);
+    profileData = markDailySpinUsed(grantResult.profileData);
+    saveUserProfileLocally(profileData);
+
+    if (currentUser && db) {
+        try {
+            await db.collection("userStats").doc(currentUser.uid).set({
+                totalXP: profileData.totalXP,
+                earnedCosmetics: profileData.earnedCosmetics,
+                unlockedBadges: profileData.unlockedBadges,
+                unlockedCardThemes: profileData.unlockedCardThemes,
+                crateInventory: normalizeCrateInventory(profileData.crateInventory),
+                streakShields: getStreakShieldCount(profileData),
+                lastSpinWheelDate: profileData.lastSpinWheelDate
+            }, { merge: true });
+        } catch (error) {
+            console.warn("Spin wheel sync failed:", error);
+        }
+    }
+
+    if (result) {
+        result.classList.remove("hidden");
+        result.innerHTML = `🎉 You won <strong>${grantResult.message}</strong>!`;
+    }
+
+    if (reward.type === "pfp" && !grantResult.duplicate && typeof showCosmeticUnlockToast === "function") {
+        showCosmeticUnlockToast({
+            name: reward.name,
+            imagePath: reward.imagePath
+        }, {
+            title: "Legendary Spin Reward!",
+            subtitle: reward.name,
+            accent: "#ffd47f",
+            background: "linear-gradient(135deg, rgba(255, 212, 127, 0.96), rgba(91, 58, 9, 0.96))",
+            icon: "🎡"
+        });
+    } else {
+        showNotification(`Spin reward: ${grantResult.message}`, "success", 4200);
+    }
+
+    renderCratesButton();
+    renderCratesModal();
+    updateSeasonalCratePanels();
+    if (typeof loadAvailablePFPs === "function") loadAvailablePFPs();
+    if (typeof loadEarnedCosmetics === "function") loadEarnedCosmetics();
+    if (typeof renderThemeSelection === "function") renderThemeSelection();
+    if (typeof renderBadgeSelection === "function") renderBadgeSelection();
+    if (typeof updateProfileBadgeUI === "function") updateProfileBadgeUI();
+    updateIndexStats();
+    updateSpinWheelUI();
+    spinWheelSpinning = false;
+}
+
+function collectAllUnlockablePfps() {
+    const entries = [];
+    const seen = new Set();
+    const addEntry = (name, imagePath, extra = {}) => {
+        if (!imagePath || seen.has(imagePath)) return;
+        seen.add(imagePath);
+        entries.push({ name: name || "Shark", imagePath, ...extra });
+    };
+
+    levelRewards.forEach(reward => addEntry(reward.name, reward.imagePath, { level: reward.level }));
+    getAllCrateRewardPools().flat()
+        .filter(reward => reward.type === "pfp")
+        .forEach(reward => addEntry(reward.name, reward.imagePath, { crateReward: true, rarity: reward.rarity }));
+    Object.values(redeemCodes).forEach(code => {
+        (code.cosmetics || []).forEach(cosmetic => addEntry(cosmetic.name, cosmetic.imagePath, { codeReward: true }));
+    });
+    addEntry(DAY_7_LOGIN_PFP.name, DAY_7_LOGIN_PFP.imagePath, { loginReward: true });
+    addEntry(SPIN_WHEEL_LEGENDARY_PFP.name, SPIN_WHEEL_LEGENDARY_PFP.imagePath, { spinReward: true, rarity: "legendary" });
+    addEntry("Port Jackson Shark", "images/leaderPfp/Shark19.png", { leaderReward: true });
+    addEntry("Catshark", "images/leaderPfp/Daily/Shark1.png", { leaderReward: true });
+    addEntry("Whitetip Reef Shark", "images/leaderPfp/Monthly/Shark1.png", { leaderReward: true });
+    addEntry("Hammerhead Shark", "images/codePfp/Shark26.png", { codeReward: true });
+
+    return entries;
+}
+
+function collectAllUnlockableBadgeIds(uid = currentUser?.uid) {
+    return allBadges
+        .filter(badge => !badge.devOnly || isDeveloperUid(uid))
+        .map(badge => badge.id);
+}
+
+window.unlockAllCosmetics = async function() {
+    if (!currentUser || !isDeveloperUid(currentUser.uid)) {
+        console.log("❌ Access denied. unlockAllCosmetics() is for developers only.");
+        showNotification("Dev command: Access denied.", "error", 4000);
+        return;
+    }
+
+    const profileData = getCurrentProfileData();
+    const allPfps = collectAllUnlockablePfps();
+    const allBadgeIds = collectAllUnlockableBadgeIds(currentUser.uid);
+    const allThemeIds = [...new Set(["default", ...sharkPassCardThemes.map(theme => theme.id)])];
+
+    profileData.earnedCosmetics = getUnifiedCosmeticList(profileData.earnedCosmetics, allPfps, "imagePath");
+    profileData.unlockedBadges = [...new Set(["starter", ...allBadgeIds])];
+    profileData.unlockedCardThemes = allThemeIds;
+    if (allBadgeIds.includes("tester")) {
+        profileData.testerBadgeUnlocked = true;
+    }
+
+    saveUserProfileLocally(profileData);
+
+    if (db) {
+        await db.collection("userStats").doc(currentUser.uid).set({
+            earnedCosmetics: profileData.earnedCosmetics,
+            unlockedBadges: profileData.unlockedBadges,
+            unlockedCardThemes: profileData.unlockedCardThemes,
+            testerBadgeUnlocked: profileData.testerBadgeUnlocked === true
+        }, { merge: true });
+    }
+
+    if (typeof renderThemeSelection === "function") renderThemeSelection();
+    if (typeof renderBadgeSelection === "function") renderBadgeSelection();
+    if (typeof loadAvailablePFPs === "function") loadAvailablePFPs();
+    if (typeof loadEarnedCosmetics === "function") loadEarnedCosmetics();
+    if (typeof updateProfileBadgeUI === "function") updateProfileBadgeUI();
+
+    console.log(`✅ Unlocked ${profileData.earnedCosmetics.length} profile icons, ${profileData.unlockedBadges.length} badges, and ${profileData.unlockedCardThemes.length} themes.`);
+    showNotification("Unlocked all profile icons, badges, and themes.", "success", 4200);
+};
+
+window.resetDailySpin = function() {
+    if (!currentUser || !isDeveloperUid(currentUser.uid)) {
+        console.log("❌ Access denied. resetDailySpin() is for developers only.");
+        return;
+    }
+    const profileData = getCurrentProfileData();
+    delete profileData.lastSpinWheelDate;
+    localStorage.removeItem(getLastSpinWheelDateStorageKey(currentUser.uid));
+    saveUserProfileLocally(profileData);
+    if (db) {
+        db.collection("userStats").doc(currentUser.uid).set({ lastSpinWheelDate: "" }, { merge: true }).catch(() => {});
+    }
+    updateSpinWheelUI();
+    console.log("✅ Daily spin reset. You can spin again.");
+};
+
+window.openSpinWheelModal = openSpinWheelModal;
+window.closeSpinWheelModal = closeSpinWheelModal;
+window.spinDailyWheel = spinDailyWheel;
+
+function getAllCrateRewardPools() {
+    return [crateRewardPool, summerCrateRewardPool, christmasCrateRewardPool, halloweenCrateRewardPool];
+}
+
+function getAllCrateBadgeRewards() {
+    return getAllCrateRewardPools()
+        .flat()
+        .filter(reward => reward.type === "badge");
+}
+
+function getOpenedCrateCount(profileData = getCurrentProfileData(), crateId = null) {
     const storedCount = Math.max(0, Number(profileData?.cratesOpened) || 0);
-    if (storedCount > 0) return storedCount;
-    return crateRewardPool.filter(reward => isCrateRewardOwned(profileData, reward)).length;
+    if (storedCount > 0) {
+        if (crateId === null) return storedCount;
+        const inventory = normalizeCrateInventory(profileData.crateInventory || {});
+        return inventory[crateId] || 0;
+    }
+    
+    if (crateId === null) {
+        return crateRewardPool.filter(reward => isCrateRewardOwned(profileData, reward)).length;
+    }
+    
+    const pool = getCratePoolById(crateId);
+    return pool.filter(reward => isCrateRewardOwned(profileData, reward)).length;
 }
 
 function normalizeGlobalXpEventConfig(rawConfig) {
@@ -1805,30 +2323,25 @@ function getActiveLimitedTimeXpEvent(nowMs = Date.now()) {
 function applyLimitedTimeXpBonus(baseXp) {
     const safeBaseXp = Math.max(0, Math.round(Number(baseXp) || 0));
     const activeEvent = getActiveLimitedTimeXpEvent();
-    const activePersonalBuff = getActivePersonalXpBuff();
-    const globalMultiplier = activeEvent ? activeEvent.multiplier : 1;
-    const personalMultiplier = activePersonalBuff ? activePersonalBuff.multiplier : 1;
-    const combinedMultiplier = Math.max(1, globalMultiplier * personalMultiplier);
+    const eventMultiplier = activeEvent ? activeEvent.multiplier : 1;
 
-    if (!activeEvent && !activePersonalBuff) {
+    if (!activeEvent) {
         return {
             baseXp: safeBaseXp,
             totalXp: safeBaseXp,
             bonusXp: 0,
             multiplier: 1,
-            event: null,
-            personalBuff: null
+            event: null
         };
     }
 
-    const totalXp = Math.round(safeBaseXp * combinedMultiplier);
+    const totalXp = Math.round(safeBaseXp * eventMultiplier);
     return {
         baseXp: safeBaseXp,
         totalXp,
         bonusXp: totalXp - safeBaseXp,
-        multiplier: combinedMultiplier,
-        event: activeEvent,
-        personalBuff: activePersonalBuff
+        multiplier: eventMultiplier,
+        event: activeEvent
     };
 }
 
@@ -1853,8 +2366,7 @@ function updateXpEventBanner() {
     if (!banner || !timer) return;
 
     const activeEvent = getActiveLimitedTimeXpEvent();
-    const activePersonalBuff = getActivePersonalXpBuff();
-    if (!activeEvent && !activePersonalBuff) {
+    if (!activeEvent) {
         banner.classList.add("hidden");
         timer.textContent = "Event inactive";
         if (xpEventBannerInterval) {
@@ -1865,18 +2377,8 @@ function updateXpEventBanner() {
     }
 
     const titleEl = banner.querySelector(".xp-event-title");
-    if (activeEvent && activePersonalBuff) {
-        const combinedMultiplier = activeEvent.multiplier * activePersonalBuff.multiplier;
-        if (titleEl) titleEl.textContent = `${combinedMultiplier}x XP active (${activeEvent.multiplier}x event + ${activePersonalBuff.multiplier}x booster)`;
-        const buffRemaining = formatEventTimeRemaining(activePersonalBuff.endMs - Date.now());
-        timer.textContent = `Booster ends in ${buffRemaining}`;
-    } else if (activePersonalBuff) {
-        if (titleEl) titleEl.textContent = `${activePersonalBuff.multiplier}x XP Booster active`;
-        timer.textContent = `Booster ends in ${formatEventTimeRemaining(activePersonalBuff.endMs - Date.now())}`;
-    } else if (activeEvent) {
-        if (titleEl) titleEl.textContent = `${activeEvent.multiplier}x XP gain active`;
-        timer.textContent = `${activeEvent.previewMode ? "Preview ends in" : "Ends in"} ${formatEventTimeRemaining(activeEvent.endMs - Date.now())}`;
-    }
+    if (titleEl) titleEl.textContent = `${activeEvent.multiplier}x XP gain active`;
+    timer.textContent = `${activeEvent.previewMode ? "Preview ends in" : "Ends in"} ${formatEventTimeRemaining(activeEvent.endMs - Date.now())}`;
 
     banner.classList.remove("hidden");
 }
@@ -1887,7 +2389,7 @@ function ensureXpEventBannerTimer() {
         clearInterval(xpEventBannerInterval);
         xpEventBannerInterval = null;
     }
-    if (getActiveLimitedTimeXpEvent() || getActivePersonalXpBuff()) {
+    if (getActiveLimitedTimeXpEvent()) {
         xpEventBannerInterval = setInterval(updateXpEventBanner, 1000);
     }
 }
@@ -1901,9 +2403,6 @@ function renderConsumablesPage() {
     const loginStateCopy = document.getElementById("consumables-login-state");
     const loginBtn = document.getElementById("consumables-login-btn");
     const shieldCountEl = document.getElementById("consumables-shield-count");
-    const totalPotionsEl = document.getElementById("consumables-total-potions");
-    const activeBuffEl = document.getElementById("consumables-active-buff");
-    const activeTimerEl = document.getElementById("consumables-active-timer");
 
     if (loginBtn) {
         loginBtn.onclick = () => openLoginModal();
@@ -1915,78 +2414,12 @@ function renderConsumablesPage() {
     if (!loggedIn) {
         if (loginStateCopy) loginStateCopy.textContent = "Login to view and use your consumables.";
         if (shieldCountEl) shieldCountEl.textContent = "0";
-        if (totalPotionsEl) totalPotionsEl.textContent = "0";
-        if (activeBuffEl) activeBuffEl.textContent = "No active booster";
-        if (activeTimerEl) activeTimerEl.textContent = "--:--:--";
-
-        pageRoot.querySelectorAll("[data-potion-item-id]").forEach(card => {
-            const countEl = card.querySelector("[data-potion-count]");
-            const statusEl = card.querySelector("[data-potion-status]");
-            const useBtn = card.querySelector("[data-potion-use-btn]");
-            if (countEl) countEl.textContent = "0";
-            if (statusEl) statusEl.textContent = "Login required";
-            if (useBtn) {
-                useBtn.disabled = true;
-                useBtn.style.opacity = "0.5";
-            }
-        });
         return;
     }
 
     const profileData = getCurrentProfileData();
-    if (clearExpiredPersonalXpBuff(profileData)) {
-        saveUserProfileLocally(profileData, { skipRemoteSync: true });
-        if (typeof scheduleRemoteProfileSync === "function") {
-            scheduleRemoteProfileSync(800);
-        }
-    }
-    const potionInventory = getXpPotionInventory(profileData);
-    const activeBuff = getActivePersonalXpBuff(profileData);
-    const potionLookup = Object.fromEntries(potionInventory.map(potion => [potion.itemId, potion]));
-
     if (loginStateCopy) loginStateCopy.textContent = "Consumables are synced to your account.";
     if (shieldCountEl) shieldCountEl.textContent = String(getStreakShieldCount(profileData));
-    if (totalPotionsEl) totalPotionsEl.textContent = String(getTotalXpPotionCount(profileData));
-    if (activeBuffEl) {
-        activeBuffEl.textContent = activeBuff
-            ? `${activeBuff.label} (${activeBuff.multiplier}x XP)`
-            : "No active booster";
-    }
-    if (activeTimerEl) {
-        activeTimerEl.textContent = activeBuff
-            ? formatEventTimeRemaining(activeBuff.endMs - Date.now())
-            : "--:--:--";
-    }
-
-    pageRoot.querySelectorAll("[data-potion-item-id]").forEach(card => {
-        const itemId = card.getAttribute("data-potion-item-id") || "";
-        const potionDef = getXpPotionDefinition(itemId);
-        const potionInfo = potionLookup[potionDef.itemId] || { count: getXpPotionCount(profileData, potionDef.itemId) };
-        const count = Math.max(0, Number(potionInfo.count) || 0);
-        const countEl = card.querySelector("[data-potion-count]");
-        const statusEl = card.querySelector("[data-potion-status]");
-        const useBtn = card.querySelector("[data-potion-use-btn]");
-
-        if (countEl) countEl.textContent = String(count);
-        if (statusEl) {
-            if (count <= 0) {
-                statusEl.textContent = "Out of stock";
-            } else if (activeBuff && activeBuff.id === potionDef.itemId) {
-                statusEl.textContent = "Buff currently active";
-            } else if (activeBuff) {
-                statusEl.textContent = "Can stack onto active buff";
-            } else {
-                statusEl.textContent = "Ready to activate";
-            }
-        }
-        if (useBtn) {
-            useBtn.disabled = count <= 0;
-            useBtn.style.opacity = count <= 0 ? "0.5" : "1";
-            useBtn.textContent = activeBuff
-                ? `Stack ${potionDef.shortLabel}`
-                : `Use ${potionDef.shortLabel}`;
-        }
-    });
 }
 
 function ensureConsumablesPageTimer() {
@@ -2070,12 +2503,12 @@ window.toggleSeasonalThemeOverride = function toggleSeasonalThemeOverride() {
     updateSeasonalThemeToggleUI();
 };
 
-function applyIndexTheme(themeId = "default") {
+function applyIndexTheme(themeId = "default", force = false) {
     const body = document.body;
     if (!body) return "default";
 
     const resolvedThemeId = normalizeIndexThemeId(themeId);
-    const appliedThemeId = (isSeasonalThemeDisabled() && resolvedThemeId !== "default")
+    const appliedThemeId = (!force && isSeasonalThemeDisabled() && resolvedThemeId !== "default")
         ? "default"
         : resolvedThemeId;
     getValidIndexThemeIds().forEach(id => {
@@ -2086,6 +2519,7 @@ function applyIndexTheme(themeId = "default") {
     body.classList.add(`global-ui-theme-${appliedThemeId}`);
     localStorage.setItem("globalIndexThemeId", resolvedThemeId);
     localStorage.setItem("globalUiThemeCache", resolvedThemeId);
+    updateSeasonalCratePanels();
 
     return appliedThemeId;
 }
@@ -2158,75 +2592,69 @@ function renderCratesButton() {
         return;
     }
 
-    const crateCount = getCrateInventory().reef;
+    const inventory = getCrateInventory();
+    const crateCount = inventory.reef + inventory.summer + inventory.christmas + inventory.halloween;
     countEl.textContent = crateCount;
     cratesBtn.classList.remove("hidden");
 }
 
 function renderCratesModal() {
+    const profileData = getCurrentProfileData();
+    const inventory = getCrateInventory(profileData);
+    const crateCount = inventory.reef;
+    const summerCrateCount = inventory.summer || 0;
+    const christmasCrateCount = inventory.christmas || 0;
+    const halloweenCrateCount = inventory.halloween || 0;
+
     const countValue = document.getElementById("crate-count-value");
+    if (countValue) countValue.textContent = crateCount;
+
+    const summerCountEl = document.getElementById("summer-crate-count-value");
+    if (summerCountEl) summerCountEl.textContent = summerCrateCount;
+    const christmasCountEl = document.getElementById("christmas-crate-count-value");
+    if (christmasCountEl) christmasCountEl.textContent = christmasCrateCount;
+    const halloweenCountEl = document.getElementById("halloween-crate-count-value");
+    if (halloweenCountEl) halloweenCountEl.textContent = halloweenCrateCount;
+
+    renderCratesButton();
+    updateSeasonalCratePanels(profileData);
+    updateSummerCrateCraftingUI(profileData);
+
     const statusCopy = document.getElementById("crate-status-copy");
-    const openBtn = document.getElementById("open-crate-btn");
     const instantToggle = document.getElementById("crate-instant-toggle");
     const pityCopy = document.getElementById("crate-pity-copy");
     const streakShieldCopy = document.getElementById("streak-shield-copy");
-    const xpPotionCopy = document.getElementById("xp-potion-copy");
-    const consumablesCtaBtn = document.getElementById("consumables-cta-btn") || document.getElementById("use-xp-potion-btn");
-    if (!countValue || !statusCopy || !openBtn || !instantToggle || !pityCopy) return;
+    if (!statusCopy || !instantToggle || !pityCopy) return;
 
-    const profileData = getCurrentProfileData();
-    const crateCount = getCrateInventory(profileData).reef;
     const pityReady = isLegendaryPityReady(profileData);
     const cratesUntilPity = getCratesUntilLegendaryPity(profileData);
     const streakShieldCount = getStreakShieldCount(profileData);
-    const totalPotionCount = getTotalXpPotionCount(profileData);
-    const potionInventory = getXpPotionInventory(profileData);
-    const activePotionBuff = getActivePersonalXpBuff(profileData);
 
-    countValue.textContent = crateCount;
     instantToggle.checked = getCrateInstantOpenEnabled(profileData);
-    renderCratesButton();
     pityCopy.textContent = pityReady
         ? "Next crate is guaranteed legendary."
         : `${cratesUntilPity} crate${cratesUntilPity === 1 ? "" : "s"} until guaranteed legendary.`;
     if (streakShieldCopy) {
         streakShieldCopy.textContent = `🛡️ Streak Shields: ${streakShieldCount} / 3 (max)`;
     }
-    if (xpPotionCopy) {
-        const potionSummary = potionInventory
-            .map(potion => `${potion.emoji} ${potion.shortLabel}: ${potion.count}`)
-            .join(" • ");
-        const activeSummary = activePotionBuff
-            ? `Active: ${activePotionBuff.multiplier}x for ${formatEventTimeRemaining(activePotionBuff.endMs - Date.now())}`
-            : "No active booster";
-        xpPotionCopy.textContent = `${potionSummary || "No XP boosters yet"} | ${activeSummary}`;
-    }
-    if (consumablesCtaBtn) {
-        consumablesCtaBtn.disabled = false;
-        consumablesCtaBtn.style.opacity = "1";
-        consumablesCtaBtn.textContent = `Manage Boosters (${totalPotionCount})`;
-        consumablesCtaBtn.onclick = () => navigate("consumables.html");
-    }
 
-    if (crateCount <= 0) {
+    const totalCrateCount = crateCount + summerCrateCount + christmasCrateCount + halloweenCrateCount;
+    if (totalCrateCount <= 0) {
         statusCopy.textContent = "You don't have any crates to open.";
-        openBtn.disabled = true;
-        openBtn.style.opacity = "0.5";
     } else {
         statusCopy.textContent = getCrateInstantOpenEnabled(profileData)
             ? "Instant open is enabled."
             : "Animation reveal is enabled.";
-        openBtn.disabled = false;
-        openBtn.style.opacity = "1";
     }
 }
 
-function renderCrateDropsModal() {
+function renderCrateDropsModal(crateId = "reef") {
     const rewardGrid = document.getElementById("crate-drops-grid");
     if (!rewardGrid) return;
     const profileData = getCurrentProfileData();
+    const pool = getCratePoolById(crateId);
 
-    rewardGrid.innerHTML = crateRewardPool.map(reward => {
+    rewardGrid.innerHTML = pool.map(reward => {
         const owned = isCrateRewardOwned(profileData, reward);
         return `
             <article class="crate-reward-card ${owned ? "owned" : ""}">
@@ -2269,13 +2697,15 @@ function openCratesModal() {
         openLoginModal();
         return;
     }
+    crateOpeningInProgress = false;
+    setCratesModalTab("inventory");
     renderCratesModal();
     const modal = document.getElementById("cratesModal");
     if (modal) modal.classList.remove("hidden");
 }
 
-function openCrateDropsModal() {
-    renderCrateDropsModal();
+function openCrateDropsModal(crateId = "reef") {
+    renderCrateDropsModal(crateId);
     document.getElementById("crateDropsModal")?.classList.remove("hidden");
 }
 
@@ -2284,6 +2714,7 @@ function closeCratesModal() {
     if (modal) modal.classList.add("hidden");
     closeCrateUnboxOverlay();
     crateOpeningInProgress = false;
+    updateSummerCrateCraftingUI();
 }
 
 function closeCrateDropsModal() {
@@ -2336,12 +2767,6 @@ function grantCrateReward(profileData, reward) {
             if (canAccept > 0) {
                 setStreakShieldCount(profileData, currentShields + canAccept);
             }
-        } else if (XP_POTION_DEFINITION_MAP[reward.itemId]) {
-            setXpPotionCount(
-                profileData,
-                getXpPotionCount(profileData, reward.itemId) + quantity,
-                reward.itemId
-            );
         }
     }
     return {
@@ -2360,10 +2785,6 @@ async function persistCrateProfileUpdate(profileData) {
         cratesOpened: Math.max(0, Number(profileData.cratesOpened) || 0),
         cratesSinceLegendary: getCratesSinceLegendary(profileData),
         streakShields: getStreakShieldCount(profileData),
-        ...getXpPotionSyncPayload(profileData),
-        personalXpBuffMultiplier: getPersonalXpBuffMultiplier(profileData),
-        personalXpBuffEndMs: getPersonalXpBuffEndMs(profileData),
-        personalXpBuffSourceItemId: getPersonalXpBuffSourceItemId(profileData),
         instantCrateOpen: getCrateInstantOpenEnabled(profileData),
         totalXP: Math.max(0, Number(profileData.totalXP) || 0),
         earnedCosmetics: Array.isArray(profileData.earnedCosmetics) ? profileData.earnedCosmetics : [],
@@ -2374,44 +2795,109 @@ async function persistCrateProfileUpdate(profileData) {
     }, { merge: true });
 }
 
-function openCrateUnboxOverlay() {
+const CRATE_UNBOX_THEME_IDS = ["reef", "summer", "christmas", "halloween"];
+let activeCrateUnboxId = "reef";
+
+function getCrateDefinition(crateId = "reef") {
+    return crateDefinitions[crateId] || crateDefinitions.reef;
+}
+
+function getCrateUnboxCopy(crateId, phase = "opening", rewardName = "") {
+    const crateName = getCrateDefinition(crateId).name;
+    const itemLabel = rewardName ? String(rewardName) : "something";
+
+    if (crateId === "summer") {
+        if (phase === "reward") return `You found ${itemLabel} in the summer crate!`;
+        if (phase === "duplicate") return `You found ${itemLabel} in the summer crate! (Already owned — converted to XP.)`;
+        return "The summer crate is opening...";
+    }
+    if (phase === "reward") return `${crateName} reward revealed!`;
+    if (phase === "duplicate") return "Duplicate converted into XP.";
+    return `The ${crateName.toLowerCase()} is opening...`;
+}
+
+function resetCrateUnboxOverlay(crateId = "reef") {
+    const themeId = CRATE_UNBOX_THEME_IDS.includes(crateId) ? crateId : "reef";
+    const crateDef = getCrateDefinition(themeId);
+    activeCrateUnboxId = themeId;
+
     const overlay = document.getElementById("crateUnboxOverlay");
+    const stage = document.getElementById("crate-unbox-stage");
     const crate = document.getElementById("crate-unbox-crate");
     const burst = document.getElementById("crate-unbox-burst");
-    const copy = document.getElementById("crate-unbox-copy");
+    const splash = document.getElementById("crate-unbox-splash");
+    const icon = document.getElementById("crate-unbox-icon");
     const reveal = document.getElementById("crate-overlay-reveal");
-    if (overlay) overlay.classList.remove("hidden");
-    if (crate) crate.className = "crate-unbox-crate";
+
+    CRATE_UNBOX_THEME_IDS.forEach(id => {
+        overlay?.classList.remove(`crate-theme-${id}`);
+        stage?.classList.remove(`crate-theme-${id}`);
+    });
+    overlay?.classList.add(`crate-theme-${themeId}`);
+    stage?.classList.add(`crate-theme-${themeId}`);
+
+    if (crate) {
+        crate.className = `crate-unbox-crate crate-theme-${themeId}`;
+    }
     if (burst) burst.className = "crate-unbox-burst";
-    if (copy) copy.textContent = "The cosmetic crate is opening...";
+    if (splash) splash.classList.remove("active");
+    if (icon) icon.className = `fa-solid ${crateDef.icon}`;
     if (reveal) {
-        reveal.classList.add("hidden");
+        reveal.classList.remove("hidden", "crate-reveal-summer");
         reveal.innerHTML = "";
     }
+}
+
+function openCrateUnboxOverlay(crateId = "reef") {
+    resetCrateUnboxOverlay(crateId);
+    const overlay = document.getElementById("crateUnboxOverlay");
+    const copy = document.getElementById("crate-unbox-copy");
+    if (overlay) overlay.classList.remove("hidden");
+    if (copy) copy.textContent = getCrateUnboxCopy(crateId, "opening");
+}
+
+function getCrateUnboxRevealDelay(crateId = activeCrateUnboxId) {
+    return crateId === "summer" ? 1150 : 950;
+}
+
+function getCrateUnboxRevealHoldDelay(crateId = activeCrateUnboxId) {
+    return crateId === "summer" ? 2050 : 1850;
+}
+
+function applyCrateUnboxOpeningState(reward) {
+    const crate = document.getElementById("crate-unbox-crate");
+    const burst = document.getElementById("crate-unbox-burst");
+    const splash = document.getElementById("crate-unbox-splash");
+    const isSummer = activeCrateUnboxId === "summer";
+
+    if (crate) {
+        crate.classList.add(isSummer ? "opening-summer" : "opening", `rarity-${reward.rarity}`);
+    }
+    if (burst) burst.classList.add(isSummer ? "active-summer" : "active", `rarity-${reward.rarity}`);
+    if (splash && isSummer) splash.classList.add("active");
 }
 
 function closeCrateUnboxOverlay() {
     const overlay = document.getElementById("crateUnboxOverlay");
-    const reveal = document.getElementById("crate-overlay-reveal");
     if (overlay) overlay.classList.add("hidden");
-    if (reveal) {
-        reveal.classList.add("hidden");
-        reveal.innerHTML = "";
-    }
+    resetCrateUnboxOverlay(activeCrateUnboxId);
 }
 
-function showCrateOverlayReward(reward) {
-    const crate = document.getElementById("crate-unbox-crate");
-    const burst = document.getElementById("crate-unbox-burst");
+function showCrateOverlayReward(reward, crateId = activeCrateUnboxId) {
     const copy = document.getElementById("crate-unbox-copy");
     const reveal = document.getElementById("crate-overlay-reveal");
-    if (crate) crate.classList.add("opening", `rarity-${reward.rarity}`);
-    if (burst) burst.classList.add("active", `rarity-${reward.rarity}`);
-    if (copy) copy.textContent = `${reward.name} dropped from the cosmetic crate.`;
+    const isSummer = crateId === "summer";
+    applyCrateUnboxOpeningState(reward);
+    if (copy) {
+        copy.textContent = isSummer
+            ? getCrateUnboxCopy(crateId, "reward", reward.name)
+            : `${reward.name} dropped from the ${getCrateDefinition(crateId).name.toLowerCase()}.`;
+    }
     if (reveal) {
         reveal.classList.remove("hidden");
+        if (isSummer) reveal.classList.add("crate-reveal-summer");
         reveal.innerHTML = `
-            <div class="crate-reveal-card crate-reveal-card-${reward.rarity}">
+            <div class="crate-reveal-card crate-reveal-card-${reward.rarity}${isSummer ? " crate-reveal-card-summer" : ""}">
                 ${getCrateRewardPreviewMarkup(reward)}
                 <div class="crate-reveal-copy">
                     <span class="crate-rarity ${reward.rarity}">${reward.rarity}</span>
@@ -2425,7 +2911,23 @@ function showCrateOverlayReward(reward) {
 
 let crateSkipTimeout = null;
 
-function finalizeCrateRewardPresentation(reward, duplicateReward, duplicateXpAward) {
+function unlockCrateAchievement(crateId = "reef") {
+    const achievementId = crateAchievementIds[crateId];
+    if (!achievementId) return;
+
+    if (typeof window.unlockAchievement === "function") {
+        window.unlockAchievement(achievementId);
+        return;
+    }
+
+    const unlockedAchievements = JSON.parse(localStorage.getItem("unlockedAchievements") || "[]");
+    if (!unlockedAchievements.includes(achievementId)) {
+        unlockedAchievements.push(achievementId);
+        localStorage.setItem("unlockedAchievements", JSON.stringify(unlockedAchievements));
+    }
+}
+
+function finalizeCrateRewardPresentation(reward, duplicateReward, duplicateXpAward, crateId = "reef") {
     if (duplicateReward) {
         showNotification(`${reward.name} was already owned. Converted to ${duplicateXpAward.totalXp} XP.`, "success", 4600);
         if (typeof updateIndexStats === "function") updateIndexStats();
@@ -2453,10 +2955,6 @@ function finalizeCrateRewardPresentation(reward, duplicateReward, duplicateXpAwa
             } else {
                 showNotification(`${reward.name} +${quantity}! You now have ${totalShields}.`, "success", 4200);
             }
-        } else if (XP_POTION_DEFINITION_MAP[reward.itemId]) {
-            const potionDef = getXpPotionDefinition(reward.itemId);
-            const totalPotions = getXpPotionCount(undefined, reward.itemId);
-            showNotification(`${reward.name} +${quantity}! ${potionDef.emoji} Total: ${totalPotions}.`, "success", 4200);
         } else {
             showNotification(`${reward.name} +${quantity}!`, "success", 4200);
         }
@@ -2467,15 +2965,7 @@ function finalizeCrateRewardPresentation(reward, duplicateReward, duplicateXpAwa
     if (typeof renderThemeSelection === "function") renderThemeSelection();
     if (typeof renderBadgeSelection === "function") renderBadgeSelection();
     if (typeof updateProfileBadgeUI === "function") updateProfileBadgeUI();
-    if (typeof window.unlockAchievement === "function") {
-        window.unlockAchievement("crate_opened");
-    } else {
-        const unlockedAchievements = JSON.parse(localStorage.getItem("unlockedAchievements") || "[]");
-        if (!unlockedAchievements.includes("crate_opened")) {
-            unlockedAchievements.push("crate_opened");
-            localStorage.setItem("unlockedAchievements", JSON.stringify(unlockedAchievements));
-        }
-    }
+    unlockCrateAchievement(crateId);
     renderCratesModal();
     if (typeof renderConsumablesPage === "function") {
         renderConsumablesPage();
@@ -2495,16 +2985,20 @@ async function openCrate(crateId = "reef") {
     const inventory = getCrateInventory(profileData);
     if ((inventory[crateId] || 0) <= 0) {
         renderCratesModal();
+        const crateName = getCrateDefinition(crateId).name;
+        showNotification(`You don't have any ${crateName}s to open.`, "error", 2800);
         return;
     }
 
     crateOpeningInProgress = true;
+    updateSummerCrateCraftingUI(profileData);
     inventory[crateId] -= 1;
     profileData.crateInventory = normalizeCrateInventory(inventory);
     profileData.cratesOpened = getOpenedCrateCount(profileData) + 1;
     const rewardRarity = pickCrateRewardRarity(profileData);
-    const rarityRewards = getCrateRewardsByRarity(rewardRarity);
-    const reward = rarityRewards[Math.floor(Math.random() * rarityRewards.length)] || crateRewardPool[0];
+    const rarityRewards = getCrateRewardsByRarity(rewardRarity, crateId);
+    const pool = getCratePoolById(crateId);
+    const reward = rarityRewards[Math.floor(Math.random() * rarityRewards.length)] || pool[0];
     const previousCratesSinceLegendary = getCratesSinceLegendary(profileData);
     const { duplicateReward } = grantCrateReward(profileData, reward);
     profileData.cratesSinceLegendary = reward.rarity === "legendary" ? 0 : previousCratesSinceLegendary + 1;
@@ -2521,30 +3015,30 @@ async function openCrate(crateId = "reef") {
     renderCratesModal();
 
     if (getCrateInstantOpenEnabled(profileData)) {
-        finalizeCrateRewardPresentation(reward, duplicateReward, duplicateXpAward);
         crateOpeningInProgress = false;
+        finalizeCrateRewardPresentation(reward, duplicateReward, duplicateXpAward, crateId);
         return;
     }
 
-    openCrateUnboxOverlay();
+    openCrateUnboxOverlay(crateId);
 
     await new Promise(resolve => {
-        crateSkipTimeout = setTimeout(resolve, 950);
+        crateSkipTimeout = setTimeout(resolve, getCrateUnboxRevealDelay(crateId));
     });
 
     if (duplicateReward) {
-        showCrateOverlayDuplicateReward(reward, duplicateXpAward);
+        showCrateOverlayDuplicateReward(reward, duplicateXpAward, crateId);
     } else {
-        showCrateOverlayReward(reward);
+        showCrateOverlayReward(reward, crateId);
     }
 
     await new Promise(resolve => {
-        crateSkipTimeout = setTimeout(resolve, 1850);
+        crateSkipTimeout = setTimeout(resolve, getCrateUnboxRevealHoldDelay(crateId));
     });
-    finalizeCrateRewardPresentation(reward, duplicateReward, duplicateXpAward);
+    crateOpeningInProgress = false;
+    finalizeCrateRewardPresentation(reward, duplicateReward, duplicateXpAward, crateId);
     await new Promise(resolve => setTimeout(resolve, 1200));
     closeCrateUnboxOverlay();
-    crateOpeningInProgress = false;
 }
 
 function maybeAwardCrateDrop(source = "win") {
@@ -2553,13 +3047,13 @@ function maybeAwardCrateDrop(source = "win") {
 
     const profileData = getCurrentProfileData();
     const inventory = getCrateInventory(profileData);
+    // Only award reef crates (normal crates) regardless of theme
     inventory.reef += 1;
+    showNotification(`Cosmetic Crate dropped from your ${source}!`, "success", 3800);
     profileData.crateInventory = normalizeCrateInventory(inventory);
-    persistCrateProfileUpdate(profileData).catch(error => console.warn("Crate drop sync failed:", error));
+    persistCrateProfileUpdate(profileData).catch(error => console.warn("Crate sync failed:", error));
     renderCratesButton();
     renderCratesModal();
-
-    showNotification(`Cosmetic Crate dropped from your ${source}!`, "success", 3800);
     return true;
 }
 
@@ -2572,11 +3066,6 @@ window.toggleCrateInstantOpen = toggleCrateInstantOpen;
 window.maybeAwardCrateDrop = maybeAwardCrateDrop;
 window.getOpenedCrateCount = getOpenedCrateCount;
 window.getStreakShieldCount = getStreakShieldCount;
-window.getXpPotionCount = getXpPotionCount;
-window.getXpPotionInventory = getXpPotionInventory;
-window.getTotalXpPotionCount = getTotalXpPotionCount;
-window.useXpPotion = useXpPotion;
-window.useXpBooster = useXpBooster;
 window.applyStreakShieldOnLoss = applyStreakShieldOnLoss;
 window.getActiveLimitedTimeXpEvent = getActiveLimitedTimeXpEvent;
 window.applyLimitedTimeXpBonus = applyLimitedTimeXpBonus;
@@ -2609,7 +3098,7 @@ function getBadgeMeta(badgeId) {
             rarity: passReward.rarity || "common"
         };
     }
-    const crateReward = crateRewardPool.find(reward => reward.type === "badge" && reward.badgeId === badgeId);
+    const crateReward = getAllCrateBadgeRewards().find(reward => reward.badgeId === badgeId);
     if (crateReward) {
         return {
             id: badgeId,
@@ -2632,7 +3121,7 @@ function getBadgeRarityMeta(badge) {
     if (badge.id === "tester") return badgeRarityMeta.code;
     if (badge.id === "dev") return badgeRarityMeta.special;
     const passReward = sharkPassRewards.find(reward => reward.type === "badge" && reward.badgeId === badge.id);
-    const crateReward = crateRewardPool.find(reward => reward.type === "badge" && reward.badgeId === badge.id);
+    const crateReward = getAllCrateBadgeRewards().find(reward => reward.badgeId === badge.id);
     return badgeRarityMeta[passReward?.rarity || crateReward?.rarity || badge.rarity || "common"] || badgeRarityMeta.common;
 }
 
@@ -2649,7 +3138,7 @@ function getBadgeUnlockOrder(badge) {
     if (badge.id === "dev") return -1;
     const passReward = sharkPassRewards.find(reward => reward.type === "badge" && reward.badgeId === badge.id);
     if (passReward) return passReward.level;
-    if (crateRewardPool.some(reward => reward.type === "badge" && reward.badgeId === badge.id)) return 500;
+    if (getAllCrateBadgeRewards().some(reward => reward.badgeId === badge.id)) return 500;
     return 999;
 }
 
@@ -2696,7 +3185,10 @@ function getUnlockedCardThemeIds(profileData = getCurrentProfileData()) {
 }
 
 function buildCosmeticSyncPayload(profileData = getCurrentProfileData()) {
+    const profilePic = profileData.profilePicture || profileData.profilePic || "images/pfp/shark1.png";
     return {
+        profilePicture: profilePic,
+        profilePic: profilePic,
         equippedBadge: profileData.equippedBadge || "starter",
         equippedCardTheme: profileData.equippedCardTheme || "default",
         unlockedBadges: getUnlockedBadgeIds(profileData),
@@ -2817,7 +3309,8 @@ const allBadges = [
     { id: "starter", name: "Starter", emoji: "🦈", description: "Default badge for all players." },
     { id: "dev", name: "Developer", emoji: "🖥️", description: "Awarded only to the developer.", devOnly: true },
     { id: "tester", name: "Tester", emoji: "🎮", description: "Awarded for testing via code redeem.", codeUnlock: true },
-    { id: "anniversary", name: "Anniversary", emoji: "🎉", description: "Awarded for redeeming the Anniversary code.", codeUnlock: true }
+    { id: "anniversary", name: "Anniversary", emoji: "🎉", description: "Awarded for redeeming the Anniversary code.", codeUnlock: true },
+    { id: "lucky-fin", name: "Lucky Fin", emoji: "🍀", description: "Awarded from the daily prize wheel.", codeUnlock: true }
 ];
 
 const currentPassBadgeDefs = [
@@ -2840,7 +3333,19 @@ allBadges.push(
     { id: "reef-glint", name: "Driftwood", emoji: "🪵", description: "A badge found in Cosmetic Crates." },
     { id: "kelp-warden", name: "Smelly Boot", emoji: "🥾", description: "A badge found in Cosmetic Crates." },
     { id: "trench-myth", name: "Message Bottle", emoji: "🍾", description: "A badge found in Cosmetic Crates." },
-    { id: "aurora-fin", name: "Doubloon", emoji: "🪙", description: "A badge found in Cosmetic Crates." }
+    { id: "aurora-fin", name: "Doubloon", emoji: "🪙", description: "A badge found in Cosmetic Crates." },
+    { id: "Tidepool", name: "Tidepool", emoji: "🌀", description: "A summer crate badge." },
+    { id: "Ice Cream", name: "Ice Cream", emoji: "🍦", description: "A summer crate badge." },
+    { id: "Horizon", name: "Horizon", emoji: "🌅", description: "A summer crate badge." },
+    { id: "Paradise", name: "Paradise", emoji: "🌴", description: "A summer crate badge." },
+    { id: "Christmas", name: "Christmas", emoji: "🎄", description: "A christmas crate badge." },
+    { id: "Present", name: "Present", emoji: "🎁", description: "A christmas crate badge." },
+    { id: "Snowflake", name: "Snowflake", emoji: "❄️", description: "A christmas crate badge." },
+    { id: "Santa", name: "Santa", emoji: "🎅", description: "A christmas crate badge." },
+    { id: "Pumpkin", name: "Pumpkin", emoji: "🎃", description: "A halloween crate badge." },
+    { id: "Bat", name: "Bat", emoji: "🦇", description: "A halloween crate badge." },
+    { id: "Ghost", name: "Ghost", emoji: "👻", description: "A halloween crate badge." },
+    { id: "Vampire", name: "Vampire", emoji: "🧛", description: "A halloween crate badge." }
 );
 
 function getUnlockedBadges(uid) {
@@ -2857,7 +3362,7 @@ function getUnlockedBadges(uid) {
     } catch {}
     // Unlock anniversary badge if code redeemed
     try {
-        if (hasRedeemedCode('ANNIVERSARY2026')) {
+        if (hasRedeemedCode('ANNIVERSARY2026') || (Array.isArray(profileData.unlockedBadges) && profileData.unlockedBadges.includes('anniversary'))) {
             if (!badges.some(b => b.id === 'anniversary')) badges.push(allBadges.find(b => b.id === 'anniversary'));
         }
     } catch {}
@@ -3181,11 +3686,27 @@ const redeemCodes = {
     'SHARKDLE': { xp: 2500, cosmetics: [{ imagePath: 'images/codePfp/Shark17.png', name: 'Wobbegong Shark' }], description: '2.5k XP + Wobbegong Shark Profile Icon' },
     'UPDATE1': { xp: 1000, cosmetics: [{ imagePath: 'images/codePfp/Shark18.png', name: 'Greenland Shark' }], description: '1k XP + Greenland Shark Profile Icon' },
     'UPDATE2': { xp: 1500, cosmetics: [{ imagePath: 'images/codePfp/Shark19.png', name: 'Goblin Shark' }], description: '1.5k XP + Goblin Shark Profile Icon' },
-    'ANNIVERSARY2026': { xp: 2000, cosmetics: [{ imagePath: 'images/codePfp/Shark26.png', name: 'Hammerhead Shark' }], badge: 'anniversary', description: '2k XP + Hammerhead Shark Profile Icon + 🎉 badge' },
+    'SUMMER2026': { xp: 3000, crates: { summer: 1 }, description: '3k XP + 1 Summer Crate' },
     'TESTER': { badge: 'tester', description: 'Unlocks the Tester badge (🎮)' }
 };
 
 delete redeemCodes.TESTER;
+
+function applyCodeCrateRewards(profileData, crateRewards = {}) {
+    if (!crateRewards || typeof crateRewards !== "object") return [];
+    const inventory = getCrateInventory(profileData);
+    const granted = [];
+    Object.entries(crateRewards).forEach(([crateId, amount]) => {
+        const count = Math.max(0, Math.floor(Number(amount) || 0));
+        if (!count || !crateDefinitions[crateId]) return;
+        inventory[crateId] = (inventory[crateId] || 0) + count;
+        granted.push({ crateId, count, name: getCrateDefinition(crateId).name });
+    });
+    if (granted.length) {
+        profileData.crateInventory = normalizeCrateInventory(inventory);
+    }
+    return granted;
+}
 
 // Keep track of redeemed codes in localStorage
 function getRedeemedCodes() {
@@ -3497,6 +4018,7 @@ async function updateAuthUI() {
         // Initialize daily login first so streak/login fields are updated before any broad stats sync.
         await initializeDailyLogin();
         await ensureLoginStreakRewards();
+        updateSpinWheelUI();
         ensureNavProfileButton();
         // Sync local stats to Firebase after daily login initialization to avoid stale login-field overwrites.
         syncStatsToFirebase();
@@ -3561,6 +4083,8 @@ async function updateAuthUI() {
         }
     } else {
     }
+
+    updateSpinWheelUI();
 
     // Update streak display
     const existingStreak = document.getElementById("streak-display");
@@ -3632,8 +4156,6 @@ function hasMeaningfulProfileData(profile) {
         profile.duelWins ||
         normalizeCrateInventory(profile.crateInventory).reef ||
         getStreakShieldCount(profile) ||
-        getTotalXpPotionCount(profile) ||
-        getPersonalXpBuffEndMs(profile) > Date.now() ||
         (Array.isArray(profile.earnedCosmetics) && profile.earnedCosmetics.length) ||
         (profile.username && !isDefaultEmailUsername(profile.username)) ||
         (profile.profilePicture && profile.profilePicture !== "images/pfp/shark1.png")
@@ -3650,8 +4172,6 @@ function hasPersistedProfileIdentity(profile) {
         (profile.equippedCardTheme && profile.equippedCardTheme !== "default") ||
         normalizeCrateInventory(profile.crateInventory).reef ||
         getStreakShieldCount(profile) ||
-        getTotalXpPotionCount(profile) ||
-        getPersonalXpBuffEndMs(profile) > Date.now() ||
         (Array.isArray(profile.earnedCosmetics) && profile.earnedCosmetics.length) ||
         (Array.isArray(profile.unlockedAchievements) && profile.unlockedAchievements.length) ||
         (Array.isArray(profile.claimedAchievements) && profile.claimedAchievements.length)
@@ -3915,18 +4435,21 @@ function saveUserProfileLocally(profileData, options = {}) {
     }
 }
 
-function showCrateOverlayDuplicateReward(reward, xpAward) {
-    const crate = document.getElementById("crate-unbox-crate");
-    const burst = document.getElementById("crate-unbox-burst");
+function showCrateOverlayDuplicateReward(reward, xpAward, crateId = activeCrateUnboxId) {
     const copy = document.getElementById("crate-unbox-copy");
     const reveal = document.getElementById("crate-overlay-reveal");
-    if (crate) crate.classList.add("opening", `rarity-${reward.rarity}`);
-    if (burst) burst.classList.add("active", `rarity-${reward.rarity}`);
-    if (copy) copy.textContent = `${reward.name} was a duplicate and converted into XP.`;
+    const isSummer = crateId === "summer";
+    applyCrateUnboxOpeningState(reward);
+    if (copy) {
+        copy.textContent = isSummer
+            ? getCrateUnboxCopy(crateId, "duplicate", reward.name)
+            : `${reward.name} was a duplicate and converted into XP.`;
+    }
     if (reveal) {
         reveal.classList.remove("hidden");
+        if (isSummer) reveal.classList.add("crate-reveal-summer");
         reveal.innerHTML = `
-            <div class="crate-reveal-card crate-reveal-card-${reward.rarity}">
+            <div class="crate-reveal-card crate-reveal-card-${reward.rarity}${isSummer ? " crate-reveal-card-summer" : ""}">
                 ${getCrateRewardPreviewMarkup(reward)}
                 <div class="crate-reveal-copy">
                     <span class="crate-rarity ${reward.rarity}">${reward.rarity}</span>
@@ -3953,9 +4476,6 @@ function clearCachedProfileState() {
     localStorage.removeItem("lastLoginDate");
     localStorage.removeItem("loginStreak");
     localStorage.removeItem("currentLoginDay");
-    // Note: We intentionally do NOT clear claimedAchievements/unlockedAchievements here
-    // because those are synced to Firebase and should persist across logout/login
-    // They will be properly loaded when the user logs back in
 }
 
 function getBestLocalProfile() {
@@ -4012,9 +4532,7 @@ function mergeProfilesSafely(localProfile, firebaseData) {
             : fallbackUsername;
     const localUpdatedMs = getProfileTimestampMs(localProfile.lastUpdated);
     const firebaseUpdatedMs = getProfileTimestampMs(firebaseData.lastUpdated);
-    const localCrateInventory = normalizeCrateInventory(localProfile.crateInventory);
-    const firebaseCrateInventory = normalizeCrateInventory(firebaseData.crateInventory);
-    const preferredCrateInventory = localUpdatedMs >= firebaseUpdatedMs ? localCrateInventory : firebaseCrateInventory;
+    const preferredCrateInventory = mergeCrateInventory(localProfile.crateInventory, firebaseData.crateInventory);
     const preferredCratesOpened = maxNumeric(localProfile.cratesOpened, firebaseData.cratesOpened);
     const preferredCratesSinceLegendary = localUpdatedMs >= firebaseUpdatedMs
         ? getCratesSinceLegendary(localProfile)
@@ -4025,21 +4543,6 @@ function mergeProfilesSafely(localProfile, firebaseData) {
     const preferredStreakShields = localUpdatedMs >= firebaseUpdatedMs
         ? getStreakShieldCount(localProfile)
         : getStreakShieldCount(firebaseData);
-    const preferredXpPotionCounts = XP_POTION_DEFINITIONS.reduce((counts, potionDef) => {
-        counts[potionDef.countField] = localUpdatedMs >= firebaseUpdatedMs
-            ? getXpPotionCount(localProfile, potionDef.itemId)
-            : getXpPotionCount(firebaseData, potionDef.itemId);
-        return counts;
-    }, {});
-    const preferredPersonalXpBuffMultiplier = localUpdatedMs >= firebaseUpdatedMs
-        ? getPersonalXpBuffMultiplier(localProfile)
-        : getPersonalXpBuffMultiplier(firebaseData);
-    const preferredPersonalXpBuffEndMs = localUpdatedMs >= firebaseUpdatedMs
-        ? getPersonalXpBuffEndMs(localProfile)
-        : getPersonalXpBuffEndMs(firebaseData);
-    const preferredPersonalXpBuffSourceItemId = localUpdatedMs >= firebaseUpdatedMs
-        ? getPersonalXpBuffSourceItemId(localProfile)
-        : getPersonalXpBuffSourceItemId(firebaseData);
 
     const localDailyWinsDate = normalizeStoredUtcDateValue(localProfile.dailyWinsUtcDate || localProfile.dailyWinsDate);
     const remoteDailyWinsDate = normalizeStoredUtcDateValue(firebaseData.dailyWinsUtcDate || firebaseData.dailyWinsDate);
@@ -4099,10 +4602,6 @@ function mergeProfilesSafely(localProfile, firebaseData) {
         cratesOpened: preferredCratesOpened,
         cratesSinceLegendary: preferredCratesSinceLegendary,
         streakShields: preferredStreakShields,
-        ...preferredXpPotionCounts,
-        personalXpBuffMultiplier: preferredPersonalXpBuffMultiplier,
-        personalXpBuffEndMs: preferredPersonalXpBuffEndMs,
-        personalXpBuffSourceItemId: preferredPersonalXpBuffSourceItemId,
         instantCrateOpen: preferredInstantCrateOpen,
         earnedCosmetics: getUnifiedCosmeticList(localProfile.earnedCosmetics, firebaseData.earnedCosmetics, "imagePath"),
         testerBadgeUnlocked: Boolean(firebaseData.testerBadgeUnlocked || localProfile.testerBadgeUnlocked),
@@ -4111,6 +4610,7 @@ function mergeProfilesSafely(localProfile, firebaseData) {
         unlockedBadges: getMergedUniqueIds(localProfile.unlockedBadges, firebaseData.unlockedBadges, ["starter"]),
         unlockedCardThemes: getMergedUniqueIds(localProfile.unlockedCardThemes, firebaseData.unlockedCardThemes, ["default"]),
         crateInventory: preferredCrateInventory,
+        lastSpinWheelDate: [normalizeStoredDateValue(localProfile.lastSpinWheelDate), normalizeStoredDateValue(firebaseData.lastSpinWheelDate)].filter(Boolean).sort().pop() || "",
         lastUpdated: Math.max(localUpdatedMs, firebaseUpdatedMs)
     };
 }
@@ -4160,6 +4660,12 @@ async function loadUserProfile(options = {}) {
             const normalizedModalShownDate = normalizeStoredDateValue(firebaseData.dailyLoginModalShownToday);
             if (normalizedModalShownDate) {
                 localStorage.setItem(getDailyLoginModalShownStorageKey(currentUser.uid), normalizedModalShownDate);
+            }
+            const normalizedSpinDate = normalizeStoredDateValue(firebaseData.lastSpinWheelDate);
+            if (normalizedSpinDate) {
+                localStorage.setItem(getLastSpinWheelDateStorageKey(currentUser.uid), normalizedSpinDate);
+            } else {
+                localStorage.removeItem(getLastSpinWheelDateStorageKey(currentUser.uid));
             }
             // Merge achievements instead of letting a stale Firestore snapshot clear local claims.
             const mergedClaimedAchievements = getMergedUniqueIds(
@@ -4213,13 +4719,6 @@ async function loadUserProfile(options = {}) {
                 cratesOpened: 0,
                 cratesSinceLegendary: 0,
                 streakShields: 0,
-                ...XP_POTION_DEFINITIONS.reduce((counts, potionDef) => {
-                    counts[potionDef.countField] = 0;
-                    return counts;
-                }, {}),
-                personalXpBuffMultiplier: 1,
-                personalXpBuffEndMs: 0,
-                personalXpBuffSourceItemId: "",
                 instantCrateOpen: false,
                 earnedCosmetics: [],
                 testerBadgeUnlocked: false,
@@ -4641,10 +5140,6 @@ async function signupUser() {
             crateInventory: normalizeCrateInventory(localProfile.crateInventory),
             cratesOpened: Math.max(0, Number(localProfile.cratesOpened) || 0),
             streakShields: getStreakShieldCount(localProfile),
-            ...getXpPotionSyncPayload(localProfile),
-            personalXpBuffMultiplier: getPersonalXpBuffMultiplier(localProfile),
-            personalXpBuffEndMs: getPersonalXpBuffEndMs(localProfile),
-            personalXpBuffSourceItemId: getPersonalXpBuffSourceItemId(localProfile),
             username: username,
             email: email,
             avatar: "🦈",
@@ -4844,24 +5339,38 @@ function closeFriendProfileModal() {
     document.getElementById("friendProfileModal").classList.add("hidden");
 }
 
+async function refreshProfilePicPicker() {
+    await loadEarnedCosmetics();
+    renderProfilePicPicker();
+}
+
 function openProfilePicModal() {
-    // Always refresh user profile from Firestore before showing pfps
-    if (typeof loadUserProfile === 'function') {
-        loadUserProfile().then(() => {
-            loadAvailablePFPs();
-            loadEarnedCosmetics().catch(err => console.error("Error loading earned cosmetics:", err));
-            document.getElementById("profilePicModal").classList.remove("hidden");
-        }).catch(err => {
-            // fallback if error
-            loadAvailablePFPs();
-            loadEarnedCosmetics().catch(err => console.error("Error loading earned cosmetics:", err));
-            document.getElementById("profilePicModal").classList.remove("hidden");
-        });
-    } else {
-        loadAvailablePFPs();
-        loadEarnedCosmetics().catch(err => console.error("Error loading earned cosmetics:", err));
-        document.getElementById("profilePicModal").classList.remove("hidden");
+    const modal = document.getElementById("profilePicModal");
+    if (!modal) return;
+
+    pfpPickerFilter = "all";
+    pfpPickerSearchQuery = "";
+    const searchInput = document.getElementById("pfp-picker-search");
+    if (searchInput) searchInput.value = "";
+    document.querySelectorAll("#pfp-picker-tabs .picker-modal-tab").forEach(tab => {
+        const isAll = tab.dataset.pfpFilter === "all";
+        tab.classList.toggle("active", isAll);
+        tab.setAttribute("aria-selected", isAll ? "true" : "false");
+    });
+
+    const showModal = () => {
+        renderProfilePicPicker();
+        modal.classList.remove("hidden");
+    };
+
+    if (typeof loadUserProfile === "function") {
+        loadUserProfile()
+            .then(() => refreshProfilePicPicker().then(showModal))
+            .catch(() => refreshProfilePicPicker().then(showModal));
+        return;
     }
+
+    refreshProfilePicPicker().then(showModal);
 }
 
 function closeProfilePicModal() {
@@ -4906,232 +5415,346 @@ async function setProfilePicture(picturePath) {
             lastUpdated: Date.now()
         }, { merge: true });
 
-        closeProfilePicModal();
+        updateProfilePicPickerPreview(picturePath);
+        renderProfilePicPicker();
+        const equippedEntry = findProfilePicCatalogEntry(buildProfilePicPickerCatalog(), picturePath);
+        showNotification(`${equippedEntry?.name || "Portrait"} equipped.`, "success", 2400);
     } catch (error) {
         console.error("Error setting profile picture:", error);
+        showNotification("Could not update profile picture. Try again.", "error", 3200);
     }
 }
 
-function normalizeProfilePictureCards(container) {
-    if (!container) return;
+const STARTER_PROFILE_PFPS = [
+    { filename: "shark1.png", name: "Whale Shark" },
+    { filename: "shark2.png", name: "Great White Shark" },
+    { filename: "shark3.png", name: "Hammerhead Shark" },
+    { filename: "shark4.png", name: "Basking Shark" },
+    { filename: "shark5.png", name: "Zebra Shark" }
+];
 
-    Array.from(container.children).forEach(card => {
-        if (!(card instanceof HTMLElement)) return;
+const PFP_RARITY_ORDER = ["core", "common", "rare", "epic", "legendary", "special"];
+let pfpPickerFilter = "all";
+let pfpPickerSearchQuery = "";
+let pfpPickerControlsBound = false;
 
-        card.style.display = "flex";
-        card.style.flexDirection = "column";
-        card.style.alignItems = "center";
-        card.style.justifyContent = "flex-start";
-        card.style.minHeight = "140px";
-
-        const imageSlot = card.querySelector("div");
-        if (imageSlot instanceof HTMLElement) {
-            imageSlot.style.width = "70px";
-            imageSlot.style.height = "70px";
-            imageSlot.style.aspectRatio = "1 / 1";
-            imageSlot.style.flex = "0 0 70px";
-            imageSlot.style.flexShrink = "0";
-        }
-
-        const label = card.querySelector("p");
-        if (label instanceof HTMLElement) {
-            label.style.fontSize = "11px";
-            label.style.lineHeight = "1.1";
-            label.style.width = "100%";
-            label.style.maxWidth = "88px";
-            label.style.overflowWrap = "normal";
-            label.style.wordBreak = "normal";
-            label.style.hyphens = "none";
-            label.style.whiteSpace = "normal";
-            label.style.textAlign = "center";
-            label.style.flex = "0 0 48px";
-            label.style.minHeight = "48px";
-            label.style.maxHeight = "48px";
-            label.style.overflow = "hidden";
-
-            let fontSize = 11;
-            while ((label.scrollHeight > label.clientHeight || label.scrollWidth > label.clientWidth) && fontSize > 6) {
-                fontSize -= 0.5;
-                label.style.fontSize = `${fontSize}px`;
-            }
-        }
-    });
+function inferPfpRarityFromPath(imagePath = "") {
+    if (/leaderPfp\/Shark19\.png$/i.test(imagePath)) return "legendary";
+    if (/leaderPfp\/(Daily|Monthly)\//i.test(imagePath)) return "rare";
+    if (/spinPfp|loginPfp/i.test(imagePath)) return "legendary";
+    if (/codePfp/i.test(imagePath)) return "special";
+    if (/levelPfp\/Shark16\.png$/i.test(imagePath)) return "legendary";
+    if (/levelPfp\/Shark1[2-5]\.png$/i.test(imagePath)) return "epic";
+    if (/levelPfp/i.test(imagePath)) return "common";
+    const seasonalMatch = imagePath.match(/cratePfp\/(?:SummerPfp|ChristmasPfp|HalloweenPfp)\/Shark([1-4])\.png$/i);
+    if (seasonalMatch) {
+        return ({ 1: "common", 2: "rare", 3: "epic", 4: "legendary" })[Number(seasonalMatch[1])] || "common";
+    }
+    if (/cratePfp\/Shark24\.png$/i.test(imagePath)) return "common";
+    if (/cratePfp\/Shark25\.png$/i.test(imagePath)) return "rare";
+    if (/cratePfp\/Shark23\.png$/i.test(imagePath)) return "epic";
+    if (/cratePfp\/Shark22\.png$/i.test(imagePath)) return "legendary";
+    if (/cratePfp/i.test(imagePath)) return "rare";
+    if (/images\/pfp\//i.test(imagePath)) return "core";
+    return "common";
 }
 
-function loadAvailablePFPs() {
-    const availablePFPsContainer = document.getElementById("available-pfps");
-    if (!availablePFPsContainer) return;
+function getPfpRarityLabel(rarity) {
+    return ({
+        core: "Starter",
+        common: "Common",
+        rare: "Rare",
+        epic: "Epic",
+        legendary: "Legendary",
+        special: "Special"
+    })[rarity] || "Common";
+}
 
-    availablePFPsContainer.innerHTML = "";
+function getPfpCategoryLabel(category) {
+    return ({
+        starter: "Starter",
+        pass: "Shark Pass",
+        reward: "Reward",
+        crate: "Crate"
+    })[category] || "Portrait";
+}
+
+function getCosmeticSourceLabel(cosmetic = {}) {
+    if (cosmetic.source) return cosmetic.source;
+    if (isLeaderRewardPfp(cosmetic) || cosmetic.name === "Port Jackson Shark") return "All-time leaderboard top 3";
+    if (/leaderPfp\/Daily/i.test(cosmetic.imagePath || "")) return "Daily leaderboard #1";
+    if (/leaderPfp\/Monthly/i.test(cosmetic.imagePath || "")) return "Monthly leaderboard #1";
+    if (/codePfp/i.test(cosmetic.imagePath || "")) return "Redeem code reward";
+    if (/loginPfp/i.test(cosmetic.imagePath || "")) return "Day 7 login reward";
+    if (/spinPfp/i.test(cosmetic.imagePath || "")) return "Daily prize wheel";
+    if (/cratePfp/i.test(cosmetic.imagePath || "")) return "Cosmetic crate";
+    if (cosmetic.level) return `Shark Pass level ${cosmetic.level}`;
+    return "Special reward";
+}
+
+function isCosmeticUnlocked(earnedCosmetics, imagePath, name) {
+    return earnedCosmetics.some(cosmetic =>
+        (imagePath && cosmetic?.imagePath === imagePath) ||
+        (name && cosmetic?.name === name)
+    );
+}
+
+function buildProfilePicPickerCatalog() {
     const profileData = getCurrentProfileData();
     const earnedCosmetics = Array.isArray(profileData.earnedCosmetics) ? profileData.earnedCosmetics : [];
-    const baseCardStyle = "text-align: center; cursor: pointer; transition: all 0.3s ease; padding: 6px; border-radius: 8px; display: flex; flex-direction: column; align-items: center; justify-content: flex-start;";
-    const earnedImagePaths = new Set(earnedCosmetics.map(cosmetic => cosmetic?.imagePath).filter(Boolean));
+    const totalXP = profileData.totalXP !== undefined
+        ? profileData.totalXP
+        : parseInt(localStorage.getItem("totalXP"), 10) || parseInt(localStorage.getItem("totalGuesses"), 10) || 0;
+    const userLevel = getLevelFromXP(totalXP);
+    const catalog = [];
+    const seen = new Set();
 
-    function appendAvailablePfpCard({ imagePath, name, title = "", accentBorder = "rgba(0, 180, 216, 0.3)", accentBackground = "rgba(0, 180, 216, 0.1)", accentText = "#ddd", hoverBackground = "rgba(0, 180, 216, 0.15)", prefix = "" }) {
-        const div = document.createElement("div");
-        div.style.cssText = baseCardStyle;
-        if (title) div.title = title;
-        div.onmouseover = () => {
-            div.style.transform = "scale(1.08)";
-            div.style.background = hoverBackground;
-        };
-        div.onmouseout = () => {
-            div.style.transform = "scale(1)";
-            div.style.background = "transparent";
-        };
-        div.addEventListener("click", (e) => {
-            e.preventDefault();
-            setProfilePicture(imagePath);
+    function addEntry(entry) {
+        if (!entry?.imagePath || seen.has(entry.imagePath)) return;
+        seen.add(entry.imagePath);
+        catalog.push({
+            imagePath: entry.imagePath,
+            name: entry.name || "Shark",
+            category: entry.category || "reward",
+            source: entry.source || getCosmeticSourceLabel(entry),
+            unlocked: entry.unlocked !== false,
+            levelRequired: entry.levelRequired || null,
+            rarity: entry.rarity || inferPfpRarityFromPath(entry.imagePath),
+            isLeader: Boolean(entry.isLeader)
         });
-        div.innerHTML = `
-            <div style="width: 70px; height: 70px; aspect-ratio: 1 / 1; flex: 0 0 70px; border-radius: 10px; overflow: hidden; background: ${accentBackground}; margin: 0 auto 7px; border: 2px solid ${accentBorder};">
-                <img src="${imagePath}" alt="PFP ${name}" style="width: 100%; height: 100%; object-fit: cover;">
-            </div>
-            <p style="margin: 5px 0 0 0; font-size: 11px; font-weight: 600; color: ${accentText};">${prefix}${name}</p>
-        `;
-        availablePFPsContainer.appendChild(div);
     }
 
-    // display only the five default shark PFPs with their actual names
-    const pfps = [
-        { filename: "shark1.png", name: "Whale Shark" },
-        { filename: "shark2.png", name: "Great White Shark" },
-        { filename: "shark3.png", name: "Hammerhead Shark" },
-        { filename: "shark4.png", name: "Basking Shark" },
-        { filename: "shark5.png", name: "Zebra Shark" }
-    ];
-
-    pfps.forEach((pfp, index) => {
-        const picPath = `images/pfp/${pfp.filename}`;
-        appendAvailablePfpCard({
-            imagePath: picPath,
-            name: pfp.name
+    STARTER_PROFILE_PFPS.forEach(pfp => {
+        addEntry({
+            imagePath: `images/pfp/${pfp.filename}`,
+            name: pfp.name,
+            category: "starter",
+            source: "Starter shark",
+            unlocked: true,
+            rarity: "core"
         });
     });
 
-    // Add code PFPs using the helper function for consistent grid layout
-    // Check earnedCosmetics from Firebase instead of hasRedeemedCode() which reads from localStorage
-    if (earnedCosmetics.some(c => c.imagePath === "images/codePfp/Shark17.png" || c.name === "Wobbegong Shark")) {
-        appendAvailablePfpCard({
-            imagePath: "images/codePfp/Shark17.png",
-            name: "Wobbegong Shark",
-            title: "Redeem code reward",
-            accentBorder: "#ff6b6b",
-            accentBackground: "rgba(255, 107, 107, 0.1)",
-            accentText: "#ff6b6b",
-            hoverBackground: "rgba(255, 107, 107, 0.15)",
-            prefix: "🎁 "
-        });
-    }
-
-    if (earnedCosmetics.some(c => c.imagePath === "images/codePfp/Shark18.png" || c.name === "Greenland Shark")) {
-        appendAvailablePfpCard({
-            imagePath: "images/codePfp/Shark18.png",
-            name: "Greenland Shark",
-            title: "Redeem code reward",
-            accentBorder: "#ff6b6b",
-            accentBackground: "rgba(255, 107, 107, 0.1)",
-            accentText: "#ff6b6b",
-            hoverBackground: "rgba(255, 107, 107, 0.15)",
-            prefix: "🎁 "
-        });
-    }
-
-    if (earnedCosmetics.some(c => c.imagePath === "images/codePfp/Shark19.png" || c.name === "Goblin Shark")) {
-        appendAvailablePfpCard({
-            imagePath: "images/codePfp/Shark19.png",
-            name: "Goblin Shark",
-            title: "Redeem code reward",
-            accentBorder: "#ff6b6b",
-            accentBackground: "rgba(255, 107, 107, 0.1)",
-            accentText: "#ff6b6b",
-            hoverBackground: "rgba(255, 107, 107, 0.15)",
-            prefix: "🎁 "
-        });
-    }
-
-    if (earnedCosmetics.some(c => c.imagePath === "images/codePfp/Shark26.png" || c.name === "Hammerhead Shark")) {
-        appendAvailablePfpCard({
-            imagePath: "images/codePfp/Shark26.png",
-            name: "Hammerhead Shark",
-            title: "Anniversary code reward",
-            accentBorder: "#ff6b6b",
-            accentBackground: "rgba(255, 107, 107, 0.1)",
-            accentText: "#ff6b6b",
-            hoverBackground: "rgba(255, 107, 107, 0.15)",
-            prefix: "🎉 "
-        });
-    }
-
-    // Add special unlocked profile pictures that should appear in the available PFP list
-    if (earnedCosmetics.some(c => c.name === "Port Jackson Shark")) {
-        const div = document.createElement("div");
-        div.style.cssText = baseCardStyle;
-        div.title = "Leaderboard Top 3 Reward";
-        div.onmouseover = () => {
-            div.style.transform = "scale(1.08)";
-            div.style.background = "rgba(212,175,55,0.22)"; // more golden
-        };
-        div.onmouseout = () => {
-            div.style.transform = "scale(1)";
-            div.style.background = "transparent";
-        };
-        div.addEventListener("click", (e) => {
-            e.preventDefault();
-            setProfilePicture("images/leaderPfp/Shark19.png");
-        });
-        div.innerHTML = `
-            <div style="width: 70px; height: 70px; aspect-ratio: 1 / 1; flex: 0 0 70px; border-radius: 10px; overflow: hidden; background: linear-gradient(135deg, #222 60%, #D4AF37 100%); margin: 0 auto 7px; border: 2px solid #D4AF37; position:relative;">
-                <span style="position:absolute;top:-12px;left:50%;transform:translateX(-50%);font-size:2em;color:#D4AF37;text-shadow:0 2px 8px #000;">👑</span>
-                <img src="images/leaderPfp/Shark19.png" alt="PFP Port Jackson Shark" style="width: 100%; height: 100%; object-fit: cover;">
-            </div>
-            <p style="margin: 5px 0 0 0; font-size: 11px; font-weight: 700; color: #D4AF37;">Port Jackson Shark <span style="color:#D4AF37;font-size:1.1em;vertical-align:middle;">👑</span></p>
-        `;
-        availablePFPsContainer.appendChild(div);
-    }
-
-    if (earnedCosmetics.some(c => c.name === DAY_7_LOGIN_PFP.name || c.imagePath === DAY_7_LOGIN_PFP.imagePath)) {
-        const div = document.createElement("div");
-        div.style.cssText = baseCardStyle;
-        div.title = "Day 7 login reward";
-        div.onmouseover = () => {
-            div.style.transform = "scale(1.08)";
-            div.style.background = "rgba(255, 215, 0, 0.16)";
-        };
-        div.onmouseout = () => {
-            div.style.transform = "scale(1)";
-            div.style.background = "transparent";
-        };
-        div.addEventListener("click", (e) => {
-            e.preventDefault();
-            setProfilePicture(DAY_7_LOGIN_PFP.imagePath);
-        });
-        div.innerHTML = `
-            <div style="width: 70px; height: 70px; aspect-ratio: 1 / 1; flex: 0 0 70px; border-radius: 10px; overflow: hidden; background: rgba(255, 215, 0, 0.12); margin: 0 auto 7px; border: 2px solid #ffd700;">
-                <img src="${DAY_7_LOGIN_PFP.imagePath}" alt="PFP ${DAY_7_LOGIN_PFP.name}" style="width: 100%; height: 100%; object-fit: cover;">
-            </div>
-            <p style="margin: 5px 0 0 0; font-size: 11px; font-weight: 700; color: #ffd700;">🏆 ${DAY_7_LOGIN_PFP.name}</p>
-        `;
-        availablePFPsContainer.appendChild(div);
-    }
-
-    crateRewardPool
-        .filter(reward => reward.type === "pfp" && earnedImagePaths.has(reward.imagePath))
+    sharkPassRewards
+        .filter(reward => reward.type === "pfp")
         .forEach(reward => {
-            appendAvailablePfpCard({
+            addEntry({
                 imagePath: reward.imagePath,
                 name: reward.name,
-                title: "Cosmetic Crate reward",
-                accentBorder: "#ffd47f",
-                accentBackground: "rgba(255, 212, 127, 0.12)",
-                accentText: "#ffd47f",
-                hoverBackground: "rgba(255, 212, 127, 0.14)",
-                prefix: "📦 "
+                category: "pass",
+                source: `Shark Pass level ${reward.level}`,
+                unlocked: userLevel >= reward.level || isCosmeticUnlocked(earnedCosmetics, reward.imagePath, reward.name),
+                levelRequired: reward.level,
+                rarity: reward.rarity || inferPfpRarityFromPath(reward.imagePath)
             });
         });
 
-    normalizeProfilePictureCards(availablePFPsContainer);
+    levelRewards.forEach(reward => {
+        addEntry({
+            imagePath: reward.imagePath,
+            name: reward.name,
+            category: "pass",
+            source: `Shark Pass level ${reward.level}`,
+            unlocked: userLevel >= reward.level || isCosmeticUnlocked(earnedCosmetics, reward.imagePath, reward.name),
+            levelRequired: reward.level,
+            rarity: inferPfpRarityFromPath(reward.imagePath)
+        });
+    });
+
+    const specialRewardDefs = [
+        { imagePath: "images/codePfp/Shark17.png", name: "Wobbegong Shark", source: "Redeem code reward" },
+        { imagePath: "images/codePfp/Shark18.png", name: "Greenland Shark", source: "Redeem code reward" },
+        { imagePath: "images/codePfp/Shark19.png", name: "Goblin Shark", source: "Redeem code reward" },
+        { imagePath: "images/codePfp/Shark26.png", name: "Hammerhead Shark", source: "Anniversary code reward" },
+        { imagePath: "images/leaderPfp/Daily/Shark1.png", name: "Catshark", source: "Daily leaderboard #1" },
+        { imagePath: "images/leaderPfp/Monthly/Shark1.png", name: "Whitetip Reef Shark", source: "Monthly leaderboard #1" },
+        { imagePath: "images/leaderPfp/Shark19.png", name: "Port Jackson Shark", source: "All-time leaderboard top 3", isLeader: true },
+        { imagePath: "images/spinPfp/Shark1.png", name: "Wheel Shark", source: "Daily prize wheel" },
+        { imagePath: "images/loginPfp/Shark20.png", name: "Bull Shark", source: "Day 7 login reward" }
+    ];
+
+    specialRewardDefs.forEach(def => {
+        if (!isCosmeticUnlocked(earnedCosmetics, def.imagePath, def.name)) return;
+        addEntry({
+            ...def,
+            category: "reward",
+            unlocked: true,
+            rarity: inferPfpRarityFromPath(def.imagePath)
+        });
+    });
+
+    getAllCrateRewardPools()
+        .flat()
+        .filter(reward => reward.type === "pfp")
+        .forEach(reward => {
+            if (!isCosmeticUnlocked(earnedCosmetics, reward.imagePath, reward.name)) return;
+            addEntry({
+                imagePath: reward.imagePath,
+                name: reward.name,
+                category: "crate",
+                source: `${reward.name.includes("Summer") || reward.imagePath.includes("SummerPfp") ? "Summer" : reward.imagePath.includes("ChristmasPfp") ? "Christmas" : reward.imagePath.includes("HalloweenPfp") ? "Halloween" : "Cosmetic"} crate`,
+                unlocked: true,
+                rarity: reward.rarity || inferPfpRarityFromPath(reward.imagePath)
+            });
+        });
+
+    earnedCosmetics.forEach(cosmetic => {
+        if (!cosmetic?.imagePath || seen.has(cosmetic.imagePath) || /^images\/pfp\//i.test(cosmetic.imagePath)) {
+            return;
+        }
+        const category = /cratePfp/i.test(cosmetic.imagePath) ? "crate" : "reward";
+        addEntry({
+            imagePath: cosmetic.imagePath,
+            name: getCosmeticDisplayName(cosmetic) || cosmetic.name || "Shark",
+            category,
+            source: getCosmeticSourceLabel(cosmetic),
+            unlocked: true,
+            levelRequired: cosmetic.level || null,
+            rarity: inferPfpRarityFromPath(cosmetic.imagePath),
+            isLeader: isLeaderRewardPfp(cosmetic) || cosmetic.name === "Port Jackson Shark"
+        });
+    });
+
+    return catalog.sort((a, b) => {
+        if (a.unlocked !== b.unlocked) return a.unlocked ? -1 : 1;
+        const rarityDiff = PFP_RARITY_ORDER.indexOf(a.rarity) - PFP_RARITY_ORDER.indexOf(b.rarity);
+        if (rarityDiff !== 0) return rarityDiff;
+        if (a.category !== b.category) return a.category.localeCompare(b.category);
+        return a.name.localeCompare(b.name);
+    });
+}
+
+function getEquippedProfilePicturePath() {
+    const profileData = getCurrentProfileData();
+    return profileData.profilePicture || profileData.profilePic || "images/pfp/shark1.png";
+}
+
+function findProfilePicCatalogEntry(catalog, imagePath) {
+    return catalog.find(entry => entry.imagePath === imagePath) || null;
+}
+
+function updateProfilePicPickerPreview(imagePath = getEquippedProfilePicturePath()) {
+    const previewImg = document.getElementById("pfp-picker-preview-img");
+    const previewName = document.getElementById("pfp-picker-preview-name");
+    const previewSource = document.getElementById("pfp-picker-preview-source");
+    const previewCrown = document.getElementById("pfp-picker-preview-crown");
+    if (!previewImg || !previewName || !previewSource) return;
+
+    const catalog = buildProfilePicPickerCatalog();
+    const entry = findProfilePicCatalogEntry(catalog, imagePath);
+    previewImg.src = imagePath;
+    previewName.textContent = entry?.name || "Shark";
+    previewSource.textContent = entry?.source || "Profile portrait";
+    if (previewCrown) {
+        previewCrown.classList.toggle("hidden", !entry?.isLeader);
+    }
+}
+
+function bindProfilePicPickerControls() {
+    if (pfpPickerControlsBound) return;
+    pfpPickerControlsBound = true;
+
+    const searchInput = document.getElementById("pfp-picker-search");
+    if (searchInput) {
+        searchInput.addEventListener("input", () => {
+            pfpPickerSearchQuery = searchInput.value.trim().toLowerCase();
+            renderProfilePicPicker();
+        });
+    }
+
+    const tabs = document.getElementById("pfp-picker-tabs");
+    if (tabs) {
+        tabs.addEventListener("click", event => {
+            const button = event.target.closest("[data-pfp-filter]");
+            if (!button) return;
+            pfpPickerFilter = button.dataset.pfpFilter || "all";
+            tabs.querySelectorAll(".picker-modal-tab").forEach(tab => {
+                const isActive = tab === button;
+                tab.classList.toggle("active", isActive);
+                tab.setAttribute("aria-selected", isActive ? "true" : "false");
+            });
+            renderProfilePicPicker();
+        });
+    }
+}
+
+function renderProfilePicPicker() {
+    const grid = document.getElementById("pfp-picker-grid");
+    if (!grid) return;
+
+    bindProfilePicPickerControls();
+
+    const catalog = buildProfilePicPickerCatalog();
+    const equippedPath = getEquippedProfilePicturePath();
+    const filtered = catalog.filter(entry => {
+        const matchesFilter = pfpPickerFilter === "all" || entry.category === pfpPickerFilter;
+        const matchesSearch = !pfpPickerSearchQuery ||
+            entry.name.toLowerCase().includes(pfpPickerSearchQuery) ||
+            entry.source.toLowerCase().includes(pfpPickerSearchQuery);
+        return matchesFilter && matchesSearch;
+    });
+
+    const unlockedCount = catalog.filter(entry => entry.unlocked).length;
+    const countEl = document.getElementById("pfp-picker-count");
+    const unlockedEl = document.getElementById("pfp-picker-unlocked-count");
+    const emptyEl = document.getElementById("pfp-picker-empty");
+    if (countEl) countEl.textContent = `${filtered.length} shown`;
+    if (unlockedEl) unlockedEl.textContent = `${unlockedCount} unlocked`;
+    if (emptyEl) emptyEl.classList.toggle("hidden", filtered.length > 0);
+
+    updateProfilePicPickerPreview(equippedPath);
+    grid.innerHTML = "";
+
+    filtered.forEach(entry => {
+        const card = document.createElement("button");
+        card.type = "button";
+        card.className = `pfp-option rarity-${entry.rarity}${entry.unlocked ? "" : " pfp-option-locked"}`;
+        if (entry.imagePath === equippedPath) card.classList.add("active");
+        card.title = entry.unlocked
+            ? `${entry.name} — ${entry.source}`
+            : `Unlock at Shark Pass level ${entry.levelRequired}`;
+
+        card.innerHTML = `
+            <span class="pfp-option-kicker">${getPfpCategoryLabel(entry.category)}</span>
+            <span class="pfp-option-frame rarity-${entry.rarity}${entry.isLeader ? " is-leader" : ""}">
+                ${entry.isLeader ? '<span class="pfp-option-crown">👑</span>' : ""}
+                <img src="${entry.imagePath}" alt="${entry.name}" loading="lazy" onerror="this.onerror=null;this.src='images/pfp/shark1.png';">
+                ${entry.unlocked ? "" : '<span class="pfp-option-lock" aria-hidden="true">🔒</span>'}
+            </span>
+            <span class="pfp-option-name">${entry.name}</span>
+            <span class="pfp-option-rarity rarity-${entry.rarity}">${entry.unlocked ? getPfpRarityLabel(entry.rarity) : `Lv. ${entry.levelRequired}`}</span>
+        `;
+
+        card.addEventListener("click", () => {
+            if (!entry.unlocked) {
+                showNotification(`Reach Shark Pass level ${entry.levelRequired} to unlock ${entry.name}.`, "info", 3200);
+                return;
+            }
+            setProfilePicture(entry.imagePath);
+        });
+
+        grid.appendChild(card);
+    });
+}
+
+const LEADER_REWARD_PFP_NAMES = {
+    "images/leaderPfp/Daily/Shark1.png": "Catshark",
+    "images/leaderPfp/Monthly/Shark1.png": "Whitetip Reef Shark",
+    "images/leaderPfp/Shark19.png": "Port Jackson Shark",
+    "images/spinPfp/Shark1.png": "Wheel Shark"
+};
+
+function getCosmeticDisplayName(cosmetic) {
+    if (!cosmetic) return "";
+    return LEADER_REWARD_PFP_NAMES[cosmetic.imagePath] || cosmetic.name || "";
+}
+
+function isLeaderRewardPfp(cosmetic) {
+    return Boolean(cosmetic?.imagePath && LEADER_REWARD_PFP_NAMES[cosmetic.imagePath]);
+}
+
+function loadAvailablePFPs() {
+    renderProfilePicPicker();
 }
 
 async function loadEarnedCosmetics() {
@@ -5195,102 +5818,9 @@ async function loadEarnedCosmetics() {
         profileData.earnedCosmetics = mergedUnlocked;
         saveUserProfileLocally(profileData, { skipRemoteSync: true });
 
-        // display in modal
-        const earnedPFPsContainer = document.getElementById("earned-pfps");
-        if (!earnedPFPsContainer) {
-            // Element doesn't exist on this page, silently return
-            return;
+        if (document.getElementById("pfp-picker-grid")) {
+            renderProfilePicPicker();
         }
-        const noEarned = document.getElementById("no-earned");
-        earnedPFPsContainer.innerHTML = "";
-
-        const cosmeticPfpsShownInAvailable = new Set([
-            "Port Jackson Shark",
-            DAY_7_LOGIN_PFP.name,
-            "Wobbegong Shark",
-            "Greenland Shark",
-            "Goblin Shark"
-        ]);
-        crateRewardPool
-            .filter(reward => reward.type === "pfp")
-            .forEach(reward => {
-                cosmeticPfpsShownInAvailable.add(reward.name);
-                if (reward.imagePath) cosmeticPfpsShownInAvailable.add(reward.imagePath);
-            });
-        const cosmeticsForGallery = mergedUnlocked.filter(cosmetic =>
-            !cosmeticPfpsShownInAvailable.has(cosmetic.name) &&
-            !cosmeticPfpsShownInAvailable.has(cosmetic.imagePath) &&
-            !/^images\/codePfp\//.test(cosmetic.imagePath || "")
-        );
-
-        if (cosmeticsForGallery.length === 0) {
-            if (noEarned) noEarned.style.display = "block";
-            return;
-        } else if (noEarned) {
-            noEarned.style.display = "none";
-        }
-
-        cosmeticsForGallery.forEach(cosmetic => {
-            const div = document.createElement("div");
-            div.style.cssText = "text-align: center; cursor: pointer; transition: all 0.3s ease; padding: 6px; border-radius: 8px; position: relative;";
-
-            // Add hover tooltip for shark pass cosmetics
-            if (cosmetic.level && cosmetic.name && !cosmetic.name.includes('Port Jackson Shark')) {
-                div.setAttribute('title', `Level ${cosmetic.level} in the Shark Pass`);
-            }
-            
-            // Special styling for Port Jackson Shark (leaderboard pfp)
-            const isBlackTip = cosmetic.name === "Port Jackson Shark" && /Shark19\.png/.test(cosmetic.imagePath);
-            // Check rarity tiers: Mako (Shark16) is yellow, Epaulette-Oceanic Whitetip (Shark12-15) are pink
-            const isMako = /Shark16\.png/.test(cosmetic.imagePath);
-            const isRare = /Shark1[2-5]\.png/.test(cosmetic.imagePath);
-            let borderColor = "#4caf50";
-            let hoverBgColor = "rgba(76, 175, 80, 0.15)";
-            let textColor = "#4caf50";
-            let bgColor = "rgba(76, 175, 80, 0.1)";
-            let crown = "";
-            if (isBlackTip) {
-                borderColor = "#222";
-                hoverBgColor = "rgba(255, 215, 0, 0.18)";
-                textColor = "#FFD700";
-                bgColor = "linear-gradient(135deg, #222 60%, #FFD700 100%)";
-                crown = '<span style="position:absolute;top:-12px;left:50%;transform:translateX(-50%);font-size:2em;color:#FFD700;text-shadow:0 2px 8px #000;">👑</span>';
-            } else if (isMako) {
-                borderColor = "#ffc107";
-                hoverBgColor = "rgba(255, 193, 7, 0.15)";
-                textColor = "#ffc107";
-                bgColor = "rgba(255, 193, 7, 0.1)";
-            } else if (isRare) {
-                borderColor = "#e91e63";
-                hoverBgColor = "rgba(233, 30, 99, 0.15)";
-                textColor = "#e91e63";
-                bgColor = "rgba(233, 30, 99, 0.1)";
-            }
-            div.onmouseover = () => {
-                div.style.transform = "scale(1.08)";
-                div.style.background = hoverBgColor;
-            };
-            div.onmouseout = () => {
-                div.style.transform = "scale(1)";
-                div.style.background = "transparent";
-            };
-            div.addEventListener("click", e => {
-                e.preventDefault();
-                setProfilePicture(cosmetic.imagePath);
-            });
-            div.innerHTML = `
-                <div style="width: 70px; height: 70px; aspect-ratio: 1 / 1; flex: 0 0 70px; border-radius: 10px; overflow: hidden; background: ${bgColor}; margin: 0 auto 7px; border: 2px solid ${borderColor}; position:relative;">
-                    ${crown}
-                    <img src="${cosmetic.imagePath}" alt="${cosmetic.name === 'Port Jackson Shark' ? 'PFP Port Jackson Shark' : cosmetic.name}" style="width: 100%; height: 100%; object-fit: cover;">
-                </div>
-                <p style="margin: 5px 0 0 0; font-size: 11px; font-weight: 700; color: ${textColor};">${cosmetic.name === 'Port Jackson Shark' ? 'Port Jackson Shark <span style=\"color:#FFD700;font-size:1.1em;vertical-align:middle;\">👑</span>' : cosmetic.name}</p>
-            `;
-            earnedPFPsContainer.appendChild(div);
-        });
-
-        normalizeProfilePictureCards(earnedPFPsContainer);
-
-
     } catch (error) {
         console.error("Error loading earned cosmetics:", error);
     }
@@ -5443,10 +5973,6 @@ async function syncStatsToFirebase() {
             cratesOpened: mergedProfile.cratesOpened || 0,
             cratesSinceLegendary: getCratesSinceLegendary(mergedProfile),
             streakShields: getStreakShieldCount(mergedProfile),
-            ...getXpPotionSyncPayload(mergedProfile),
-            personalXpBuffMultiplier: getPersonalXpBuffMultiplier(mergedProfile),
-            personalXpBuffEndMs: getPersonalXpBuffEndMs(mergedProfile),
-            personalXpBuffSourceItemId: getPersonalXpBuffSourceItemId(mergedProfile),
             instantCrateOpen: getCrateInstantOpenEnabled(mergedProfile),
             username: mergedProfile.username || getStoredPreferredUsername() || authUser.email.split("@")[0],
             profilePic: mergedProfile.profilePicture || "images/pfp/shark1.png",
@@ -5539,6 +6065,7 @@ async function syncStatsToFirebase() {
             localStorage.removeItem(getDailyLoginModalShownStorageKey());
         }
         stats.dailyLoginModalShownToday = normalizedModalShownDate;
+        stats.lastSpinWheelDate = normalizeStoredDateValue(mergedProfile.lastSpinWheelDate);
 
         // Save stats to userStats collection
         await statsRef.set(stats, { merge: true });
@@ -5634,10 +6161,7 @@ async function ensureLoginStreakRewards() {
         console.warn("Unable to sync day 7 login reward:", error);
     }
 
-    if (document.getElementById("available-pfps")) {
-        loadAvailablePFPs();
-    }
-    if (document.getElementById("earned-pfps")) {
+    if (document.getElementById("pfp-picker-grid")) {
         loadEarnedCosmetics();
     }
 
@@ -5886,9 +6410,9 @@ document.addEventListener("DOMContentLoaded", function() {
         document.getElementById("losses").textContent = localStorage.getItem("losses") || 0;
     }
 
-    // Load available PFPs on page load
-    if (document.getElementById("available-pfps")) {
-        loadAvailablePFPs();
+    // Load profile picture picker data on page load
+    if (document.getElementById("pfp-picker-grid")) {
+        loadEarnedCosmetics();
     }
 
     // If user is already logged in, refresh profile from Firebase immediately
@@ -5903,6 +6427,8 @@ document.addEventListener("DOMContentLoaded", function() {
     if (typeof ensureConsumablesPageTimer === "function") {
         ensureConsumablesPageTimer();
     }
+    initCratesModalTabs();
+    updateSeasonalCratePanels();
 });
 
 // ----- REDEEM CODE FUNCTIONS -----
@@ -5978,6 +6504,8 @@ async function redeemCode() {
             }
         }
 
+        const grantedCrates = applyCodeCrateRewards(userProfile, codeReward.crates);
+
         // Save to localStorage
         saveUserProfileLocally(userProfile);
 
@@ -5988,7 +6516,8 @@ async function redeemCode() {
                 totalXP: newXP,
                 earnedCosmetics: userProfile.earnedCosmetics,
                 unlockedBadges: Array.isArray(userProfile.unlockedBadges) ? userProfile.unlockedBadges : ["starter"],
-                testerBadgeUnlocked: userProfile.testerBadgeUnlocked === true
+                testerBadgeUnlocked: userProfile.testerBadgeUnlocked === true,
+                crateInventory: normalizeCrateInventory(userProfile.crateInventory)
             }, { merge: true });
         }
 
@@ -6012,6 +6541,9 @@ async function redeemCode() {
         if (xpAward.totalXp > 0) rewardLines.push(`${xpAward.totalXp} XP`);
         if (newlyUnlockedCosmetics.length) rewardLines.push(`${newlyUnlockedCosmetics.length} cosmetic${newlyUnlockedCosmetics.length === 1 ? "" : "s"}`);
         if (codeReward.badge) rewardLines.push(`badge unlocked`);
+        grantedCrates.forEach(crate => {
+            rewardLines.push(`${crate.count} ${crate.name}${crate.count === 1 ? "" : "s"}`);
+        });
         const rewardSummary = rewardLines.length ? rewardLines.join(" + ") : "Rewards unlocked";
         showRedeemMessage(`✨ Success! ${rewardSummary}.`, true);
         codeInput.value = '';
@@ -6020,6 +6552,9 @@ async function redeemCode() {
         loadUserProfile();
         loadEarnedCosmetics();
         loadAvailablePFPs();
+        renderCratesButton();
+        renderCratesModal();
+        updateSeasonalCratePanels();
 
         // Close modal after 2 seconds
         setTimeout(() => {
@@ -6311,30 +6846,15 @@ async function grantGlobalStreakShields(amount = 1) {
     }));
 }
 
-async function grantGlobalBoosters(amount = 1, itemId = XP_POTION_ITEM_ID) {
-    const count = Math.floor(Number(amount));
-    if (!Number.isFinite(count) || count <= 0) {
-        throw new Error("Invalid booster amount.");
-    }
-    const potionDef = getXpPotionDefinition(itemId);
-    const nowMs = Date.now();
-    const batchResult = await runActiveUserStatsBatch(() => ({
-        [potionDef.countField]: firebase.firestore.FieldValue.increment(count),
-        lastUpdated: nowMs
-    }));
-    return {
-        ...batchResult,
-        potionDef
-    };
-}
-
 async function refreshAdminAbusePanel() {
     if (!isDeveloperSessionActive() || !db) return false;
 
-    const [xpDoc, themeDoc, messageDoc] = await Promise.all([
+    const activeCutoffMs = Date.now() - ACTIVE_PLAYER_WINDOW_MS;
+    const [xpDoc, themeDoc, messageDoc, onlineUsersSnapshot] = await Promise.all([
         db.collection(GLOBAL_XP_EVENT_CONFIG_PATH.collection).doc(GLOBAL_XP_EVENT_CONFIG_PATH.doc).get(),
         db.collection(GLOBAL_INDEX_THEME_CONFIG_PATH.collection).doc(GLOBAL_INDEX_THEME_CONFIG_PATH.doc).get(),
-        db.collection(GLOBAL_MESSAGE_CONFIG_PATH.collection).doc(GLOBAL_MESSAGE_CONFIG_PATH.doc).get()
+        db.collection(GLOBAL_MESSAGE_CONFIG_PATH.collection).doc(GLOBAL_MESSAGE_CONFIG_PATH.doc).get(),
+        db.collection("userStats").where("lastActive", ">=", activeCutoffMs).get()
     ]);
 
     const xpData = xpDoc.exists ? (xpDoc.data() || {}) : {};
@@ -6378,6 +6898,21 @@ async function refreshAdminAbusePanel() {
         );
     } else {
         setAdminAbuseStatus("admin-message-status", "No global message is active.");
+    }
+
+    const onlineUsersDisplay = document.getElementById("admin-online-users-display");
+    if (onlineUsersDisplay) {
+        const onlineNames = onlineUsersSnapshot.docs
+            .map(doc => {
+                const data = doc.data() || {};
+                return String(data.username || doc.id);
+            })
+            .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }));
+
+        onlineUsersDisplay.textContent = `Online users: ${onlineNames.length}`;
+        onlineUsersDisplay.title = onlineNames.length
+            ? `Online users (${onlineNames.length}):\n${onlineNames.join("\n")}`
+            : "No users are currently online.";
     }
 
     return true;
@@ -6460,28 +6995,6 @@ async function adminGrantGlobalStreakShields() {
         showNotification(`Granted streak shields to ${result.updatedUsers} active player${result.updatedUsers === 1 ? "" : "s"}.`, "success", 3400);
     } catch (error) {
         setAdminAbuseStatus("admin-grant-status", `Shield grant failed: ${error.message || error}`, { error: true });
-    }
-}
-
-async function adminGrantGlobalBoosters() {
-    if (!isDeveloperSessionActive()) {
-        showNotification("Developer access required.", "error", 3000);
-        return;
-    }
-    const amount = getAdminPositiveCountValue("admin-grant-boosters-count", 1);
-    const boosterTypeSelect = document.getElementById("admin-grant-booster-type");
-    const itemId = boosterTypeSelect?.value || XP_POTION_ITEM_ID;
-    setAdminAbuseStatus("admin-grant-status", "Granting boosters to active players...");
-    try {
-        const result = await grantGlobalBoosters(amount, itemId);
-        const activeMinutes = Math.round(result.activeWindowMs / 60000);
-        setAdminAbuseStatus(
-            "admin-grant-status",
-            `Granted ${amount} ${result.potionDef.name}${amount === 1 ? "" : "s"} to ${result.updatedUsers} active player${result.updatedUsers === 1 ? "" : "s"} (last ${activeMinutes}m).`
-        );
-        showNotification(`Granted boosters to ${result.updatedUsers} active player${result.updatedUsers === 1 ? "" : "s"}.`, "success", 3400);
-    } catch (error) {
-        setAdminAbuseStatus("admin-grant-status", `Booster grant failed: ${error.message || error}`, { error: true });
     }
 }
 
@@ -6836,6 +7349,8 @@ async function forceRedeemCode(code) {
             }
         }
 
+        const grantedCrates = applyCodeCrateRewards(userProfile, codeReward.crates);
+
         saveUserProfileLocally(userProfile);
 
         // Sync to Firebase
@@ -6845,7 +7360,8 @@ async function forceRedeemCode(code) {
                 totalXP: newXP,
                 earnedCosmetics: userProfile.earnedCosmetics,
                 testerBadgeUnlocked: userProfile.testerBadgeUnlocked,
-                unlockedBadges: userProfile.unlockedBadges
+                unlockedBadges: userProfile.unlockedBadges,
+                crateInventory: normalizeCrateInventory(userProfile.crateInventory)
             }, { merge: true });
         }
 
@@ -6865,10 +7381,14 @@ async function forceRedeemCode(code) {
             codeReward.cosmetics.forEach(c => console.log(`   Cosmetic: ${c.name}`));
         }
         if (codeReward.badge) console.log(`   Badge: ${codeReward.badge}`);
+        grantedCrates.forEach(crate => console.log(`   Crate: +${crate.count} ${crate.name}`));
 
         loadUserProfile();
         loadEarnedCosmetics();
         loadAvailablePFPs();
+        renderCratesButton();
+        renderCratesModal();
+        updateSeasonalCratePanels();
 
     } catch (error) {
         console.error("❌ Error force-redeeming code:", error);
@@ -6941,62 +7461,9 @@ async function addStreakShields(amount = 1) {
     }
 }
 
-async function addXpPotions(amount = 1, itemId = XP_POTION_ITEM_ID) {
-    if (!firebase.auth().currentUser || !isDeveloperUid(firebase.auth().currentUser.uid)) {
-        console.log("❌ Access denied. This command is for developers only.");
-        return;
-    }
-    if (!currentUser) {
-        console.log("❌ Error: User must be logged in");
-        return;
-    }
-
-    const count = Math.floor(Number(amount));
-    if (!Number.isFinite(count) || count <= 0) {
-        console.log(`❌ Usage: addXpPotions(3, "${XP_POTION_ITEM_ID}")`);
-        return;
-    }
-
-    if (!XP_POTION_DEFINITION_MAP[itemId]) {
-        console.log(`❌ Unknown potion id: ${itemId}`);
-        console.log(`Available ids: ${XP_POTION_DEFINITIONS.map(def => def.itemId).join(", ")}`);
-        return;
-    }
-
-    try {
-        const potionDef = getXpPotionDefinition(itemId);
-        const profileData = getCurrentProfileData();
-        setXpPotionCount(
-            profileData,
-            getXpPotionCount(profileData, potionDef.itemId) + count,
-            potionDef.itemId
-        );
-        saveUserProfileLocally(profileData);
-        await db.collection("userStats").doc(currentUser.uid).set({
-            ...getXpPotionSyncPayload(profileData)
-        }, { merge: true });
-        renderCratesModal();
-        if (typeof renderConsumablesPage === "function") {
-            renderConsumablesPage();
-        }
-        console.log(
-            `✅ Added ${count} ${potionDef.name}${count === 1 ? "" : "s"}. ` +
-            `Total ${potionDef.shortLabel}: ${getXpPotionCount(profileData, potionDef.itemId)}`
-        );
-    } catch (error) {
-        console.error("❌ Error adding XP potions:", error);
-    }
-}
-
-async function addXpBoosters(amount = 1, itemId = XP_POTION_ITEM_ID) {
-    return addXpPotions(amount, itemId);
-}
-
 // Display current stats
 function showStats() {
     const userProfile = JSON.parse(localStorage.getItem("userProfile") || "{}");
-    const potionInventory = getXpPotionInventory(userProfile);
-    const potionSummary = potionInventory.map(potion => `${potion.name}: ${potion.count}`).join(" | ");
     console.log("=== CURRENT STATS ===");
     console.log(`XP: ${userProfile.totalXP || 0}`);
     console.log(`Wins: ${userProfile.wins || 0}`);
@@ -7006,16 +7473,6 @@ function showStats() {
     console.log(`Current Streak: ${userProfile.currentStreak || 0}`);
     console.log(`Highest Streak: ${userProfile.highestStreak || 0}`);
     console.log(`Streak Shields: ${Math.max(0, Number(userProfile.streakShields) || 0)}`);
-    console.log(`XP Boosters (Total): ${getTotalXpPotionCount(userProfile)}`);
-    console.log(`XP Boosters (By Type): ${potionSummary}`);
-    const activePotion = getActivePersonalXpBuff(userProfile);
-    console.log(
-        `Active XP Booster: ${
-            activePotion
-                ? `${activePotion.label} (${activePotion.multiplier}x) until ${new Date(activePotion.endMs).toLocaleTimeString()}`
-                : "None"
-        }`
-    );
     console.log(`Login Day: ${parseInt(localStorage.getItem("currentLoginDay")) || 1}`);
     console.log(`Login Streak: ${parseInt(localStorage.getItem("loginStreak")) || 1}`);
     console.log(`Level: ${getLevelFromXP(userProfile.totalXP || 0)}`);
@@ -7039,9 +7496,8 @@ function showCommands() {
     console.log("skipLoginDay(1) - Simulate missing 1 day and re-run daily login logic");
     console.log("addCrates(3) - Add Cosmetic Crates for testing");
     console.log("addStreakShields(3) - Add Streak Shields for testing");
-    console.log(`addXpBoosters(3, "${XP_POTION_ITEM_ID}") - Add specific XP boosters by item id`);
-    console.log(`addXpPotions(3, "${XP_POTION_ITEM_ID}") - Add specific XP boosters by item id`);
-    console.log(`useXpBooster("${XP_POTION_ITEM_ID}") - Use a booster by item id`);
+    console.log("resetDailySpin() - Reset today's daily spin wheel");
+    console.log("unlockAllCosmetics() - Unlock all profile icons, badges, and themes");
     console.log("addTestStats() - Quick test add (500 XP, 10 wins, 5 losses, 15 games, 75 guesses)");
     console.log("revealShark() - Reveal the currently open duel shark");
     console.log("revealShark('duel_id') - Reveal a specific duel shark by id");
@@ -7049,4 +7505,3 @@ function showCommands() {
     console.log("showCommands() - Show this help");
     console.log("================================");
 }
-
