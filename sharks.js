@@ -16,7 +16,7 @@ const sharks = [
             { "name": "Atlantic Big Eye Six Gill Shark", "family": "Hexanchidae", "order": "Hexanchiformes", "genus": "Hexanchus", "size": "Medium","habitat": "Bathypelagic", "yod": 1969},
             // Hexanchidae | Hexanchiformes | Notorynchus | 1 species
             { "name": "Broad Nose Seven Gill Shark", "family": "Hexanchidae", "order": "Hexanchiformes", "genus": "Notorynchus", "size": "Medium","habitat": "Epipelagic", "yod": 1907},
-            // DogFish | Squaliformes | Not Completed | Most need size.
+            // DogFish | Squaliformes | Completed |
             // Centrophoridae | Squaliformes | Centrophorus | 12 species
             { "name": "Dwarf Gulper Shark", "family": "Centrophoridae", "order": "Squaliformes", "genus": "Centrophorus", "size": "Tiny","habitat": "Mesopelagic", "yod": 1913 },
             { "name": "Gulper Shark", "family": "Centrophoridae", "order": "Squaliformes", "genus": "Centrophorus", "size": "Small","habitat": "Mesopelagic", "yod": 1801 },
@@ -104,6 +104,7 @@ const sharks = [
             { "name": "Traveller Lanternshark", "family": "Etmopteridae", "order": "Squaliformes", "genus": "Etmopterus", "size": "Small","habitat": "Mesopelagic", "yod": 2011 },
             { "name": "Hawaiian Lanternshark", "family": "Etmopteridae", "order": "Squaliformes", "genus": "Etmopterus", "size": "Small","habitat": "Mesopelagic", "yod": 1905 },
             { "name": "Green Lanternshark", "family": "Etmopteridae", "order": "Squaliformes", "genus": "Etmopterus", "size": "Small","habitat": "Mesopelagic", "yod": 1953 },
+            { "name": "West Australian Lanternshark", "family": "Etmopteridae", "order": "Squaliformes", "genus": "Etmopterus", "size": "Small","habitat": "Mesopelagic", "yod": 2025 },
             // Etmopteridae | Squaliformes | Trigonognathus | 1 species
             { "name": "Viper Dogfish", "family": "Etmopteridae", "order": "Squaliformes", "genus": "Trigonognathus", "size": "Small","habitat": "Bathypelagic", "yod": 1990 },
             // Oxynotidae | Squaliformes | Oxynotus | 5 species
