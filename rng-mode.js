@@ -14,10 +14,10 @@
         { name: "Legendary", baseOneIn: 2500, coinReward: 2500, className: "legendary" },
         { name: "Mythical", baseOneIn: 50000, coinReward: 18000, className: "mythical" },
         { name: "Secret", baseOneIn: 500000, coinReward: 90000, className: "secret" },
-        { name: "Ultra", baseOneIn: 2_000_000, coinReward: 250000, className: "ultra" },
-        { name: "Hyper", baseOneIn: 25_000_000, coinReward: 1_500_000, className: "hyper" },
-        { name: "Omega", baseOneIn: 250_000_000, coinReward: 8_000_000, className: "omega" },
-        { name: "Singularity", baseOneIn: 1_000_000_000, coinReward: 50000000, className: "singularity" }
+        { name: "Ultra", baseOneIn: 2_000_000, coinReward: 2500000, className: "ultra" },
+        { name: "Hyper", baseOneIn: 25_000_000, coinReward: 4000000, className: "hyper" },
+        { name: "Omega", baseOneIn: 250_000_000, coinReward: 10000000, className: "omega" },
+        { name: "Singularity", baseOneIn: 1_000_000_000, coinReward: 7000000, className: "singularity" }
     ];
 
     const STREAK_LUCK_INTERVAL = 10;
@@ -216,35 +216,35 @@
             name: "Abyss Potion",
             icon: "🌊",
             desc: "Guaranteed 1 in 1M+ species on next roll",
-            cost: 500000,
+            cost: 1000000,
             rolls: 1
         },
         omega: {
             name: "Singularity Potion",
             icon: "🕳️",
             desc: "Guaranteed 100M+ species on next roll",
-            cost: 10000000,
+            cost: 50000000,
             rolls: 1
         },
         albino: {
             name: "Albino Potion",
             icon: "🤍",
             desc: "Guaranteed albino mutation on next roll",
-            cost: 5000000,
+            cost: 2000000,
             rolls: 1
         },
         shiny: {
             name: "Shiny Potion",
             icon: "✨",
             desc: "Guaranteed shiny mutation on next roll",
-            cost: 3000000,
+            cost: 5000000,
             rolls: 1
         },
         bioluminescent: {
             name: "Bioluminescent Potion",
             icon: "🧬",
             desc: "Guaranteed bioluminescent mutation on next roll",
-            cost: 2000000,
+            cost: 10000000,
             rolls: 1
         }
     };
