@@ -408,15 +408,16 @@
     const TIER_ORDER = TIERS.map((tier) => tier.name);
     const TIER_RANK = Object.fromEntries(TIER_ORDER.map((name, index) => [name, index]));
 
-    let rollPool = [];
-    let ultraRarePool = [];
-    let tierPools = {};
-    let player = createDefaultPlayer();
-    let autoEnabled = false;
-    let hideEnabled = false;
-    let autoInterval = null;
-    let isRolling = false;
-    let rollLockedUntil = 0;
+let rollPool = [];
+     let ultraRarePool = [];
+     let tierPools = {};
+     let player = createDefaultPlayer();
+     let autoEnabled = false;
+     let hideEnabled = false;
+     let autoInterval = null;
+     let isRolling = false;
+     let rollLockedUntil = 0;
+     let cooldownInterval = null;
     let potionTickTimer = null;
     let cutsceneResolve = null;
     let audioCtx = null;
@@ -1804,85 +1805,112 @@ function rollForShark() {
         }
     }
 
-    function updateActiveEffectsUi() {
-        const el = document.getElementById("rng-active-effects");
-        if (!el) return;
-
-        const parts = [];
-        if (player.activeEffects.luck.remaining > 0) {
-            parts.push(`\u{1F340} Luck \u00d7${player.activeEffects.luck.mult} (${player.activeEffects.luck.remaining})`);
-        }
-        if (player.activeEffects.coin.remaining > 0) {
-            parts.push(`\u{1F4B0} Coin \u00d7${player.activeEffects.coin.mult} (${player.activeEffects.coin.remaining})`);
-        }
-        if (player.activeEffects.speed.remaining > 0) {
-            parts.push(`\u26A1 Speed (${player.activeEffects.speed.remaining})`);
-        }
-if (player.activeEffects.ultra.remaining > 0) {
-                parts.push("\u{1F30A} Abyss ready");
-            }
-            if (player.activeEffects.albino?.remaining > 0) {
-                parts.push("\u{1F90D} Albino ready");
-            }
-            if (player.activeEffects.shiny?.remaining > 0) {
-                parts.push("\u2728 Shiny ready");
-            }
-            if (player.activeEffects.bioluminescent?.remaining > 0) {
-                parts.push("\u{1F9EC} Bioluminescent ready");
-            }
-        const mChance = getMutationChance();
-        if (mChance !== null) {
-            parts.push(`\u{1F9EC} Mutation: 1 in ${mChance.toLocaleString()}`);
-        }
-
-        if (parts.length) {
-            el.textContent = parts.join(" \u00b7 ");
-            el.removeAttribute("data-empty");
-        } else {
-            el.textContent = "";
-            el.setAttribute("data-empty", "true");
-        }
-    }
-
-    function showToast(message, type = "success") {
-        const toast = document.getElementById("rng-toast");
-        if (!toast) return;
-        toast.textContent = message;
-        toast.className = `rng-toast visible ${type}`;
-        clearTimeout(showToast._timer);
-        showToast._timer = setTimeout(() => {
-            toast.className = "rng-toast hidden";
-        }, 2800);
-    }
-
-    function updateStatsUi() {
-        const topCoins = document.querySelector("#rng-top-coins span");
-        const topLuck = document.querySelector("#rng-top-luck span");
-        const topCollection = document.querySelector("#rng-top-collection span");
-        const rollsEl = document.getElementById("rng-roll-text");
-        const bestEl = document.getElementById("rng-best-text");
-        const streakEl = document.getElementById("rng-streak-text");
-        const cooldownEl = document.getElementById("rng-cooldown-text");
-        const streakInfo = getStreakRollInfo();
-
-        if (topCoins) topCoins.textContent = `${player.coins.toLocaleString()} (${getCoinMultiplier().toFixed(1)}\u00d7)`;
-        if (topLuck) topLuck.textContent = `x${getLuckMultiplier().toFixed(2)}`;
-        if (topCollection) topCollection.textContent = `${getCollectionCount()}/${rollPool.length}`;
-        if (rollsEl) rollsEl.textContent = player.rolls.toLocaleString();
-        if (bestEl) {
-            bestEl.textContent = player.bestOneIn
-                ? `1/${formatOneIn(player.bestOneIn)}`
-                : "\u2014";
-        }
-        if (streakEl) {
-            streakEl.textContent = streakInfo.value;
-            streakEl.closest(".rng-quick-stat")?.classList.toggle("rng-quick-stat-active", streakInfo.active);
-        }
-        if (cooldownEl) cooldownEl.textContent = `${(getRollCooldownMs() / 1000).toFixed(1)}s`;
-        updateActiveEffectsUi();
-    }
-
-    function updateEquippedUi() {
+function updateActiveEffectsUi() {
+         const el = document.getElementById("rng-active-effects");
+         if (!el) return;
+ 
+         const parts = [];
+         if (player.activeEffects.luck.remaining > 0) {
+             parts.push(`\u{1F340} Luck \u00d7${player.activeEffects.luck.mult} (${player.activeEffects.luck.remaining})`);
+         }
+         if (player.activeEffects.coin.remaining > 0) {
+             parts.push(`\u{1F4B0} Coin \u00d7${player.activeEffects.coin.mult} (${player.activeEffects.coin.remaining})`);
+         }
+         if (player.activeEffects.speed.remaining > 0) {
+             parts.push(`\u26A1 Speed (${player.activeEffects.speed.remaining})`);
+         }
+         if (player.activeEffects.ultra.remaining > 0) {
+             parts.push("\u{1F30A} Abyss ready");
+         }
+         if (player.activeEffects.albino?.remaining > 0) {
+             parts.push("\u{1F90D} Albino ready");
+         }
+         if (player.activeEffects.shiny?.remaining > 0) {
+             parts.push("\u2728 Shiny ready");
+         }
+         if (player.activeEffects.bioluminescent?.remaining > 0) {
+             parts.push("\u{1F9EC} Bioluminescent ready");
+         }
+         const mChance = getMutationChance();
+         if (mChance !== null) {
+             parts.push(`\u{1F9EC} Mutation: 1 in ${mChance.toLocaleString()}`);
+         }
+ 
+         if (parts.length) {
+             el.textContent = parts.join(" \u00b7 ");
+             el.removeAttribute("data-empty");
+         } else {
+             el.textContent = "";
+             el.setAttribute("data-empty", "true");
+         }
+     }
+ 
+     function showToast(message, type = "success") {
+         const toast = document.getElementById("rng-toast");
+         if (!toast) return;
+         toast.textContent = message;
+         toast.className = `rng-toast visible ${type}`;
+         clearTimeout(showToast._timer);
+         showToast._timer = setTimeout(() => {
+             toast.className = "rng-toast hidden";
+         }, 2800);
+     }
+ 
+     function updateRollButtonState() {
+         const rollBtn = document.getElementById("rng-roll-btn");
+         if (!rollBtn) return;
+ 
+         const now = Date.now();
+         const remaining = Math.max(0, rollLockedUntil - now);
+         const isOnCooldown = remaining > 0;
+ 
+         rollBtn.disabled = isOnCooldown || isRolling;
+         if (isOnCooldown) {
+             rollBtn.classList.add("rng-btn-cooldown");
+         } else {
+             rollBtn.classList.remove("rng-btn-cooldown");
+         }
+     }
+ 
+     function startCooldownTimer() {
+         if (cooldownInterval) clearInterval(cooldownInterval);
+         cooldownInterval = setInterval(() => {
+             updateRollButtonState();
+             if (Date.now() >= rollLockedUntil) {
+                 clearInterval(cooldownInterval);
+                 cooldownInterval = null;
+             }
+         }, 100);
+     }
+ 
+     function updateStatsUi() {
+         const topCoins = document.querySelector("#rng-top-coins span");
+         const topLuck = document.querySelector("#rng-top-luck span");
+         const topCollection = document.querySelector("#rng-top-collection span");
+         const rollsEl = document.getElementById("rng-roll-text");
+         const bestEl = document.getElementById("rng-best-text");
+         const streakEl = document.getElementById("rng-streak-text");
+         const cooldownEl = document.getElementById("rng-cooldown-text");
+         const streakInfo = getStreakRollInfo();
+ 
+         if (topCoins) topCoins.textContent = `${player.coins.toLocaleString()} (${getCoinMultiplier().toFixed(1)}\u00d7)`;
+         if (topLuck) topLuck.textContent = `x${getLuckMultiplier().toFixed(2)}`;
+         if (topCollection) topCollection.textContent = `${getCollectionCount()}/${rollPool.length}`;
+         if (rollsEl) rollsEl.textContent = player.rolls.toLocaleString();
+         if (bestEl) {
+             bestEl.textContent = player.bestOneIn
+                 ? `1/${formatOneIn(player.bestOneIn)}`
+                 : "\u2014";
+         }
+         if (streakEl) {
+             streakEl.textContent = streakInfo.value;
+             streakEl.closest(".rng-quick-stat")?.classList.toggle("rng-quick-stat-active", streakInfo.active);
+         }
+         if (cooldownEl) cooldownEl.textContent = `${(getRollCooldownMs() / 1000).toFixed(1)}s`;
+         updateActiveEffectsUi();
+     }
+ 
+     function updateEquippedUi() {
         const equippedEl = document.getElementById("rng-equipped-name");
         const equippedMeta = document.getElementById("rng-equipped-meta");
         if (!equippedEl || !equippedMeta) return;
@@ -2068,17 +2096,18 @@ if (player.activeEffects.ultra.remaining > 0) {
         }
     }
 
-    function updateAllUi() {
-        updateStatsUi();
-        updateRankUi();
-        updateEquippedUi();
-        renderUpgradeShop();
-        renderPotionShop();
-        renderCollectionGrid();
-        renderTierLegend();
-        renderRngLeaderboardSelf();
-        updateAutoButtonUi();
-    }
+function updateAllUi() {
+         updateStatsUi();
+         updateRankUi();
+         updateEquippedUi();
+         renderUpgradeShop();
+         renderPotionShop();
+         renderCollectionGrid();
+         renderTierLegend();
+         renderRngLeaderboardSelf();
+         updateAutoButtonUi();
+         updateRollButtonState();
+     }
 
     function renderTierLegend() {
         const legend = document.getElementById("rng-tier-legend");
@@ -2406,24 +2435,26 @@ if (player.activeEffects.ultra.remaining > 0) {
         });
     }
 
-    async function performRoll() {
-        if (isRolling || Date.now() < rollLockedUntil) return;
-        if (document.getElementById("rng-cutscene")?.classList.contains("visible")) return;
-        isRolling = true;
-        GameFx.resumeAudio();
-        GameFx.pulseRollButton();
-
-        const finalShark = rollForShark();
-        await animateRoll(finalShark);
-        applyRollJuice(finalShark);
-        await showRollReveal(finalShark);
-        persistPlayerState();
-
-        rollLockedUntil = Date.now() + getRollCooldownMs();
-        isRolling = false;
-    }
-
-    function restartAutoRoll() {
+async function performRoll() {
+         if (isRolling || Date.now() < rollLockedUntil) return;
+         if (document.getElementById("rng-cutscene")?.classList.contains("visible")) return;
+         isRolling = true;
+         GameFx.resumeAudio();
+         GameFx.pulseRollButton();
+         updateRollButtonState();
+ 
+         const finalShark = rollForShark();
+         await animateRoll(finalShark);
+         applyRollJuice(finalShark);
+         await showRollReveal(finalShark);
+         persistPlayerState();
+ 
+         rollLockedUntil = Date.now() + getRollCooldownMs();
+         startCooldownTimer();
+         isRolling = false;
+     }
+ 
+     function restartAutoRoll() {
         if (!autoEnabled) return;
         setAutoRoll(false);
         setAutoRoll(true);
@@ -2819,17 +2850,18 @@ if (cmd === "giveall") {
         potionTickTimer = setInterval(updateActiveEffectsUi, 500);
     }
 
-    async function initRngMode() {
-        buildRollPool();
-        loadLocalProfile();
-        initAmbientBubbles();
-        bindUi();
-        updateAllUi();
-        updateSettingsUi();
-        initRngLeaderboard();
-        startPotionUiTicker();
-        GameFx.initAudio();
-    }
+async function initRngMode() {
+         buildRollPool();
+         loadLocalProfile();
+         initAmbientBubbles();
+         bindUi();
+         updateAllUi();
+         updateSettingsUi();
+         initRngLeaderboard();
+         startPotionUiTicker();
+         GameFx.initAudio();
+         updateRollButtonState();
+     }
 
     window.initRngMode = initRngMode;
 })();
