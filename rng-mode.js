@@ -100,28 +100,28 @@
 
     const ULTRA_REVEAL_CONFIGS = {
         Ultra: {
-            eyebrow: "Deep-sea anomaly",
+            eyebrow: "Ultra Rarity Detected",
             particleCount: 24,
             ringCount: 1,
             beamCount: 0,
             particleSymbols: ["*", ".", "o"]
         },
         Hyper: {
-            eyebrow: "Abyss warp detected",
+            eyebrow: "Hyper Rarity Detected",
             particleCount: 34,
             ringCount: 2,
             beamCount: 3,
             particleSymbols: ["*", "+", "."]
         },
         Omega: {
-            eyebrow: "Omega signal locked",
+            eyebrow: "Omega Rarity Detected",
             particleCount: 46,
             ringCount: 3,
             beamCount: 5,
             particleSymbols: ["*", "+", "x"]
         },
         Singularity: {
-            eyebrow: "Reality breach",
+            eyebrow: "Singularity Rarity Detected",
             particleCount: 70,
             ringCount: 5,
             beamCount: 8,
@@ -354,15 +354,6 @@
             rolls: 1,
             maxOwned: 1,
             restockRolls: 20
-        },
-        omega: {
-            name: "Singularity Potion",
-            icon: "\u{1F573}\uFE0F",
-            desc: "Guaranteed 100M+ species; restocks after 75 normal rolls",
-            cost: 50000000,
-            rolls: 1,
-            maxOwned: 1,
-            restockRolls: 75
         },
         albino: {
             name: "Albino Potion",
@@ -1829,9 +1820,6 @@ function rollForShark() {
         }
 if (player.activeEffects.ultra.remaining > 0) {
                 parts.push("\u{1F30A} Abyss ready");
-            }
-            if (player.activeEffects.omega?.remaining > 0) {
-                parts.push("\u{1F573}\uFE0F Singularity ready");
             }
             if (player.activeEffects.albino?.remaining > 0) {
                 parts.push("\u{1F90D} Albino ready");
