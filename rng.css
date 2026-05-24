@@ -405,9 +405,17 @@ body.rng-page {
 }
 
 .rng-btn-roll.rng-pulse {
-    transform: scale(0.94);
-    animation: none;
-}
+     transform: scale(0.94);
+     animation: none;
+ }
+ 
+ .rng-btn-roll.rng-btn-cooldown {
+     opacity: 0.5;
+     cursor: not-allowed;
+     filter: grayscale(0.6);
+     animation: none;
+     box-shadow: none;
+ }
 
 .rng-result.rng-result-pop {
     animation: rng-result-pop 0.35s ease-out;
@@ -1733,82 +1741,6 @@ body.rng-page {
     40% { transform: translateX(4px); }
     60% { transform: translateX(-3px); }
     80% { transform: translateX(3px); }
-}
-
-.rng-dev-devbtn,
-.rng-dev-toggle {
-    position: fixed;
-    bottom: 8px;
-    right: 8px;
-    z-index: 60;
-    width: 36px;
-    height: 36px;
-    border-radius: 8px;
-    border: 1px solid var(--rng-border);
-    background: var(--rng-surface);
-    color: var(--rng-muted);
-    cursor: pointer;
-    opacity: 0.4;
-}
-
-.rng-dev-panel {
-    position: fixed;
-    bottom: 50px;
-    right: 8px;
-    z-index: 70;
-    width: min(340px, calc(100vw - 16px));
-    background: var(--rng-surface);
-    border: 1px solid var(--rng-border);
-    border-radius: var(--rng-radius);
-    padding: 10px;
-}
-
-.rng-dev-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 6px;
-}
-
-.rng-dev-hint {
-    margin: 0 0 8px;
-    font-size: 0.65rem;
-    color: var(--rng-muted);
-}
-
-.rng-dev-hint code {
-    background: var(--rng-surface-2);
-    padding: 1px 4px;
-    border-radius: 3px;
-    font-size: 0.62rem;
-}
-
-.rng-dev-input-row {
-    display: flex;
-    gap: 6px;
-    margin-bottom: 8px;
-}
-
-.rng-dev-input-row input {
-    flex: 1;
-    padding: 6px 8px;
-    border-radius: 6px;
-    border: 1px solid var(--rng-border);
-    background: var(--rng-surface-2);
-    color: var(--rng-text);
-    font-family: inherit;
-    font-size: 0.78rem;
-}
-
-.rng-dev-log {
-    margin: 0;
-    padding: 8px;
-    max-height: 80px;
-    overflow-y: auto;
-    background: #060d14;
-    border-radius: 6px;
-    font-size: 0.65rem;
-    color: #7dd3a8;
 }
 
 /* Short viewports — shrink roll area text */
