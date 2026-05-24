@@ -259,6 +259,7 @@ body.rng-page {
     border-radius: calc(var(--rng-radius) - 4px);
     border: 1px solid rgba(77, 208, 225, 0.12);
     pointer-events: none;
+    z-index: 0;
 }
 
 .rng-float-layer {
@@ -266,6 +267,7 @@ body.rng-page {
     inset: 0;
     pointer-events: none;
     overflow: hidden;
+    z-index: 2;
 }
 
 .rng-float-text {
@@ -310,6 +312,8 @@ body.rng-page {
     font-size: clamp(1.1rem, 2.5vh, 1.75rem);
     font-weight: 800;
     line-height: 1.2;
+    position: relative;
+    z-index: 1;
 }
 .rng-roll-display.albino    { color: #f1f5f9; text-shadow: 0 0 18px rgba(241,245,249,0.6); }
 .rng-roll-display.shiny     { color: #fde047; text-shadow: 0 0 18px rgba(253,224,71,0.6); }
@@ -318,19 +322,37 @@ body.rng-page {
 .rng-roll-display.apex { color: #fb923c; text-shadow: 0 0 20px rgba(251,146,60,0.75), 0 0 34px rgba(239,68,68,0.42); }
 
 .rng-result {
-    margin-top: 6px;
-    min-height: 0;
-    max-height: 2.6em;
-    overflow: hidden;
+    width: min(100%, 560px);
+    margin-top: 8px;
+    min-height: 44px;
+    padding: 6px 10px;
+    overflow: visible;
     display: flex;
     flex-direction: column;
-    gap: 2px;
-    font-size: 0.72rem;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    border-radius: 8px;
+    background: rgba(3, 12, 22, 0.22);
+    font-size: 0.74rem;
+    line-height: 1.25;
+    position: relative;
+    z-index: 1;
+}
+
+.rng-result > span:first-child {
+    max-width: 100%;
+    line-height: 1.25;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .rng-result-meta {
+    max-width: 100%;
     color: var(--rng-muted);
     font-size: 0.68rem;
+    line-height: 1.25;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -1790,6 +1812,11 @@ body.rng-page {
 @media (max-height: 700px) {
     .rng-equipped-name { font-size: 0.82rem; }
     .rng-roll-display { font-size: 1rem; }
+    .rng-result {
+        min-height: 38px;
+        padding: 4px 8px;
+        font-size: 0.68rem;
+    }
 }
 
 /* Narrow — split vertically, still no page scroll */
