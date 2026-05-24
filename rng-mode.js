@@ -1027,6 +1027,11 @@ let rollPool = [];
         return "Common";
     }
 
+    function getTierOneInFloor(tierName) {
+        const index = TIER_RANK[tierName] || 0;
+        return TIERS[index]?.baseOneIn || 2;
+    }
+
     function buildOneIn(shark, tierName, tierMeta) {
         const score = computeRarityScore(shark);
         const hash = hashString(shark.name);
@@ -1039,14 +1044,84 @@ let rollPool = [];
             return 120_000_000 + (hash % 20) * 8_000_000;
         }
         if (score >= 64) {
-            return 8_000_000 + (hash % 30) * 750_000;
+            return 10_000_000 + (hash % 30) * 750_000;
         }
         if (score >= 56) {
             return 1_200_000 + (hash % 40) * 120_000;
         }
 
         const variance = 0.82 + ((hash % 36) / 100);
-        return Math.max(2, Math.round(tierMeta.baseOneIn * variance));
+        return Math.max(getTierOneInFloor(tierName), Math.round(tierMeta.baseOneIn * variance));
+    }
+
+    function getStableTierCoinReward(tierName, seed) {
+        const tierMeta = getTierMeta(tierName);
+        const hash = hashString(seed);
+        return Math.round(tierMeta.coinReward * (0.95 + ((hash >> 4) % 15) / 100));
+    }
+
+    function applyStableMutation(shark, type) {
+        const mutation = MUTATION_TYPES[type];
+        if (!shark || !mutation) return shark;
+
+        const hash = hashString(`${shark.name}:${type}:mutation`);
+        const variant = 0.9 + (hash % 20) / 100;
+        const mutatedOneIn = Math.max(2, Math.floor(shark.oneIn * mutation.oneInMult * variant));
+        const tier = tierNameFromOneIn(mutatedOneIn);
+        const tierMeta = getTierMeta(tier);
+
+        return {
+            ...shark,
+            oneIn: mutatedOneIn,
+            tier,
+            className: tierMeta.className,
+            coinReward: getStableTierCoinReward(tier, `${shark.name}:${type}:mutation:coins`),
+            mutation: type
+        };
+    }
+
+    function getRollPoolEntryByName(name) {
+        return rollPool.find((shark) => shark.name === name) || null;
+    }
+
+    function getMutationKeyFromCollectionName(name) {
+        for (const [key, mutation] of Object.entries(MUTATION_TYPES)) {
+            if (String(name || "").endsWith(` (${mutation.name})`)) return key;
+        }
+        return null;
+    }
+
+    function getBaseNameFromCollectionEntry(name, entry) {
+        if (entry?.baseName) return entry.baseName;
+        const mutationKey = entry?.mutation || getMutationKeyFromCollectionName(name);
+        const mutationName = MUTATION_TYPES[mutationKey]?.name;
+        if (mutationName && String(name || "").endsWith(` (${mutationName})`)) {
+            return name.slice(0, -(` (${mutationName})`.length));
+        }
+        return name;
+    }
+
+    function getCanonicalCollectionEntry(name, entry) {
+        const mutationKey = entry?.mutation || getMutationKeyFromCollectionName(name);
+        const baseName = getBaseNameFromCollectionEntry(name, entry);
+        const baseShark = getRollPoolEntryByName(baseName);
+        if (!baseShark) return null;
+
+        const canonical = mutationKey
+            ? applyStableMutation(baseShark, mutationKey)
+            : baseShark;
+        const canonicalKey = getCollectionKey(canonical);
+
+        return {
+            key: canonicalKey,
+            entry: {
+                ...entry,
+                tier: canonical.tier,
+                oneIn: canonical.oneIn,
+                mutation: mutationKey || undefined,
+                baseName: mutationKey ? baseShark.name : undefined
+            }
+        };
     }
 
     function getTierMeta(tierName) {
@@ -1282,74 +1357,29 @@ let rollPool = [];
     }
 
     function getAbyssEligiblePool() {
-        const seen = new Set();
-        const pool = [];
+        const pool = rollPool.filter((shark) => shark.oneIn >= ULTRA_ONE_IN_THRESHOLD);
+        if (pool.length) return pool;
 
-        const add = (shark) => {
-            if (shark && !seen.has(shark.name)) {
-                seen.add(shark.name);
-                pool.push(shark);
-            }
-        };
-
-        for (const entry of ultraRarePool) add(entry);
-
-        for (const tierName of ["Singularity", "Omega", "Hyper", "Ultra", "Secret", "Mythical", "Legendary"]) {
-            for (const entry of tierPools[tierName] || []) add(entry);
-        }
-
-        const highScore = rollPool.filter((shark) => computeRarityScore(shark) >= 70);
-        for (const entry of highScore) add(entry);
-
-        if (!pool.length) {
-            return [...rollPool].sort((a, b) => b.oneIn - a.oneIn).slice(0, 40);
-        }
-
-        return pool;
-    }
-
-    function applyAbyssRollBoost(shark) {
-        const rollSalt = hashString(`${shark.name}:${player.rolls}:${Date.now()}`);
-        const forcedOneIn = Math.max(
-            shark.oneIn,
-            ULTRA_ONE_IN_THRESHOLD + (rollSalt % 49_000_000)
-        );
-        const tier = tierNameFromOneIn(forcedOneIn);
-        const tierMeta = getTierMeta(tier);
-
-        return {
-            ...shark,
-            oneIn: forcedOneIn,
-            tier,
-            className: tierMeta.className,
-            coinReward: Math.round(tierMeta.coinReward * (0.95 + ((rollSalt >> 4) % 15) / 100))
-        };
+        return [...rollPool].sort((a, b) => b.oneIn - a.oneIn).slice(0, 10);
     }
 
     function pickGuaranteedOmegaOrBetter() {
-        const candidates = [...(tierPools.Singularity || []), ...(tierPools.Omega || [])];
+        const candidates = rollPool.filter((shark) => shark.oneIn >= 100_000_000);
         const shark = candidates.length
             ? candidates[Math.floor(Math.random() * candidates.length)]
-            : rollPool[Math.floor(Math.random() * rollPool.length)];
-
-        const rollSalt = hashString(`${shark.name}:${player.rolls}:${Date.now()}`);
-        const forcedOneIn = 100_000_000 + (rollSalt % 900_000_000);
-        const tier = tierNameFromOneIn(forcedOneIn);
-        const tierMeta = getTierMeta(tier);
+            : [...rollPool].sort((a, b) => b.oneIn - a.oneIn)[0];
 
         return {
-            ...shark,
-            oneIn: forcedOneIn,
-            tier,
-            className: tierMeta.className,
-            coinReward: Math.round(tierMeta.coinReward * (0.95 + ((rollSalt >> 4) % 15) / 100))
+            ...shark
         };
     }
 
     function pickGuaranteedUltraRare() {
         const pool = getAbyssEligiblePool();
         const picked = pool[Math.floor(Math.random() * pool.length)];
-        return applyAbyssRollBoost(picked);
+        return {
+            ...picked
+        };
     }
 
     function consumeEffectRolls() {
@@ -1411,6 +1441,73 @@ let rollPool = [];
 
         grantRollXp(rolled);
         return rolled;
+    }
+
+    function mergeCollectionEntry(target, key, entry) {
+        const existing = target[key];
+        if (!existing) {
+            target[key] = entry;
+            return;
+        }
+
+        target[key] = {
+            ...existing,
+            ...entry,
+            count: (existing.count || 0) + (entry.count || 0),
+            firstRoll: Math.min(existing.firstRoll || entry.firstRoll || 0, entry.firstRoll || existing.firstRoll || 0)
+        };
+    }
+
+    function normalizeStoredCollectionRarities() {
+        if (!player.collection || typeof player.collection !== "object") {
+            player.collection = {};
+            player.bestOneIn = 0;
+            return true;
+        }
+
+        let changed = false;
+        let bestOneIn = 0;
+        const normalizedCollection = {};
+        const equippedBefore = player.equipped;
+        const bestBefore = player.bestOneIn || 0;
+        let equippedAfter = null;
+
+        for (const [name, entry] of Object.entries(player.collection)) {
+            if (!entry || typeof entry !== "object") continue;
+
+            const canonical = getCanonicalCollectionEntry(name, entry);
+            if (!canonical) {
+                const preservedOneIn = toSafeNumber(entry.oneIn);
+                bestOneIn = Math.max(bestOneIn, preservedOneIn);
+                mergeCollectionEntry(normalizedCollection, name, entry);
+                if (name === equippedBefore) equippedAfter = name;
+                continue;
+            }
+
+            mergeCollectionEntry(normalizedCollection, canonical.key, canonical.entry);
+            bestOneIn = Math.max(bestOneIn, canonical.entry.oneIn || 0);
+
+            if (
+                canonical.key !== name ||
+                canonical.entry.oneIn !== entry.oneIn ||
+                canonical.entry.tier !== entry.tier ||
+                canonical.entry.baseName !== entry.baseName
+            ) {
+                changed = true;
+            }
+
+            if (name === equippedBefore) equippedAfter = canonical.key;
+        }
+
+        player.collection = normalizedCollection;
+        player.bestOneIn = bestOneIn;
+        player.equipped = equippedAfter || (player.equipped && normalizedCollection[player.equipped] ? player.equipped : null);
+
+        if (equippedBefore !== player.equipped || bestOneIn !== bestBefore) {
+            changed = true;
+        }
+
+        return changed;
     }
 
     function getXpForLevel(level) {
@@ -1556,37 +1653,11 @@ function rollForShark() {
                     Math.floor(Math.random() * mutationKeys.length)
                 ];
 
-            const mutation = MUTATION_TYPES[mutationKey];
-
             // Pick a normal shark FIRST
             const picked =
                 rollPool[Math.floor(Math.random() * rollPool.length)];
 
-            const salt = hashString(
-                `${picked.name}:${player.rolls}:${Date.now()}`
-            );
-
-            const variant = 0.9 + (salt % 20) / 100;
-
-            const mutatedOneIn = Math.floor(
-                picked.oneIn *
-                mutation.oneInMult *
-                variant
-            );
-
-            const tier = tierNameFromOneIn(mutatedOneIn);
-
-            rolled = {
-                ...picked,
-                oneIn: mutatedOneIn,
-                tier,
-                className: getTierMeta(tier).className,
-                coinReward: Math.round(
-                    getTierMeta(tier).coinReward *
-                    (0.95 + ((salt >> 4) % 15) / 100)
-                ),
-                mutation: mutationKey
-            };
+            rolled = applyStableMutation(picked, mutationKey);
         }
     }
 
@@ -1611,34 +1682,7 @@ function rollForShark() {
     // =========================================
 
     function applyForcedMutation(type) {
-
-        const mutation = MUTATION_TYPES[type];
-
-        const salt = hashString(
-            `${rolled.name}:${player.rolls}:${Date.now()}`
-        );
-
-        const variant = 0.9 + (salt % 20) / 100;
-
-        const mutatedOneIn = Math.floor(
-            rolled.oneIn *
-            mutation.oneInMult *
-            variant
-        );
-
-        const tier = tierNameFromOneIn(mutatedOneIn);
-
-        rolled = {
-            ...rolled,
-            oneIn: mutatedOneIn,
-            tier,
-            className: getTierMeta(tier).className,
-            coinReward: Math.round(
-                getTierMeta(tier).coinReward *
-                (0.95 + ((salt >> 4) % 15) / 100)
-            ),
-            mutation: type
-        };
+        rolled = applyStableMutation(rolled, type);
 
         rolled = markGuaranteedPotionRoll(rolled, "mutationPotion");
 
@@ -1724,6 +1768,9 @@ function rollForShark() {
                     soundEnabled: parsed.settings?.soundEnabled !== false
                 }
             };
+            if (normalizeStoredCollectionRarities()) {
+                saveLocalProfile();
+            }
         } catch (error) {
             console.warn("Failed to load local RNG profile:", error);
             player = createDefaultPlayer();
@@ -1750,6 +1797,10 @@ function rollForShark() {
 
     function getCollectionCount() {
         return Object.keys(player.collection).length;
+    }
+
+    function getCollectionTargetCount() {
+        return rollPool.length * (1 + Object.keys(MUTATION_TYPES).length);
     }
 
     function getRarityClass(tierName) {
@@ -1895,7 +1946,7 @@ function updateActiveEffectsUi() {
  
          if (topCoins) topCoins.textContent = `${player.coins.toLocaleString()} (${getCoinMultiplier().toFixed(1)}\u00d7)`;
          if (topLuck) topLuck.textContent = `x${getLuckMultiplier().toFixed(2)}`;
-         if (topCollection) topCollection.textContent = `${getCollectionCount()}/${rollPool.length}`;
+         if (topCollection) topCollection.textContent = `${getCollectionCount()}/${getCollectionTargetCount()}`;
          if (rollsEl) rollsEl.textContent = player.rolls.toLocaleString();
          if (bestEl) {
              bestEl.textContent = player.bestOneIn
@@ -2589,153 +2640,6 @@ async function performRoll() {
         }
     }
 
-    function parseAmount(raw) {
-        const value = String(raw || "").trim().toLowerCase().replace(/,/g, "");
-        if (!value) return NaN;
-        const match = value.match(/^([\d.]+)\s*([kmb])?$/i);
-        if (!match) return NaN;
-        let num = parseFloat(match[1]);
-        const suffix = (match[2] || "").toLowerCase();
-        if (suffix === "k") num *= 1_000;
-        if (suffix === "m") num *= 1_000_000;
-        if (suffix === "b") num *= 1_000_000_000;
-        return Math.floor(num);
-    }
-
-    function devLog(message) {
-        const log = document.getElementById("rng-dev-log");
-        if (!log) return;
-        const line = `> ${message}`;
-        log.textContent = log.textContent ? `${log.textContent}\n${line}` : line;
-        log.scrollTop = log.scrollHeight;
-    }
-
-    function runDevCommand(input) {
-        const raw = String(input || "").trim();
-        if (!raw) return;
-
-        const parts = raw.split(/\s+/);
-        const cmd = parts[0].toLowerCase().replace(/^\//, "");
-        const arg = parts.slice(1).join(" ");
-
-        if (cmd === "help" || cmd === "commands") {
-            devLog("givecoins <n> | maxcoins | givepotion <type> <n> | reset");
-            devLog("potions: luckMinor, luck, luckStrong, luckMega, luckVoid, coin, speed, ultra, omega, albino, shiny, bioluminescent");
-            return;
-        }
-        // Command to give all shark species INCLUDING mutations
-if (cmd === "giveall") {
-
-    // normal sharks
-    for (const shark of rollPool) {
-        player.collection[shark.name] = {
-            tier: shark.tier,
-            oneIn: shark.oneIn,
-            firstRoll: player.rolls,
-            count: 1
-        };
-
-        // mutated versions
-        for (const mutationKey of Object.keys(MUTATION_TYPES)) {
-            const mutation = MUTATION_TYPES[mutationKey];
-
-            const mutatedOneIn = Math.floor(shark.oneIn * mutation.oneInMult);
-
-            const mutatedKey = `${shark.name} (${mutation.name})`;
-
-            player.collection[mutatedKey] = {
-                tier: tierNameFromOneIn(mutatedOneIn),
-                oneIn: mutatedOneIn,
-                firstRoll: player.rolls,
-                count: 1,
-                mutation: mutationKey,
-                baseName: shark.name
-            };
-        }
-    }
-
-    persistPlayerState();
-    renderCollectionGrid();
-
-    devLog("Gave all shark species + mutations");
-    showToast("All sharks and mutations granted");
-
-    return;
-}
-        if (cmd === "givecoins" || cmd === "coins" || cmd === "addcoins") {
-            const amount = parseAmount(arg);
-            if (!Number.isFinite(amount) || amount <= 0) {
-                devLog("Usage: givecoins 50000  (supports 1k, 1m, 1b)");
-                showToast("Invalid amount", "error");
-                return;
-            }
-            player.coins += amount;
-            persistPlayerState();
-            devLog(`Added ${amount.toLocaleString()} coins`);
-            showToast(`+${amount.toLocaleString()} coins`);
-            return;
-        }
-
-        if (cmd === "maxcoins" || cmd === "rich") {
-            player.coins = 999_999_999;
-            persistPlayerState();
-            devLog("Coins set to 999,999,999");
-            showToast("Max coins granted");
-            return;
-        }
-
-        if (cmd === "setcoins") {
-            const amount = parseAmount(arg);
-            if (!Number.isFinite(amount) || amount < 0) {
-                devLog("Usage: setcoins 100000");
-                showToast("Invalid amount", "error");
-                return;
-            }
-            player.coins = amount;
-            persistPlayerState();
-            devLog(`Coins set to ${amount.toLocaleString()}`);
-            showToast(`Coins set to ${amount.toLocaleString()}`);
-            return;
-        }
-
-        if (cmd === "givepotion" || cmd === "potion") {
-            const potionParts = arg.split(/\s+/);
-            const type = potionParts[0]?.toLowerCase();
-            const count = parseAmount(potionParts[1] || "1") || 1;
-            if (!POTION_DEFS[type]) {
-                devLog(`Types: ${Object.keys(POTION_DEFS).join(", ")}`);
-                showToast("Unknown potion type", "error");
-                return;
-            }
-            player.potions[type] = (player.potions[type] || 0) + count;
-            persistPlayerState();
-            devLog(`Gave ${count}\u00d7 ${type} potion(s)`);
-            showToast(`+${count} ${POTION_DEFS[type].name}`);
-            return;
-        }
-
-        if (cmd === "reset" || cmd === "resetrng") {
-            player = createDefaultPlayer();
-            rollLockedUntil = 0;
-            setAutoRoll(false);
-            persistPlayerState();
-            devLog("RNG profile reset");
-            showToast("Profile reset");
-            return;
-        }
-
-        devLog(`Unknown: ${cmd} \u2014 type 'help'`);
-        showToast("Unknown command", "error");
-    }
-
-    function toggleDevPanel(forceOpen) {
-        const panel = document.getElementById("rng-dev-panel");
-        if (!panel) return;
-        const open = forceOpen !== undefined ? forceOpen : panel.classList.contains("hidden");
-        panel.classList.toggle("hidden", !open);
-        if (open) document.getElementById("rng-dev-input")?.focus();
-    }
-
     function resetRngProgress() {
         if (!confirm("Reset all Shark RNG progress? This will clear coins, rolls, upgrades, collection, and settings.")) {
             return;
@@ -2814,27 +2718,7 @@ if (cmd === "giveall") {
             loadRngLeaderboard({ syncFirst: true });
         });
 
-        document.getElementById("rng-dev-toggle")?.addEventListener("click", () => toggleDevPanel());
-        document.getElementById("rng-dev-close")?.addEventListener("click", () => toggleDevPanel(false));
-        document.getElementById("rng-dev-run")?.addEventListener("click", () => {
-            const input = document.getElementById("rng-dev-input");
-            if (input?.value) {
-                runDevCommand(input.value);
-                input.value = "";
-            }
-        });
-        document.getElementById("rng-dev-input")?.addEventListener("keydown", (event) => {
-            if (event.key === "Enter") {
-                runDevCommand(event.target.value);
-                event.target.value = "";
-            }
-        });
-
         document.addEventListener("keydown", (event) => {
-            if (event.key === "`" && !event.target.matches("input, textarea")) {
-                event.preventDefault();
-                toggleDevPanel();
-            }
             if (event.key === "Escape") {
                 if (document.getElementById("rng-cutscene")?.classList.contains("visible")) {
                     closeUltraCutscene();
