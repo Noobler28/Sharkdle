@@ -16,6 +16,10 @@
     const RNG_LEADERBOARD_LIMIT = 10;
     const RNG_LEADERBOARD_QUERY_LIMIT = 30;
     const RNG_LEADERBOARD_SYNC_INTERVAL_MS = 6000;
+    const RNG_DEV_UIDS = [
+        "ETPtQC0VA2NiSnX67rS2P2ma2tC2",
+        "gOcPqOuyPJRWisE4dxvFkGTOl5g2"
+    ];
     const RNG_FIREBASE_CONFIG = {
         apiKey: "AIzaSyAS9l8O1jRMafPt3r0lF6mqjr2-gl-EbZ0",
         authDomain: "sharkdle-leaderboard.firebaseapp.com",
@@ -149,6 +153,7 @@
         { id: "speed", name: "Roll Speed", icon: "fa-bolt", levelKey: "rollSpeedLevel", listKey: "speed" },
         { id: "auto", name: "Auto Roll", icon: "fa-robot", levelKey: "autoRollLevel", listKey: "auto" },
         { id: "mutation", name: "Mutation Luck", icon: "fa-dna", levelKey: "mutationLevel", listKey: "mutation" },
+        { id: "apex", name: "Apex Instinct", icon: "fa-crown", levelKey: "apexLevel", listKey: "apex" },
         { id: "xp", name: "Research XP", icon: "fa-book-open", levelKey: "xpLevel", listKey: "xp" }
     ];
 
@@ -265,7 +270,24 @@
         return list;
     }
 
+    function buildApexUpgrades() {
+        const list = [];
+        for (let i = 1; i <= 30; i++) {
+            // Apex is natural-only, so even max level keeps it rarer than normal mutations.
+            const chanceOneIn = Math.round(5_000_000 / Math.pow(1.15, i - 1));
+            list.push({
+                level: i,
+                chance: Math.max(75_000, chanceOneIn),
+                cost: Math.floor(250_000 * Math.pow(1.26, i - 1)),
+                shopTier: getShopTierName(i + 20),
+                tierClass: getShopTierClass(i + 20)
+            });
+        }
+        return list;
+    }
+
     const MUTATION_UPGRADES = buildMutationUpgrades();
+    const APEX_MUTATION_UPGRADES = buildApexUpgrades();
 
     const UPGRADE_LISTS = {
         luck: buildLuckUpgrades(),
@@ -274,6 +296,7 @@
         speed: buildRollSpeedUpgrades(),
         auto: buildAutoRollUpgrades(),
         mutation: MUTATION_UPGRADES,
+        apex: APEX_MUTATION_UPGRADES,
         xp: buildXpUpgrades()
     };
 
@@ -283,6 +306,7 @@
     const ROLL_SPEED_UPGRADES = UPGRADE_LISTS.speed;
     const AUTO_ROLL_UPGRADES = UPGRADE_LISTS.auto;
     const MUTATION_LUCK_UPGRADES = UPGRADE_LISTS.mutation;
+    const APEX_LUCK_UPGRADES = UPGRADE_LISTS.apex;
     const XP_UPGRADES = UPGRADE_LISTS.xp;
 
     const POTION_DEFS = {
@@ -375,11 +399,19 @@
             desc: "Guaranteed bioluminescent mutation; reduced coin payout",
             cost: 10000000,
             rolls: 1
+        },
+        megatooth: {
+            name: "Megatooth Potion",
+            icon: "\u{1F9B7}",
+            desc: "Guaranteed megatooth mutation; reduced coin payout",
+            cost: 50000000,
+            rolls: 1
         }
     };
 
     // === MUTATION SYSTEM ===
-    // Three visual mutations that can roll on any shark and massively inflate its oneIn.
+    // Visual mutations can roll on any shark and massively inflate its oneIn.
+    // Apex is natural-only and uses its own upgrade path, not mutation potions.
     // With no mutation Luck upgrades the base chance is essentially zero.
     const MUTATION_TYPES = {
         albino: {
@@ -387,23 +419,46 @@
             icon: "\u{1F90D}",
             oneInMult: 5,    // shark becomes 5\u00d7 rarer
             color: "#f1f5f9",
-            scoreBonus: 30
+            scoreBonus: 30,
+            rollWeight: 50
         },
         shiny: {
             name: "Shiny",
             icon: "\u2728",
             oneInMult: 7,    // shark becomes 7\u00d7 rarer
             color: "#fde047",
-            scoreBonus: 22
+            scoreBonus: 22,
+            rollWeight: 25
         },
         bioluminescent: {
             name: "Bioluminescent",
             icon: "\u{1F9EC}",
             oneInMult: 10,   // shark becomes 10\u00d7 rarer
             color: "#22d3ee",
-            scoreBonus: 16
+            scoreBonus: 16,
+            rollWeight: 15
+        },
+        megatooth: {
+            name: "Megatooth",
+            icon: "\u{1F9B7}",
+            oneInMult: 50,   // shark becomes 50\u00d7 rarer
+            color: "#f87171",
+            scoreBonus: 38,
+            rollWeight: 10
+        },
+        apex: {
+            name: "Apex",
+            icon: "\u{1F988}",
+            oneInMult: 120,  // shark becomes 120\u00d7 rarer
+            color: "#fb923c",
+            scoreBonus: 45,
+            naturalOnly: true
         }
     };
+
+    const STANDARD_MUTATION_KEYS = Object.keys(MUTATION_TYPES)
+        .filter((key) => !MUTATION_TYPES[key].naturalOnly);
+    const MUTATION_CHANCE_ORDER = ["albino", "shiny", "bioluminescent", "megatooth", "apex"];
 
     const TIER_ORDER = TIERS.map((tier) => tier.name);
     const TIER_RANK = Object.fromEntries(TIER_ORDER.map((name, index) => [name, index]));
@@ -428,6 +483,7 @@ let rollPool = [];
     let rngLeaderboardSyncTimer = null;
     let rngLeaderboardLastSyncAt = 0;
     let rngLeaderboardLoading = false;
+    let rngDevForcedMutationType = null;
 
     const GameFx = {
         initAudio() {
@@ -520,6 +576,7 @@ let rollPool = [];
             rollSpeedLevel: 0,
             autoRollLevel: 0,
             mutationLevel: 0,
+            apexLevel: 0,
             xpLevel: 0,
             collection: {},
             equipped: null,
@@ -537,7 +594,8 @@ let rollPool = [];
                 omega: { remaining: 0 },
                 albino: { remaining: 0 },
                 shiny: { remaining: 0 },
-                bioluminescent: { remaining: 0 }
+                bioluminescent: { remaining: 0 },
+                megatooth: { remaining: 0 }
             },
             settings: {
                 disableRarePopups: false,
@@ -1273,6 +1331,51 @@ let rollPool = [];
         return upgrade ? upgrade.chance : null;
     }
 
+    function getApexMutationChance() {
+        if (player.apexLevel <= 0) return null;
+        const upgrade = APEX_LUCK_UPGRADES.find((entry) => entry.level === player.apexLevel);
+        return upgrade ? upgrade.chance : null;
+    }
+
+    function getQueuedForcedMutationType() {
+        return STANDARD_MUTATION_KEYS.find((key) => player.activeEffects[key]?.remaining > 0) || null;
+    }
+
+    function consumeQueuedDevForcedMutationType() {
+        const type = rngDevForcedMutationType;
+        rngDevForcedMutationType = null;
+        return MUTATION_TYPES[type] ? type : null;
+    }
+
+    function getMutationRollWeightTotal(keys = STANDARD_MUTATION_KEYS) {
+        return keys.reduce((sum, key) => sum + Math.max(0, MUTATION_TYPES[key]?.rollWeight || 0), 0);
+    }
+
+    function pickWeightedMutationKey(keys = STANDARD_MUTATION_KEYS) {
+        const weightedKeys = keys.filter((key) => (MUTATION_TYPES[key]?.rollWeight || 0) > 0);
+        const totalWeight = getMutationRollWeightTotal(weightedKeys);
+        if (!weightedKeys.length || totalWeight <= 0) return keys[0] || null;
+
+        let rng = Math.random() * totalWeight;
+        for (const key of weightedKeys) {
+            rng -= MUTATION_TYPES[key].rollWeight;
+            if (rng <= 0) return key;
+        }
+        return weightedKeys[weightedKeys.length - 1];
+    }
+
+    function getNaturalMutationChanceOneIn(key) {
+        if (key === "apex") return getApexMutationChance();
+        if (!STANDARD_MUTATION_KEYS.includes(key)) return null;
+
+        const baseChance = getMutationChance();
+        const weight = MUTATION_TYPES[key]?.rollWeight || 0;
+        const totalWeight = getMutationRollWeightTotal();
+        if (baseChance === null || weight <= 0 || totalWeight <= 0) return null;
+
+        return Math.round(baseChance * (totalWeight / weight));
+    }
+
     function getNextUpgrade(list, currentLevel) {
         return list[currentLevel] || null;
     }
@@ -1607,6 +1710,9 @@ function rollForShark() {
     player.rolls += 1;
 
     let rolled = null;
+    const forcedMutationType = getQueuedForcedMutationType();
+    const devForcedMutationType = consumeQueuedDevForcedMutationType();
+    const hasForcedMutation = forcedMutationType || devForcedMutationType;
 
     // =========================================
     // OMEGA / ULTRA GUARANTEED POTIONS
@@ -1634,10 +1740,29 @@ function rollForShark() {
     }
 
     // =========================================
-    // RANDOM MUTATION ROLL
+    // RANDOM APEX MUTATION ROLL
     // =========================================
 
-    if (!rolled) {
+    if (!rolled && !hasForcedMutation) {
+
+        const apexChance = getApexMutationChance();
+
+        if (
+            apexChance !== null &&
+            Math.random() < (1 / apexChance)
+        ) {
+            const picked =
+                rollPool[Math.floor(Math.random() * rollPool.length)];
+
+            rolled = applyStableMutation(picked, "apex");
+        }
+    }
+
+    // =========================================
+    // RANDOM STANDARD MUTATION ROLL
+    // =========================================
+
+    if (!rolled && !hasForcedMutation) {
 
         const mutationChance = getMutationChance();
 
@@ -1646,18 +1771,15 @@ function rollForShark() {
             Math.random() < (1 / mutationChance)
         ) {
 
-            const mutationKeys = Object.keys(MUTATION_TYPES);
-
-            const mutationKey =
-                mutationKeys[
-                    Math.floor(Math.random() * mutationKeys.length)
-                ];
+            const mutationKey = pickWeightedMutationKey(STANDARD_MUTATION_KEYS);
 
             // Pick a normal shark FIRST
             const picked =
                 rollPool[Math.floor(Math.random() * rollPool.length)];
 
-            rolled = applyStableMutation(picked, mutationKey);
+            if (mutationKey) {
+                rolled = applyStableMutation(picked, mutationKey);
+            }
         }
     }
 
@@ -1692,17 +1814,10 @@ function rollForShark() {
         );
     }
 
-    if (player.activeEffects.albino?.remaining > 0) {
-
-        applyForcedMutation("albino");
-
-    } else if (player.activeEffects.shiny?.remaining > 0) {
-
-        applyForcedMutation("shiny");
-
-    } else if (player.activeEffects.bioluminescent?.remaining > 0) {
-
-        applyForcedMutation("bioluminescent");
+    if (devForcedMutationType) {
+        rolled = applyStableMutation(rolled, devForcedMutationType);
+    } else if (forcedMutationType) {
+        applyForcedMutation(forcedMutationType);
     }
 
     // =========================================
@@ -1735,6 +1850,7 @@ function rollForShark() {
                     parsed.autoRollLevel ?? Math.min(parsed.autoSpeedLevel || 0, 1),
                     AUTO_ROLL_UPGRADES.length
                 ),
+                apexLevel: Math.min(parsed.apexLevel || 0, APEX_LUCK_UPGRADES.length),
                 xpLevel: Math.min(parsed.xpLevel || 0, XP_UPGRADES.length),
                 potions: { ...createDefaultPotions(), ...(parsed.potions || {}) },
                 potionRestock: {
@@ -1751,7 +1867,8 @@ function rollForShark() {
                     omega: { ...createDefaultPlayer().activeEffects.omega, ...(parsed.activeEffects?.omega || {}) },
                     albino: { ...createDefaultPlayer().activeEffects.albino, ...(parsed.activeEffects?.albino || {}) },
                     shiny: { ...createDefaultPlayer().activeEffects.shiny, ...(parsed.activeEffects?.shiny || {}) },
-                    bioluminescent: { ...createDefaultPlayer().activeEffects.bioluminescent, ...(parsed.activeEffects?.bioluminescent || {}) }
+                    bioluminescent: { ...createDefaultPlayer().activeEffects.bioluminescent, ...(parsed.activeEffects?.bioluminescent || {}) },
+                    megatooth: { ...createDefaultPlayer().activeEffects.megatooth, ...(parsed.activeEffects?.megatooth || {}) }
                 },
                 collection: parsed.collection && typeof parsed.collection === "object" ? parsed.collection : {},
                 settings: {
@@ -1873,18 +1990,18 @@ function updateActiveEffectsUi() {
          if (player.activeEffects.ultra.remaining > 0) {
              parts.push("\u{1F30A} Abyss ready");
          }
-         if (player.activeEffects.albino?.remaining > 0) {
-             parts.push("\u{1F90D} Albino ready");
-         }
-         if (player.activeEffects.shiny?.remaining > 0) {
-             parts.push("\u2728 Shiny ready");
-         }
-         if (player.activeEffects.bioluminescent?.remaining > 0) {
-             parts.push("\u{1F9EC} Bioluminescent ready");
+         for (const key of STANDARD_MUTATION_KEYS) {
+             if (player.activeEffects[key]?.remaining > 0) {
+                 parts.push(`${MUTATION_TYPES[key].icon} ${MUTATION_TYPES[key].name} ready`);
+             }
          }
          const mChance = getMutationChance();
          if (mChance !== null) {
              parts.push(`\u{1F9EC} Mutation: 1 in ${mChance.toLocaleString()}`);
+         }
+         const apexChance = getApexMutationChance();
+         if (apexChance !== null) {
+             parts.push(`\u{1F988} Apex: 1 in ${apexChance.toLocaleString()}`);
          }
  
          if (parts.length) {
@@ -2004,6 +2121,9 @@ function updateActiveEffectsUi() {
         }
         if (def.listKey === "mutation") {
             return `Lv.${next.level} \u00b7 1 in ${next.chance.toLocaleString()} chance`;
+        }
+        if (def.listKey === "apex") {
+            return `Lv.${next.level} \u00b7 Apex 1 in ${next.chance.toLocaleString()}`;
         }
         if (def.listKey === "xp") {
             return `Lv.${next.level} \u00b7 +${Math.round(next.bonus * 100)}% XP`;
@@ -2178,10 +2298,38 @@ function updateAllUi() {
             ["Singularity", "1 in 500M+"]
         ];
 
-        legend.innerHTML = examples.map(([name, odds]) => {
+        const rarityRows = examples.map(([name, odds]) => {
             const meta = getTierMeta(name);
             return `<div class="rng-tier-row ${meta.className}"><span>${name}</span><span>${odds}</span></div>`;
-        }).join("");
+        });
+
+        const mutationRows = MUTATION_CHANCE_ORDER.map((key) => {
+            const mutation = MUTATION_TYPES[key];
+            if (!mutation) return "";
+            const chance = getNaturalMutationChanceOneIn(key);
+            const standardWeightTotal = getMutationRollWeightTotal();
+            const pickPercent = STANDARD_MUTATION_KEYS.includes(key) && standardWeightTotal > 0
+                ? Math.round(((mutation.rollWeight || 0) / standardWeightTotal) * 100)
+                : null;
+            const chanceText = chance === null
+                ? (key === "apex" ? "Apex Instinct locked" : `${pickPercent}% of mutation rolls`)
+                : `1 in ${formatOneIn(chance)}`;
+            const pickText = chance !== null && pickPercent !== null ? ` · ${pickPercent}% pick` : "";
+
+            return `
+                <div class="rng-tier-row rng-mutation-chance-row ${key}" style="border-left-color:${mutation.color}">
+                    <span>${mutation.icon} ${mutation.name}</span>
+                    <span>${chanceText}${pickText} · ${mutation.oneInMult}x</span>
+                </div>
+            `;
+        });
+
+        legend.innerHTML = [
+            `<div class="rng-tier-section-title">Rarities</div>`,
+            ...rarityRows,
+            `<div class="rng-tier-section-title">Mutation chances</div>`,
+            ...mutationRows
+        ].join("");
     }
 
     function renderCollectionGrid() {
@@ -2191,8 +2339,7 @@ function updateAllUi() {
         if (!grid) return;
 
         const tierFilter = filter ? filter.value : "all";
-        const mutationFilter = tierFilter === "albino" || tierFilter === "shiny" || tierFilter === "bioluminescent"
-            ? tierFilter : null;
+        const mutationFilter = MUTATION_TYPES[tierFilter] ? tierFilter : null;
         const searchTerm = (searchInput?.value || "").toLowerCase().trim();
         const searchTokens = searchTerm ? searchTerm.split(/\s+/).filter(Boolean) : [];
 
@@ -2617,12 +2764,8 @@ async function performRoll() {
             player.activeEffects.ultra.remaining += def.rolls;
         } else if (key === "omega") {
             player.activeEffects.omega.remaining += def.rolls;
-        } else if (key === "albino") {
-            player.activeEffects.albino.remaining += def.rolls;
-        } else if (key === "shiny") {
-            player.activeEffects.shiny.remaining += def.rolls;
-        } else if (key === "bioluminescent") {
-            player.activeEffects.bioluminescent.remaining += def.rolls;
+        } else if (STANDARD_MUTATION_KEYS.includes(key)) {
+            player.activeEffects[key].remaining += def.rolls;
         }
 
         persistPlayerState();
@@ -2670,6 +2813,119 @@ async function performRoll() {
 
     function closeSettingsModal() {
         document.getElementById("rng-settings-modal")?.classList.add("hidden");
+    }
+
+    function getRngCurrentDevUser() {
+        ensureRngLeaderboardServices();
+        return rngLeaderboardAuth?.currentUser || rngLeaderboardUser || null;
+    }
+
+    function isRngDeveloperUser(user = getRngCurrentDevUser()) {
+        return RNG_DEV_UIDS.includes(user?.uid || "");
+    }
+
+    function requireRngDevCommand(commandName) {
+        const user = getRngCurrentDevUser();
+        if (!user || !isRngDeveloperUser(user)) {
+            console.log(`Access denied. ${commandName} is for developers only.`);
+            showToast("Dev command access denied.", "error");
+            return false;
+        }
+        return true;
+    }
+
+    function parseRngDevCoinAmount(amount, commandName, options = {}) {
+        const normalized = typeof amount === "string" ? amount.replace(/,/g, "").trim() : amount;
+        const parsed = Math.floor(Number(normalized));
+        const min = options.allowZero ? 0 : 1;
+        if (!Number.isFinite(parsed) || parsed < min) {
+            const example = options.example || (options.allowZero ? "0" : "1000000");
+            console.log(`Usage: ${commandName}(${example})`);
+            return null;
+        }
+        return parsed;
+    }
+
+    function installRngDevCommands() {
+        window.addRngCoins = function addRngCoins(amount = 1_000_000) {
+            if (!requireRngDevCommand("addRngCoins")) return;
+            const coinsToAdd = parseRngDevCoinAmount(amount, "addRngCoins");
+            if (coinsToAdd === null) return;
+
+            player.coins = Math.max(0, (Number(player.coins) || 0) + coinsToAdd);
+            persistPlayerState();
+            console.log(`Added ${coinsToAdd.toLocaleString()} RNG coins. Total: ${player.coins.toLocaleString()}`);
+            showToast(`+${coinsToAdd.toLocaleString()} coins`);
+        };
+
+        window.setRngCoins = function setRngCoins(amount = 1_000_000) {
+            if (!requireRngDevCommand("setRngCoins")) return;
+            const newTotal = parseRngDevCoinAmount(amount, "setRngCoins", { allowZero: true });
+            if (newTotal === null) return;
+
+            player.coins = newTotal;
+            persistPlayerState();
+            console.log(`Set RNG coins to ${player.coins.toLocaleString()}.`);
+            showToast(`Coins set: ${player.coins.toLocaleString()}`);
+        };
+
+        window.addRngLevels = function addRngLevels(amount = 1) {
+            if (!requireRngDevCommand("addRngLevels")) return;
+            const levelsToAdd = parseRngDevCoinAmount(amount, "addRngLevels", { example: "5" });
+            if (levelsToAdd === null) return;
+
+            const before = getRankInfo();
+            const targetLevel = before.level + levelsToAdd;
+            const xpIntoCurrentLevel = Math.max(0, before.xp - before.current.xp);
+            player.rngXp = getXpForLevel(targetLevel) + xpIntoCurrentLevel;
+            persistPlayerState();
+
+            const after = getRankInfo();
+            console.log(`Added ${levelsToAdd.toLocaleString()} RNG level${levelsToAdd === 1 ? "" : "s"}. Level: ${before.level} -> ${after.level}.`);
+            showToast(`RNG level ${after.level}`);
+        };
+
+        window.setRngLevel = function setRngLevel(level = 10) {
+            if (!requireRngDevCommand("setRngLevel")) return;
+            const targetLevel = parseRngDevCoinAmount(level, "setRngLevel", { example: "25" });
+            if (targetLevel === null) return;
+
+            player.rngXp = getXpForLevel(targetLevel);
+            persistPlayerState();
+            console.log(`Set RNG level to ${targetLevel.toLocaleString()} (${player.rngXp.toLocaleString()} XP).`);
+            showToast(`RNG level set: ${targetLevel.toLocaleString()}`);
+        };
+
+        window.nextRollApex = function nextRollApex() {
+            if (!requireRngDevCommand("nextRollApex")) return;
+            rngDevForcedMutationType = "apex";
+            console.log("Next RNG roll will be forced Apex.");
+            showToast("Next roll: Apex");
+        };
+
+        window.showRngStats = function showRngStats() {
+            const rank = getRankInfo();
+            console.log("=== CURRENT RNG STATS ===");
+            console.log(`Coins: ${(Number(player.coins) || 0).toLocaleString()}`);
+            console.log(`Rolls: ${(Number(player.rolls) || 0).toLocaleString()}`);
+            console.log(`Level: ${rank.level.toLocaleString()} (${rank.xp.toLocaleString()} / ${rank.next.xp.toLocaleString()} XP)`);
+            console.log(`Forced Next Roll: ${rngDevForcedMutationType ? MUTATION_TYPES[rngDevForcedMutationType]?.name || rngDevForcedMutationType : "None"}`);
+            console.log(`Best: ${player.bestTier || "None"} (${player.bestOneIn ? `1 in ${formatOneIn(player.bestOneIn)}` : "none"})`);
+            console.log(`Collection: ${getCollectionCount().toLocaleString()} / ${getCollectionTargetCount().toLocaleString()}`);
+            console.log("=========================");
+        };
+
+        window.showRngCommands = function showRngCommands() {
+            console.log("=== AVAILABLE RNG COMMANDS ===");
+            console.log("addRngCoins(1000000) - Add RNG coins");
+            console.log("setRngCoins(1000000) - Set RNG coins directly");
+            console.log("addRngLevels(5) - Add RNG levels");
+            console.log("setRngLevel(25) - Set RNG level directly");
+            console.log("nextRollApex() - Force the next RNG roll to be Apex");
+            console.log("showRngStats() - Display current RNG stats");
+            console.log("showRngCommands() - Show this help");
+            console.log("==============================");
+        };
     }
 
     function bindUi() {
@@ -2738,6 +2994,7 @@ async function initRngMode() {
          buildRollPool();
          loadLocalProfile();
          initAmbientBubbles();
+         installRngDevCommands();
          bindUi();
          updateAllUi();
          updateSettingsUi();
