@@ -45,6 +45,8 @@
         { name: "Singularity", baseOneIn: 1_000_000_000, coinReward: 7000000, className: "singularity" }
     ];
 
+    const INDEX_REWARD_DEFS = buildIndexRewardDefs();
+
     const EQUIPPED_LUCK_BONUS_BY_TIER = {
         Common: 0,
         Uncommon: 0.005,
@@ -139,7 +141,8 @@
 
     const SHOP_TIER_NAMES = [
         "Bronze", "Silver", "Gold", "Platinum", "Diamond",
-        "Mythic", "Abyssal", "Celestial", "Void", "Singularity"
+        "Mythic", "Abyssal", "Celestial", "Void", "Singularity",
+        "Event Horizon", "Quantum", "Eclipse", "Transcendent"
     ];
 
     const PLAYER_RANK_ICON = "\u{1F988}";
@@ -154,8 +157,77 @@
         { id: "auto", name: "Auto Roll", icon: "fa-robot", levelKey: "autoRollLevel", listKey: "auto" },
         { id: "mutation", name: "Mutation Luck", icon: "fa-dna", levelKey: "mutationLevel", listKey: "mutation" },
         { id: "apex", name: "Apex Instinct", icon: "fa-crown", levelKey: "apexLevel", listKey: "apex" },
+        { id: "mutationBounty", name: "Mutation Bounty", icon: "fa-sack-dollar", levelKey: "mutationBountyLevel", listKey: "mutationBounty" },
+        { id: "potionRestock", name: "Potion Restock", icon: "fa-hourglass-half", levelKey: "potionRestockLevel", listKey: "potionRestock" },
         { id: "xp", name: "Research XP", icon: "fa-book-open", levelKey: "xpLevel", listKey: "xp" }
     ];
+
+    function buildIndexRewardDefs() {
+        const rewards = [
+            {
+                id: "index_20_luck",
+                goal: 20,
+                title: "First Survey",
+                rewardText: "+5% permanent luck",
+                effects: [{ type: "luckBonus", amount: 0.05 }]
+            }
+        ];
+
+        const legacyIds = {
+            300: "index_300_mutagen",
+            500: "index_500_omega",
+            1000: "index_1000_omega"
+        };
+
+        for (let goal = 50; goal <= 3200; goal += 50) {
+            const id = legacyIds[goal] || `index_${goal}`;
+            let title = "Index Grant";
+            let rewardText = "";
+            let effects = [];
+
+            if (goal % 500 === 0) {
+                const amount = Math.max(1, Math.floor(goal / 500));
+                title = goal >= 2000 ? "Omega Treasury" : "Omega Cache";
+                rewardText = `${amount} Omega Potion${amount === 1 ? "" : "s"}`;
+                effects = [{ type: "potion", key: "omega", amount }];
+            } else if (goal % 250 === 0) {
+                const amount = Math.round((0.02 + Math.floor(goal / 500) * 0.01) * 100) / 100;
+                title = "Survey Bonus";
+                rewardText = `+${Math.round(amount * 100)}% permanent luck`;
+                effects = [{ type: "luckBonus", amount }];
+            } else if (goal % 150 === 0) {
+                const amount = 1 + Math.floor(goal / 900);
+                title = "Mutagen Cache";
+                rewardText = `${amount} Mutagen Storm Potion${amount === 1 ? "" : "s"}`;
+                effects = [{ type: "potion", key: "randomMutation", amount }];
+            } else if (goal % 100 === 0) {
+                const amount = 1 + Math.floor(goal / 1000);
+                title = "Abyss Cache";
+                rewardText = `${amount} Abyss Potion${amount === 1 ? "" : "s"}`;
+                effects = [{ type: "potion", key: "ultra", amount }];
+            } else {
+                const amount = Math.floor(25000 * Math.pow(1.11, (goal / 50) - 1));
+                title = "Coin Cache";
+                rewardText = `${formatCompactCoins(amount)} coins`;
+                effects = [{ type: "coins", amount }];
+            }
+
+            rewards.push({ id, goal, title, rewardText, effects });
+        }
+
+        rewards.push({
+            id: "index_complete",
+            goal: 3234,
+            title: "Complete Index",
+            rewardText: "+25% permanent luck + 5 Omega",
+            effects: [
+                { type: "luckBonus", amount: 0.25 },
+                { type: "potion", key: "omega", amount: 5 }
+            ]
+        });
+
+        return rewards;
+    }
 
     function getShopTierName(level) {
         const tierIndex = Math.min(Math.floor((level - 1) / 5), SHOP_TIER_NAMES.length - 1);
@@ -179,6 +251,16 @@
                 tierClass: getShopTierClass(i)
             });
         }
+        for (let i = 51; i <= 70; i++) {
+            const extraLevel = i - 51;
+            list.push({
+                level: i,
+                bonus: Math.round((8 + extraLevel * 0.45) * 100) / 100,
+                cost: Math.floor(120_000_000 * Math.pow(1.37, extraLevel)),
+                shopTier: getShopTierName(i),
+                tierClass: getShopTierClass(i)
+            });
+        }
         return list;
     }
 
@@ -193,35 +275,50 @@
                 tierClass: getShopTierClass(i)
             });
         }
+        for (let i = 41; i <= 60; i++) {
+            const extraLevel = i - 41;
+            list.push({
+                level: i,
+                bonus: Math.round((0.8 + extraLevel * 0.05) * 100) / 100,
+                cost: Math.floor(90_000_000 * Math.pow(1.35, extraLevel)),
+                shopTier: getShopTierName(i + 10),
+                tierClass: getShopTierClass(i + 10)
+            });
+        }
         return list;
     }
 
     function buildRollSpeedUpgrades() {
-        const reductions = [80, 90, 100, 105, 110, 115, 120, 125, 130, 135, 145, 155];
+        const reductions = [80, 90, 100, 105, 110, 115, 120, 125, 130, 135, 145, 155, 15];
         return reductions.map((reduction, index) => {
             const level = index + 1;
+            const eliteLevel = level > 12;
             return {
                 level,
                 reduction,
-                cost: Math.floor(650 * Math.pow(1.42, index)),
-                shopTier: getShopTierName(level),
-                tierClass: getShopTierClass(level)
+                cost: eliteLevel ? 750_000_000 : Math.floor(650 * Math.pow(1.42, index)),
+                shopTier: getShopTierName(eliteLevel ? 51 : level),
+                tierClass: getShopTierClass(eliteLevel ? 51 : level)
             };
         });
     }
 
     function buildAutoRollUpgrades() {
-        const intervals = [2800, 2400, 2100, 1850, 1600, 1400, 1250, 1100];
-        const costs = [25000, 75000, 200000, 650000, 1800000, 5000000, 14000000, 40000000];
+        const intervals = [2800, 2400, 2100, 1850, 1600, 1400, 1250, 1100, 980, 880, 780, 700, 640, 600];
+        const costs = [
+            25000, 75000, 200000, 650000, 1800000, 5000000, 14000000, 40000000,
+            250_000_000, 650_000_000, 1_500_000_000, 3_500_000_000, 8_000_000_000, 20_000_000_000
+        ];
 
         return intervals.map((interval, index) => {
             const level = index + 1;
+            const shopLevel = level <= 8 ? level : level + 42;
             return {
                 level,
                 interval,
                 cost: costs[index],
-                shopTier: getShopTierName(level),
-                tierClass: getShopTierClass(level)
+                shopTier: getShopTierName(shopLevel),
+                tierClass: getShopTierClass(shopLevel)
             };
         });
     }
@@ -235,6 +332,16 @@
                 cost: Math.floor(2500 * Math.pow(1.24, i - 1)),
                 shopTier: getShopTierName(i),
                 tierClass: getShopTierClass(i)
+            });
+        }
+        for (let i = 26; i <= 40; i++) {
+            const extraLevel = i - 26;
+            list.push({
+                level: i,
+                bonus: Math.round((0.75 + extraLevel * 0.045) * 1000) / 1000,
+                cost: Math.floor(80_000_000 * Math.pow(1.34, extraLevel)),
+                shopTier: getShopTierName(i + 25),
+                tierClass: getShopTierClass(i + 25)
             });
         }
         return list;
@@ -251,6 +358,16 @@
                 tierClass: getShopTierClass(i)
             });
         }
+        for (let i = 16; i <= 30; i++) {
+            const extraLevel = i - 16;
+            list.push({
+                level: i,
+                mult: Math.round((11.5 + extraLevel * 0.6) * 10) / 10,
+                cost: Math.floor(150_000_000 * Math.pow(1.33, extraLevel)),
+                shopTier: getShopTierName(i + 35),
+                tierClass: getShopTierClass(i + 35)
+            });
+        }
         return list;
     }
 
@@ -265,6 +382,17 @@
                 cost: Math.floor(8000 * Math.pow(1.18, i - 1)),
                 shopTier: getShopTierName(i + 14),   // mutation tier offset from luck upgrades
                 tierClass: getShopTierClass(i + 14)
+            });
+        }
+        for (let i = 51; i <= 70; i++) {
+            const extraLevel = i - 51;
+            const chanceOneIn = Math.round(100 / Math.pow(1.075, extraLevel + 1));
+            list.push({
+                level: i,
+                chance: Math.max(25, chanceOneIn),
+                cost: Math.floor(160_000_000 * Math.pow(1.38, extraLevel)),
+                shopTier: getShopTierName(i),
+                tierClass: getShopTierClass(i)
             });
         }
         return list;
@@ -286,6 +414,37 @@
         return list;
     }
 
+    function buildMutationBountyUpgrades() {
+        const list = [];
+        for (let i = 1; i <= 30; i++) {
+            const extraLevel = i - 1;
+            list.push({
+                level: i,
+                bonus: Math.round((0.12 + extraLevel * 0.035) * 1000) / 1000,
+                cost: Math.floor(250_000_000 * Math.pow(1.42, extraLevel)),
+                shopTier: getShopTierName(i + 45),
+                tierClass: getShopTierClass(i + 45)
+            });
+        }
+        return list;
+    }
+
+    function buildPotionRestockUpgrades() {
+        const list = [];
+        for (let i = 1; i <= 15; i++) {
+            const progress = i / 15;
+            list.push({
+                level: i,
+                ultraRestock: Math.max(5, Math.round(20 - (15 * progress))),
+                omegaRestock: Math.max(20, Math.round(80 - (60 * progress))),
+                cost: Math.floor(200_000_000 * Math.pow(1.6, i - 1)),
+                shopTier: getShopTierName(i + 50),
+                tierClass: getShopTierClass(i + 50)
+            });
+        }
+        return list;
+    }
+
     const MUTATION_UPGRADES = buildMutationUpgrades();
     const APEX_MUTATION_UPGRADES = buildApexUpgrades();
 
@@ -297,6 +456,8 @@
         auto: buildAutoRollUpgrades(),
         mutation: MUTATION_UPGRADES,
         apex: APEX_MUTATION_UPGRADES,
+        mutationBounty: buildMutationBountyUpgrades(),
+        potionRestock: buildPotionRestockUpgrades(),
         xp: buildXpUpgrades()
     };
 
@@ -307,6 +468,8 @@
     const AUTO_ROLL_UPGRADES = UPGRADE_LISTS.auto;
     const MUTATION_LUCK_UPGRADES = UPGRADE_LISTS.mutation;
     const APEX_LUCK_UPGRADES = UPGRADE_LISTS.apex;
+    const MUTATION_BOUNTY_UPGRADES = UPGRADE_LISTS.mutationBounty;
+    const POTION_RESTOCK_UPGRADES = UPGRADE_LISTS.potionRestock;
     const XP_UPGRADES = UPGRADE_LISTS.xp;
 
     const POTION_DEFS = {
@@ -379,6 +542,15 @@
             maxOwned: 1,
             restockRolls: 20
         },
+        omega: {
+            name: "Omega Potion",
+            icon: "\u{1F31F}",
+            desc: "Guaranteed 1 in 100M+ species; restocks after 80 normal rolls",
+            cost: 100000000000,
+            rolls: 1,
+            maxOwned: 1,
+            restockRolls: 80
+        },
         albino: {
             name: "Albino Potion",
             icon: "\u{1F90D}",
@@ -406,6 +578,13 @@
             desc: "Guaranteed megatooth mutation; reduced coin payout",
             cost: 50000000,
             rolls: 1
+        },
+        randomMutation: {
+            name: "Mutagen Storm Potion",
+            icon: "\u{1F9EC}",
+            desc: "Guaranteed random mutation for 50 rolls; reduced coin payout",
+            cost: 100000000,
+            rolls: 50
         }
     };
 
@@ -414,37 +593,85 @@
     // Apex is natural-only and uses its own upgrade path, not mutation potions.
     // With no mutation Luck upgrades the base chance is essentially zero.
     const MUTATION_TYPES = {
+        melanistic: {
+            name: "Melanistic",
+            icon: "\u26AB",
+            oneInMult: 3,
+            color: "#94a3b8",
+            scoreBonus: 18,
+            rollWeight: 50
+        },
         albino: {
             name: "Albino",
             icon: "\u{1F90D}",
-            oneInMult: 5,    // shark becomes 5\u00d7 rarer
+            oneInMult: 5,
             color: "#f1f5f9",
             scoreBonus: 30,
-            rollWeight: 50
+            rollWeight: 42
         },
         shiny: {
             name: "Shiny",
             icon: "\u2728",
-            oneInMult: 7,    // shark becomes 7\u00d7 rarer
+            oneInMult: 7,
             color: "#fde047",
             scoreBonus: 22,
-            rollWeight: 25
+            rollWeight: 28
         },
         bioluminescent: {
             name: "Bioluminescent",
             icon: "\u{1F9EC}",
-            oneInMult: 10,   // shark becomes 10\u00d7 rarer
+            oneInMult: 10,
             color: "#22d3ee",
             scoreBonus: 16,
-            rollWeight: 15
+            rollWeight: 22
+        },
+        copper: {
+            name: "Copper",
+            icon: "\u{1F7E0}",
+            oneInMult: 14,
+            color: "#fb923c",
+            scoreBonus: 20,
+            rollWeight: 17
+        },
+        golden: {
+            name: "Golden",
+            icon: "\u{1F3C6}",
+            oneInMult: 20,
+            color: "#fbbf24",
+            scoreBonus: 28,
+            rollWeight: 12
+        },
+        spectral: {
+            name: "Spectral",
+            icon: "\u{1F47B}",
+            oneInMult: 30,
+            color: "#c4b5fd",
+            scoreBonus: 34,
+            rollWeight: 8
+        },
+        abyssal: {
+            name: "Abyssal",
+            icon: "\u{1F311}",
+            oneInMult: 40,
+            color: "#818cf8",
+            scoreBonus: 36,
+            rollWeight: 6
         },
         megatooth: {
             name: "Megatooth",
             icon: "\u{1F9B7}",
-            oneInMult: 50,   // shark becomes 50\u00d7 rarer
+            oneInMult: 55,
             color: "#f87171",
             scoreBonus: 38,
-            rollWeight: 10
+            rollWeight: 4
+        },
+        cosmic: {
+            name: "Cosmic",
+            icon: "\u{1F30C}",
+            oneInMult: 80,
+            color: "#e879f9",
+            scoreBonus: 42,
+            rollWeight: 2
         },
         apex: {
             name: "Apex",
@@ -458,7 +685,19 @@
 
     const STANDARD_MUTATION_KEYS = Object.keys(MUTATION_TYPES)
         .filter((key) => !MUTATION_TYPES[key].naturalOnly);
-    const MUTATION_CHANCE_ORDER = ["albino", "shiny", "bioluminescent", "megatooth", "apex"];
+    const MUTATION_CHANCE_ORDER = [
+        "melanistic",
+        "albino",
+        "shiny",
+        "bioluminescent",
+        "copper",
+        "golden",
+        "spectral",
+        "abyssal",
+        "megatooth",
+        "cosmic",
+        "apex"
+    ];
 
     const TIER_ORDER = TIERS.map((tier) => tier.name);
     const TIER_RANK = Object.fromEntries(TIER_ORDER.map((name, index) => [name, index]));
@@ -577,8 +816,11 @@ let rollPool = [];
             autoRollLevel: 0,
             mutationLevel: 0,
             apexLevel: 0,
+            mutationBountyLevel: 0,
+            potionRestockLevel: 0,
             xpLevel: 0,
             collection: {},
+            claimedIndexRewards: [],
             equipped: null,
             bestOneIn: 0,
             potions: createDefaultPotions(),
@@ -595,7 +837,8 @@ let rollPool = [];
                 albino: { remaining: 0 },
                 shiny: { remaining: 0 },
                 bioluminescent: { remaining: 0 },
-                megatooth: { remaining: 0 }
+                megatooth: { remaining: 0 },
+                randomMutation: { remaining: 0 }
             },
             settings: {
                 disableRarePopups: false,
@@ -654,7 +897,7 @@ let rollPool = [];
             if (!best || oneIn > best.oneIn) {
                 best = {
                     name,
-                    tier: entry?.tier || tierNameFromOneIn(oneIn),
+                    tier: getOddsTierName(entry),
                     oneIn
                 };
             }
@@ -681,9 +924,90 @@ let rollPool = [];
         return getTimestampMs(b.updatedAt) - getTimestampMs(a.updatedAt);
     }
 
+    function getEmailUsername(user) {
+        return user?.email ? String(user.email).split("@")[0] : "";
+    }
+
+    function normalizeRngUsername(username) {
+        return String(username || "").trim().slice(0, 32);
+    }
+
+    function isDefaultEmailUsername(username, user) {
+        const normalized = normalizeRngUsername(username).toLowerCase();
+        const emailName = getEmailUsername(user).toLowerCase();
+        return Boolean(normalized && emailName && normalized === emailName);
+    }
+
+    function isMeaningfulRngUsername(username, user) {
+        const normalized = normalizeRngUsername(username);
+        return Boolean(
+            normalized &&
+            normalized !== "Anonymous" &&
+            !isDefaultEmailUsername(normalized, user)
+        );
+    }
+
+    function readStoredJson(key) {
+        try {
+            return JSON.parse(localStorage.getItem(key) || "{}");
+        } catch (error) {
+            return {};
+        }
+    }
+
+    function getLocalRngUsernameCandidates(user) {
+        const candidates = [];
+        if (typeof window.getCurrentProfileData === "function") {
+            try {
+                candidates.push(window.getCurrentProfileData()?.username);
+            } catch (error) {
+                console.warn("Unable to read local RNG profile username:", error);
+            }
+        }
+
+        if (user?.uid) {
+            candidates.push(localStorage.getItem(`preferredUsername_${user.uid}`));
+            candidates.push(readStoredJson(`userProfile_${user.uid}`).username);
+            candidates.push(readStoredJson(`userProfileBackup_${user.uid}`).username);
+        }
+
+        for (const key of ["userProfile", "userProfileBackup"]) {
+            const profile = readStoredJson(key);
+            if (!profile?.uid || profile.uid === user?.uid) {
+                candidates.push(profile.username);
+            }
+        }
+
+        return candidates;
+    }
+
+    function pickRngUsername(user, ...candidates) {
+        const flatCandidates = candidates.flat();
+        for (const candidate of flatCandidates) {
+            if (isMeaningfulRngUsername(candidate, user)) {
+                return normalizeRngUsername(candidate);
+            }
+        }
+        return "";
+    }
+
     function getFallbackUsername(user) {
-        const emailName = user?.email ? user.email.split("@")[0] : "";
-        return user?.displayName || emailName || "Anonymous";
+        return pickRngUsername(
+            user,
+            getLocalRngUsernameCandidates(user),
+            user?.displayName
+        ) || "Anonymous";
+    }
+
+    async function getLeaderboardIdentityData(collectionName, uid) {
+        if (!rngLeaderboardDb || !uid) return {};
+        try {
+            const doc = await rngLeaderboardDb.collection(collectionName).doc(uid).get();
+            return doc.exists ? doc.data() || {} : {};
+        } catch (error) {
+            console.warn(`Unable to load ${collectionName} identity:`, error);
+            return {};
+        }
     }
 
     function setRngLeaderboardStatus(message) {
@@ -740,14 +1064,22 @@ let rollPool = [];
         }
 
         try {
-            const profileDoc = await rngLeaderboardDb.collection("userStats").doc(user.uid).get();
-            const data = profileDoc.exists ? profileDoc.data() || {} : {};
+            const data = await getLeaderboardIdentityData("userStats", user.uid);
+            const existingRngData = await getLeaderboardIdentityData(RNG_LEADERBOARD_COLLECTION, user.uid);
+            const username = pickRngUsername(
+                user,
+                data.username,
+                getLocalRngUsernameCandidates(user),
+                existingRngData.username,
+                user.displayName
+            ) || fallback.username;
+
             rngLeaderboardProfileCache = {
                 ...fallback,
-                username: String(data.username || fallback.username).slice(0, 32),
-                profilePicture: data.profilePicture || data.profilePic || fallback.profilePicture,
-                equippedBadge: data.equippedBadge || "starter",
-                equippedCardTheme: data.equippedCardTheme || "default"
+                username,
+                profilePicture: data.profilePicture || data.profilePic || existingRngData.profilePicture || fallback.profilePicture,
+                equippedBadge: data.equippedBadge || existingRngData.equippedBadge || "starter",
+                equippedCardTheme: data.equippedCardTheme || existingRngData.equippedCardTheme || "default"
             };
             return rngLeaderboardProfileCache;
         } catch (error) {
@@ -760,10 +1092,10 @@ let rollPool = [];
     function buildRngLeaderboardPayload(user, profile) {
         const best = getBestCollectionEntry();
         const rankInfo = getRankInfo();
+        const username = profile.username || getFallbackUsername(user);
 
-        return {
+        const payload = {
             uid: user.uid,
-            username: profile.username || getFallbackUsername(user),
             profilePicture: profile.profilePicture || "images/pfp/shark1.png",
             equippedBadge: profile.equippedBadge || "starter",
             equippedCardTheme: profile.equippedCardTheme || "default",
@@ -776,6 +1108,12 @@ let rollPool = [];
             collectionCount: getCollectionCount(),
             updatedAt: Date.now()
         };
+
+        if (isMeaningfulRngUsername(username, user)) {
+            payload.username = normalizeRngUsername(username);
+        }
+
+        return payload;
     }
 
     function buildRngLeaderboardFallbackPayload(payload) {
@@ -1125,15 +1463,18 @@ let rollPool = [];
         const hash = hashString(`${shark.name}:${type}:mutation`);
         const variant = 0.9 + (hash % 20) / 100;
         const mutatedOneIn = Math.max(2, Math.floor(shark.oneIn * mutation.oneInMult * variant));
-        const tier = tierNameFromOneIn(mutatedOneIn);
-        const tierMeta = getTierMeta(tier);
+        const baseTier = getBaseTierName(shark);
+        const oddsTier = tierNameFromOneIn(mutatedOneIn);
+        const baseTierMeta = getTierMeta(baseTier);
 
         return {
             ...shark,
             oneIn: mutatedOneIn,
-            tier,
-            className: tierMeta.className,
-            coinReward: getStableTierCoinReward(tier, `${shark.name}:${type}:mutation:coins`),
+            tier: baseTier,
+            baseTier,
+            oddsTier,
+            className: baseTierMeta.className,
+            coinReward: getStableTierCoinReward(oddsTier, `${shark.name}:${type}:mutation:coins`),
             mutation: type
         };
     }
@@ -1169,12 +1510,16 @@ let rollPool = [];
             ? applyStableMutation(baseShark, mutationKey)
             : baseShark;
         const canonicalKey = getCollectionKey(canonical);
+        const baseTier = getBaseTierName(canonical);
+        const oddsTier = getOddsTierName(canonical);
 
         return {
             key: canonicalKey,
             entry: {
                 ...entry,
-                tier: canonical.tier,
+                tier: baseTier,
+                baseTier,
+                oddsTier,
                 oneIn: canonical.oneIn,
                 mutation: mutationKey || undefined,
                 baseName: mutationKey ? baseShark.name : undefined
@@ -1184,6 +1529,22 @@ let rollPool = [];
 
     function getTierMeta(tierName) {
         return TIERS.find((tier) => tier.name === tierName) || TIERS[0];
+    }
+
+    function isKnownTierName(tierName) {
+        return TIER_RANK[tierName] !== undefined;
+    }
+
+    function getBaseTierName(entry) {
+        const tier = entry?.baseTier || entry?.tier;
+        if (isKnownTierName(tier)) return tier;
+        return isKnownTierName(entry?.oddsTier) ? entry.oddsTier : "Common";
+    }
+
+    function getOddsTierName(entry) {
+        if (isKnownTierName(entry?.oddsTier)) return entry.oddsTier;
+        const oddsTier = tierNameFromOneIn(toSafeNumber(entry?.oneIn));
+        return isKnownTierName(oddsTier) ? oddsTier : getBaseTierName(entry);
     }
 
     function buildRollPool() {
@@ -1201,6 +1562,8 @@ let rollPool = [];
                 habitat: shark.habitat,
                 yod: shark.yod,
                 tier: tierName,
+                baseTier: tierName,
+                oddsTier: tierName,
                 oneIn,
                 coinReward: Math.round(tierMeta.coinReward * (0.9 + ((hashString(shark.name + "coin") % 20) / 100))),
                 className: tierMeta.className
@@ -1245,7 +1608,7 @@ let rollPool = [];
         const potionMult = player.activeEffects.luck.remaining > 0
             ? player.activeEffects.luck.mult
             : 1;
-        return (1 + upgradeBonus) * getRankLuckMultiplier() * getEquippedLuckMultiplier() * potionMult;
+        return (1 + upgradeBonus) * getRankLuckMultiplier() * getEquippedLuckMultiplier() * getIndexLuckMultiplier() * potionMult;
     }
 
     function getRollLuckMultiplier() {
@@ -1277,7 +1640,7 @@ let rollPool = [];
 
     function getEquippedLuckBonus() {
         const entry = getEquippedCollectionEntry();
-        return entry ? (EQUIPPED_LUCK_BONUS_BY_TIER[entry.tier] || 0) : 0;
+        return entry ? (EQUIPPED_LUCK_BONUS_BY_TIER[getBaseTierName(entry)] || 0) : 0;
     }
 
     function getEquippedLuckMultiplier() {
@@ -1287,6 +1650,14 @@ let rollPool = [];
     function getXpMultiplier() {
         const upgradeBonus = XP_UPGRADES
             .slice(0, player.xpLevel)
+            .reduce((sum, upgrade) => sum + upgrade.bonus, 0);
+        return 1 + upgradeBonus;
+    }
+
+    function getMutationBountyMultiplier(rolled) {
+        if (!rolled?.mutation) return 1;
+        const upgradeBonus = MUTATION_BOUNTY_UPGRADES
+            .slice(0, player.mutationBountyLevel || 0)
             .reduce((sum, upgrade) => sum + upgrade.bonus, 0);
         return 1 + upgradeBonus;
     }
@@ -1302,8 +1673,9 @@ let rollPool = [];
     }
 
     function getRewardCoinMultiplier(rolled) {
-        if (!rolled.potionSource) return getCoinMultiplier();
-        return Math.min(getCoinMultiplier(), GUARANTEED_ROLL_COIN_MULTIPLIER_CAP);
+        const mutationBountyMult = getMutationBountyMultiplier(rolled);
+        if (!rolled.potionSource) return getCoinMultiplier() * mutationBountyMult;
+        return Math.min(getCoinMultiplier(), GUARANTEED_ROLL_COIN_MULTIPLIER_CAP) * mutationBountyMult;
     }
 
     function getRewardRate(rolled) {
@@ -1337,8 +1709,22 @@ let rollPool = [];
         return upgrade ? upgrade.chance : null;
     }
 
-    function getQueuedForcedMutationType() {
-        return STANDARD_MUTATION_KEYS.find((key) => player.activeEffects[key]?.remaining > 0) || null;
+    function getQueuedForcedMutation() {
+        const specificType = STANDARD_MUTATION_KEYS.find((key) => player.activeEffects[key]?.remaining > 0);
+        if (specificType) {
+            return { type: specificType, effectKey: specificType };
+        }
+
+        if (player.activeEffects.randomMutation?.remaining > 0) {
+            const randomType = pickWeightedMutationKey(STANDARD_MUTATION_KEYS);
+            if (!randomType) return null;
+            return {
+                type: randomType,
+                effectKey: "randomMutation"
+            };
+        }
+
+        return null;
     }
 
     function consumeQueuedDevForcedMutationType() {
@@ -1385,6 +1771,24 @@ let rollPool = [];
         if (num >= 1_000_000_000) return `${(num / 1_000_000_000).toFixed(num % 1_000_000_000 === 0 ? 0 : 2)}B`;
         if (num >= 1_000_000) return `${(num / 1_000_000).toFixed(num % 1_000_000 === 0 ? 0 : 1)}M`;
         return num.toLocaleString();
+    }
+
+    function formatCompactCoins(value) {
+        const num = Math.max(0, Math.floor(Number(value) || 0));
+        const units = [
+            { value: 1_000_000_000_000_000, suffix: "qa" },
+            { value: 1_000_000_000_000, suffix: "t" },
+            { value: 1_000_000_000, suffix: "b" },
+            { value: 1_000_000, suffix: "m" },
+            { value: 1_000, suffix: "k" }
+        ];
+        const unit = units.find((entry) => num >= entry.value);
+        if (unit) {
+            const scaled = num / unit.value;
+            const precision = scaled >= 100 || Number.isInteger(scaled) ? 0 : scaled >= 10 ? 1 : 2;
+            return `${scaled.toFixed(precision).replace(/\.0+$|(\.\d*[1-9])0+$/, "$1")}${unit.suffix}`;
+        }
+        return String(num);
     }
 
     function getLuckAdjustedTierOdds(tierName, luck) {
@@ -1500,6 +1904,14 @@ let rollPool = [];
         return shark.mutation ? `${shark.name} (${MUTATION_TYPES[shark.mutation]?.name})` : shark.name;
     }
 
+    function getCollectionEntryForShark(shark) {
+        return player.collection[getCollectionKey(shark)] || null;
+    }
+
+    function isNewCollectionRoll(shark) {
+        return getCollectionEntryForShark(shark)?.count === 1;
+    }
+
     function finalizeRoll(rolled) {
         const rewardRate = getRewardRate(rolled);
         const coinMultiplier = getRewardCoinMultiplier(rolled);
@@ -1513,9 +1925,13 @@ let rollPool = [];
         };
 
         const key = getCollectionKey(rolled);
+        const baseTier = getBaseTierName(rolled);
+        const oddsTier = getOddsTierName(rolled);
         if (!player.collection[key]) {
             player.collection[key] = {
-                tier: rolled.tier,
+                tier: baseTier,
+                baseTier,
+                oddsTier,
                 oneIn: rolled.oneIn,
                 firstRoll: player.rolls,
                 count: 1,
@@ -1528,9 +1944,13 @@ let rollPool = [];
                 player.collection[key].mutation = rolled.mutation;
                 player.collection[key].baseName = rolled.name;
             }
+            player.collection[key].tier = player.collection[key].baseTier || baseTier;
+            player.collection[key].baseTier = player.collection[key].baseTier || baseTier;
             if (rolled.oneIn > (player.collection[key].oneIn || 0)) {
                 player.collection[key].oneIn = rolled.oneIn;
-                player.collection[key].tier = rolled.tier;
+                player.collection[key].oddsTier = oddsTier;
+            } else if (!player.collection[key].oddsTier) {
+                player.collection[key].oddsTier = oddsTier;
             }
         }
 
@@ -1594,6 +2014,8 @@ let rollPool = [];
                 canonical.key !== name ||
                 canonical.entry.oneIn !== entry.oneIn ||
                 canonical.entry.tier !== entry.tier ||
+                canonical.entry.baseTier !== entry.baseTier ||
+                canonical.entry.oddsTier !== entry.oddsTier ||
                 canonical.entry.baseName !== entry.baseName
             ) {
                 changed = true;
@@ -1672,7 +2094,7 @@ let rollPool = [];
 
     function grantRollXp(shark) {
         let xp = 4 + Math.floor(Math.random() * 4);
-        const tierRank = TIER_RANK[shark.tier] || 0;
+        const tierRank = TIER_RANK[getOddsTierName(shark)] || 0;
 
         if (tierRank >= TIER_RANK.Rare) xp += 12;
         if (tierRank >= TIER_RANK.Epic) xp += 28;
@@ -1710,9 +2132,9 @@ function rollForShark() {
     player.rolls += 1;
 
     let rolled = null;
-    const forcedMutationType = getQueuedForcedMutationType();
+    const forcedMutation = getQueuedForcedMutation();
     const devForcedMutationType = consumeQueuedDevForcedMutationType();
-    const hasForcedMutation = forcedMutationType || devForcedMutationType;
+    const hasForcedMutation = forcedMutation || devForcedMutationType;
 
     // =========================================
     // OMEGA / ULTRA GUARANTEED POTIONS
@@ -1803,28 +2225,28 @@ function rollForShark() {
     // GUARANTEED MUTATION POTIONS
     // =========================================
 
-    function applyForcedMutation(type) {
+    function applyForcedMutation(type, effectKey = type) {
         rolled = applyStableMutation(rolled, type);
 
         rolled = markGuaranteedPotionRoll(rolled, "mutationPotion");
 
-        player.activeEffects[type].remaining = Math.max(
+        player.activeEffects[effectKey].remaining = Math.max(
             0,
-            player.activeEffects[type].remaining - 1
+            player.activeEffects[effectKey].remaining - 1
         );
     }
 
     if (devForcedMutationType) {
         rolled = applyStableMutation(rolled, devForcedMutationType);
-    } else if (forcedMutationType) {
-        applyForcedMutation(forcedMutationType);
+    } else if (forcedMutation) {
+        applyForcedMutation(forcedMutation.type, forcedMutation.effectKey);
     }
 
     // =========================================
     // CLEANUP
     // =========================================
 
-    if (!rolled.potionSource) {
+    if (rolled.potionSource !== "omegaPotion" && rolled.potionSource !== "ultraPotion") {
         tickPotionRestocks();
     }
 
@@ -1851,6 +2273,8 @@ function rollForShark() {
                     AUTO_ROLL_UPGRADES.length
                 ),
                 apexLevel: Math.min(parsed.apexLevel || 0, APEX_LUCK_UPGRADES.length),
+                mutationBountyLevel: Math.min(parsed.mutationBountyLevel || 0, MUTATION_BOUNTY_UPGRADES.length),
+                potionRestockLevel: Math.min(parsed.potionRestockLevel || 0, POTION_RESTOCK_UPGRADES.length),
                 xpLevel: Math.min(parsed.xpLevel || 0, XP_UPGRADES.length),
                 potions: { ...createDefaultPotions(), ...(parsed.potions || {}) },
                 potionRestock: {
@@ -1868,9 +2292,11 @@ function rollForShark() {
                     albino: { ...createDefaultPlayer().activeEffects.albino, ...(parsed.activeEffects?.albino || {}) },
                     shiny: { ...createDefaultPlayer().activeEffects.shiny, ...(parsed.activeEffects?.shiny || {}) },
                     bioluminescent: { ...createDefaultPlayer().activeEffects.bioluminescent, ...(parsed.activeEffects?.bioluminescent || {}) },
-                    megatooth: { ...createDefaultPlayer().activeEffects.megatooth, ...(parsed.activeEffects?.megatooth || {}) }
+                    megatooth: { ...createDefaultPlayer().activeEffects.megatooth, ...(parsed.activeEffects?.megatooth || {}) },
+                    randomMutation: { ...createDefaultPlayer().activeEffects.randomMutation, ...(parsed.activeEffects?.randomMutation || {}) }
                 },
                 collection: parsed.collection && typeof parsed.collection === "object" ? parsed.collection : {},
+                claimedIndexRewards: Array.isArray(parsed.claimedIndexRewards) ? parsed.claimedIndexRewards : [],
                 settings: {
                     ...createDefaultPlayer().settings,
                     ...(parsed.settings || {}),
@@ -1920,12 +2346,69 @@ function rollForShark() {
         return rollPool.length * (1 + Object.keys(MUTATION_TYPES).length);
     }
 
+    function getIndexRewardGoal(reward) {
+        return reward.id === "index_complete" ? getCollectionTargetCount() : reward.goal;
+    }
+
+    function getClaimedIndexRewardSet() {
+        if (!Array.isArray(player.claimedIndexRewards)) {
+            player.claimedIndexRewards = [];
+        }
+        return new Set(player.claimedIndexRewards);
+    }
+
+    function getIndexLuckBonus() {
+        const claimed = getClaimedIndexRewardSet();
+        return INDEX_REWARD_DEFS.reduce((sum, reward) => {
+            if (!claimed.has(reward.id)) return sum;
+            return sum + reward.effects
+                .filter((effect) => effect.type === "luckBonus")
+                .reduce((effectSum, effect) => effectSum + effect.amount, 0);
+        }, 0);
+    }
+
+    function getIndexLuckMultiplier() {
+        return 1 + getIndexLuckBonus();
+    }
+
+    function getStoredPotionCount() {
+        return Object.keys(POTION_DEFS).reduce((sum, key) => sum + Math.max(0, player.potions[key] || 0), 0);
+    }
+
+    function getActivePotionChargeCount() {
+        const effects = player.activeEffects || {};
+        return [
+            "luck", "coin", "speed", "ultra", "omega",
+            ...STANDARD_MUTATION_KEYS,
+            "randomMutation"
+        ].reduce((sum, key) => sum + Math.max(0, effects[key]?.remaining || 0), 0);
+    }
+
+    function getPotionTotalCount() {
+        return getStoredPotionCount() + getActivePotionChargeCount();
+    }
+
     function getRarityClass(tierName) {
         return getTierMeta(tierName).className;
     }
 
     function getPotionRestock(key) {
         return Math.max(0, player.potionRestock?.[key] || 0);
+    }
+
+    function getEffectivePotionRestockRolls(key) {
+        const baseRestock = POTION_DEFS[key]?.restockRolls || 0;
+        if (!baseRestock) return 0;
+
+        if ((player.potionRestockLevel || 0) <= 0) return baseRestock;
+
+        const upgrade = POTION_RESTOCK_UPGRADES[Math.min(
+            POTION_RESTOCK_UPGRADES.length - 1,
+            player.potionRestockLevel - 1
+        )];
+        if (key === "ultra") return upgrade?.ultraRestock || baseRestock;
+        if (key === "omega") return upgrade?.omegaRestock || baseRestock;
+        return baseRestock;
     }
 
     function getPotionHeldCount(key) {
@@ -1946,14 +2429,14 @@ function rollForShark() {
         }
 
         if (player.coins < def.cost) {
-            return `Need ${def.cost.toLocaleString()} coins`;
+            return `Need ${formatCompactCoins(def.cost)} coins`;
         }
 
         return "";
     }
 
     function startPotionRestock(key) {
-        const restockRolls = POTION_DEFS[key]?.restockRolls || 0;
+        const restockRolls = getEffectivePotionRestockRolls(key);
         if (!restockRolls) return;
 
         if (!player.potionRestock || typeof player.potionRestock !== "object") {
@@ -1973,6 +2456,33 @@ function rollForShark() {
         }
     }
 
+    function applyIndexRewardEffect(effect) {
+        if (effect.type === "potion" && POTION_DEFS[effect.key]) {
+            player.potions[effect.key] = (player.potions[effect.key] || 0) + effect.amount;
+        } else if (effect.type === "coins") {
+            player.coins += effect.amount;
+        }
+    }
+
+    function claimIndexReward(rewardId) {
+        const reward = INDEX_REWARD_DEFS.find((entry) => entry.id === rewardId);
+        if (!reward) return;
+
+        const claimed = getClaimedIndexRewardSet();
+        if (claimed.has(reward.id)) return;
+
+        if (getCollectionCount() < getIndexRewardGoal(reward)) {
+            showToast("Index milestone not ready yet.", "error");
+            return;
+        }
+
+        reward.effects.forEach(applyIndexRewardEffect);
+        player.claimedIndexRewards = [...claimed, reward.id];
+        persistPlayerState();
+        showToast(`${reward.title} claimed: ${reward.rewardText}`);
+        GameFx.play("upgrade");
+    }
+
 function updateActiveEffectsUi() {
          const el = document.getElementById("rng-active-effects");
          if (!el) return;
@@ -1990,10 +2500,16 @@ function updateActiveEffectsUi() {
          if (player.activeEffects.ultra.remaining > 0) {
              parts.push("\u{1F30A} Abyss ready");
          }
+         if (player.activeEffects.omega.remaining > 0) {
+             parts.push("\u{1F31F} Omega ready");
+         }
          for (const key of STANDARD_MUTATION_KEYS) {
              if (player.activeEffects[key]?.remaining > 0) {
                  parts.push(`${MUTATION_TYPES[key].icon} ${MUTATION_TYPES[key].name} ready`);
              }
+         }
+         if (player.activeEffects.randomMutation?.remaining > 0) {
+             parts.push(`\u{1F9EC} Random mutation (${player.activeEffects.randomMutation.remaining})`);
          }
          const mChance = getMutationChance();
          if (mChance !== null) {
@@ -2061,7 +2577,10 @@ function updateActiveEffectsUi() {
          const cooldownEl = document.getElementById("rng-cooldown-text");
          const streakInfo = getStreakRollInfo();
  
-         if (topCoins) topCoins.textContent = `${player.coins.toLocaleString()} (${getCoinMultiplier().toFixed(1)}\u00d7)`;
+         if (topCoins) {
+             topCoins.textContent = `${formatCompactCoins(player.coins)} (${getCoinMultiplier().toFixed(1)}\u00d7)`;
+             topCoins.title = `${player.coins.toLocaleString()} coins`;
+         }
          if (topLuck) topLuck.textContent = `x${getLuckMultiplier().toFixed(2)}`;
          if (topCollection) topCollection.textContent = `${getCollectionCount()}/${getCollectionTargetCount()}`;
          if (rollsEl) rollsEl.textContent = player.rolls.toLocaleString();
@@ -2092,7 +2611,7 @@ function updateActiveEffectsUi() {
 
         const entry = getEquippedCollectionEntry();
         const poolEntry = rollPool.find((shark) => shark.name === player.equipped);
-        const tier = entry?.tier || poolEntry?.tier || "Common";
+        const tier = getBaseTierName(entry || poolEntry);
         const luckBonus = getEquippedLuckBonus();
         equippedEl.textContent = player.equipped;
         equippedEl.className = `rng-equipped-name ${getRarityClass(tier)}`;
@@ -2124,6 +2643,12 @@ function updateActiveEffectsUi() {
         }
         if (def.listKey === "apex") {
             return `Lv.${next.level} \u00b7 Apex 1 in ${next.chance.toLocaleString()}`;
+        }
+        if (def.listKey === "mutationBounty") {
+            return `Lv.${next.level} \u00b7 +${Math.round(next.bonus * 100)}% mutated roll coins`;
+        }
+        if (def.listKey === "potionRestock") {
+            return `Lv.${next.level} \u00b7 Abyss ${next.ultraRestock} rolls \u00b7 Omega ${next.omegaRestock} rolls`;
         }
         if (def.listKey === "xp") {
             return `Lv.${next.level} \u00b7 +${Math.round(next.bonus * 100)}% XP`;
@@ -2172,11 +2697,7 @@ function updateActiveEffectsUi() {
                 btn.textContent = "MAX";
                 btn.disabled = true;
             } else {
-                btn.textContent = next.cost >= 1_000_000
-                    ? `${(next.cost / 1_000_000).toFixed(1)}M`
-                    : next.cost >= 1000
-                        ? `${Math.round(next.cost / 1000)}K`
-                        : String(next.cost);
+                btn.textContent = formatCompactCoins(next.cost);
                 btn.title = `Buy for ${next.cost.toLocaleString()} coins`;
                 btn.disabled = player.coins < next.cost;
                 btn.addEventListener("click", () => buyUpgradeByDef(def));
@@ -2222,6 +2743,14 @@ function updateActiveEffectsUi() {
 
         shop.innerHTML = "";
 
+        const summary = document.createElement("div");
+        summary.className = "rng-potion-summary";
+        summary.innerHTML = `
+            <strong>${getPotionTotalCount().toLocaleString()} total potions</strong>
+            <span>${getStoredPotionCount().toLocaleString()} stored \u00b7 ${getActivePotionChargeCount().toLocaleString()} active charges</span>
+        `;
+        shop.appendChild(summary);
+
         for (const [key, def] of Object.entries(POTION_DEFS)) {
             const card = document.createElement("article");
             card.className = "rng-potion-card";
@@ -2245,11 +2774,7 @@ function updateActiveEffectsUi() {
             const restock = getPotionRestock(key);
             buyBtn.textContent = restock > 0
                 ? `${restock} rolls`
-                : def.cost >= 1_000_000
-                ? `${(def.cost / 1_000_000).toFixed(0)}M`
-                : def.cost >= 1000
-                    ? `${Math.round(def.cost / 1000)}K`
-                    : String(def.cost);
+                : formatCompactCoins(def.cost);
             buyBtn.title = blockReason || `Buy for ${def.cost.toLocaleString()} coins`;
             buyBtn.disabled = Boolean(blockReason);
             buyBtn.addEventListener("click", () => buyPotion(key));
@@ -2332,63 +2857,165 @@ function updateAllUi() {
         ].join("");
     }
 
+    function renderIndexSummary() {
+        const summary = document.getElementById("rng-index-summary");
+        if (!summary) return;
+
+        const collected = getCollectionCount();
+        const target = getCollectionTargetCount();
+        const progress = target > 0 ? Math.round((collected / target) * 100) : 0;
+        const luckBonus = Math.round(getIndexLuckBonus() * 100);
+        summary.innerHTML = `
+            <div>
+                <span class="rng-index-kicker">Index Progress</span>
+                <strong>${collected.toLocaleString()} / ${target.toLocaleString()}</strong>
+            </div>
+            <div class="rng-index-summary-track"><span style="width:${Math.min(100, progress)}%"></span></div>
+            <span class="rng-index-summary-meta">${progress}% complete \u00b7 +${luckBonus}% milestone luck</span>
+        `;
+    }
+
+    function renderIndexRewards() {
+        const rewardsEl = document.getElementById("rng-index-rewards");
+        if (!rewardsEl) return;
+
+        const collected = getCollectionCount();
+        const claimed = getClaimedIndexRewardSet();
+        rewardsEl.innerHTML = INDEX_REWARD_DEFS.map((reward) => {
+            const goal = getIndexRewardGoal(reward);
+            const isClaimed = claimed.has(reward.id);
+            const isReady = collected >= goal && !isClaimed;
+            const stateClass = isClaimed ? "claimed" : isReady ? "ready" : "locked";
+            const buttonText = isClaimed ? "Claimed" : isReady ? "Claim" : `${Math.min(collected, goal)}/${goal}`;
+
+            return `
+                <article class="rng-index-reward ${stateClass}">
+                    <span>${goal.toLocaleString()}</span>
+                    <strong>${reward.title}</strong>
+                    <em>${reward.rewardText}</em>
+                    <button class="rng-btn rng-index-claim-btn" type="button" data-index-reward="${reward.id}" ${isReady ? "" : "disabled"}>${buttonText}</button>
+                </article>
+            `;
+        }).join("");
+
+        rewardsEl.querySelectorAll("[data-index-reward]").forEach((button) => {
+            button.addEventListener("click", () => claimIndexReward(button.dataset.indexReward));
+        });
+    }
+
     function renderCollectionGrid() {
         const grid = document.getElementById("rng-collection-grid");
         const filter = document.getElementById("rng-collection-filter");
         const searchInput = document.getElementById("rng-collection-search");
         if (!grid) return;
 
+        if (document.getElementById("rng-collection-modal")?.classList.contains("hidden")) {
+            return;
+        }
+
+        renderIndexSummary();
+        renderIndexRewards();
+
         const tierFilter = filter ? filter.value : "all";
+        const baseOnlyFilter = tierFilter === "base";
         const mutationFilter = MUTATION_TYPES[tierFilter] ? tierFilter : null;
         const searchTerm = (searchInput?.value || "").toLowerCase().trim();
         const searchTokens = searchTerm ? searchTerm.split(/\s+/).filter(Boolean) : [];
 
-        const ownedNames = Object.keys(player.collection).sort((a, b) => {
-            const tierDiff = (TIER_RANK[player.collection[b].tier] || 0) - (TIER_RANK[player.collection[a].tier] || 0);
-            if (tierDiff !== 0) return tierDiff;
-            return (player.collection[b].oneIn || 0) - (player.collection[a].oneIn || 0);
-        });
-
         grid.innerHTML = "";
 
-        if (!ownedNames.length) {
-            grid.innerHTML = `<p class="rng-empty-note">No species yet. Hit Roll to start your collection.</p>`;
-            return;
-        }
+        const sectionDefs = [
+            { key: "base", title: "Base Species", mutation: null },
+            ...MUTATION_CHANCE_ORDER.map((key) => ({
+                key,
+                title: `${MUTATION_TYPES[key]?.icon || ""} ${MUTATION_TYPES[key]?.name || key}`,
+                mutation: key
+            }))
+        ].filter((section) => {
+            if (baseOnlyFilter) return section.key === "base";
+            if (mutationFilter) return section.key === mutationFilter;
+            return true;
+        });
 
         let rendered = 0;
-        for (const name of ownedNames) {
-            const entry = player.collection[name];
-            if (mutationFilter) {
-                if (entry.mutation !== mutationFilter) continue;
-            } else if (tierFilter !== "all" && entry.tier !== tierFilter) {
-                continue;
-            }
 
-            if (searchTokens.length) {
-                const displayName = entry.mutation ? entry.baseName : name;
-                if (!searchTokens.every(token => displayName.toLowerCase().includes(token))) continue;
-            }
+        for (const section of sectionDefs) {
+            const candidates = rollPool
+                .map((baseShark) => {
+                    const canonical = section.mutation ? applyStableMutation(baseShark, section.mutation) : baseShark;
+                    const key = getCollectionKey(canonical);
+                    const entry = player.collection[key] || null;
+                    const source = entry || canonical;
+                    const displayName = section.mutation ? baseShark.name : canonical.name;
+                    const baseTier = getBaseTierName(source);
+                    const oddsTier = getOddsTierName(source);
+                    const searchHaystack = `${displayName} ${section.title} ${baseTier} ${oddsTier}`.toLowerCase();
 
-            const displayName = entry.mutation ? entry.baseName : name;
-            const card = document.createElement("button");
-            card.type = "button";
-            card.className = `rng-collection-card ${getRarityClass(entry.tier)}${player.equipped === name ? " equipped" : ""}${entry.mutation ? ' ' + entry.mutation : ""}`;
-            card.innerHTML = `
-                <span class="rng-collection-card-tier">${entry.tier}${entry.mutation ? ' \u00b7 ' + MUTATION_TYPES[entry.mutation]?.name : ''}</span>
-                <strong>${displayName}</strong>
-                <span class="rng-collection-card-meta">1 in ${formatOneIn(entry.oneIn)} \u00b7 x${entry.count}</span>
+                    if (!baseOnlyFilter && !mutationFilter && tierFilter !== "all" && baseTier !== tierFilter) {
+                        return null;
+                    }
+                    if (searchTokens.length && !searchTokens.every(token => searchHaystack.includes(token))) {
+                        return null;
+                    }
+
+                    return {
+                        key,
+                        entry,
+                        canonical,
+                        displayName,
+                        baseTier,
+                        oddsTier,
+                        obtained: Boolean(entry)
+                    };
+                })
+                .filter(Boolean)
+                .sort((a, b) => {
+                    const oddsDiff = (a.canonical.oneIn || 0) - (b.canonical.oneIn || 0);
+                    if (oddsDiff !== 0) return oddsDiff;
+                    const tierDiff = (TIER_RANK[a.baseTier] || 0) - (TIER_RANK[b.baseTier] || 0);
+                    if (tierDiff !== 0) return tierDiff;
+                    return a.displayName.localeCompare(b.displayName);
+                });
+
+            if (!candidates.length) continue;
+
+            const ownedInSection = candidates.filter((candidate) => candidate.obtained).length;
+            const header = document.createElement("div");
+            header.className = "rng-index-section-header";
+            header.innerHTML = `
+                <strong>${section.title}</strong>
+                <span>${ownedInSection}/${candidates.length}</span>
             `;
-            card.addEventListener("click", () => {
-                player.equipped = name;
-                persistPlayerState();
-            });
-            grid.appendChild(card);
-            rendered++;
+            grid.appendChild(header);
+
+            for (const candidate of candidates) {
+                const { key, entry, canonical, displayName, baseTier, oddsTier, obtained } = candidate;
+                const oddsNote = oddsTier !== baseTier ? ` \u00b7 ${oddsTier} odds` : "";
+                const card = document.createElement("button");
+                card.type = "button";
+                card.disabled = !obtained;
+                card.className = `rng-collection-card ${getRarityClass(baseTier)}${obtained ? " obtained" : " missing"}${player.equipped === key ? " equipped" : ""}${canonical.mutation ? ' ' + canonical.mutation : ""}`;
+                card.innerHTML = `
+                    <span class="rng-collection-card-tier">${baseTier}${canonical.mutation ? ' \u00b7 ' + MUTATION_TYPES[canonical.mutation]?.name : ''}</span>
+                    <strong>${displayName}</strong>
+                    <span class="rng-collection-card-meta">${obtained
+                        ? `1 in ${formatOneIn(entry.oneIn)}${oddsNote} \u00b7 x${entry.count}`
+                        : `Missing \u00b7 1 in ${formatOneIn(canonical.oneIn)}${oddsNote}`}</span>
+                    <span class="rng-index-status">${obtained ? "Obtained" : "Missing"}</span>
+                `;
+                if (obtained) {
+                    card.addEventListener("click", () => {
+                        player.equipped = key;
+                        persistPlayerState();
+                    });
+                }
+                grid.appendChild(card);
+                rendered++;
+            }
         }
 
         if (!rendered) {
-            grid.innerHTML = `<p class="rng-empty-note">No matching species.</p>`;
+            grid.innerHTML = `<p class="rng-empty-note">No matching index entries.</p>`;
         }
     }
 
@@ -2422,7 +3049,10 @@ function updateAllUi() {
         stage?.classList.remove("rng-rolling");
 
         if (result) {
-            const isNew = player.collection[finalShark.name]?.count === 1;
+            const isNew = isNewCollectionRoll(finalShark);
+            const baseTier = getBaseTierName(finalShark);
+            const oddsTier = getOddsTierName(finalShark);
+            const oddsNote = oddsTier !== baseTier ? ` \u00b7 ${oddsTier} odds` : "";
             const streakNote = isStreakLuckRoll()
                 ? ` \u00b7 <span class="rng-streak-tag">Streak \u00d7${getStreakLuckMultiplier()}</span>`
                 : "";
@@ -2434,7 +3064,7 @@ function updateAllUi() {
                 : "";
             result.innerHTML = `
                 <span class="${finalShark.className}${finalShark.mutation ? ' ' + finalShark.mutation : ''}">You rolled: ${finalShark.name}</span>
-                <span class="rng-result-meta">${finalShark.tier} \u00b7 1 in ${formatOneIn(finalShark.oneIn)} \u00b7 +${finalShark.coinReward.toLocaleString()} coins${isNew ? " \u00b7 NEW!" : ""}${streakNote}${mutationNote}${payoutNote}</span>
+                <span class="rng-result-meta">${baseTier}${oddsNote} \u00b7 1 in ${formatOneIn(finalShark.oneIn)} \u00b7 +${formatCompactCoins(finalShark.coinReward)} coins${isNew ? " \u00b7 NEW!" : ""}${streakNote}${mutationNote}${payoutNote}</span>
             `;
             if (isNew) result.classList.add("rng-result-pop");
             setTimeout(() => result.classList.remove("rng-result-pop"), 400);
@@ -2442,7 +3072,7 @@ function updateAllUi() {
     }
 
     function applyRollJuice(shark) {
-        GameFx.floatText(`+${shark.coinReward.toLocaleString()}`, "coin");
+        GameFx.floatText(`+${formatCompactCoins(shark.coinReward)}`, "coin");
         GameFx.play("coin");
 
         if (isUltraRarePull(shark)) {
@@ -2457,7 +3087,7 @@ function updateAllUi() {
             GameFx.play("tick");
         }
 
-        const isNew = player.collection[shark.name]?.count === 1;
+        const isNew = isNewCollectionRoll(shark);
         if (isNew) GameFx.play("new");
     }
 
@@ -2466,7 +3096,7 @@ function updateAllUi() {
     }
 
     function isRarePull(shark) {
-        return shark.oneIn >= 2500 || TIER_RANK[shark.tier] >= TIER_RANK.Legendary;
+        return shark.oneIn >= 2500 || TIER_RANK[getOddsTierName(shark)] >= TIER_RANK.Legendary;
     }
 
     function closeRarePopup() {
@@ -2479,11 +3109,12 @@ function updateAllUi() {
     function showRarePopup(shark) {
         const overlay = document.getElementById("rng-celebration");
         if (!overlay) return;
+        const oddsTier = getOddsTierName(shark);
 
-        overlay.className = `rng-celebration visible ${shark.className}`;
+        overlay.className = `rng-celebration visible ${getRarityClass(oddsTier)}`;
         overlay.innerHTML = `
             <div class="rng-celebration-card">
-                <p class="rng-celebration-tag">${shark.tier}!</p>
+                <p class="rng-celebration-tag">${oddsTier} odds!</p>
                 <h2>${shark.name}</h2>
                 <p>1 in ${formatOneIn(shark.oneIn)}</p>
                 <button type="button" id="rng-celebration-close">Continue</button>
@@ -2509,8 +3140,9 @@ function updateAllUi() {
 
     async function showRollReveal(shark) {
         if (shark.oneIn >= ULTRA_ONE_IN_THRESHOLD) {
+            const oddsTier = getOddsTierName(shark);
             if (shouldSkipCutscene(shark)) {
-                showToast(`Skipped repeat ${shark.tier} cutscene`);
+                showToast(`Skipped repeat ${oddsTier} cutscene`);
                 return;
             }
             await showUltraCutscene(shark);
@@ -2520,17 +3152,17 @@ function updateAllUi() {
     }
 
     function getUltraRevealConfig(shark) {
-        return ULTRA_REVEAL_CONFIGS[shark.tier] || ULTRA_REVEAL_CONFIGS.Ultra;
+        return ULTRA_REVEAL_CONFIGS[getOddsTierName(shark)] || ULTRA_REVEAL_CONFIGS.Ultra;
     }
 
     function shouldSkipCutscene(shark) {
-        const tier = shark.tier;
+        const tier = getOddsTierName(shark);
         const settings = getSettings();
         return Boolean(settings.skipCutscenes?.[tier] && settings.seenCutscenes?.[tier]);
     }
 
     function markCutsceneSeen(shark) {
-        const tier = shark.tier;
+        const tier = getOddsTierName(shark);
         if (!CUTSCENE_SKIP_TIERS.includes(tier)) return;
         getSettings().seenCutscenes[tier] = true;
     }
@@ -2545,10 +3177,12 @@ function updateAllUi() {
 
             cutsceneResolve = resolve;
             markCutsceneSeen(shark);
-            const isNew = player.collection[shark.name]?.count === 1;
+            const isNew = isNewCollectionRoll(shark);
+            const oddsTier = getOddsTierName(shark);
+            const oddsClass = getRarityClass(oddsTier);
             const reveal = getUltraRevealConfig(shark);
 
-            cutscene.className = `rng-cutscene visible playing ${shark.className}${shark.mutation ? ' ' + shark.mutation : ''}`;
+            cutscene.className = `rng-cutscene visible playing ${oddsClass}${shark.mutation ? ' ' + shark.mutation : ''}`;
             cutscene.innerHTML = `
                 <div class="rng-cutscene-vignette"></div>
                 <div class="rng-cutscene-aura"></div>
@@ -2559,7 +3193,7 @@ function updateAllUi() {
                 <div class="rng-cutscene-particles" aria-hidden="true"></div>
                 <div class="rng-cutscene-content">
                     <p class="rng-cutscene-eyebrow">${reveal.eyebrow}</p>
-                    <p class="rng-cutscene-tier">${shark.tier}</p>
+                    <p class="rng-cutscene-tier">${oddsTier}</p>
                     <h2 class="rng-cutscene-name${shark.mutation ? ' ' + shark.mutation : ''}">${shark.name}</h2>
                     <p class="rng-cutscene-odds">1 in ${formatOneIn(shark.oneIn)}</p>
                     <p class="rng-cutscene-meta">${shark.habitat || "Unknown"} \u00b7 ${shark.size || "?"} \u00b7 ${isNew ? "NEW species!" : "Added to collection"}${shark.mutation ? ' \u00b7 <span class="rng-mutation-tag ' + shark.mutation + '">' + MUTATION_TYPES[shark.mutation]?.icon + ' ' + shark.mutation.toUpperCase() + '</span>' : ''}</p>
@@ -2571,7 +3205,7 @@ function updateAllUi() {
             if (rings) {
                 for (let i = 0; i < reveal.ringCount; i++) {
                     const ring = document.createElement("span");
-                    const ringSize = shark.tier === "Singularity" ? 110 + (i * 62) : 140 + (i * 76);
+                    const ringSize = oddsTier === "Singularity" ? 110 + (i * 62) : 140 + (i * 76);
                     ring.style.setProperty("--i", String(i));
                     ring.style.setProperty("--ring-size", `${ringSize}px`);
                     ring.style.setProperty("--delay", `${(i * 0.18).toFixed(2)}s`);
@@ -2600,7 +3234,7 @@ function updateAllUi() {
                     span.textContent = symbols[i % symbols.length];
                     span.style.setProperty("--i", String(i));
                     span.style.setProperty("--x", `${(6 + (hashString(shark.name + i) % 88))}%`);
-                    span.style.setProperty("--y", `${(8 + (hashString(shark.tier + shark.name + i) % 84))}%`);
+                    span.style.setProperty("--y", `${(8 + (hashString(oddsTier + shark.name + i) % 84))}%`);
                     span.style.setProperty("--delay", `${(i * 0.045).toFixed(2)}s`);
                     span.style.setProperty("--dur", `${(1.8 + (i % 6) * 0.16).toFixed(2)}s`);
                     particles.appendChild(span);
@@ -2764,6 +3398,8 @@ async function performRoll() {
             player.activeEffects.ultra.remaining += def.rolls;
         } else if (key === "omega") {
             player.activeEffects.omega.remaining += def.rolls;
+        } else if (key === "randomMutation") {
+            player.activeEffects.randomMutation.remaining += def.rolls;
         } else if (STANDARD_MUTATION_KEYS.includes(key)) {
             player.activeEffects[key].remaining += def.rolls;
         }
@@ -2855,7 +3491,7 @@ async function performRoll() {
             player.coins = Math.max(0, (Number(player.coins) || 0) + coinsToAdd);
             persistPlayerState();
             console.log(`Added ${coinsToAdd.toLocaleString()} RNG coins. Total: ${player.coins.toLocaleString()}`);
-            showToast(`+${coinsToAdd.toLocaleString()} coins`);
+            showToast(`+${formatCompactCoins(coinsToAdd)} coins`);
         };
 
         window.setRngCoins = function setRngCoins(amount = 1_000_000) {
@@ -2866,7 +3502,7 @@ async function performRoll() {
             player.coins = newTotal;
             persistPlayerState();
             console.log(`Set RNG coins to ${player.coins.toLocaleString()}.`);
-            showToast(`Coins set: ${player.coins.toLocaleString()}`);
+            showToast(`Coins set: ${formatCompactCoins(player.coins)}`);
         };
 
         window.addRngLevels = function addRngLevels(amount = 1) {
@@ -2905,12 +3541,13 @@ async function performRoll() {
 
         window.showRngStats = function showRngStats() {
             const rank = getRankInfo();
+            const best = getBestCollectionEntry();
             console.log("=== CURRENT RNG STATS ===");
             console.log(`Coins: ${(Number(player.coins) || 0).toLocaleString()}`);
             console.log(`Rolls: ${(Number(player.rolls) || 0).toLocaleString()}`);
             console.log(`Level: ${rank.level.toLocaleString()} (${rank.xp.toLocaleString()} / ${rank.next.xp.toLocaleString()} XP)`);
             console.log(`Forced Next Roll: ${rngDevForcedMutationType ? MUTATION_TYPES[rngDevForcedMutationType]?.name || rngDevForcedMutationType : "None"}`);
-            console.log(`Best: ${player.bestTier || "None"} (${player.bestOneIn ? `1 in ${formatOneIn(player.bestOneIn)}` : "none"})`);
+            console.log(`Best: ${best?.tier || "None"} (${player.bestOneIn ? `1 in ${formatOneIn(player.bestOneIn)}` : "none"})`);
             console.log(`Collection: ${getCollectionCount().toLocaleString()} / ${getCollectionTargetCount().toLocaleString()}`);
             console.log("=========================");
         };
@@ -2933,6 +3570,18 @@ async function performRoll() {
         document.getElementById("rng-auto-btn")?.addEventListener("click", () => setAutoRoll(!autoEnabled));
         document.getElementById("rng-hide-btn")?.addEventListener("click", () => setHideRoll(!hideEnabled));
         document.getElementById("rng-collection-open-btn")?.addEventListener("click", openCollectionModal);
+        const topCollectionChip = document.getElementById("rng-top-collection");
+        if (topCollectionChip) {
+            topCollectionChip.title = "Open Shark Index";
+            topCollectionChip.tabIndex = 0;
+            topCollectionChip.addEventListener("click", openCollectionModal);
+            topCollectionChip.addEventListener("keydown", (event) => {
+                if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    openCollectionModal();
+                }
+            });
+        }
         document.getElementById("rng-collection-close-btn")?.addEventListener("click", closeCollectionModal);
         document.getElementById("rng-collection-filter")?.addEventListener("change", renderCollectionGrid);
         document.getElementById("rng-collection-search")?.addEventListener("input", renderCollectionGrid);
