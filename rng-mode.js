@@ -546,7 +546,7 @@
             name: "Omega Potion",
             icon: "\u{1F31F}",
             desc: "Guaranteed 1 in 100M+ species; restocks after 80 normal rolls",
-            cost: 100000000000,
+            cost: 250000000,
             rolls: 1,
             maxOwned: 1,
             restockRolls: 80
