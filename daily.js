@@ -450,6 +450,10 @@ if(shark.name === targetShark.name){
         window.maybeAwardCrateDrop('daily win');
     }
 
+    if (typeof window.contributeCommunityBossWin === 'function') {
+        window.contributeCommunityBossWin('daily', { contributionKey: today });
+    }
+
     showWin(xpGain, guessesTaken);
 
 }
