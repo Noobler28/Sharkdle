@@ -1487,6 +1487,19 @@ const GLOBAL_MESSAGE_CONFIG_PATH = {
     collection: "globalConfig",
     doc: "globalMessage"
 };
+const COMMUNITY_BOSS_EVENT = {
+    id: "summer-megaladon-2026",
+    title: "Defeat the Megaladon",
+    targetWins: 500,
+    startMs: new Date("2026-05-25T00:00:00Z").getTime(),
+    endMs: new Date("2026-06-08T00:00:00Z").getTime(),
+    rewardBadgeId: "extinction",
+    rewards: {
+        first: { label: "#1 contributor", xp: 25000, summerCrates: 10, rank: 1 },
+        second: { label: "#2 contributor", xp: 15000, summerCrates: 5, rank: 2 },
+        default: { label: "Everybody else", xp: 10000, summerCrates: 2, rank: null }
+    }
+};
 const SEASONAL_THEME_DISABLED_KEY = "disableSeasonalTheme";
 const INDEX_THEME_OPTIONS = [
     { id: "default", name: "Default Ocean" },
@@ -1612,6 +1625,9 @@ let pendingAuthStateClearTimeout = null;
 let globalXpEventOverride = null;
 let globalXpEventUnsubscribe = null;
 let globalIndexThemeUnsubscribe = null;
+let communityBossUnsubscribe = null;
+let communityBossState = null;
+let communityBossUiTimer = null;
 let cloudProfileReloadTimeouts = [];
 let lastServerHydratedProfileUid = null;
 const CLOUD_PROFILE_RELOAD_DELAYS_MS = [1200, 4000, 9000];
@@ -2393,6 +2409,829 @@ function ensureXpEventBannerTimer() {
         xpEventBannerInterval = setInterval(updateXpEventBanner, 1000);
     }
 }
+
+function getCommunityBossPageKind() {
+    const path = window.location.pathname.toLowerCase();
+    if (document.body?.classList.contains("home-page")) return "home";
+    if (path.endsWith("/daily.html") || path.endsWith("daily.html")) return "daily";
+    if (path.endsWith("/infinite.html") || path.endsWith("infinite.html")) return "infinite";
+    return "";
+}
+
+function getCommunityBossWins() {
+    return Math.max(0, Number(communityBossState?.wins) || 0);
+}
+
+function isCommunityBossStarted(nowMs = Date.now()) {
+    return nowMs >= COMMUNITY_BOSS_EVENT.startMs;
+}
+
+function isCommunityBossExpired(nowMs = Date.now()) {
+    return nowMs >= COMMUNITY_BOSS_EVENT.endMs;
+}
+
+function isCommunityBossComplete(wins = getCommunityBossWins()) {
+    return wins >= COMMUNITY_BOSS_EVENT.targetWins;
+}
+
+function isCommunityBossContributionOpen(nowMs = Date.now()) {
+    return isCommunityBossStarted(nowMs) && !isCommunityBossExpired(nowMs) && !isCommunityBossComplete();
+}
+
+function hasClaimedCommunityBossReward(profileData = getCurrentProfileData()) {
+    return Boolean(profileData?.communityBossRewards?.[COMMUNITY_BOSS_EVENT.id]);
+}
+
+function getCommunityBossDocRef() {
+    return db?.collection("communityEvents").doc(COMMUNITY_BOSS_EVENT.id) || null;
+}
+
+function getCommunityBossContributorRef(uid = currentUser?.uid) {
+    const eventRef = getCommunityBossDocRef();
+    return eventRef && uid ? eventRef.collection("contributors").doc(uid) : null;
+}
+
+function getCommunityBossRewardForRank(rank) {
+    if (rank === 1) return COMMUNITY_BOSS_EVENT.rewards.first;
+    if (rank === 2) return COMMUNITY_BOSS_EVENT.rewards.second;
+    return COMMUNITY_BOSS_EVENT.rewards.default;
+}
+
+function resolveCommunityBossProfilePicturePath(path) {
+    const storedPath = String(path || "").trim();
+    if (!storedPath) return "images/pfp/shark1.png";
+    if (/^https?:\/\//i.test(storedPath) || storedPath.startsWith("images/")) return storedPath;
+    if (storedPath.includes("/")) return `images/${storedPath.replace(/^\/+/, "")}`;
+    return `images/pfp/${storedPath}`;
+}
+
+function getCommunityBossRewardsMarkup() {
+    return `
+        <strong>Rewards</strong>
+        <ul class="community-boss-rewards-list">
+            <li><b>#1 contributor</b><span>10 Summer Crates, 25,000 XP, Extinction profile badge</span></li>
+            <li><b>#2 contributor</b><span>5 Summer Crates, 15,000 XP, Extinction profile badge</span></li>
+            <li><b>Everybody else</b><span>2 Summer Crates, 10,000 XP, Extinction profile badge</span></li>
+        </ul>
+    `;
+}
+
+async function getCommunityBossTopContributors(limit = 2) {
+    const eventRef = getCommunityBossDocRef();
+    if (!eventRef) return [];
+
+    try {
+        const snapshot = await eventRef
+            .collection("contributors")
+            .orderBy("wins", "desc")
+            .limit(limit)
+            .get();
+        const rows = snapshot.docs.map((doc, index) => ({
+            uid: doc.id,
+            rank: index + 1,
+            ...(doc.data() || {})
+        }));
+
+        return Promise.all(rows.map(async row => {
+            if (row.profilePicture || row.profilePic || !db) return row;
+            try {
+                const profileDoc = await db.collection("userStats").doc(row.uid).get();
+                const profileData = profileDoc.exists ? (profileDoc.data() || {}) : {};
+                return {
+                    ...row,
+                    profilePicture: profileData.profilePicture || profileData.profilePic || ""
+                };
+            } catch (error) {
+                return row;
+            }
+        }));
+    } catch (error) {
+        console.warn("Unable to load community boss contributor ranks:", error);
+        return [];
+    }
+}
+
+function ensureCommunityBossRanksModal() {
+    let modal = document.getElementById("community-boss-ranks-modal");
+    if (modal) return modal;
+
+    modal = document.createElement("div");
+    modal.id = "community-boss-ranks-modal";
+    modal.className = "community-boss-ranks-modal hidden";
+    modal.innerHTML = `
+        <div class="community-boss-ranks-card">
+            <button class="community-boss-ranks-close" type="button" onclick="closeCommunityBossRanksModal()" aria-label="Close ranks">×</button>
+            <span class="community-boss-kicker">Megaladon Leaderboard</span>
+            <h3>Top Contributors</h3>
+            <div id="community-boss-ranks-list" class="community-boss-ranks-list">
+                <p class="community-boss-ranks-empty">Loading ranks...</p>
+            </div>
+        </div>
+    `;
+    modal.addEventListener("click", (event) => {
+        if (event.target === modal) closeCommunityBossRanksModal();
+    });
+    document.body.appendChild(modal);
+    return modal;
+}
+
+function escapeCommunityBossHtml(value) {
+    return String(value ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
+
+function renderCommunityBossRanks(rows) {
+    const list = document.getElementById("community-boss-ranks-list");
+    if (!list) return;
+
+    if (!rows.length) {
+        list.innerHTML = `<p class="community-boss-ranks-empty">No contributions yet. First win gets the lead.</p>`;
+        return;
+    }
+
+    list.innerHTML = rows.map((row, index) => {
+        const rank = index + 1;
+        const rankClass = rank <= 2 ? ` top-${rank}` : "";
+        const username = escapeCommunityBossHtml(row.username || "Anonymous");
+        const profilePic = escapeCommunityBossHtml(resolveCommunityBossProfilePicturePath(row.profilePicture || row.profilePic));
+        const wins = Math.max(0, Number(row.wins) || 0);
+        const reward = getCommunityBossRewardForRank(rank);
+        return `
+            <article class="community-boss-rank-row${rankClass}">
+                <span class="community-boss-rank-number">#${rank}</span>
+                <img class="community-boss-rank-avatar" src="${profilePic}" alt="${username}" onerror="this.onerror=null;this.src='images/pfp/shark1.png';">
+                <div>
+                    <strong>${username}</strong>
+                    <span>${wins.toLocaleString()} contribution${wins === 1 ? "" : "s"} · ${reward.label}</span>
+                </div>
+            </article>
+        `;
+    }).join("");
+}
+
+async function openCommunityBossRanksModal() {
+    const modal = ensureCommunityBossRanksModal();
+    modal.classList.remove("hidden");
+    renderCommunityBossRanks([]);
+    const list = document.getElementById("community-boss-ranks-list");
+    if (list) list.innerHTML = `<p class="community-boss-ranks-empty">Loading ranks...</p>`;
+    const rows = await getCommunityBossTopContributors(10);
+    renderCommunityBossRanks(rows);
+}
+
+function closeCommunityBossRanksModal() {
+    document.getElementById("community-boss-ranks-modal")?.classList.add("hidden");
+}
+
+async function getCurrentCommunityBossReward() {
+    const topContributors = await getCommunityBossTopContributors(2);
+    const currentRank = topContributors.find(row => row.uid === currentUser?.uid)?.rank || null;
+    return getCommunityBossRewardForRank(currentRank);
+}
+
+function ensureCommunityBossStyles() {
+    if (document.getElementById("community-boss-event-styles")) return;
+    const style = document.createElement("style");
+    style.id = "community-boss-event-styles";
+    style.textContent = `
+        .community-boss-event {
+            width: min(1120px, calc(100% - 32px));
+            margin: 18px auto;
+            padding: 18px;
+            border: 1px solid rgba(255, 202, 123, 0.34);
+            border-radius: 20px;
+            background:
+                radial-gradient(circle at top left, rgba(255, 220, 134, 0.18), transparent 36%),
+                radial-gradient(circle at 88% 18%, rgba(255, 118, 92, 0.14), transparent 28%),
+                linear-gradient(135deg, rgba(5, 38, 54, 0.94), rgba(12, 70, 84, 0.9));
+            color: #f4fdff;
+            box-shadow: 0 18px 42px rgba(0, 0, 0, 0.28);
+            box-sizing: border-box;
+        }
+        body.home-page .community-boss-event {
+            margin-top: 0;
+            margin-bottom: 10px;
+            padding: 10px 12px;
+            width: min(980px, calc(100% - 36px));
+            border-radius: 16px;
+            box-shadow: 0 10px 24px rgba(0, 0, 0, 0.22);
+        }
+        body.home-page .community-boss-grid {
+            grid-template-columns: minmax(0, 1fr) minmax(240px, 0.88fr);
+            gap: 12px;
+        }
+        body.home-page .community-boss-kicker {
+            padding: 4px 8px;
+            font-size: 10px;
+        }
+        body.home-page .community-boss-event h2 {
+            margin: 6px 0 4px;
+            font-size: clamp(19px, 2.1vw, 25px);
+        }
+        body.home-page .community-boss-event p {
+            font-size: 12px;
+            line-height: 1.35;
+        }
+        body.home-page .community-boss-progress-shell {
+            gap: 6px;
+        }
+        body.home-page .community-boss-progress {
+            height: 11px;
+        }
+        body.home-page .community-boss-progress-meta,
+        body.home-page .community-boss-status {
+            font-size: 11px;
+        }
+        body.home-page .community-boss-reward {
+            padding: 8px 10px;
+        }
+        body.home-page .community-boss-reward strong {
+            margin-bottom: 2px;
+        }
+        body.home-page .community-boss-rewards-list {
+            gap: 2px;
+        }
+        body.home-page .community-boss-rewards-list li {
+            grid-template-columns: 96px minmax(0, 1fr);
+            gap: 8px;
+            align-items: baseline;
+            padding: 3px 0;
+        }
+        body.home-page .community-boss-rewards-list b,
+        body.home-page .community-boss-rewards-list span {
+            font-size: 11px;
+            line-height: 1.2;
+        }
+        body.home-page .community-boss-actions {
+            gap: 7px;
+            margin-top: 8px;
+        }
+        body.home-page .community-boss-actions button {
+            min-height: 32px;
+            padding: 7px 10px;
+            border-radius: 10px;
+            font-size: 12px;
+        }
+        body.home-page .community-boss-status {
+            margin-top: 5px;
+            min-height: 14px;
+        }
+        .community-boss-grid {
+            display: grid;
+            grid-template-columns: minmax(0, 1.15fr) minmax(260px, 0.85fr);
+            gap: 18px;
+            align-items: center;
+        }
+        .community-boss-kicker {
+            display: inline-flex;
+            align-items: center;
+            width: fit-content;
+            padding: 5px 9px;
+            border-radius: 999px;
+            background: rgba(255, 202, 123, 0.14);
+            color: #ffd78c;
+            font-size: 11px;
+            font-weight: 900;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+        .community-boss-event h2 {
+            margin: 9px 0 7px;
+            font-size: clamp(24px, 3vw, 36px);
+            line-height: 1.05;
+            letter-spacing: 0;
+        }
+        .community-boss-event p {
+            margin: 0;
+            color: rgba(244, 253, 255, 0.82);
+            line-height: 1.5;
+            font-size: 14px;
+        }
+        .community-boss-progress-shell {
+            display: grid;
+            gap: 10px;
+        }
+        .community-boss-progress-meta {
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+            color: #dff9ff;
+            font-size: 13px;
+            font-weight: 800;
+        }
+        .community-boss-progress {
+            position: relative;
+            height: 16px;
+            overflow: hidden;
+            border-radius: 999px;
+            background: rgba(1, 18, 29, 0.72);
+            border: 1px solid rgba(255, 255, 255, 0.14);
+        }
+        .community-boss-progress-fill {
+            width: 0%;
+            height: 100%;
+            border-radius: inherit;
+            background: linear-gradient(90deg, #57e5d4, #ffd36f, #ff8f70);
+            transition: width 0.4s ease;
+        }
+        .community-boss-reward {
+            padding: 13px;
+            border-radius: 14px;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            background: rgba(255, 255, 255, 0.07);
+        }
+        .community-boss-reward strong {
+            display: block;
+            color: #ffd78c;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.07em;
+            margin-bottom: 5px;
+        }
+        .community-boss-rewards-list {
+            display: grid;
+            gap: 8px;
+            margin: 0;
+            padding: 0;
+            list-style: none;
+        }
+        .community-boss-rewards-list li {
+            display: grid;
+            gap: 2px;
+            padding: 8px 0;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .community-boss-rewards-list li:first-child {
+            border-top: 0;
+            padding-top: 0;
+        }
+        .community-boss-rewards-list b {
+            color: #fff4c7;
+            font-size: 13px;
+        }
+        .community-boss-rewards-list span {
+            color: rgba(244, 253, 255, 0.82);
+            font-size: 12px;
+            line-height: 1.35;
+        }
+        .community-boss-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 14px;
+        }
+        .community-boss-actions button {
+            min-height: 42px;
+            border: 0;
+            border-radius: 12px;
+            padding: 10px 14px;
+            font-weight: 900;
+            cursor: pointer;
+            background: rgba(255, 255, 255, 0.13);
+            color: #f8fdff;
+        }
+        .community-boss-actions button.primary {
+            background: linear-gradient(135deg, #ffd36f, #ff8f70);
+            color: #122634;
+        }
+        .community-boss-actions button:disabled {
+            cursor: default;
+            opacity: 0.62;
+        }
+        .community-boss-status {
+            margin-top: 9px;
+            min-height: 18px;
+            color: #a7edf7;
+            font-size: 12px;
+            font-weight: 800;
+        }
+        .community-boss-ranks-modal {
+            position: fixed;
+            inset: 0;
+            z-index: 10001;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 18px;
+            background: rgba(1, 14, 24, 0.72);
+            backdrop-filter: blur(8px);
+        }
+        .community-boss-ranks-modal.hidden {
+            display: none;
+        }
+        .community-boss-ranks-card {
+            position: relative;
+            width: min(420px, 100%);
+            max-height: min(72vh, 560px);
+            overflow-y: auto;
+            padding: 18px;
+            border-radius: 18px;
+            border: 1px solid rgba(255, 211, 111, 0.28);
+            background:
+                radial-gradient(circle at top left, rgba(255, 211, 111, 0.16), transparent 42%),
+                linear-gradient(145deg, rgba(5, 38, 54, 0.98), rgba(9, 28, 45, 0.98));
+            color: #f4fdff;
+            box-shadow: 0 22px 55px rgba(0, 0, 0, 0.38);
+        }
+        .community-boss-ranks-close {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            width: 32px;
+            height: 32px;
+            border: 0;
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            color: #f4fdff;
+            cursor: pointer;
+            font-size: 22px;
+            line-height: 1;
+        }
+        .community-boss-ranks-card h3 {
+            margin: 10px 0 14px;
+            font-size: 24px;
+            letter-spacing: 0;
+        }
+        .community-boss-ranks-list {
+            display: grid;
+            gap: 9px;
+        }
+        .community-boss-rank-row {
+            display: grid;
+            grid-template-columns: 46px 42px 1fr;
+            gap: 10px;
+            align-items: center;
+            padding: 11px;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.075);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .community-boss-rank-row.top-1 {
+            border-color: rgba(255, 211, 111, 0.5);
+            background: rgba(255, 211, 111, 0.12);
+        }
+        .community-boss-rank-row.top-2 {
+            border-color: rgba(172, 221, 255, 0.42);
+            background: rgba(172, 221, 255, 0.1);
+        }
+        .community-boss-rank-number {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 34px;
+            border-radius: 10px;
+            background: rgba(0, 0, 0, 0.22);
+            color: #ffd78c;
+            font-weight: 900;
+        }
+        .community-boss-rank-avatar {
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid rgba(255, 211, 111, 0.32);
+            background: rgba(0, 0, 0, 0.24);
+        }
+        .community-boss-rank-row.top-1 .community-boss-rank-avatar {
+            border-color: rgba(255, 211, 111, 0.75);
+        }
+        .community-boss-rank-row.top-2 .community-boss-rank-avatar {
+            border-color: rgba(172, 221, 255, 0.64);
+        }
+        .community-boss-rank-row strong,
+        .community-boss-rank-row span {
+            display: block;
+        }
+        .community-boss-rank-row strong {
+            font-size: 14px;
+        }
+        .community-boss-rank-row span,
+        .community-boss-ranks-empty {
+            color: rgba(244, 253, 255, 0.78);
+            font-size: 12px;
+            line-height: 1.35;
+        }
+        @media (max-width: 760px) {
+            .community-boss-grid {
+                grid-template-columns: 1fr;
+            }
+            .community-boss-event {
+                width: min(100% - 20px, 560px);
+                padding: 15px;
+            }
+            body.home-page .community-boss-grid {
+                grid-template-columns: 1fr;
+            }
+            body.home-page .community-boss-rewards-list li {
+                grid-template-columns: 1fr;
+                gap: 0;
+            }
+        }
+    `;
+    document.head.appendChild(style);
+}
+
+function ensureCommunityBossPanel() {
+    const pageKind = getCommunityBossPageKind();
+    if (!pageKind || document.getElementById("community-boss-event")) return;
+
+    ensureCommunityBossStyles();
+    const panel = document.createElement("section");
+    panel.id = "community-boss-event";
+    panel.className = `community-boss-event community-boss-${pageKind}`;
+    panel.setAttribute("aria-live", "polite");
+
+    if (pageKind === "home") {
+        const homeSection = document.querySelector(".home-section");
+        if (homeSection?.parentNode) {
+            homeSection.parentNode.insertBefore(panel, homeSection);
+        }
+    } else {
+        const gameContainer = document.querySelector(".game-container");
+        if (gameContainer?.parentNode) {
+            gameContainer.parentNode.insertBefore(panel, gameContainer);
+        }
+    }
+
+    renderCommunityBossPanel();
+}
+
+function renderCommunityBossPanel() {
+    const panel = document.getElementById("community-boss-event");
+    if (!panel) return;
+
+    const wins = Math.min(getCommunityBossWins(), COMMUNITY_BOSS_EVENT.targetWins);
+    const target = COMMUNITY_BOSS_EVENT.targetWins;
+    const progressPercent = Math.max(0, Math.min(100, (wins / target) * 100));
+    const nowMs = Date.now();
+    const complete = isCommunityBossComplete(wins);
+    const claimed = hasClaimedCommunityBossReward();
+    const started = isCommunityBossStarted(nowMs);
+    const expired = isCommunityBossExpired(nowMs);
+    const contributionOpen = isCommunityBossContributionOpen(nowMs);
+
+    let timerText = "";
+    if (!started) {
+        timerText = `Starts in ${formatEventTimeRemaining(COMMUNITY_BOSS_EVENT.startMs - nowMs)}`;
+    } else if (complete) {
+        timerText = "Boss defeated. Rewards are unlocked.";
+    } else if (expired) {
+        timerText = "Event ended.";
+    } else {
+        timerText = `Ends in ${formatEventTimeRemaining(COMMUNITY_BOSS_EVENT.endMs - nowMs)}`;
+    }
+
+    const claimLabel = !currentUser
+        ? "Login to Claim"
+        : claimed
+        ? "Reward Claimed"
+        : complete
+        ? "Claim Reward"
+        : "Locked";
+
+    panel.innerHTML = `
+        <div class="community-boss-grid">
+            <div>
+                <span class="community-boss-kicker">Limited Summer Boss Event</span>
+                <h2>${COMMUNITY_BOSS_EVENT.title}</h2>
+                <p>Daily and Infinite wins from every logged-in player count together. Reach 500 community wins in two weeks to bring down the Megaladon.</p>
+                <div class="community-boss-actions">
+                    <button class="primary" type="button" onclick="navigate('infinite.html')">Play Infinite</button>
+                    <button type="button" onclick="navigate('daily.html')">Daily Challenge</button>
+                    <button type="button" onclick="openCommunityBossRanksModal()">Ranks</button>
+                    <button id="community-boss-claim-btn" type="button">${claimLabel}</button>
+                </div>
+                <div class="community-boss-status" id="community-boss-status">${timerText}</div>
+            </div>
+            <div class="community-boss-progress-shell">
+                <div class="community-boss-progress-meta">
+                    <span>${wins.toLocaleString()} / ${target.toLocaleString()} wins</span>
+                    <span>${Math.floor(progressPercent)}%</span>
+                </div>
+                <div class="community-boss-progress" aria-label="Community boss progress">
+                    <div class="community-boss-progress-fill" style="width:${progressPercent}%"></div>
+                </div>
+                <div class="community-boss-reward">
+                    ${getCommunityBossRewardsMarkup()}
+                </div>
+                <p>${contributionOpen ? "Your next Daily or Infinite win will add 1 to the global total." : complete ? "The community did it. Claim your reward while logged in." : "Wins are no longer being counted for this event."}</p>
+            </div>
+        </div>
+    `;
+
+    const claimBtn = document.getElementById("community-boss-claim-btn");
+    if (claimBtn) {
+        claimBtn.onclick = claimCommunityBossReward;
+        claimBtn.classList.toggle("primary", complete && !claimed);
+        claimBtn.disabled = Boolean(currentUser && (!complete || claimed));
+    }
+}
+
+function ensureCommunityBossUiTimer() {
+    ensureCommunityBossPanel();
+    if (communityBossUiTimer) return;
+    if (!getCommunityBossPageKind()) return;
+    communityBossUiTimer = setInterval(() => {
+        if (!getCommunityBossPageKind()) {
+            clearInterval(communityBossUiTimer);
+            communityBossUiTimer = null;
+            return;
+        }
+        renderCommunityBossPanel();
+    }, 1000);
+}
+
+function setupCommunityBossEventListener() {
+    const start = () => {
+        ensureCommunityBossUiTimer();
+        const eventRef = getCommunityBossDocRef();
+        if (!eventRef || communityBossUnsubscribe) return;
+
+        communityBossUnsubscribe = eventRef.onSnapshot(snapshot => {
+            communityBossState = snapshot.exists ? (snapshot.data() || {}) : { wins: 0 };
+            renderCommunityBossPanel();
+        }, error => {
+            console.warn("Community boss event listener failed:", error);
+            communityBossState = communityBossState || { wins: 0 };
+            renderCommunityBossPanel();
+        });
+    };
+
+    if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", start, { once: true });
+    } else {
+        start();
+    }
+}
+
+function getCommunityBossContributionStorageKey(mode, options = {}) {
+    if (!currentUser?.uid) return "";
+    if (mode !== "daily") return "";
+    const contributionKey = options.contributionKey || getUtcDateKey();
+    return `communityBossContribution_${COMMUNITY_BOSS_EVENT.id}_${currentUser.uid}_${mode}_${contributionKey}`;
+}
+
+async function contributeCommunityBossWin(mode = "infinite", options = {}) {
+    const normalizedMode = mode === "daily" ? "daily" : "infinite";
+    if (!isCommunityBossContributionOpen()) return { contributed: false, reason: "inactive" };
+    if (!currentUser || !db || typeof firebase === "undefined") {
+        return { contributed: false, reason: "login-required" };
+    }
+
+    const storageKey = getCommunityBossContributionStorageKey(normalizedMode, options);
+    if (storageKey && localStorage.getItem(storageKey) === "true") {
+        return { contributed: false, reason: "already-counted" };
+    }
+
+    const eventRef = getCommunityBossDocRef();
+    const contributorRef = getCommunityBossContributorRef();
+    if (!eventRef) return { contributed: false, reason: "unavailable" };
+    if (!contributorRef) return { contributed: false, reason: "contributor-unavailable" };
+
+    try {
+        let didIncrement = false;
+        await db.runTransaction(async transaction => {
+            const snapshot = await transaction.get(eventRef);
+            const contributorSnapshot = await transaction.get(contributorRef);
+            const currentWins = Math.max(0, Number(snapshot.data()?.wins) || 0);
+            if (currentWins >= COMMUNITY_BOSS_EVENT.targetWins || isCommunityBossExpired()) return;
+            const profileData = getCurrentProfileData();
+            const contributorUsername = String(profileData.username || currentUser.email?.split("@")[0] || "Anonymous").slice(0, 32);
+            const contributorProfilePicture = resolveCommunityBossProfilePicturePath(
+                profileData.profilePicture || profileData.profilePic
+            );
+
+            const payload = {
+                wins: firebase.firestore.FieldValue.increment(1),
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                lastContributionMode: normalizedMode,
+                lastContributionUid: currentUser.uid
+            };
+
+            if (snapshot.exists) {
+                transaction.update(eventRef, payload);
+            } else {
+                transaction.set(eventRef, {
+                    wins: 1,
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    lastContributionMode: normalizedMode,
+                    lastContributionUid: currentUser.uid
+                });
+            }
+
+            if (contributorSnapshot.exists) {
+                transaction.update(contributorRef, {
+                    wins: firebase.firestore.FieldValue.increment(1),
+                    username: contributorUsername,
+                    profilePicture: contributorProfilePicture,
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    lastContributionMode: normalizedMode
+                });
+            } else {
+                transaction.set(contributorRef, {
+                    uid: currentUser.uid,
+                    username: contributorUsername,
+                    profilePicture: contributorProfilePicture,
+                    wins: 1,
+                    firstContributionAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    lastContributionMode: normalizedMode
+                });
+            }
+            didIncrement = true;
+        });
+
+        if (didIncrement) {
+            if (storageKey) localStorage.setItem(storageKey, "true");
+            showNotification("Community boss progress +1", "success", 2600);
+            renderCommunityBossPanel();
+            return { contributed: true };
+        }
+        return { contributed: false, reason: "complete" };
+    } catch (error) {
+        console.warn("Unable to contribute community boss win:", error);
+        return { contributed: false, reason: "error" };
+    }
+}
+
+async function claimCommunityBossReward() {
+    if (!currentUser) {
+        openLoginModal();
+        return;
+    }
+    if (!db) {
+        showNotification("Community event is unavailable right now.", "error", 3200);
+        return;
+    }
+
+    const eventRef = getCommunityBossDocRef();
+    const snapshot = eventRef ? await eventRef.get().catch(() => null) : null;
+    const serverWins = snapshot?.exists ? Math.max(0, Number(snapshot.data()?.wins) || 0) : 0;
+    const wins = Math.max(serverWins, getCommunityBossWins());
+
+    if (!isCommunityBossComplete(wins)) {
+        showNotification("The Megaladon is not defeated yet.", "info", 3000);
+        return;
+    }
+
+    const profileData = getCurrentProfileData();
+    if (hasClaimedCommunityBossReward(profileData)) {
+        showNotification("You already claimed this community reward.", "info", 3000);
+        renderCommunityBossPanel();
+        return;
+    }
+
+    const reward = await getCurrentCommunityBossReward();
+    const rewardBadgeId = COMMUNITY_BOSS_EVENT.rewardBadgeId;
+
+    profileData.totalXP = (Number(profileData.totalXP) || 0) + reward.xp;
+    const inventory = getCrateInventory(profileData);
+    inventory.summer = (inventory.summer || 0) + reward.summerCrates;
+    profileData.crateInventory = normalizeCrateInventory(inventory);
+    profileData.unlockedBadges = [
+        ...new Set([
+            ...(Array.isArray(profileData.unlockedBadges) ? profileData.unlockedBadges : ["starter"]),
+            rewardBadgeId
+        ])
+    ];
+    profileData.equippedBadge = rewardBadgeId;
+    profileData.communityBossRewards = {
+        ...(profileData.communityBossRewards && typeof profileData.communityBossRewards === "object" ? profileData.communityBossRewards : {}),
+        [COMMUNITY_BOSS_EVENT.id]: {
+            claimedAt: Date.now(),
+            rank: reward.rank,
+            xp: reward.xp,
+            summerCrates: reward.summerCrates,
+            badgeId: rewardBadgeId
+        }
+    };
+    profileData.lastUpdated = Date.now();
+
+    saveUserProfileLocally(profileData);
+    await db.collection("userStats").doc(currentUser.uid).set({
+        totalXP: profileData.totalXP,
+        crateInventory: profileData.crateInventory,
+        unlockedBadges: getUnlockedBadgeIds(profileData),
+        equippedBadge: getEquippedBadge(),
+        communityBossRewards: profileData.communityBossRewards,
+        lastUpdated: new Date()
+    }, { merge: true });
+
+    updateProfileDisplay(profileData);
+    updateProfileBadgeUI();
+    renderCratesButton();
+    renderCommunityBossPanel();
+    showNotification(`${reward.label} reward claimed: ${reward.xp.toLocaleString()} XP, ${reward.summerCrates} Summer Crates, and the Extinction badge.`, "success", 5600);
+}
+
+window.contributeCommunityBossWin = contributeCommunityBossWin;
+window.claimCommunityBossReward = claimCommunityBossReward;
+window.openCommunityBossRanksModal = openCommunityBossRanksModal;
+window.closeCommunityBossRanksModal = closeCommunityBossRanksModal;
 
 let consumablesPageInterval = null;
 
@@ -3191,8 +4030,10 @@ function buildCosmeticSyncPayload(profileData = getCurrentProfileData()) {
         profilePic: profilePic,
         equippedBadge: profileData.equippedBadge || "starter",
         equippedCardTheme: profileData.equippedCardTheme || "default",
+        equippedTitle: getEquippedProfileTitle(profileData),
         unlockedBadges: getUnlockedBadgeIds(profileData),
-        unlockedCardThemes: getUnlockedCardThemeIds(profileData)
+        unlockedCardThemes: getUnlockedCardThemeIds(profileData),
+        unlockedTitles: getUnlockedProfileTitleIds(profileData)
     };
 }
 
@@ -3310,7 +4151,13 @@ const allBadges = [
     { id: "dev", name: "Developer", emoji: "🖥️", description: "Awarded only to the developer.", devOnly: true },
     { id: "tester", name: "Tester", emoji: "🎮", description: "Awarded for testing via code redeem.", codeUnlock: true },
     { id: "anniversary", name: "Anniversary", emoji: "🎉", description: "Awarded for redeeming the Anniversary code.", codeUnlock: true },
-    { id: "lucky-fin", name: "Lucky Fin", emoji: "🍀", description: "Awarded from the daily prize wheel.", codeUnlock: true }
+    { id: "lucky-fin", name: "Lucky Fin", emoji: "🍀", description: "Awarded from the daily prize wheel.", codeUnlock: true },
+    { id: "extinction", name: "Extinction", emoji: "☄️", description: "Awarded for defeating the summer Megaladon community boss.", rarity: "legendary", codeUnlock: true }
+];
+
+const profileTitleDefs = [
+    { id: "", name: "No Title", description: "Show no profile title." },
+    { id: "megaladon", name: "Megaladon", description: "Awarded for defeating the summer community boss." }
 ];
 
 const currentPassBadgeDefs = [
@@ -3509,6 +4356,75 @@ function renderBadgeSelection() {
         badgeContainer.appendChild(div);
     });
 }
+
+function getProfileTitleMeta(titleId) {
+    return profileTitleDefs.find(title => title.id === titleId) || profileTitleDefs[0];
+}
+
+function getUnlockedProfileTitleIds(profileData = getCurrentProfileData()) {
+    const storedTitles = Array.isArray(profileData.unlockedTitles) ? profileData.unlockedTitles : [];
+    const normalized = storedTitles
+        .map(titleId => getProfileTitleMeta(titleId).id)
+        .filter(titleId => titleId && profileTitleDefs.some(title => title.id === titleId));
+    return [...new Set(normalized)];
+}
+
+function getUnlockedProfileTitles(profileData = getCurrentProfileData()) {
+    return [
+        profileTitleDefs[0],
+        ...getUnlockedProfileTitleIds(profileData).map(getProfileTitleMeta)
+    ];
+}
+
+function getEquippedProfileTitle(profileData = getCurrentProfileData()) {
+    const equippedTitle = profileData.equippedTitle || "";
+    return getUnlockedProfileTitleIds(profileData).includes(equippedTitle) ? equippedTitle : "";
+}
+
+function updateProfileTitleUI(profileData = getCurrentProfileData()) {
+    const titleEl = document.getElementById("profile-title-label");
+    if (!titleEl) return;
+    const equippedTitle = getEquippedProfileTitle(profileData);
+    const titleMeta = getProfileTitleMeta(equippedTitle);
+    titleEl.textContent = equippedTitle ? titleMeta.name : "";
+    titleEl.classList.toggle("hidden", !equippedTitle);
+}
+
+function renderTitleSelection() {
+    const container = document.getElementById("title-select-container");
+    if (!container || !currentUser) return;
+    const profileData = getCurrentProfileData();
+    const unlockedTitles = getUnlockedProfileTitles(profileData);
+    const equippedTitle = getEquippedProfileTitle(profileData);
+    container.innerHTML = "";
+
+    unlockedTitles.forEach(title => {
+        const button = document.createElement("button");
+        button.className = `title-option ${title.id === equippedTitle ? "active" : ""}`;
+        button.type = "button";
+        button.onclick = () => setEquippedProfileTitle(title.id);
+        button.innerHTML = `
+            <span>${title.name}</span>
+            <small>${title.description}</small>
+        `;
+        container.appendChild(button);
+    });
+}
+
+function setEquippedProfileTitle(titleId) {
+    const profileData = getCurrentProfileData();
+    const normalizedTitleId = getProfileTitleMeta(titleId).id;
+    if (normalizedTitleId && !getUnlockedProfileTitleIds(profileData).includes(normalizedTitleId)) return;
+
+    profileData.equippedTitle = normalizedTitleId;
+    saveUserProfileLocally(profileData);
+    if (currentUser && db) {
+        db.collection("userStats").doc(currentUser.uid).set(buildCosmeticSyncPayload(profileData), { merge: true });
+    }
+    updateProfileTitleUI(profileData);
+    renderTitleSelection();
+}
+
 const firebaseConfig = {
     apiKey: "AIzaSyAS9l8O1jRMafPt3r0lF6mqjr2-gl-EbZ0",
     authDomain: "sharkdle-leaderboard.firebaseapp.com",
@@ -3642,6 +4558,7 @@ function initializeFirebase() {
     db = firebase.firestore();
     setupGlobalXpEventListener();
     setupGlobalIndexThemeListener();
+    setupCommunityBossEventListener();
     
     // Set up offline support detection
     window.addEventListener('online', () => {
@@ -4045,6 +4962,8 @@ async function updateAuthUI() {
     ensureAdminAbuseVisibility();
     renderCratesButton();
     ensureXpEventBannerTimer();
+    ensureCommunityBossUiTimer();
+    renderCommunityBossPanel();
     if (typeof renderConsumablesPage === "function") {
         renderConsumablesPage();
     }
@@ -4157,6 +5076,8 @@ function hasMeaningfulProfileData(profile) {
         normalizeCrateInventory(profile.crateInventory).reef ||
         getStreakShieldCount(profile) ||
         (Array.isArray(profile.earnedCosmetics) && profile.earnedCosmetics.length) ||
+        (Array.isArray(profile.unlockedTitles) && profile.unlockedTitles.length) ||
+        (profile.equippedTitle && profile.equippedTitle !== "") ||
         (profile.username && !isDefaultEmailUsername(profile.username)) ||
         (profile.profilePicture && profile.profilePicture !== "images/pfp/shark1.png")
     );
@@ -4172,7 +5093,9 @@ function hasPersistedProfileIdentity(profile) {
         (profile.equippedCardTheme && profile.equippedCardTheme !== "default") ||
         normalizeCrateInventory(profile.crateInventory).reef ||
         getStreakShieldCount(profile) ||
+        (profile.equippedTitle && profile.equippedTitle !== "") ||
         (Array.isArray(profile.earnedCosmetics) && profile.earnedCosmetics.length) ||
+        (Array.isArray(profile.unlockedTitles) && profile.unlockedTitles.length) ||
         (Array.isArray(profile.unlockedAchievements) && profile.unlockedAchievements.length) ||
         (Array.isArray(profile.claimedAchievements) && profile.claimedAchievements.length)
     );
@@ -4609,6 +5532,12 @@ function mergeProfilesSafely(localProfile, firebaseData) {
         equippedCardTheme: firebaseData.equippedCardTheme || localProfile.equippedCardTheme || "default",
         unlockedBadges: getMergedUniqueIds(localProfile.unlockedBadges, firebaseData.unlockedBadges, ["starter"]),
         unlockedCardThemes: getMergedUniqueIds(localProfile.unlockedCardThemes, firebaseData.unlockedCardThemes, ["default"]),
+        unlockedTitles: getMergedUniqueIds(localProfile.unlockedTitles, firebaseData.unlockedTitles, []),
+        equippedTitle: firebaseData.equippedTitle || localProfile.equippedTitle || "",
+        communityBossRewards: {
+            ...(localProfile.communityBossRewards && typeof localProfile.communityBossRewards === "object" ? localProfile.communityBossRewards : {}),
+            ...(firebaseData.communityBossRewards && typeof firebaseData.communityBossRewards === "object" ? firebaseData.communityBossRewards : {})
+        },
         crateInventory: preferredCrateInventory,
         lastSpinWheelDate: [normalizeStoredDateValue(localProfile.lastSpinWheelDate), normalizeStoredDateValue(firebaseData.lastSpinWheelDate)].filter(Boolean).sort().pop() || "",
         lastUpdated: Math.max(localUpdatedMs, firebaseUpdatedMs)
@@ -4726,6 +5655,9 @@ async function loadUserProfile(options = {}) {
                 equippedCardTheme: "default",
                 unlockedBadges: ["starter"],
                 unlockedCardThemes: ["default"],
+                unlockedTitles: [],
+                equippedTitle: "",
+                communityBossRewards: {},
                 crateInventory: normalizeCrateInventory()
             };
             saveUserProfileLocally(userData, { skipRemoteSync: true });
@@ -4744,6 +5676,9 @@ async function loadUserProfile(options = {}) {
         }
         if (typeof renderThemeSelection === "function") {
             renderThemeSelection();
+        }
+        if (typeof renderTitleSelection === "function") {
+            renderTitleSelection();
         }
         loadEarnedCosmetics();
         if (typeof loadAvailablePFPs === "function") {
@@ -4788,6 +5723,8 @@ function updateProfileDisplay(userData) {
     const navProfilePic = document.getElementById("nav-profile-pic");
     if (navProfilePic) navProfilePic.src = userData.profilePicture || "images/pfp/shark1.png";
     applyProfileCardTheme(userData.equippedCardTheme || "default");
+    updateProfileTitleUI(userData);
+    renderTitleSelection();
 
     const profileUid = userData.uid || currentUser?.uid;
     if (profileUid) {
@@ -5137,6 +6074,11 @@ async function signupUser() {
             profilePicture: localProfile.profilePicture || "images/pfp/shark1.png",
             equippedBadge: localProfile.equippedBadge || "starter",
             equippedCardTheme: localProfile.equippedCardTheme || "default",
+            equippedTitle: localProfile.equippedTitle || "",
+            unlockedTitles: Array.isArray(localProfile.unlockedTitles) ? localProfile.unlockedTitles : [],
+            communityBossRewards: localProfile.communityBossRewards && typeof localProfile.communityBossRewards === "object"
+                ? localProfile.communityBossRewards
+                : {},
             crateInventory: normalizeCrateInventory(localProfile.crateInventory),
             cratesOpened: Math.max(0, Number(localProfile.cratesOpened) || 0),
             streakShields: getStreakShieldCount(localProfile),
@@ -5227,6 +6169,7 @@ async function openProfileModal() {
         }
         updateProfileBadgeUI();
         renderThemeSelection();
+        renderTitleSelection();
         updateSeasonalThemeToggleUI();
         ensureAdminAbuseVisibility();
         await ensureFriendDocument(currentUser.uid).catch(err => console.error("Friend network init failed:", err));
@@ -5247,6 +6190,7 @@ async function openUserProfileModal(uid) {
 
 function updateFriendProfileDisplay(profileData, uid) {
     const usernameEl = document.getElementById('friend-profile-username');
+    const titleEl = document.getElementById('friend-profile-title');
     const uidEl = document.getElementById('friend-profile-uid');
     const picEl = document.getElementById('friend-profile-pic');
     const totalGuessesEl = document.getElementById('friend-profile-total-guesses');
@@ -5259,6 +6203,11 @@ function updateFriendProfileDisplay(profileData, uid) {
     const highestEl = document.getElementById('friend-profile-highest');
 
     if (usernameEl) usernameEl.textContent = profileData.username || uid;
+    if (titleEl) {
+        const equippedTitle = getEquippedProfileTitle(profileData);
+        titleEl.textContent = equippedTitle ? getProfileTitleMeta(equippedTitle).name : "";
+        titleEl.classList.toggle("hidden", !equippedTitle);
+    }
     if (uidEl) uidEl.textContent = uid;
     if (picEl) picEl.src = profileData.profilePicture || "images/pfp/shark1.png";
     applyThemeToProfileCard('friend-profile-hero-card', profileData.equippedCardTheme || "default");
@@ -5979,6 +6928,11 @@ async function syncStatsToFirebase() {
             profilePicture: mergedProfile.profilePicture || "images/pfp/shark1.png",
             earnedCosmetics: Array.isArray(mergedProfile.earnedCosmetics) ? mergedProfile.earnedCosmetics : [],
             testerBadgeUnlocked: Boolean(mergedProfile.testerBadgeUnlocked),
+            unlockedTitles: getUnlockedProfileTitleIds(mergedProfile),
+            equippedTitle: getEquippedProfileTitle(mergedProfile),
+            communityBossRewards: mergedProfile.communityBossRewards && typeof mergedProfile.communityBossRewards === "object"
+                ? mergedProfile.communityBossRewards
+                : {},
             crateInventory: normalizeCrateInventory(mergedProfile.crateInventory),
             lastUpdated: new Date()
         };
@@ -6427,6 +7381,7 @@ document.addEventListener("DOMContentLoaded", function() {
     if (typeof ensureConsumablesPageTimer === "function") {
         ensureConsumablesPageTimer();
     }
+    ensureCommunityBossUiTimer();
     initCratesModalTabs();
     updateSeasonalCratePanels();
 });
