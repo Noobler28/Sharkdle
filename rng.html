@@ -122,38 +122,49 @@
     </aside>
 </main>
 
-<div id="rng-collection-modal" class="rng-modal hidden">
+<div id="rng-collection-modal" class="rng-modal rng-collection-modal hidden">
     <div class="rng-modal-content">
         <div class="rng-modal-header">
-            <h2>Shark Collection</h2>
+            <h2>Shark Index</h2>
             <button id="rng-collection-close-btn" class="rng-btn rng-btn-ghost" type="button">
                 <i class="fa-solid fa-xmark"></i>
             </button>
         </div>
-        <select id="rng-collection-filter" class="rng-select">
-            <option value="all">All rarities</option>
-            <option value="Common">Common</option>
-            <option value="Uncommon">Uncommon</option>
-            <option value="Rare">Rare</option>
-            <option value="Epic">Epic</option>
-            <option value="Legendary">Legendary</option>
-            <option value="Mythical">Mythical</option>
-            <option value="Secret">Secret</option>
-            <option value="Ultra">Ultra</option>
-            <option value="Hyper">Hyper</option>
-            <option value="Omega">Omega</option>
-            <option value="Singularity">Singularity</option>
-            <option value="albino">Albino</option>
-            <option value="shiny">Shiny</option>
-            <option value="bioluminescent">Bioluminescent</option>
-            <option value="megatooth">Megatooth</option>
-            <option value="apex">Apex</option>
+        <div id="rng-index-summary" class="rng-index-summary"></div>
+        <div id="rng-index-rewards" class="rng-index-rewards"></div>
+        <div class="rng-index-controls">
+            <select id="rng-collection-filter" class="rng-select">
+                <option value="all">All index entries</option>
+                <option value="base">Base species</option>
+                <option value="Common">Common</option>
+                <option value="Uncommon">Uncommon</option>
+                <option value="Rare">Rare</option>
+                <option value="Epic">Epic</option>
+                <option value="Legendary">Legendary</option>
+                <option value="Mythical">Mythical</option>
+                <option value="Secret">Secret</option>
+                <option value="Ultra">Ultra</option>
+                <option value="Hyper">Hyper</option>
+                <option value="Omega">Omega</option>
+                <option value="Singularity">Singularity</option>
+                <option value="melanistic">Melanistic</option>
+                <option value="albino">Albino</option>
+                <option value="shiny">Shiny</option>
+                <option value="bioluminescent">Bioluminescent</option>
+                <option value="copper">Copper</option>
+                <option value="golden">Golden</option>
+                <option value="spectral">Spectral</option>
+                <option value="abyssal">Abyssal</option>
+                <option value="megatooth">Megatooth</option>
+                <option value="cosmic">Cosmic</option>
+                <option value="apex">Apex</option>
             </select>
             <div class="search-bar">
                 <i class="fas fa-search" aria-hidden="true"></i>
                 <input type="text" id="rng-collection-search" placeholder="Search collection...">
             </div>
-            <div id="rng-collection-grid" class="rng-collection-grid"></div>
+        </div>
+        <div id="rng-collection-grid" class="rng-collection-grid"></div>
     </div>
 </div>
 
