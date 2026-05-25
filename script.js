@@ -1489,7 +1489,7 @@ const GLOBAL_MESSAGE_CONFIG_PATH = {
 };
 const COMMUNITY_BOSS_EVENT = {
     id: "summer-megaladon-2026",
-    title: "Defeat the Megaladon",
+    title: "Defeat the Megalodon",
     targetWins: 500,
     startMs: new Date("2026-05-25T00:00:00Z").getTime(),
     endMs: new Date("2026-06-08T00:00:00Z").getTime(),
@@ -2521,7 +2521,7 @@ function ensureCommunityBossRanksModal() {
     modal.innerHTML = `
         <div class="community-boss-ranks-card">
             <button class="community-boss-ranks-close" type="button" onclick="closeCommunityBossRanksModal()" aria-label="Close ranks">×</button>
-            <span class="community-boss-kicker">Megaladon Leaderboard</span>
+            <span class="community-boss-kicker">Megalodon Leaderboard</span>
             <h3>Top Contributors</h3>
             <div id="community-boss-ranks-list" class="community-boss-ranks-list">
                 <p class="community-boss-ranks-empty">Loading ranks...</p>
@@ -2998,7 +2998,7 @@ function renderCommunityBossPanel() {
             <div>
                 <span class="community-boss-kicker">Limited Summer Boss Event</span>
                 <h2>${COMMUNITY_BOSS_EVENT.title}</h2>
-                <p>Daily and Infinite wins from every logged-in player count together. Reach 500 community wins in two weeks to bring down the Megaladon.</p>
+                <p>Daily and Infinite wins from every logged-in player count together. Reach 500 community wins in two weeks to bring down the Megalodon.</p>
                 <div class="community-boss-actions">
                     <button class="primary" type="button" onclick="navigate('infinite.html')">Play Infinite</button>
                     <button type="button" onclick="navigate('daily.html')">Daily Challenge</button>
@@ -3174,7 +3174,7 @@ async function claimCommunityBossReward() {
     const wins = Math.max(serverWins, getCommunityBossWins());
 
     if (!isCommunityBossComplete(wins)) {
-        showNotification("The Megaladon is not defeated yet.", "info", 3000);
+        showNotification("The Megalodon is not defeated yet.", "info", 3000);
         return;
     }
 
@@ -4152,12 +4152,7 @@ const allBadges = [
     { id: "tester", name: "Tester", emoji: "🎮", description: "Awarded for testing via code redeem.", codeUnlock: true },
     { id: "anniversary", name: "Anniversary", emoji: "🎉", description: "Awarded for redeeming the Anniversary code.", codeUnlock: true },
     { id: "lucky-fin", name: "Lucky Fin", emoji: "🍀", description: "Awarded from the daily prize wheel.", codeUnlock: true },
-    { id: "extinction", name: "Extinction", emoji: "☄️", description: "Awarded for defeating the summer Megaladon community boss.", rarity: "legendary", codeUnlock: true }
-];
-
-const profileTitleDefs = [
-    { id: "", name: "No Title", description: "Show no profile title." },
-    { id: "megaladon", name: "Megaladon", description: "Awarded for defeating the summer community boss." }
+    { id: "extinction", name: "Extinction", emoji: "☄️", description: "Awarded for defeating the summer Megalodon community boss.", rarity: "legendary", codeUnlock: true }
 ];
 
 const currentPassBadgeDefs = [
