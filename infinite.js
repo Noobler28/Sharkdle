@@ -233,6 +233,10 @@ function makeGuess() {
         if (typeof window.maybeAwardCrateDrop === 'function') {
             window.maybeAwardCrateDrop('infinite win');
         }
+
+        if (typeof window.contributeCommunityBossWin === 'function') {
+            window.contributeCommunityBossWin('infinite');
+        }
         
         // Check achievements for win conditions
         if (window.checkAchievements) {
