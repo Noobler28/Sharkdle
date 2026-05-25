@@ -2,6 +2,7 @@
     "use strict";
 
     const STORAGE_KEY = "sharkRngProfile";
+    const LOCAL_SAVE_INTERVAL_MS = 120000;
     const BASE_ROLL_COOLDOWN_MS = 1600;
     const BASE_AUTO_INTERVAL_MS = 1800;
     const ULTRA_ONE_IN_THRESHOLD = 1_000_000;
@@ -15,7 +16,7 @@
     const RNG_LEADERBOARD_FALLBACK_COLLECTION = "userStats";
     const RNG_LEADERBOARD_LIMIT = 10;
     const RNG_LEADERBOARD_QUERY_LIMIT = 30;
-    const RNG_LEADERBOARD_SYNC_INTERVAL_MS = 6000;
+    const RNG_LEADERBOARD_SYNC_INTERVAL_MS = 120000;
     const RNG_DEV_UIDS = [
         "ETPtQC0VA2NiSnX67rS2P2ma2tC2",
         "gOcPqOuyPJRWisE4dxvFkGTOl5g2"
@@ -723,6 +724,9 @@ let rollPool = [];
     let rngLeaderboardLastSyncAt = 0;
     let rngLeaderboardLoading = false;
     let rngDevForcedMutationType = null;
+    let localSaveTimer = null;
+    let localSaveDirty = false;
+    let localSaveFlushBound = false;
 
     const GameFx = {
         initAudio() {
@@ -1282,7 +1286,9 @@ let rollPool = [];
         if (rngLeaderboardSyncTimer) return;
 
         const elapsed = Date.now() - rngLeaderboardLastSyncAt;
-        const delay = Math.max(1200, RNG_LEADERBOARD_SYNC_INTERVAL_MS - elapsed);
+        const delay = rngLeaderboardLastSyncAt
+            ? Math.max(1200, RNG_LEADERBOARD_SYNC_INTERVAL_MS - elapsed)
+            : RNG_LEADERBOARD_SYNC_INTERVAL_MS;
 
         rngLeaderboardSyncTimer = setTimeout(async () => {
             rngLeaderboardSyncTimer = null;
@@ -1371,7 +1377,6 @@ let rollPool = [];
             rngLeaderboardUser = user || null;
             rngLeaderboardProfileCache = null;
             renderRngLeaderboardSelf();
-            if (user) scheduleRngLeaderboardSync();
             loadRngLeaderboard();
         });
 
@@ -2256,7 +2261,37 @@ function rollForShark() {
 }
 
     function saveLocalProfile() {
+        if (localSaveTimer) {
+            clearTimeout(localSaveTimer);
+            localSaveTimer = null;
+        }
         localStorage.setItem(STORAGE_KEY, JSON.stringify(player));
+        localSaveDirty = false;
+    }
+
+    function flushLocalProfileSave() {
+        if (localSaveDirty) saveLocalProfile();
+    }
+
+    function scheduleLocalProfileSave() {
+        localSaveDirty = true;
+        if (localSaveTimer) return;
+
+        localSaveTimer = setTimeout(() => {
+            localSaveTimer = null;
+            flushLocalProfileSave();
+        }, LOCAL_SAVE_INTERVAL_MS);
+    }
+
+    function bindLocalProfileSaveFlush() {
+        if (localSaveFlushBound) return;
+        localSaveFlushBound = true;
+
+        window.addEventListener("pagehide", flushLocalProfileSave);
+        window.addEventListener("beforeunload", flushLocalProfileSave);
+        document.addEventListener("visibilitychange", () => {
+            if (document.visibilityState === "hidden") flushLocalProfileSave();
+        });
     }
 
     function loadLocalProfile() {
@@ -2333,7 +2368,7 @@ function rollForShark() {
     }
 
     function persistPlayerState() {
-        saveLocalProfile();
+        scheduleLocalProfileSave();
         scheduleCloudSync();
         updateAllUi();
     }
@@ -3644,6 +3679,7 @@ async function initRngMode() {
          loadLocalProfile();
          initAmbientBubbles();
          installRngDevCommands();
+         bindLocalProfileSaveFlush();
          bindUi();
          updateAllUi();
          updateSettingsUi();
