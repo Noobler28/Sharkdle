@@ -248,6 +248,23 @@ function mergeAchievementIdLists(...lists) {
     return [...new Set(lists.flatMap(list => Array.isArray(list) ? list : []))];
 }
 
+async function addAchievementIdToRemote(fieldName, achievementId, fallbackList = []) {
+    if (!currentUser || !db || !achievementId) return;
+    try {
+        const fieldValue = typeof firebase !== "undefined"
+            && firebase.firestore
+            && firebase.firestore.FieldValue
+            ? firebase.firestore.FieldValue
+            : null;
+        const payload = fieldValue?.arrayUnion
+            ? { [fieldName]: fieldValue.arrayUnion(achievementId) }
+            : { [fieldName]: fallbackList };
+        await db.collection("userStats").doc(currentUser.uid).set(payload, { merge: true });
+    } catch (error) {
+        console.warn(`Error syncing ${fieldName} to Firebase:`, error);
+    }
+}
+
 function waitForAchievementAuthState(timeoutMs = 1500) {
     if (achievementAuthReady) return Promise.resolve();
     if (typeof firebase === "undefined" || typeof firebase.auth !== "function") {
@@ -291,6 +308,14 @@ async function hydrateAchievementStateFromRemote() {
         const mergedClaimed = mergeAchievementIdLists(localClaimed, remoteData.claimedAchievements);
         setStoredAchievementIds("unlockedAchievements", mergedUnlocked);
         setStoredAchievementIds("claimedAchievements", mergedClaimed);
+        const remoteUnlockedCount = Array.isArray(remoteData.unlockedAchievements) ? remoteData.unlockedAchievements.length : 0;
+        const remoteClaimedCount = Array.isArray(remoteData.claimedAchievements) ? remoteData.claimedAchievements.length : 0;
+        if (mergedUnlocked.length !== remoteUnlockedCount || mergedClaimed.length !== remoteClaimedCount) {
+            await db.collection("userStats").doc(currentUser.uid).set({
+                unlockedAchievements: mergedUnlocked,
+                claimedAchievements: mergedClaimed
+            }, { merge: true });
+        }
         return { unlockedAchievements: mergedUnlocked, claimedAchievements: mergedClaimed };
     } catch (error) {
         console.warn("Error hydrating achievement state from Firebase:", error);
@@ -494,6 +519,13 @@ async function loadAndDisplayAchievements() {
     
     // Retroactively unlock achievements for existing players based on current stats
     unlockedAchievements = await retroactivelyUnlockAchievements(profileData, unlockedAchievements);
+    if (currentUser && db) {
+        try {
+            await db.collection("userStats").doc(currentUser.uid).set({ unlockedAchievements }, { merge: true });
+        } catch (error) {
+            console.warn("Error syncing retroactive achievements:", error);
+        }
+    }
     if (typeof window.syncAchievementThemeUnlocks === "function") {
         const themeSyncResult = window.syncAchievementThemeUnlocks(profileData);
         profileData = themeSyncResult.profileData;
@@ -739,11 +771,12 @@ function calculateClaimedPoints(claimedAchievements) {
 }
 
 function unlockAchievement(achievementId) {
-    const unlockedAchievements = JSON.parse(localStorage.getItem("unlockedAchievements") || "[]");
+    const unlockedAchievements = getStoredAchievementIds("unlockedAchievements");
     
     if (!unlockedAchievements.includes(achievementId)) {
         unlockedAchievements.push(achievementId);
-        localStorage.setItem("unlockedAchievements", JSON.stringify(unlockedAchievements));
+        setStoredAchievementIds("unlockedAchievements", unlockedAchievements);
+        addAchievementIdToRemote("unlockedAchievements", achievementId, unlockedAchievements);
         
         // Sync to Firebase to sync achievements across devices
         if (window.syncStatsToFirebase) {
@@ -772,15 +805,7 @@ async function claimAchievementReward(achievementId, points) {
     if (!claimedAchievements.includes(achievementId)) {
         claimedAchievements.push(achievementId);
         setStoredAchievementIds("claimedAchievements", claimedAchievements);
-        if (currentUser && db) {
-            try {
-                await db.collection("userStats").doc(currentUser.uid).set({
-                    claimedAchievements
-                }, { merge: true });
-            } catch (error) {
-                console.error("Error writing claimed achievement to Firebase:", error);
-            }
-        }
+        await addAchievementIdToRemote("claimedAchievements", achievementId, claimedAchievements);
         
         // Add XP to user profile
         const profileData = typeof window.getCurrentProfileData === "function"
