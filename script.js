@@ -279,6 +279,7 @@ function unlockDuelAchievement(achievementId) {
     if (!unlocked.includes(achievementId)) {
         unlocked.push(achievementId);
         localStorage.setItem('unlockedAchievements', JSON.stringify(unlocked));
+        syncUnlockedAchievementToFirebase(achievementId, unlocked);
     }
 }
 
@@ -1737,6 +1738,25 @@ function getUnlockedPassRewards(profileData = getCurrentProfileData()) {
 function getClaimedAchievementIds() {
     return JSON.parse(localStorage.getItem("claimedAchievements") || "[]");
 }
+
+async function syncUnlockedAchievementToFirebase(achievementId, fallbackUnlockedAchievements = []) {
+    if (!currentUser || !db || !achievementId) return;
+    try {
+        const fieldValue = typeof firebase !== "undefined"
+            && firebase.firestore
+            && firebase.firestore.FieldValue
+            ? firebase.firestore.FieldValue
+            : null;
+        const payload = fieldValue?.arrayUnion
+            ? { unlockedAchievements: fieldValue.arrayUnion(achievementId) }
+            : { unlockedAchievements: fallbackUnlockedAchievements };
+        await db.collection("userStats").doc(currentUser.uid).set(payload, { merge: true });
+    } catch (error) {
+        console.warn("Unable to sync achievement unlock:", error);
+    }
+}
+
+window.syncUnlockedAchievementToFirebase = syncUnlockedAchievementToFirebase;
 
 function getAchievementUnlockedThemeIds(claimedAchievements = getClaimedAchievementIds()) {
     return sharkPassCardThemes
@@ -3763,6 +3783,7 @@ function unlockCrateAchievement(crateId = "reef") {
     if (!unlockedAchievements.includes(achievementId)) {
         unlockedAchievements.push(achievementId);
         localStorage.setItem("unlockedAchievements", JSON.stringify(unlockedAchievements));
+        syncUnlockedAchievementToFirebase(achievementId, unlockedAchievements);
     }
 }
 
@@ -4033,7 +4054,8 @@ function buildCosmeticSyncPayload(profileData = getCurrentProfileData()) {
         equippedTitle: getEquippedProfileTitle(profileData),
         unlockedBadges: getUnlockedBadgeIds(profileData),
         unlockedCardThemes: getUnlockedCardThemeIds(profileData),
-        unlockedTitles: getUnlockedProfileTitleIds(profileData)
+        unlockedTitles: getUnlockedProfileTitleIds(profileData),
+        lastUpdated: profileData.lastUpdated || Date.now()
     };
 }
 
@@ -5068,6 +5090,9 @@ function hasMeaningfulProfileData(profile) {
         profile.totalGuesses ||
         profile.duelGames ||
         profile.duelWins ||
+        profile.loginStreak ||
+        profile.currentLoginDay ||
+        normalizeStoredDateValue(profile.lastLoginDate) ||
         normalizeCrateInventory(profile.crateInventory).reef ||
         getStreakShieldCount(profile) ||
         (Array.isArray(profile.earnedCosmetics) && profile.earnedCosmetics.length) ||
@@ -5126,6 +5151,94 @@ function getDailyLoginModalShownStorageKey(uid = null) {
 
 function getStoredDailyLoginModalShownDate(uid = null) {
     return localStorage.getItem(getDailyLoginModalShownStorageKey(uid)) || "";
+}
+
+function normalizeLoginProgress(source = {}) {
+    const normalized = {
+        loginStreak: Math.max(0, Math.floor(Number(source.loginStreak) || 0)),
+        currentLoginDay: Math.max(0, Math.floor(Number(source.currentLoginDay) || 0)),
+        lastLoginDate: normalizeStoredDateValue(source.lastLoginDate),
+        dailyLoginModalShownToday: normalizeStoredDateValue(source.dailyLoginModalShownToday)
+    };
+    return normalized;
+}
+
+function getLoginProgressFromLocalStorage(uid = null) {
+    return normalizeLoginProgress({
+        loginStreak: localStorage.getItem("loginStreak"),
+        currentLoginDay: localStorage.getItem("currentLoginDay"),
+        lastLoginDate: localStorage.getItem("lastLoginDate"),
+        dailyLoginModalShownToday: getStoredDailyLoginModalShownDate(uid)
+    });
+}
+
+function mergeLoginProgress(localProgress = {}, remoteProgress = {}) {
+    const local = normalizeLoginProgress(localProgress);
+    const remote = normalizeLoginProgress(remoteProgress);
+    const localDate = local.lastLoginDate;
+    const remoteDate = remote.lastLoginDate;
+    let preferred = null;
+
+    if (localDate && remoteDate) {
+        const dateDiff = getCalendarDayDifference(localDate, remoteDate);
+        if (Number.isFinite(dateDiff) && dateDiff > 0) preferred = remote;
+        if (Number.isFinite(dateDiff) && dateDiff < 0) preferred = local;
+    } else if (localDate) {
+        preferred = local;
+    } else if (remoteDate) {
+        preferred = remote;
+    }
+
+    const latestLoginDate = preferred?.lastLoginDate || [localDate, remoteDate].filter(Boolean).sort().pop() || "";
+    const latestModalShownDate = [local.dailyLoginModalShownToday, remote.dailyLoginModalShownToday]
+        .filter(Boolean)
+        .sort()
+        .pop() || "";
+    const fallbackProgress = preferred === local ? remote : local;
+
+    return {
+        loginStreak: preferred ? (preferred.loginStreak || fallbackProgress.loginStreak || 0) : Math.max(local.loginStreak, remote.loginStreak),
+        currentLoginDay: preferred ? (preferred.currentLoginDay || fallbackProgress.currentLoginDay || 0) : Math.max(local.currentLoginDay, remote.currentLoginDay),
+        lastLoginDate: latestLoginDate,
+        dailyLoginModalShownToday: latestModalShownDate
+    };
+}
+
+function storeLoginProgressLocally(progress = {}, uid = null) {
+    const normalized = normalizeLoginProgress(progress);
+    if (normalized.loginStreak > 0) {
+        localStorage.setItem("loginStreak", String(normalized.loginStreak));
+    }
+    if (normalized.currentLoginDay > 0) {
+        localStorage.setItem("currentLoginDay", String(normalized.currentLoginDay));
+    }
+    if (normalized.lastLoginDate) {
+        localStorage.setItem("lastLoginDate", normalized.lastLoginDate);
+    }
+    const modalStorageKey = getDailyLoginModalShownStorageKey(uid);
+    if (normalized.dailyLoginModalShownToday) {
+        localStorage.setItem(modalStorageKey, normalized.dailyLoginModalShownToday);
+    }
+    return normalized;
+}
+
+function buildLoginProgressSyncPayload(progress = {}) {
+    const normalized = normalizeLoginProgress(progress);
+    return {
+        loginStreak: normalized.loginStreak,
+        currentLoginDay: normalized.currentLoginDay,
+        lastLoginDate: normalized.lastLoginDate,
+        dailyLoginModalShownToday: normalized.dailyLoginModalShownToday
+    };
+}
+
+function loginProgressDiffers(remoteData = {}, mergedProgress = {}) {
+    const remote = normalizeLoginProgress(remoteData);
+    const merged = normalizeLoginProgress(mergedProgress);
+    return remote.loginStreak !== merged.loginStreak
+        || remote.currentLoginDay !== merged.currentLoginDay
+        || remote.lastLoginDate !== merged.lastLoginDate
+        || remote.dailyLoginModalShownToday !== merged.dailyLoginModalShownToday;
 }
 
 function getLocalDateKey(dateValue = new Date()) {
@@ -5322,7 +5435,11 @@ function scheduleRemoteProfileSync(delayMs = 150) {
 
 function saveUserProfileLocally(profileData, options = {}) {
     if (!profileData || typeof profileData !== "object") return;
-    if (!profileData.lastUpdated) profileData.lastUpdated = Date.now();
+    if (options.preserveLastUpdated) {
+        if (!profileData.lastUpdated) profileData.lastUpdated = Date.now();
+    } else {
+        profileData.lastUpdated = Date.now();
+    }
     if (profileData.profilePicture && !profileData.profilePic) {
         profileData.profilePic = profileData.profilePicture;
     }
@@ -5461,6 +5578,25 @@ function mergeProfilesSafely(localProfile, firebaseData) {
     const preferredStreakShields = localUpdatedMs >= firebaseUpdatedMs
         ? getStreakShieldCount(localProfile)
         : getStreakShieldCount(firebaseData);
+    const preferLocalProfileFields = localUpdatedMs > firebaseUpdatedMs;
+    const localProfilePic = localProfile.profilePicture || localProfile.profilePic;
+    const remoteProfilePic = firebaseData.profilePicture || firebaseData.profilePic;
+    const preferredProfilePic = preferLocalProfileFields
+        ? (localProfilePic || remoteProfilePic || "images/pfp/shark1.png")
+        : (remoteProfilePic || localProfilePic || "images/pfp/shark1.png");
+    const preferredAvatar = preferLocalProfileFields
+        ? (localProfile.avatar || firebaseData.avatar || "🦈")
+        : (firebaseData.avatar || localProfile.avatar || "🦈");
+    const preferredEquippedBadge = preferLocalProfileFields
+        ? (localProfile.equippedBadge || firebaseData.equippedBadge || "starter")
+        : (firebaseData.equippedBadge || localProfile.equippedBadge || "starter");
+    const preferredEquippedCardTheme = preferLocalProfileFields
+        ? (localProfile.equippedCardTheme || firebaseData.equippedCardTheme || "default")
+        : (firebaseData.equippedCardTheme || localProfile.equippedCardTheme || "default");
+    const preferredEquippedTitle = preferLocalProfileFields
+        ? (localProfile.equippedTitle || firebaseData.equippedTitle || "")
+        : (firebaseData.equippedTitle || localProfile.equippedTitle || "");
+    const mergedLoginProgress = mergeLoginProgress(getLoginProgressFromLocalStorage(currentUser?.uid), firebaseData);
 
     const localDailyWinsDate = normalizeStoredUtcDateValue(localProfile.dailyWinsUtcDate || localProfile.dailyWinsDate);
     const remoteDailyWinsDate = normalizeStoredUtcDateValue(firebaseData.dailyWinsUtcDate || firebaseData.dailyWinsDate);
@@ -5490,9 +5626,9 @@ function mergeProfilesSafely(localProfile, firebaseData) {
         uid: currentUser.uid,
         username: preferredUsername,
         email: currentUser.email,
-        profilePicture: firebaseData.profilePicture || firebaseData.profilePic || localProfile.profilePicture || localProfile.profilePic || "images/pfp/shark1.png",
-        profilePic: firebaseData.profilePicture || firebaseData.profilePic || localProfile.profilePicture || localProfile.profilePic || "images/pfp/shark1.png",
-        avatar: firebaseData.avatar || localProfile.avatar || "🦈",
+        profilePicture: preferredProfilePic,
+        profilePic: preferredProfilePic,
+        avatar: preferredAvatar,
         totalGuesses: maxNumeric(localProfile.totalGuesses, firebaseData.totalGuesses),
         gamesPlayed: maxNumeric(localProfile.gamesPlayed, firebaseData.gamesPlayed),
         wins: maxNumeric(localProfile.wins, firebaseData.wins),
@@ -5523,17 +5659,21 @@ function mergeProfilesSafely(localProfile, firebaseData) {
         instantCrateOpen: preferredInstantCrateOpen,
         earnedCosmetics: getUnifiedCosmeticList(localProfile.earnedCosmetics, firebaseData.earnedCosmetics, "imagePath"),
         testerBadgeUnlocked: Boolean(firebaseData.testerBadgeUnlocked || localProfile.testerBadgeUnlocked),
-        equippedBadge: firebaseData.equippedBadge || localProfile.equippedBadge || "starter",
-        equippedCardTheme: firebaseData.equippedCardTheme || localProfile.equippedCardTheme || "default",
+        equippedBadge: preferredEquippedBadge,
+        equippedCardTheme: preferredEquippedCardTheme,
         unlockedBadges: getMergedUniqueIds(localProfile.unlockedBadges, firebaseData.unlockedBadges, ["starter"]),
         unlockedCardThemes: getMergedUniqueIds(localProfile.unlockedCardThemes, firebaseData.unlockedCardThemes, ["default"]),
         unlockedTitles: getMergedUniqueIds(localProfile.unlockedTitles, firebaseData.unlockedTitles, []),
-        equippedTitle: firebaseData.equippedTitle || localProfile.equippedTitle || "",
+        equippedTitle: preferredEquippedTitle,
         communityBossRewards: {
             ...(localProfile.communityBossRewards && typeof localProfile.communityBossRewards === "object" ? localProfile.communityBossRewards : {}),
             ...(firebaseData.communityBossRewards && typeof firebaseData.communityBossRewards === "object" ? firebaseData.communityBossRewards : {})
         },
         crateInventory: preferredCrateInventory,
+        loginStreak: mergedLoginProgress.loginStreak,
+        currentLoginDay: mergedLoginProgress.currentLoginDay,
+        lastLoginDate: mergedLoginProgress.lastLoginDate,
+        dailyLoginModalShownToday: mergedLoginProgress.dailyLoginModalShownToday,
         lastSpinWheelDate: [normalizeStoredDateValue(localProfile.lastSpinWheelDate), normalizeStoredDateValue(firebaseData.lastSpinWheelDate)].filter(Boolean).sort().pop() || "",
         lastUpdated: Math.max(localUpdatedMs, firebaseUpdatedMs)
     };
@@ -5560,7 +5700,8 @@ async function loadUserProfile(options = {}) {
         if (statsSnap.exists && Object.keys(statsSnap.data() || {}).length > 0) {
             firebaseData = statsSnap.data();
             userData = mergeProfilesSafely(localProfile, firebaseData);
-            saveUserProfileLocally(userData, { skipRemoteSync: true });
+            storeLoginProgressLocally(userData, authUser.uid);
+            saveUserProfileLocally(userData, { skipRemoteSync: true, preserveLastUpdated: true });
             // Ensure legacy localStorage keys are updated for compatibility with other parts of the app
             localStorage.setItem("games", String(userData.gamesPlayed || 0));
             localStorage.setItem("wins", String(userData.wins || 0));
@@ -5570,20 +5711,9 @@ async function loadUserProfile(options = {}) {
             }
             // Load redeemed codes from Firebase
             localStorage.setItem("redeemedCodes", JSON.stringify(Array.isArray(firebaseData.redeemedCodes) ? firebaseData.redeemedCodes : []));
-            // Load login streak data from Firebase
-            if (firebaseData.loginStreak !== undefined) {
-                localStorage.setItem("loginStreak", firebaseData.loginStreak);
-            }
-            const normalizedLastLoginDate = normalizeStoredDateValue(firebaseData.lastLoginDate);
-            if (normalizedLastLoginDate) {
-                localStorage.setItem("lastLoginDate", normalizedLastLoginDate);
-            }
-            if (firebaseData.currentLoginDay !== undefined) {
-                localStorage.setItem("currentLoginDay", firebaseData.currentLoginDay);
-            }
-            const normalizedModalShownDate = normalizeStoredDateValue(firebaseData.dailyLoginModalShownToday);
-            if (normalizedModalShownDate) {
-                localStorage.setItem(getDailyLoginModalShownStorageKey(currentUser.uid), normalizedModalShownDate);
+            const mergedLoginProgressPayload = buildLoginProgressSyncPayload(userData);
+            if (loginProgressDiffers(firebaseData, mergedLoginProgressPayload)) {
+                await statsRef.set(mergedLoginProgressPayload, { merge: true });
             }
             const normalizedSpinDate = normalizeStoredDateValue(firebaseData.lastSpinWheelDate);
             if (normalizedSpinDate) {
@@ -5613,6 +5743,7 @@ async function loadUserProfile(options = {}) {
             }
         } else if (hasMeaningfulProfileData(localProfile)) {
             userData = mergeProfilesSafely(localProfile, {});
+            storeLoginProgressLocally(userData, authUser.uid);
             // Only seed remote stats if we positively confirmed from the server that the doc was empty.
             // This prevents cache-fallback reads from clobbering real cloud stats on login.
             if (fromServer) {
@@ -5620,9 +5751,10 @@ async function loadUserProfile(options = {}) {
             } else {
                 console.warn("Skipped seeding userStats from local profile because snapshot was cache-fallback.");
             }
-            saveUserProfileLocally(userData, { skipRemoteSync: true });
+            saveUserProfileLocally(userData, { skipRemoteSync: true, preserveLastUpdated: true });
         } else {
             const cachedPreferredUsername = getStoredPreferredUsername();
+            const localLoginProgress = getLoginProgressFromLocalStorage(authUser.uid);
             userData = {
                 uid: authUser.uid,
                 username: cachedPreferredUsername || localProfile.username || authUser.email.split("@")[0],
@@ -5652,10 +5784,15 @@ async function loadUserProfile(options = {}) {
                 unlockedCardThemes: ["default"],
                 unlockedTitles: [],
                 equippedTitle: "",
+                loginStreak: localLoginProgress.loginStreak,
+                currentLoginDay: localLoginProgress.currentLoginDay,
+                lastLoginDate: localLoginProgress.lastLoginDate,
+                dailyLoginModalShownToday: localLoginProgress.dailyLoginModalShownToday,
                 communityBossRewards: {},
                 crateInventory: normalizeCrateInventory()
             };
-            saveUserProfileLocally(userData, { skipRemoteSync: true });
+            storeLoginProgressLocally(userData, authUser.uid);
+            saveUserProfileLocally(userData, { skipRemoteSync: true, preserveLastUpdated: true });
         }
         const themeSyncResult = syncAchievementThemeUnlocks(userData);
         userData = themeSyncResult.profileData;
@@ -5951,7 +6088,7 @@ async function updateUsername(newUsername) {
 
         // Save to Firebase
         const statsRef = db.collection("userStats").doc(currentUser.uid);
-        await statsRef.set({ username: newUsername }, { merge: true });
+        await statsRef.set({ username: newUsername, lastUpdated: profileData.lastUpdated || Date.now() }, { merge: true });
     } catch (error) {
         console.warn("Username update failed:", error);
     }
@@ -6057,6 +6194,15 @@ async function signupUser() {
         const _bestGame = localProfile.bestGame || 0;
         const _currentStreak = localProfile.currentStreak || 0;
         const _highestStreak = localProfile.highestStreak || 0;
+        const _loginProgress = getLoginProgressFromLocalStorage(result.user.uid);
+        let _claimedAchievements = [];
+        let _unlockedAchievements = [];
+        try {
+            _claimedAchievements = JSON.parse(localStorage.getItem("claimedAchievements") || "[]");
+            _unlockedAchievements = JSON.parse(localStorage.getItem("unlockedAchievements") || "[]");
+        } catch (error) {
+            console.warn("Unable to migrate local achievement cache during signup:", error);
+        }
         
         const _currentLevel = getLevelFromXP(_totalXP);
         const _xpInLevel = getXPInCurrentLevel(_totalXP);
@@ -6071,12 +6217,17 @@ async function signupUser() {
             equippedCardTheme: localProfile.equippedCardTheme || "default",
             equippedTitle: localProfile.equippedTitle || "",
             unlockedTitles: Array.isArray(localProfile.unlockedTitles) ? localProfile.unlockedTitles : [],
+            unlockedBadges: Array.isArray(localProfile.unlockedBadges) ? localProfile.unlockedBadges : ["starter"],
+            unlockedCardThemes: Array.isArray(localProfile.unlockedCardThemes) ? localProfile.unlockedCardThemes : ["default"],
+            earnedCosmetics: Array.isArray(localProfile.earnedCosmetics) ? localProfile.earnedCosmetics : [],
+            testerBadgeUnlocked: Boolean(localProfile.testerBadgeUnlocked),
             communityBossRewards: localProfile.communityBossRewards && typeof localProfile.communityBossRewards === "object"
                 ? localProfile.communityBossRewards
                 : {},
             crateInventory: normalizeCrateInventory(localProfile.crateInventory),
             cratesOpened: Math.max(0, Number(localProfile.cratesOpened) || 0),
             streakShields: getStreakShieldCount(localProfile),
+            instantCrateOpen: getCrateInstantOpenEnabled(localProfile),
             username: username,
             email: email,
             avatar: "🦈",
@@ -6093,6 +6244,13 @@ async function signupUser() {
             currentXP: _xpInLevel,
             xpToNextLevel: _xpToNext,
             unlockedPfps: _unlockedPfps,
+            claimedAchievements: Array.isArray(_claimedAchievements) ? _claimedAchievements : [],
+            unlockedAchievements: Array.isArray(_unlockedAchievements) ? _unlockedAchievements : [],
+            redeemedCodes: getRedeemedCodes(),
+            loginStreak: _loginProgress.loginStreak,
+            currentLoginDay: _loginProgress.currentLoginDay,
+            lastLoginDate: _loginProgress.lastLoginDate,
+            dailyLoginModalShownToday: _loginProgress.dailyLoginModalShownToday,
             createdAt: new Date()
         };
         await userRef.set(newProfile);
@@ -6866,7 +7024,7 @@ async function syncStatsToFirebase() {
 
         // If remote appears empty, only allow sync when local has meaningful numeric progress.
         // This prevents identity-only local profiles from pushing zeroed stats.
-        if (!remoteHasData && !hasMeaningfulProfileData(profileData)) {
+        if (!remoteHasData && !hasMeaningfulProfileData(profileData) && !hasPersistedProfileIdentity(profileData)) {
             console.warn("Skipping sync: remote profile empty and local profile has no meaningful stats.");
             scheduleRemoteProfileSync(3000);
             return;
@@ -6875,7 +7033,8 @@ async function syncStatsToFirebase() {
         // Never let a fresh/blank local cache clobber a real Firestore profile.
         if (!hasMeaningfulProfileData(profileData) && hasRecoverableRemoteProfile(remoteData)) {
             const recoveredProfile = mergeProfilesSafely(profileData, remoteData);
-            saveUserProfileLocally(recoveredProfile, { skipRemoteSync: true });
+            storeLoginProgressLocally(recoveredProfile, authUser.uid);
+            saveUserProfileLocally(recoveredProfile, { skipRemoteSync: true, preserveLastUpdated: true });
             updateProfileDisplay(recoveredProfile);
             updateIndexStats();
             return;
@@ -6896,6 +7055,8 @@ async function syncStatsToFirebase() {
             JSON.parse(localStorage.getItem("unlockedAchievements") || "[]"),
             remoteData.unlockedAchievements
         );
+        const mergedLoginProgress = mergeLoginProgress(getLoginProgressFromLocalStorage(authUser.uid), remoteData);
+        storeLoginProgressLocally(mergedLoginProgress, authUser.uid);
         
         // base stats
         const stats = {
@@ -6992,22 +7153,16 @@ async function syncStatsToFirebase() {
         stats.claimedAchievements = mergedClaimedAchievements;
         stats.unlockedAchievements = mergedUnlockedAchievements;
         stats.redeemedCodes = getRedeemedCodes();
-        stats.loginStreak = localStorage.getItem("loginStreak") !== null
-            ? parseInt(localStorage.getItem("loginStreak")) || 0
-            : (Number(remoteData.loginStreak) || 0);
-        stats.currentLoginDay = localStorage.getItem("currentLoginDay") !== null
-            ? parseInt(localStorage.getItem("currentLoginDay")) || 0
-            : (Number(remoteData.currentLoginDay) || 0);
-        const normalizedLastLoginDate = normalizeStoredDateValue(localStorage.getItem("lastLoginDate"))
-            || normalizeStoredDateValue(remoteData.lastLoginDate);
+        stats.loginStreak = mergedLoginProgress.loginStreak;
+        stats.currentLoginDay = mergedLoginProgress.currentLoginDay;
+        const normalizedLastLoginDate = mergedLoginProgress.lastLoginDate;
         if (normalizedLastLoginDate) {
             localStorage.setItem("lastLoginDate", normalizedLastLoginDate);
         } else {
             localStorage.removeItem("lastLoginDate");
         }
         stats.lastLoginDate = normalizedLastLoginDate;
-        const normalizedModalShownDate = normalizeStoredDateValue(getStoredDailyLoginModalShownDate())
-            || normalizeStoredDateValue(remoteData.dailyLoginModalShownToday);
+        const normalizedModalShownDate = mergedLoginProgress.dailyLoginModalShownToday;
         if (normalizedModalShownDate) {
             localStorage.setItem(getDailyLoginModalShownStorageKey(), normalizedModalShownDate);
         } else {
@@ -7183,12 +7338,26 @@ async function initializeDailyLogin() {
             ? window.applyLimitedTimeXpBonus(reward.xp)
             : { totalXp: reward.xp };
         const xpGain = xpAward.totalXp;
+        const profileData = getCurrentProfileData();
+        const currentProfileXp = Number(profileData.totalXP) || 0;
+        const currentStoredXp = Number(totalXP) || 0;
+        const nextTotalXp = Math.max(currentProfileXp, currentStoredXp) + xpGain;
+
+        profileData.totalXP = nextTotalXp;
+        profileData.loginStreak = streak;
+        profileData.currentLoginDay = nextDay;
+        profileData.lastLoginDate = today;
+        profileData.dailyLoginModalShownToday = today;
+        if (currentUser?.uid) {
+            profileData.uid = currentUser.uid;
+        }
+        saveUserProfileLocally(profileData, { skipRemoteSync: true });
 
         // Update localStorage
         localStorage.setItem("lastLoginDate", today);
         localStorage.setItem("currentLoginDay", nextDay);
         localStorage.setItem("loginStreak", streak);
-        localStorage.setItem("totalXP", totalXP + xpGain);
+        localStorage.setItem("totalXP", nextTotalXp);
         localStorage.setItem(dailyLoginModalShownStorageKey, today);
 
         // Sync login streak data to Firebase
@@ -7198,7 +7367,8 @@ async function initializeDailyLogin() {
                 lastLoginDate: today,
                 currentLoginDay: nextDay,
                 loginStreak: streak,
-                dailyLoginModalShownToday: today
+                dailyLoginModalShownToday: today,
+                totalXP: nextTotalXp
             }, { merge: true });
         }
 
