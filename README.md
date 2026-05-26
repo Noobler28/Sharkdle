@@ -12,7 +12,7 @@ Test your shark knowledge, unlock cosmetics, earn achievements, and dive deeper 
 
 ## 📦 Version Information
 
-Current Version: 1.3
+Current Version: 1.4 - Summer 2026
 
 ## 🛠️ Tech Stack
 HTML, CSS, JavaScript
