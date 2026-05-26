@@ -7,17 +7,22 @@
     <title>Sharkdle Map</title>
     <link rel="stylesheet" href="style.css">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+    <script defer src="script.js"></script>
     <script defer src="achievements.js"></script>
     <script defer src="story.js"></script>
 </head>
 <body>
     <header class="navbar">
         <div class="logo">🦈 Sharkdle</div>
-        <div id="auth-container" class="auth-container">
-            <button onclick="window.location.href='index.html'" class="nav-btn">Home</button>
-            <button onclick="window.location.href='practice.html'" class="nav-btn">Practice Mode</button>
-            <button onclick="window.location.href='achievements.html'" class="nav-btn">Achievements</button>
-        </div>
+     <div id="auth-container" class="auth-container">
+         <button onclick="window.location.href='index.html'" class="nav-btn">Home</button>
+         <button onclick="window.location.href='practice.html'" class="nav-btn">Practice Mode</button>
+         <button onclick="window.location.href='achievements.html'" class="nav-btn">Achievements</button>
+         <button id="login-btn" onclick="openLoginModal()" class="auth-btn">Login</button>
+     </div>
     </header>
 
     <section class="hero" style="padding: 60px 20px 30px 20px;">
@@ -35,7 +40,6 @@
             <span id="close-modal" class="close">&times;</span>
             <div class="story-modal-header">
                 <div class="story-modal-title-group">
-                    <div class="story-modal-kicker">Field Briefing</div>
                     <h2 id="modal-title"></h2>
                     <div class="story-modal-area-label"><span class="area-icon">🌊</span> Atlantic Ocean</div>
                     <div class="story-modal-brief">
@@ -56,4 +60,3 @@
 <script src="global-broadcast.js"></script>
 </body>
 </html>
-
