@@ -4,7 +4,7 @@ A Wordle‑style shark‑guessing game built by **Connor Eagle / Noobler28**
 
 Test your shark knowledge, unlock cosmetics, earn achievements, and dive deeper into the world of sharks — one guess at a time.
 
-🎮 Play Now:[Sharkdle](https://sharkdle.online)
+🎮 Play Now:[Sharkdle ](https://sharkdle.online)
 
 💬 Join the Community: https://discord.gg/FbnWZNsq
 
