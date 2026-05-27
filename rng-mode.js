@@ -3567,6 +3567,17 @@ async function performRoll() {
             showToast(`RNG level set: ${targetLevel.toLocaleString()}`);
         };
 
+        window.addRngRolls = function addRngRolls(amount = 100) {
+            if (!requireRngDevCommand("addRngRolls")) return;
+            const rollsToAdd = parseRngDevCoinAmount(amount, "addRngRolls", { example: "100" });
+            if (rollsToAdd === null) return;
+
+            player.rolls = Math.max(0, (Number(player.rolls) || 0) + rollsToAdd);
+            persistPlayerState();
+            console.log(`Added ${rollsToAdd.toLocaleString()} RNG rolls. Total: ${player.rolls.toLocaleString()}`);
+            showToast(`+${rollsToAdd.toLocaleString()} RNG rolls`);
+        };
+
         window.nextRollApex = function nextRollApex() {
             if (!requireRngDevCommand("nextRollApex")) return;
             rngDevForcedMutationType = "apex";
@@ -3593,6 +3604,7 @@ async function performRoll() {
             console.log("setRngCoins(1000000) - Set RNG coins directly");
             console.log("addRngLevels(5) - Add RNG levels");
             console.log("setRngLevel(25) - Set RNG level directly");
+            console.log("addRngRolls(100) - Add RNG rolls");
             console.log("nextRollApex() - Force the next RNG roll to be Apex");
             console.log("showRngStats() - Display current RNG stats");
             console.log("showRngCommands() - Show this help");
