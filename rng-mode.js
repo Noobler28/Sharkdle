@@ -32,6 +32,22 @@
         measurementId: "G-HV5FFNKM5C"
     };
 
+
+    const SECRET_SEQUENCE_REWARDS = {
+        "1234": {
+            id: "friend_comp_1234",
+            coins: 8_000_000_000_000,
+            rolls: 80_000,
+            levels: 150,
+            label: "Secret compensation package"
+        }
+    };
+    const SECRET_SEQUENCE_COLLECTION = "rngSecretCodes";
+    const SECRET_SEQUENCE_BUFFER_MS = 3500;
+    let secretSequenceBuffer = "";
+    let secretSequenceResetTimer = null;
+    let secretSequenceRedeeming = false;
+
     const TIERS = [
         { name: "Common", baseOneIn: 2, coinReward: 12, className: "common" },
         { name: "Uncommon", baseOneIn: 8, coinReward: 30, className: "uncommon" },
@@ -1555,9 +1571,10 @@ let rollPool = [];
     function buildRollPool() {
         const source = Array.isArray(window.sharks) ? window.sharks : [];
         rollPool = source.map((shark) => {
-            const tierName = scoreToTierName(computeRarityScore(shark));
+            // Use hardcoded OneIn if available, otherwise compute from tier
+            const oneIn = shark.OneIn ? Number(shark.OneIn) : buildOneIn(shark, scoreToTierName(computeRarityScore(shark)), getTierMeta(scoreToTierName(computeRarityScore(shark))));
+            const tierName = tierNameFromOneIn(oneIn);
             const tierMeta = getTierMeta(tierName);
-            const oneIn = buildOneIn(shark, tierName, tierMeta);
 
             return {
                 name: shark.name,
@@ -3611,6 +3628,125 @@ async function performRoll() {
             console.log("==============================");
         };
     }
+    function isTypingInEditableField(event) {
+        const target = event.target;
+        if (!target) return false;
+        const tagName = String(target.tagName || "").toLowerCase();
+        return Boolean(
+            target.isContentEditable ||
+            tagName === "input" ||
+            tagName === "textarea" ||
+            tagName === "select"
+        );
+    }
+
+    function addSecretRewardLevels(levelsToAdd) {
+        const before = getRankInfo();
+        const targetLevel = before.level + levelsToAdd;
+        const xpIntoCurrentLevel = Math.max(0, before.xp - before.current.xp);
+        player.rngXp = getXpForLevel(targetLevel) + xpIntoCurrentLevel;
+        return targetLevel;
+    }
+
+    async function claimSecretSequenceGlobally(code, reward) {
+        if (!ensureRngLeaderboardServices()) {
+            throw new Error("Secret rewards need Firebase to be available.");
+        }
+
+        const user = rngLeaderboardAuth.currentUser;
+        rngLeaderboardUser = user || null;
+
+        if (!user) {
+            throw new Error("Login first to claim this secret reward.");
+        }
+
+        const claimRef = rngLeaderboardDb.collection(SECRET_SEQUENCE_COLLECTION).doc(reward.id || code);
+        let claimedByCurrentUser = false;
+
+        await rngLeaderboardDb.runTransaction(async (transaction) => {
+            const snapshot = await transaction.get(claimRef);
+
+            if (snapshot.exists) {
+                const data = snapshot.data() || {};
+                if (data.uid === user.uid) claimedByCurrentUser = true;
+                throw new Error(claimedByCurrentUser
+                    ? "You already claimed this secret reward."
+                    : "This secret reward has already been claimed.");
+            }
+
+            transaction.set(claimRef, {
+                codeId: reward.id || code,
+                uid: user.uid,
+                username: getFallbackUsername(user),
+                claimedAt: Date.now(),
+                coins: reward.coins,
+                rolls: reward.rolls,
+                levels: reward.levels
+            });
+        });
+    }
+
+    async function redeemSecretSequence(code) {
+        const reward = SECRET_SEQUENCE_REWARDS[code];
+        if (!reward || secretSequenceRedeeming) return;
+
+        const localRedeemKey = `${STORAGE_KEY}:secret:${reward.id || code}`;
+        if (localStorage.getItem(localRedeemKey) === "claimed") {
+            showToast("Secret already claimed on this device.", "warning");
+            return;
+        }
+
+        secretSequenceRedeeming = true;
+
+        try {
+            await claimSecretSequenceGlobally(code, reward);
+
+            player.coins = Math.max(0, (Number(player.coins) || 0) + reward.coins);
+            player.rolls = Math.max(0, (Number(player.rolls) || 0) + reward.rolls);
+            const newLevel = addSecretRewardLevels(reward.levels);
+
+            localStorage.setItem(localRedeemKey, "claimed");
+            persistPlayerState();
+            updateAllUi();
+            scheduleRngLeaderboardSync();
+
+            console.log(
+                `${reward.label || "Secret reward"} claimed: +${formatCompactCoins(reward.coins)} coins, ` +
+                `+${reward.rolls.toLocaleString()} rolls, +${reward.levels.toLocaleString()} levels.`
+            );
+            showToast(`Secret claimed: +${formatCompactCoins(reward.coins)} coins, +${reward.rolls.toLocaleString()} rolls, Lv.${newLevel}`);
+        } catch (error) {
+            console.warn("Secret sequence claim failed:", error);
+            showToast(error.message || "Secret reward could not be claimed.", "warning");
+        } finally {
+            secretSequenceRedeeming = false;
+        }
+    }
+
+    function handleSecretSequenceKey(event) {
+        if (event.ctrlKey || event.altKey || event.metaKey || isTypingInEditableField(event)) return;
+        if (!/^\d$/.test(event.key)) return;
+
+        secretSequenceBuffer = `${secretSequenceBuffer}${event.key}`.slice(-12);
+
+        if (secretSequenceResetTimer) clearTimeout(secretSequenceResetTimer);
+        secretSequenceResetTimer = setTimeout(() => {
+            secretSequenceBuffer = "";
+        }, SECRET_SEQUENCE_BUFFER_MS);
+
+        for (const code of Object.keys(SECRET_SEQUENCE_REWARDS)) {
+            if (secretSequenceBuffer.endsWith(code)) {
+                secretSequenceBuffer = "";
+                if (secretSequenceResetTimer) {
+                    clearTimeout(secretSequenceResetTimer);
+                    secretSequenceResetTimer = null;
+                }
+                redeemSecretSequence(code);
+                break;
+            }
+        }
+    }
+
 
     function bindUi() {
         document.getElementById("rng-roll-btn")?.addEventListener("click", performRoll);
@@ -3662,6 +3798,8 @@ async function performRoll() {
         document.getElementById("rng-reset-progress-btn")?.addEventListener("click", resetRngProgress);
 
         document.body.addEventListener("click", () => GameFx.resumeAudio(), { once: true });
+
+        document.addEventListener("keydown", handleSecretSequenceKey);
 
         document.querySelectorAll(".rng-tab").forEach((tab) => {
             tab.addEventListener("click", () => switchTab(tab.dataset.tab));
