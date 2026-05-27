@@ -236,7 +236,7 @@ const sharks = [
             // Alopiidae | Lamniformes | Alopias | 3 species
             { "name": "Pelagic Thresher Shark", "family": "Alopiidae", "order": "Lamniformes", "genus": "Alopias", "size": "Large","habitat": "Epipelagic", "yod": 1935 },
             { "name": "Big-eye Thresher Shark", "family": "Alopiidae", "order": "Lamniformes", "genus": "Alopias", "size": "Large","habitat": "Mesopelagic", "yod": 1841 },
-            { "name": "Thresher Shark", "family": "Alopiidae", "order": "Lamniformes", "genus": "Alopias", "size": "Large","habitat": "Epipelagic", "yod": 1788 },
+            { "name": "Common Thresher Shark", "family": "Alopiidae", "order": "Lamniformes", "genus": "Alopias", "size": "Large","habitat": "Epipelagic", "yod": 1788 },
             // Cetorhinidae | Lamniformes | Cetorhinus | 1 species
             { "name": "Basking Shark", "family": "Cetorhinidae", "order": "Lamniformes", "genus": "Cetorhinus", "size": "Giant","habitat": "Epipelagic", "yod": 1765 },
             // Lamnidae | Lamniformes | Carcharodon | 1 species
