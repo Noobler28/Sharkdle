@@ -72,61 +72,108 @@
 </section>
 
 
-<section class="home-section">
-<section class="menu-grid home-menu-grid">
+<section class="home-section home-hub-section home-tabs-hub" aria-labelledby="home-tabs-heading">
+<div class="home-tabs-heading">
+    <div>
+        <span class="section-kicker">Hub</span>
+        <h2 id="home-tabs-heading">Game Hub</h2>
+    </div>
+</div>
 
+<div class="home-tab-list" role="tablist" aria-label="Sharkdle home sections">
+    <button id="home-tab-play" class="home-tab-btn active" type="button" role="tab" aria-selected="true" aria-controls="home-panel-play" data-home-tab="play">
+        <i class="fa-solid fa-gamepad"></i>
+        <span>Play</span>
+    </button>
+    <button id="home-tab-progress" class="home-tab-btn" type="button" role="tab" aria-selected="false" aria-controls="home-panel-progress" data-home-tab="progress" tabindex="-1">
+        <i class="fa-solid fa-chart-line"></i>
+        <span>Progress</span>
+    </button>
+    <button id="home-tab-explore" class="home-tab-btn" type="button" role="tab" aria-selected="false" aria-controls="home-panel-explore" data-home-tab="explore" tabindex="-1">
+        <i class="fa-solid fa-compass"></i>
+        <span>Explore</span>
+    </button>
+</div>
 
-<div class="game-card" onclick="navigate('daily.html')">
-    <div class="game-card-topline">Today's Run</div>
+<div class="home-tab-panels">
+<section id="home-panel-play" class="home-tab-panel active" role="tabpanel" aria-labelledby="home-tab-play" data-home-panel="play">
+<p class="home-tab-note">For actually playing: the main guessing modes are first, with the two side games at the end.</p>
+<div class="menu-grid home-menu-grid home-card-grid play-grid">
+<a class="game-card home-action-card featured-card" href="daily.html">
     <i class="fa-solid fa-calendar-day"></i>
-    <h2>Daily Challenge</h2>
-    <p>One shark per day. Can you guess it?</p>
-</div>
+    <h3>Daily Challenge</h3>
+    <p>One new shark each day. Same puzzle for everyone.</p>
+</a>
 
-<div class="game-card" onclick="navigate('infinite.html')">
+<a class="game-card home-action-card" href="infinite.html">
     <i class="fa-solid fa-infinity"></i>
-    <h2>Infinite Mode</h2>
-    <p>Infinite games, endless fun.</p>
-</div>
+    <h3>Infinite Mode</h3>
+    <p>Keep guessing for XP, crates, and longer streaks.</p>
+</a>
 
-<div class="game-card" onclick="navigate('practice.html')">
+<a class="game-card home-action-card" href="practice.html">
     <i class="fa-solid fa-dumbbell"></i>
-    <h2>Practice Mode</h2>
-    <p>Unlimited guesses, no pressure.</p>
-</div>
+    <h3>Practice Mode</h3>
+    <p>Learn the clues without risking your stats.</p>
+</a>
 
-<div class="game-card" onclick="navigate('story.html')">
-    <i class="fa-solid fa-globe"></i>
-    <h2>World Map</h2>
-    <p>Travel the globe and complete challenges.</p>
-</div>
+<a class="game-card home-action-card" href="rng.html">
+    <div class="game-card-topline">Minigame</div>
+    <i class="fa-solid fa-dice"></i>
+    <h3>Shark RNG</h3>
+    <p>Roll, upgrade your luck, and chase rare finds.</p>
+</a>
 
-<div class="game-card" onclick="navigate('achievements.html')">
+<a class="game-card home-action-card" href="secret.html">
+    <div class="game-card-topline">Minigame</div>
+    <i class="fa-solid fa-life-ring"></i>
+    <h3>Shark Rescue Command</h3>
+    <p>A chill clicker where upgrades do the heavy lifting.</p>
+</a>
+</div>
+</section>
+
+<section id="home-panel-progress" class="home-tab-panel" role="tabpanel" aria-labelledby="home-tab-progress" data-home-panel="progress" hidden>
+<p class="home-tab-note">For checking how far you've got: rewards, unlocks, and leaderboard spots live here.</p>
+<div class="menu-grid home-menu-grid home-card-grid progress-grid">
+<a class="game-card home-action-card" href="achievements.html">
     <i class="fa-solid fa-trophy"></i>
-    <h2>Achievements</h2>
-    <p>Track your progress and claim rewards.</p>
-</div>
+    <h3>Achievements</h3>
+    <p>Claim rewards for the milestones you've hit.</p>
+</a>
 
-<div class="game-card" onclick="navigate('library.html')">
-    <i class="fa-solid fa-fish"></i>
-    <h2>The Sharchive</h2>
-    <p>Explore every shark in the game.</p>
-</div>
-
-<div class="game-card" onclick="navigate('sharkpass.html')">
+<a class="game-card home-action-card" href="sharkpass.html">
     <i class="fa-solid fa-id-card"></i>
-    <h2>Shark Pass</h2>
-    <p>Earn XP, collect cosmetics.</p>
-</div>
+    <h3>Shark Pass</h3>
+    <p>Level up, grab cosmetics, and see what's next.</p>
+</a>
 
-<div class="game-card" onclick="navigate('leaderboards.html')">
+<a class="game-card home-action-card" href="leaderboards.html">
     <i class="fa-solid fa-ranking-star"></i>
-    <h2>Leaderboards</h2>
-    <p>See the top Sharkdle players.</p>
-  </div>
+    <h3>Leaderboards</h3>
+    <p>Check daily, monthly, and all-time rankings.</p>
+</a>
+</div>
+</section>
 
- </section>
- </section>
+<section id="home-panel-explore" class="home-tab-panel" role="tabpanel" aria-labelledby="home-tab-explore" data-home-panel="explore" hidden>
+<p class="home-tab-note">For looking around: story progress and the shark archive are tucked in here.</p>
+<div class="menu-grid home-menu-grid home-card-grid explore-grid">
+<a class="game-card home-action-card" href="story.html">
+    <i class="fa-solid fa-globe"></i>
+    <h3>World Map</h3>
+    <p>Move through story areas and clear map challenges.</p>
+</a>
+
+<a class="game-card home-action-card" href="library.html">
+    <i class="fa-solid fa-fish"></i>
+    <h3>The Sharchive</h3>
+    <p>Browse the 500+ Species of sharks and learn about their classifications.</p>
+</a>
+</div>
+</section>
+</div>
+</section>
 
 
 </main>
@@ -152,6 +199,7 @@
 <div id="devModal" class="modal hidden">
     <div class="modal-content dev-modal-content" style="width:90%;max-width:400px;text-align:center;">
         <h2 style="margin-top:0;">👨‍💻 Meet the Dev</h2>
+        <p style="color:#9eddea;font-size:13px;margin:0 0 12px 0;">A quick note from the person building Sharkdle.</p>
         <a href="secret.html" style="text-decoration:none;display:inline-block;cursor:pointer;">
             <img src="images/dev.jpg" alt="Dev Profile" style="width:70px;height:70px;border-radius:50%;border:2px solid #00b4d8;margin-bottom:10px;transition:0.2s ease;display:block;">
         </a>
@@ -437,9 +485,10 @@
 <div style="margin: 20px 0; border-top: 1px solid #ddd; padding-top: 20px;">
 <h3 style="font-size: 16px; margin-bottom: 15px;">🎁 Redeem Code</h3>
 <p style="color: #888; font-size: 14px; margin-bottom: 15px;">Enter a redemption code to claim exclusive rewards!</p>
-<div style="display: flex; gap: 10px; margin-bottom: 15px;">
-<input type="text" id="redeem-code-input" placeholder="Enter code here" style="flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; font-size: 14px; text-transform: uppercase;">
+<div style="display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap;">
+<input type="text" id="redeem-code-input" placeholder="Enter code here" style="flex: 1; min-width: 220px; padding: 10px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; font-size: 14px; text-transform: uppercase;">
 <button onclick="redeemCode()" style="padding: 10px 20px; background: #00b4d8; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; white-space: nowrap;">Redeem</button>
+<button id="sync-data-button" onclick="syncAllFirestoreData()" style="padding: 10px 20px; background: #38b000; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; white-space: nowrap;">Sync Data</button>
 </div>
 <div id="redeem-message" style="display: none; padding: 12px; background: rgba(0, 180, 216, 0.1); border-radius: 6px; text-align: center; font-weight: 600;"></div>
 </div>
@@ -952,6 +1001,43 @@ function openDevModal() {
 function closeDevModal() {
     document.getElementById('devModal').classList.add('hidden');
 }
+
+(function initHomeTabs() {
+    const tabs = Array.from(document.querySelectorAll('[data-home-tab]'));
+    const panels = Array.from(document.querySelectorAll('[data-home-panel]'));
+
+    if (!tabs.length || !panels.length) return;
+
+    function setActiveHomeTab(tabName) {
+        tabs.forEach(tab => {
+            const isActive = tab.dataset.homeTab === tabName;
+            tab.classList.toggle('active', isActive);
+            tab.setAttribute('aria-selected', String(isActive));
+            tab.tabIndex = isActive ? 0 : -1;
+        });
+
+        panels.forEach(panel => {
+            const isActive = panel.dataset.homePanel === tabName;
+            panel.classList.toggle('active', isActive);
+            panel.hidden = !isActive;
+        });
+    }
+
+    tabs.forEach((tab, index) => {
+        tab.addEventListener('click', () => setActiveHomeTab(tab.dataset.homeTab));
+        tab.addEventListener('keydown', event => {
+            if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
+            event.preventDefault();
+
+            const direction = event.key === 'ArrowRight' ? 1 : -1;
+            const nextIndex = (index + direction + tabs.length) % tabs.length;
+            tabs[nextIndex].focus();
+            setActiveHomeTab(tabs[nextIndex].dataset.homeTab);
+        });
+    });
+
+    setActiveHomeTab('play');
+})();
 </script>
 
 <script>
