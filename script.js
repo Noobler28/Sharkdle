@@ -4037,7 +4037,7 @@ function getBadgeIconMarkup(badge) {
 }
 
 function getUnlockedBadgeIds(profileData = getCurrentProfileData()) {
-    return getUnlockedBadges(profileData.uid || currentUser?.uid || "").map(badge => badge.id);
+    return getUnlockedBadges(profileData.uid || currentUser?.uid || "", profileData).map(badge => badge.id);
 }
 
 function getUnlockedCardThemeIds(profileData = getCurrentProfileData()) {
@@ -4212,21 +4212,21 @@ allBadges.push(
     { id: "Vampire", name: "Vampire", emoji: "🧛", description: "A halloween crate badge." }
 );
 
-function getUnlockedBadges(uid) {
+function getUnlockedBadges(uid, profileData = getCurrentProfileData()) {
     // Always unlock starter badge
     const badges = [allBadges[0]];
-    if (isDeveloperUid(uid)) badges.push(allBadges[1]);
-    const profileData = getCurrentProfileData();
-    const playerLevel = getCurrentPlayerLevel(profileData);
+    if (isDeveloperUid(uid || profileData?.uid)) badges.push(allBadges[1]);
+    const activeProfile = profileData || getCurrentProfileData();
+    const playerLevel = getCurrentPlayerLevel(activeProfile);
     // Unlock tester badge if code redeemed
     try {
-        if (profileData.testerBadgeUnlocked || hasRedeemedCode('TESTER')) {
+        if (activeProfile.testerBadgeUnlocked || hasRedeemedCode('TESTER')) {
             if (!badges.some(b => b.id === 'tester')) badges.push(allBadges.find(b => b.id === 'tester'));
         }
     } catch {}
     // Unlock anniversary badge if code redeemed
     try {
-        if (hasRedeemedCode('ANNIVERSARY2026') || (Array.isArray(profileData.unlockedBadges) && profileData.unlockedBadges.includes('anniversary'))) {
+        if (hasRedeemedCode('ANNIVERSARY2026') || (Array.isArray(activeProfile.unlockedBadges) && activeProfile.unlockedBadges.includes('anniversary'))) {
             if (!badges.some(b => b.id === 'anniversary')) badges.push(allBadges.find(b => b.id === 'anniversary'));
         }
     } catch {}
@@ -4245,7 +4245,7 @@ function getUnlockedBadges(uid) {
                 badges.push(badgeMeta);
             }
         });
-    getStoredUnlockedBadgeIds(profileData).forEach(badgeId => {
+    getStoredUnlockedBadgeIds(activeProfile).forEach(badgeId => {
         const badgeMeta = getBadgeMeta(badgeId);
         if (badgeMeta && !badges.some(existing => existing.id === badgeMeta.id)) {
             badges.push(badgeMeta);
@@ -4254,11 +4254,10 @@ function getUnlockedBadges(uid) {
     return badges.map(badge => getBadgeMeta(badge.id));
 }
 
-function getEquippedBadge() {
-    const profileData = getCurrentProfileData();
+function getEquippedBadge(profileData = getCurrentProfileData()) {
     const equipped = profileData.equippedBadge || "starter";
     // Only allow equipped badge if it's unlocked
-    const unlocked = getUnlockedBadges(profileData.uid || (currentUser && currentUser.uid));
+    const unlocked = getUnlockedBadges(profileData.uid || (currentUser && currentUser.uid), profileData);
     if (unlocked.some(b => b.id === equipped)) {
         return equipped;
     }
@@ -4621,6 +4620,7 @@ const redeemCodes = {
     'UPDATE1': { xp: 1000, cosmetics: [{ imagePath: 'images/codePfp/Shark18.png', name: 'Greenland Shark' }], description: '1k XP + Greenland Shark Profile Icon' },
     'UPDATE2': { xp: 1500, cosmetics: [{ imagePath: 'images/codePfp/Shark19.png', name: 'Goblin Shark' }], description: '1.5k XP + Goblin Shark Profile Icon' },
     'SUMMER2026': { xp: 3000, crates: { summer: 1 }, description: '3k XP + 1 Summer Crate' },
+    'SORRY': { xp: 5000, description: '5k XP apology reward' },
     'TESTER': { badge: 'tester', description: 'Unlocks the Tester badge (🎮)' }
 };
 
@@ -7202,6 +7202,29 @@ async function syncStatsToFirebase() {
             const nextSync = syncQueue.shift();
             nextSync();
         }
+    }
+}
+
+async function syncAllFirestoreData() {
+    const syncButton = document.getElementById("sync-data-button");
+    if (syncButton) syncButton.disabled = true;
+
+    try {
+        const authUser = firebase.auth().currentUser;
+        if (!authUser) {
+            showNotification('Please login first to sync your profile.', 'error', 4000);
+            return;
+        }
+
+        showNotification('Syncing profile data with Firebase...', 'info', 3000);
+        await loadUserProfile();
+        await syncStatsToFirebase();
+        showNotification('Your profile data is now synced with Firebase.', 'success', 4500);
+    } catch (error) {
+        console.error('Error syncing data:', error);
+        showNotification('Could not sync profile data. Please try again later.', 'error', 5000);
+    } finally {
+        if (syncButton) syncButton.disabled = false;
     }
 }
 
