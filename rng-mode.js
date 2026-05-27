@@ -32,7 +32,6 @@
         measurementId: "G-HV5FFNKM5C"
     };
 
-
     const SECRET_SEQUENCE_REWARDS = {
         "1234": {
             id: "friend_comp_1234",
@@ -47,6 +46,7 @@
     let secretSequenceBuffer = "";
     let secretSequenceResetTimer = null;
     let secretSequenceRedeeming = false;
+
 
     const TIERS = [
         { name: "Common", baseOneIn: 2, coinReward: 12, className: "common" },
@@ -196,35 +196,66 @@
             1000: "index_1000_omega"
         };
 
-        for (let goal = 50; goal <= 3200; goal += 50) {
+        function getIndexCoinAmount(goal) {
+            if (goal < 250) return Math.floor(75_000 * Math.pow(1.22, goal / 50));
+            if (goal < 1000) return Math.floor(400_000 * Math.pow(1.18, (goal - 250) / 50));
+            if (goal < 2500) return Math.floor(4_000_000 * Math.pow(1.13, (goal - 1000) / 50));
+            if (goal < 5000) return Math.floor(65_000_000 * Math.pow(1.095, (goal - 2500) / 50));
+            return Math.floor(750_000_000 * Math.pow(1.075, (goal - 5000) / 50));
+        }
+
+        // Built past the expected full-index size so there is no dead zone before completion.
+        // renderIndexRewards() hides milestones beyond the current true index target.
+        for (let goal = 50; goal <= 7500; goal += 50) {
             const id = legacyIds[goal] || `index_${goal}`;
             let title = "Index Grant";
             let rewardText = "";
             let effects = [];
 
-            if (goal % 500 === 0) {
-                const amount = Math.max(1, Math.floor(goal / 500));
-                title = goal >= 2000 ? "Omega Treasury" : "Omega Cache";
-                rewardText = `${amount} Omega Potion${amount === 1 ? "" : "s"}`;
-                effects = [{ type: "potion", key: "omega", amount }];
+            if (goal % 1000 === 0) {
+                const omegaAmount = 2 + Math.floor(goal / 1000);
+                const coinAmount = getIndexCoinAmount(goal);
+
+                title = goal >= 5000 ? "Omega Treasury" : "Omega Cache";
+                rewardText = `${omegaAmount} Omega Potions + ${formatCompactCoins(coinAmount)} coins`;
+                effects = [
+                    { type: "potion", key: "omega", amount: omegaAmount },
+                    { type: "coins", amount: coinAmount }
+                ];
+            } else if (goal % 500 === 0) {
+                const luckAmount = Math.round((0.04 + Math.floor(goal / 1000) * 0.015) * 1000) / 1000;
+                const ultraAmount = 2 + Math.floor(goal / 1500);
+
+                title = "Survey Breakthrough";
+                rewardText = `+${Math.round(luckAmount * 100)}% permanent luck + ${ultraAmount} Abyss Potions`;
+                effects = [
+                    { type: "luckBonus", amount: luckAmount },
+                    { type: "potion", key: "ultra", amount: ultraAmount }
+                ];
             } else if (goal % 250 === 0) {
-                const amount = Math.round((0.02 + Math.floor(goal / 500) * 0.01) * 100) / 100;
-                title = "Survey Bonus";
-                rewardText = `+${Math.round(amount * 100)}% permanent luck`;
-                effects = [{ type: "luckBonus", amount }];
-            } else if (goal % 150 === 0) {
-                const amount = 1 + Math.floor(goal / 900);
-                title = "Mutagen Cache";
-                rewardText = `${amount} Mutagen Storm Potion${amount === 1 ? "" : "s"}`;
-                effects = [{ type: "potion", key: "randomMutation", amount }];
+                const amount = 1 + Math.floor(goal / 1250);
+                const coinAmount = Math.floor(getIndexCoinAmount(goal) * 0.75);
+
+                title = "Mutagen Shipment";
+                rewardText = `${amount} Mutagen Storm Potion${amount === 1 ? "" : "s"} + ${formatCompactCoins(coinAmount)} coins`;
+                effects = [
+                    { type: "potion", key: "randomMutation", amount },
+                    { type: "coins", amount: coinAmount }
+                ];
             } else if (goal % 100 === 0) {
-                const amount = 1 + Math.floor(goal / 1000);
+                const amount = 1 + Math.floor(goal / 2000);
+                const coinAmount = Math.floor(getIndexCoinAmount(goal) * 0.55);
+
                 title = "Abyss Cache";
-                rewardText = `${amount} Abyss Potion${amount === 1 ? "" : "s"}`;
-                effects = [{ type: "potion", key: "ultra", amount }];
+                rewardText = `${amount} Abyss Potion${amount === 1 ? "" : "s"} + ${formatCompactCoins(coinAmount)} coins`;
+                effects = [
+                    { type: "potion", key: "ultra", amount },
+                    { type: "coins", amount: coinAmount }
+                ];
             } else {
-                const amount = Math.floor(25000 * Math.pow(1.11, (goal / 50) - 1));
-                title = "Coin Cache";
+                const amount = getIndexCoinAmount(goal);
+
+                title = goal >= 5000 ? "Deep Index Cache" : goal >= 2500 ? "Grand Coin Cache" : "Coin Cache";
                 rewardText = `${formatCompactCoins(amount)} coins`;
                 effects = [{ type: "coins", amount }];
             }
@@ -234,12 +265,13 @@
 
         rewards.push({
             id: "index_complete",
-            goal: 3234,
+            goal: 999999,
             title: "Complete Index",
-            rewardText: "+25% permanent luck + 5 Omega",
+            rewardText: "+50% permanent luck + 10 Omega Potions + 5B coins",
             effects: [
-                { type: "luckBonus", amount: 0.25 },
-                { type: "potion", key: "omega", amount: 5 }
+                { type: "luckBonus", amount: 0.5 },
+                { type: "potion", key: "omega", amount: 10 },
+                { type: "coins", amount: 5_000_000_000 }
             ]
         });
 
@@ -725,6 +757,7 @@ let rollPool = [];
      let player = createDefaultPlayer();
      let autoEnabled = false;
      let hideEnabled = false;
+     let collectionSortByRarity = false;
      let autoInterval = null;
      let isRolling = false;
      let rollLockedUntil = 0;
@@ -2933,7 +2966,10 @@ function updateAllUi() {
 
         const collected = getCollectionCount();
         const claimed = getClaimedIndexRewardSet();
-        rewardsEl.innerHTML = INDEX_REWARD_DEFS.map((reward) => {
+        const target = getCollectionTargetCount();
+        rewardsEl.innerHTML = INDEX_REWARD_DEFS
+            .filter((reward) => reward.id === "index_complete" || reward.goal <= target)
+            .map((reward) => {
             const goal = getIndexRewardGoal(reward);
             const isClaimed = claimed.has(reward.id);
             const isReady = collected >= goal && !isClaimed;
@@ -2955,6 +2991,44 @@ function updateAllUi() {
         });
     }
 
+    function ensureCollectionRaritySortButton() {
+        let button = document.getElementById("rng-collection-sort-rarity");
+        if (!button) {
+            const filter = document.getElementById("rng-collection-filter");
+            const searchInput = document.getElementById("rng-collection-search");
+            const controls = searchInput?.parentElement || filter?.parentElement;
+            if (!controls) return null;
+
+            button = document.createElement("button");
+            button.id = "rng-collection-sort-rarity";
+            button.className = "rng-btn rng-collection-sort-rarity-btn";
+            button.type = "button";
+            controls.appendChild(button);
+        }
+
+        if (!button.dataset.raritySortBound) {
+            button.dataset.raritySortBound = "true";
+            button.addEventListener("click", () => {
+                collectionSortByRarity = !collectionSortByRarity;
+                updateCollectionRaritySortButton();
+                renderCollectionGrid();
+            });
+        }
+
+        updateCollectionRaritySortButton();
+        return button;
+    }
+
+    function updateCollectionRaritySortButton() {
+        const button = document.getElementById("rng-collection-sort-rarity");
+        if (!button) return;
+        button.classList.toggle("active", collectionSortByRarity);
+        button.textContent = collectionSortByRarity ? "Grouped View" : "Sort by Rarity";
+        button.title = collectionSortByRarity
+            ? "Return to Base Species / mutation sections"
+            : "Show your obtained sharks from rarest to least rare, ignoring sections";
+    }
+
     function renderCollectionGrid() {
         const grid = document.getElementById("rng-collection-grid");
         const filter = document.getElementById("rng-collection-filter");
@@ -2965,6 +3039,7 @@ function updateAllUi() {
             return;
         }
 
+        ensureCollectionRaritySortButton();
         renderIndexSummary();
         renderIndexRewards();
 
@@ -2991,8 +3066,8 @@ function updateAllUi() {
 
         let rendered = 0;
 
-        for (const section of sectionDefs) {
-            const candidates = rollPool
+        function buildCollectionCandidates(section) {
+            return rollPool
                 .map((baseShark) => {
                     const canonical = section.mutation ? applyStableMutation(baseShark, section.mutation) : baseShark;
                     const key = getCollectionKey(canonical);
@@ -3001,7 +3076,8 @@ function updateAllUi() {
                     const displayName = section.mutation ? baseShark.name : canonical.name;
                     const baseTier = getBaseTierName(source);
                     const oddsTier = getOddsTierName(source);
-                    const searchHaystack = `${displayName} ${section.title} ${baseTier} ${oddsTier}`.toLowerCase();
+                    const shownOneIn = entry?.oneIn || canonical.oneIn || 0;
+                    const searchHaystack = `${displayName} ${section.title} ${baseTier} ${oddsTier} ${formatOneIn(shownOneIn)} ${shownOneIn}`.toLowerCase();
 
                     if (!baseOnlyFilter && !mutationFilter && tierFilter !== "all" && baseTier !== tierFilter) {
                         return null;
@@ -3017,10 +3093,72 @@ function updateAllUi() {
                         displayName,
                         baseTier,
                         oddsTier,
-                        obtained: Boolean(entry)
+                        shownOneIn,
+                        obtained: Boolean(entry),
+                        sectionTitle: section.title,
+                        sectionKey: section.key
                     };
                 })
-                .filter(Boolean)
+                .filter(Boolean);
+        }
+
+        function renderCollectionCard(candidate) {
+            const { key, entry, canonical, displayName, baseTier, oddsTier, obtained, shownOneIn } = candidate;
+            const oddsNote = oddsTier !== baseTier ? ` \u00b7 ${oddsTier} odds` : "";
+            const mutationLabel = canonical.mutation ? ` \u00b7 ${MUTATION_TYPES[canonical.mutation]?.name || canonical.mutation}` : "";
+            const card = document.createElement("button");
+            card.type = "button";
+            card.disabled = !obtained;
+            card.className = `rng-collection-card ${getRarityClass(baseTier)}${obtained ? " obtained" : " missing"}${player.equipped === key ? " equipped" : ""}${canonical.mutation ? ' ' + canonical.mutation : ""}`;
+            card.innerHTML = `
+                <span class="rng-collection-card-tier">${baseTier}${mutationLabel}</span>
+                <strong>${displayName}</strong>
+                <span class="rng-collection-card-meta">${obtained
+                    ? `1 in ${formatOneIn(shownOneIn)}${oddsNote} \u00b7 x${entry.count}`
+                    : `Missing \u00b7 1 in ${formatOneIn(shownOneIn)}${oddsNote}`}</span>
+                <span class="rng-index-status">${obtained ? "Obtained" : "Missing"}</span>
+            `;
+            if (obtained) {
+                card.addEventListener("click", () => {
+                    player.equipped = key;
+                    persistPlayerState();
+                });
+            }
+            grid.appendChild(card);
+            rendered++;
+        }
+
+        if (collectionSortByRarity) {
+            const allCandidates = sectionDefs
+                .flatMap(buildCollectionCandidates)
+                .filter((candidate) => candidate.obtained)
+                .sort((a, b) => {
+                    const rarityDiff = (b.shownOneIn || 0) - (a.shownOneIn || 0);
+                    if (rarityDiff !== 0) return rarityDiff;
+                    return a.displayName.localeCompare(b.displayName);
+                });
+
+            const header = document.createElement("div");
+            header.className = "rng-index-section-header";
+            header.innerHTML = `
+                <strong>Best Sharks by Rarity</strong>
+                <span>${allCandidates.length.toLocaleString()} obtained</span>
+            `;
+            grid.appendChild(header);
+
+            for (const candidate of allCandidates) {
+                renderCollectionCard(candidate);
+            }
+
+            if (!rendered) {
+                grid.innerHTML = `<p class="rng-empty-note">No obtained sharks match this search.</p>`;
+            }
+
+            return;
+        }
+
+        for (const section of sectionDefs) {
+            const candidates = buildCollectionCandidates(section)
                 .sort((a, b) => {
                     const oddsDiff = (a.canonical.oneIn || 0) - (b.canonical.oneIn || 0);
                     if (oddsDiff !== 0) return oddsDiff;
@@ -3041,28 +3179,7 @@ function updateAllUi() {
             grid.appendChild(header);
 
             for (const candidate of candidates) {
-                const { key, entry, canonical, displayName, baseTier, oddsTier, obtained } = candidate;
-                const oddsNote = oddsTier !== baseTier ? ` \u00b7 ${oddsTier} odds` : "";
-                const card = document.createElement("button");
-                card.type = "button";
-                card.disabled = !obtained;
-                card.className = `rng-collection-card ${getRarityClass(baseTier)}${obtained ? " obtained" : " missing"}${player.equipped === key ? " equipped" : ""}${canonical.mutation ? ' ' + canonical.mutation : ""}`;
-                card.innerHTML = `
-                    <span class="rng-collection-card-tier">${baseTier}${canonical.mutation ? ' \u00b7 ' + MUTATION_TYPES[canonical.mutation]?.name : ''}</span>
-                    <strong>${displayName}</strong>
-                    <span class="rng-collection-card-meta">${obtained
-                        ? `1 in ${formatOneIn(entry.oneIn)}${oddsNote} \u00b7 x${entry.count}`
-                        : `Missing \u00b7 1 in ${formatOneIn(canonical.oneIn)}${oddsNote}`}</span>
-                    <span class="rng-index-status">${obtained ? "Obtained" : "Missing"}</span>
-                `;
-                if (obtained) {
-                    card.addEventListener("click", () => {
-                        player.equipped = key;
-                        persistPlayerState();
-                    });
-                }
-                grid.appendChild(card);
-                rendered++;
+                renderCollectionCard(candidate);
             }
         }
 
@@ -3400,6 +3517,7 @@ async function performRoll() {
 
     function openCollectionModal() {
         document.getElementById("rng-collection-modal")?.classList.remove("hidden");
+        ensureCollectionRaritySortButton();
         renderCollectionGrid();
     }
 
@@ -3628,6 +3746,8 @@ async function performRoll() {
             console.log("==============================");
         };
     }
+
+
     function isTypingInEditableField(event) {
         const target = event.target;
         if (!target) return false;
@@ -3747,7 +3867,6 @@ async function performRoll() {
         }
     }
 
-
     function bindUi() {
         document.getElementById("rng-roll-btn")?.addEventListener("click", performRoll);
         document.getElementById("rng-auto-btn")?.addEventListener("click", () => setAutoRoll(!autoEnabled));
@@ -3768,6 +3887,7 @@ async function performRoll() {
         document.getElementById("rng-collection-close-btn")?.addEventListener("click", closeCollectionModal);
         document.getElementById("rng-collection-filter")?.addEventListener("change", renderCollectionGrid);
         document.getElementById("rng-collection-search")?.addEventListener("input", renderCollectionGrid);
+        ensureCollectionRaritySortButton();
         document.getElementById("rng-collection-modal")?.addEventListener("click", (event) => {
             if (event.target.id === "rng-collection-modal") closeCollectionModal();
         });
