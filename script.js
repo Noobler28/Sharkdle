@@ -1491,7 +1491,7 @@ const GLOBAL_MESSAGE_CONFIG_PATH = {
 const COMMUNITY_BOSS_EVENT = {
     id: "summer-megaladon-2026",
     title: "Defeat the Megalodon",
-    targetWins: 500,
+    targetWins: 150,
     startMs: new Date("2026-05-25T00:00:00Z").getTime(),
     endMs: new Date("2026-06-08T00:00:00Z").getTime(),
     rewardBadgeId: "extinction",
@@ -3018,7 +3018,7 @@ function renderCommunityBossPanel() {
             <div>
                 <span class="community-boss-kicker">Limited Summer Boss Event</span>
                 <h2>${COMMUNITY_BOSS_EVENT.title}</h2>
-                <p>Daily and Infinite wins from every logged-in player count together. Reach 500 community wins in two weeks to bring down the Megalodon.</p>
+                <p>Daily and Infinite wins from every logged-in player count together. Reach ${COMMUNITY_BOSS_EVENT.targetWins.toLocaleString()} community wins by the event deadline to bring down the Megalodon.</p>
                 <div class="community-boss-actions">
                     <button class="primary" type="button" onclick="navigate('infinite.html')">Play Infinite</button>
                     <button type="button" onclick="navigate('daily.html')">Daily Challenge</button>
