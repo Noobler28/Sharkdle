@@ -313,6 +313,9 @@ async function persistCrateProfileUpdate(profileData) {
         cratesSinceLegendary: getCratesSinceLegendary(profileData),
         streakShields: getStreakShieldCount(profileData),
         instantCrateOpen: getCrateInstantOpenEnabled(profileData),
+        pearls: getPearlCount(profileData),
+        pearlBoostExpiresAt: getPearlBoostExpiresAt(profileData),
+        seasonXpBoosts: getSeasonXpBoosts(profileData),
         totalXP: Math.max(0, Number(profileData.totalXP) || 0),
         earnedCosmetics: Array.isArray(profileData.earnedCosmetics) ? profileData.earnedCosmetics : [],
         unlockedBadges: Array.isArray(profileData.unlockedBadges) ? profileData.unlockedBadges : ["starter"],
@@ -331,8 +334,13 @@ function shouldShowSummerCratePanel(profileData = getCurrentProfileData()) {
     return getCrateInventory(profileData).summer > 0;
 }
 
-function updateSeasonalCratePanels(profileData = getCurrentProfileData()) {
+function shouldShowSeasonalCratePanel(crateId, profileData = getCurrentProfileData()) {
     const body = document.body;
+    if (body?.classList.contains(`global-ui-theme-${crateId}`)) return true;
+    return (getCrateInventory(profileData)[crateId] || 0) > 0;
+}
+
+function updateSeasonalCratePanels(profileData = getCurrentProfileData()) {
     const summerPanel = document.getElementById("summer-crate-panel");
     if (summerPanel) {
         summerPanel.style.display = shouldShowSummerCratePanel(profileData) ? "" : "none";
@@ -340,12 +348,12 @@ function updateSeasonalCratePanels(profileData = getCurrentProfileData()) {
 
     const christmasPanel = document.getElementById("christmas-crate-panel");
     if (christmasPanel) {
-        christmasPanel.style.display = body?.classList.contains("global-ui-theme-christmas") ? "" : "none";
+        christmasPanel.style.display = shouldShowSeasonalCratePanel("christmas", profileData) ? "" : "none";
     }
 
     const halloweenPanel = document.getElementById("halloween-crate-panel");
     if (halloweenPanel) {
-        halloweenPanel.style.display = body?.classList.contains("global-ui-theme-halloween") ? "" : "none";
+        halloweenPanel.style.display = shouldShowSeasonalCratePanel("halloween", profileData) ? "" : "none";
     }
 
     const cratesLayout = document.querySelector("#cratesModal .crates-layout");
@@ -398,7 +406,7 @@ function updateSummerCrateCraftingUI(profileData = getCurrentProfileData()) {
         craftBtn.disabled = !canCraft;
         craftBtn.style.opacity = canCraft ? "1" : "0.5";
         craftBtn.textContent = canCraft
-            ? "Craft Summer Crate"
+            ? "Craft Crate"
             : `Need ${SUMMER_CRATE_CRAFT_COST} Cosmetic Crates`;
     }
 
@@ -580,8 +588,9 @@ async function renderFriendsList(friends) {
                     <span class="btn-icon">👁</span>
                     View
                 </button>
-                <button onclick="event.stopPropagation(); removeFriend('${uid}')" class="action-btn remove-btn">
+                <button onclick="event.stopPropagation(); removeFriend('${uid}')" class="action-btn remove-btn" title="Remove friend">
                     <span class="btn-icon">❌</span>
+                    Remove
                 </button>
             </div>
         `;
@@ -1457,6 +1466,8 @@ const sharkPassCardThemes = [
     { id: "default", name: "Starter Blue", level: 0, preview: "linear-gradient(135deg, rgba(0,180,216,0.16), rgba(11,34,51,0.94))" },
     { id: "tidal-blue", name: "Tidal Blue", level: 7, preview: "linear-gradient(135deg, rgba(67, 170, 255, 0.24), rgba(8, 23, 48, 0.98))" },
     { id: "sunken-gold", name: "Sunken Gold", level: 15, preview: "linear-gradient(135deg, rgba(255, 196, 87, 0.22), rgba(20, 27, 56, 0.98))" },
+    { id: "reef-rush", name: "Reef Rush", level: 24, preview: "linear-gradient(135deg, rgba(118, 244, 184, 0.22), rgba(15, 92, 112, 0.96) 44%, rgba(6, 24, 42, 1))" },
+    { id: "abyssal-current", name: "Abyssal Current", level: 30, preview: "linear-gradient(135deg, rgba(117, 202, 255, 0.24), rgba(33, 55, 120, 0.28) 42%, rgba(4, 12, 27, 1))" },
     { id: "coral-bloom", name: "Coral Bloom", unlockAchievement: "pacific_master", preview: "linear-gradient(135deg, rgba(255, 122, 156, 0.28), rgba(255, 176, 109, 0.2) 38%, rgba(15, 92, 112, 0.96))" },
     { id: "deep-abyss", name: "Deep Abyss", unlockAchievement: "guess_master", preview: "linear-gradient(135deg, rgba(17, 255, 203, 0.14), rgba(5, 18, 34, 0.94) 42%, rgba(1, 6, 15, 0.99))" },
     { id: "storm-current", name: "Storm Current", unlockAchievement: "duel_won", preview: "linear-gradient(135deg, rgba(117, 202, 255, 0.26), rgba(67, 126, 255, 0.2) 34%, rgba(9, 20, 47, 0.98))" },
@@ -1488,19 +1499,53 @@ const GLOBAL_MESSAGE_CONFIG_PATH = {
     collection: "globalConfig",
     doc: "globalMessage"
 };
-const COMMUNITY_BOSS_EVENT = {
-    id: "summer-megaladon-2026",
-    title: "Defeat the Megalodon",
-    targetWins: 150,
-    startMs: new Date("2026-05-25T00:00:00Z").getTime(),
-    endMs: new Date("2026-06-08T00:00:00Z").getTime(),
-    rewardBadgeId: "extinction",
-    rewards: {
-        first: { label: "#1 contributor", xp: 25000, summerCrates: 10, rank: 1 },
-        second: { label: "#2 contributor", xp: 15000, summerCrates: 5, rank: 2 },
-        default: { label: "Everybody else", xp: 10000, summerCrates: 2, rank: null }
+const COMMUNITY_BOSS_EVENTS = [
+    {
+        id: "summer-megaladon-2026",
+        season: "summer",
+        seasonLabel: "Limited Summer Boss Event",
+        bossName: "Megalodon",
+        title: "Defeat the Megalodon",
+        targetWins: 150,
+        // Event counter only: leaderboard/profile wins remain +1 in the mode scripts.
+        contributionMultiplier: 2,
+        startMs: new Date("2026-05-25T00:00:00Z").getTime(),
+        endMs: new Date("2026-06-15T00:00:00Z").getTime(),
+        crateId: "summer",
+        rewardBadgeId: "extinction",
+        rewardBadgeName: "Extinction",
+        rewards: createCommunityBossRewards("summer")
+    },
+    {
+        id: "halloween-helicoprion-2026",
+        season: "halloween",
+        seasonLabel: "Limited Halloween Boss Event",
+        bossName: "Helicoprion",
+        title: "Defeat the Helicoprion",
+        targetWins: 150,
+        startMs: new Date("2026-10-18T00:00:00Z").getTime(),
+        endMs: new Date("2026-11-01T00:00:00Z").getTime(),
+        crateId: "halloween",
+        rewardBadgeId: "spiral-hunter",
+        rewardBadgeName: "Spiral Hunter",
+        rewards: createCommunityBossRewards("halloween")
+    },
+    {
+        id: "christmas-stethacanthus-2026",
+        season: "christmas",
+        seasonLabel: "Limited Christmas Boss Event",
+        bossName: "Stethacanthus",
+        title: "Defeat the Stethacanthus",
+        targetWins: 150,
+        startMs: new Date("2026-12-12T00:00:00Z").getTime(),
+        endMs: new Date("2026-12-26T00:00:00Z").getTime(),
+        crateId: "christmas",
+        rewardBadgeId: "frost-anvil",
+        rewardBadgeName: "Frost Anvil",
+        rewards: createCommunityBossRewards("christmas")
     }
-};
+];
+const COMMUNITY_BOSS_EVENT = getCurrentCommunityBossEvent();
 const SEASONAL_THEME_DISABLED_KEY = "disableSeasonalTheme";
 const INDEX_THEME_OPTIONS = [
     { id: "default", name: "Default Ocean" },
@@ -1554,6 +1599,53 @@ const crateRarityWeights = {
     legendary: 4
 };
 const CRATE_LEGENDARY_PITY_THRESHOLD = 25;
+const SHARK_TAXONOMY_COMMON_NAMES = [
+    { scientific: "Carcharhiniformes", Common: "Ground Sharks" },
+    { scientific: "Orectolobiformes", Common: "Carpet Sharks" },
+    { scientific: "Lamniformes", Common: "Mackerel Sharks" },
+    { scientific: "Heterodontiformes", Common: "Bullhead Sharks" },
+    { scientific: "Squantiniformes", Common: "Angel Sharks" },
+    { scientific: "Pristiophoriformes", Common: "Saw Sharks" },
+    { scientific: "Squaliformes", Common: "Dog Fish" },
+    { scientific: "Hexanchiformes", Common: "Cow and Frilled Sharks" },
+    { scientific: "Sphyrnidae", Common: "Hammerhead Sharks" },
+    { scientific: "Carcharhinidae", Common: "Requiem Sharks" },
+    { scientific: "Stegostinatidae", Common: "Zebra Sharks" },
+    { scientific: "Rhincodontidae", Common: "Whale Sharks" },
+    { scientific: "Orectolobidae", Common: "Wobbegong Sharks" },
+    { scientific: "Hemiscylliidae", Common: "Bamboo Sharks" },
+    { scientific: "Ginglymostomatidae", Common: "Nurse Sharks" },
+    { scientific: "Dalatiidae", Common: "Kitefin Sharks" },
+    { scientific: "Etmopteridae", Common: "Lantern Sharks" },
+    { scientific: "Echinorhinidae", Common: "Bramble Sharks" },
+    { scientific: "Odontaspididae", Common: "Sand Tiger Sharks" },
+    { scientific: "Megachasmidae", Common: "Megamouth Sharks" },
+    { scientific: "Lamnidae", Common: "Mackerel Sharks" },
+    { scientific: "Hexanchidae", Common: "Cow Sharks" },
+    { scientific: "Centrophoridae", Common: "Gulper Sharks" },
+    { scientific: "Pristiophoridae", Common: "Saw Sharks" },
+    { scientific: "Squatinidae", Common: "Angel Sharks" },
+    { scientific: "Heterodontidae", Common: "Bullhead Sharks" },
+    { scientific: "Alopiidae", Common: "Thresher Sharks" },
+    { scientific: "Cetorhinidae", Common: "Basking Sharks" },
+    { scientific: "Mitsukurinidae", Common: "Goblin Sharks" },
+    { scientific: "Brachaeluridae", Common: "Blind Sharks" },
+    { scientific: "Chlamydoselachidae", Common: "Frilled Sharks" },
+    { scientific: "Pseudocarchariidae", Common: "Crocodile Sharks" },
+    { scientific: "Somniosidae", Common: "Sleeper Sharks" },
+    { scientific: "Pentachidae", Common: "Deep-Sea CatSharks" },
+    { scientific: "Glyphis", Common: "River Sharks" },
+    { scientific: "Haploblepharus", Common: "ShySharks" }
+];
+
+function getSharkTaxonomyCommonName(scientificName = "") {
+    const value = String(scientificName || "").trim();
+    if (!value) return "";
+    return SHARK_TAXONOMY_COMMON_NAMES.find(entry => entry.scientific === value)?.Common || "";
+}
+
+window.SHARK_TAXONOMY_COMMON_NAMES = SHARK_TAXONOMY_COMMON_NAMES;
+window.getSharkTaxonomyCommonName = getSharkTaxonomyCommonName;
 
 const crateDuplicateXpRewards = {
     common: 40,
@@ -1649,7 +1741,47 @@ const sharkPassRewards = [
     { level: 15, type: "theme", name: "Sunken Gold", themeId: "sunken-gold", rarity: "legendary", blurb: "A warmer, trophy-like profile treatment." },
     { level: 18, type: "badge", name: "Prime", badgeId: "storm-tracker", rarity: "legendary", blurb: "For players who stuck with the grind." },
     { level: 20, type: "pfp", name: "Mako Shark", imagePath: "images/levelPfp/Shark16.png", rarity: "legendary", blurb: "The capstone Shark Pass portrait." },
-    { level: 20, type: "badge", name: "Apex", badgeId: "apex-voyager", rarity: "legendary", blurb: "The final Shark Pass badge." }
+    { level: 20, type: "badge", name: "Apex", badgeId: "apex-voyager", rarity: "legendary", blurb: "The final Shark Pass badge." },
+    { level: 22, type: "badge", name: "Current Rider", badgeId: "current-rider", rarity: "epic", blurb: "A seasonal Shark Pass badge for pushing past the old track." },
+    { level: 24, type: "theme", name: "Reef Rush", themeId: "reef-rush", rarity: "epic", blurb: "A bright profile card theme from the active season." },
+    { level: 26, type: "badge", name: "Tidebreaker", badgeId: "tidebreaker", rarity: "legendary", blurb: "A late-season badge for serious XP runs." },
+    { level: 28, type: "crate", name: "Summer Crate", crateId: "summer", crateCount: 1, rarity: "legendary", blurb: "A bonus summer cosmetic crate milestone." },
+    { level: 30, type: "theme", name: "Abyssal Current", themeId: "abyssal-current", rarity: "legendary", blurb: "The season capstone profile theme." }
+];
+
+const SHARK_PASS_ACTIVE_SEASON_ID = "reef-rush-2026";
+
+const sharkPassSeasons = [
+    {
+        id: SHARK_PASS_ACTIVE_SEASON_ID,
+        name: "Reef Rush",
+        subtitle: "Season 1",
+        startsAt: "2026-06-01T00:00:00Z",
+        endsAt: "2026-08-31T23:59:59Z",
+        theme: "Reef Rush",
+        dailyQuests: [
+            { id: "daily-first-fin", title: "First Fin", description: "Play 1 Sharkdle game today.", metric: "gamesPlayed", goal: 1, xp: 180, icon: "fa-gamepad" },
+            { id: "daily-clean-catch", title: "Clean Catch", description: "Win 1 daily game today.", metric: "dailyWins", goal: 1, xp: 260, icon: "fa-calendar-check", progressMode: "absolute" },
+            { id: "daily-xp-splash", title: "XP Splash", description: "Earn 500 XP today.", metric: "totalXP", goal: 500, xp: 320, icon: "fa-bolt" }
+        ],
+        weeklyQuests: [
+            { id: "weekly-patrol", title: "Weekly Patrol", description: "Play 10 games this week.", metric: "gamesPlayed", goal: 10, xp: 1000, icon: "fa-compass" },
+            { id: "weekly-win-current", title: "Win Current", description: "Win 5 games this week.", metric: "wins", goal: 5, xp: 1400, icon: "fa-trophy" },
+            { id: "weekly-research-surge", title: "Research Surge", description: "Earn 3,500 XP this week.", metric: "totalXP", goal: 3500, xp: 1800, icon: "fa-book-open" }
+        ],
+        seasonQuests: [
+            { id: "season-first-current", title: "First Current", description: "Play 3 games this season.", metric: "gamesPlayed", goal: 3, xp: 450, icon: "fa-gamepad" },
+            { id: "season-reef-wins", title: "Reef Wins", description: "Win 5 games this season.", metric: "wins", goal: 5, xp: 900, icon: "fa-trophy" },
+            { id: "season-daily-scout", title: "Daily Scout", description: "Win 2 daily games during the season.", metric: "dailyWins", goal: 2, xp: 700, icon: "fa-calendar-check", progressMode: "absolute" },
+            { id: "season-streak-signal", title: "Streak Signal", description: "Reach a 3 win streak.", metric: "highestStreak", goal: 3, xp: 850, icon: "fa-fire", progressMode: "absolute" },
+            { id: "season-deep-research", title: "Deep Research", description: "Earn 7,500 XP this season.", metric: "totalXP", goal: 7500, xp: 1200, icon: "fa-book-open" },
+            { id: "season-crate-current", title: "Crate Current", description: "Open 2 cosmetic crates this season.", metric: "cratesOpened", goal: 2, xp: 1000, icon: "fa-box-open" },
+            { id: "season-shiver-run", title: "Shiver Run", description: "Play 20 games this season.", metric: "gamesPlayed", goal: 20, xp: 1800, icon: "fa-water" },
+            { id: "season-apex-hunt", title: "Apex Hunt", description: "Win 15 games this season.", metric: "wins", goal: 15, xp: 2400, icon: "fa-crown" },
+            { id: "season-treasure-tide", title: "Treasure Tide", description: "Open 5 cosmetic crates this season.", metric: "cratesOpened", goal: 5, xp: 2100, icon: "fa-box-open" },
+            { id: "season-master-current", title: "Master Current", description: "Earn 25,000 XP this season.", metric: "totalXP", goal: 25000, xp: 4200, icon: "fa-star" }
+        ]
+    }
 ];
 
 const sharkPassBadgeMeta = {
@@ -1693,6 +1825,8 @@ const sharkPassBadgeTiers = {
     "open-water-ace": 3,
     "storm-tracker": 4,
     "apex-voyager": 5,
+    "current-rider": 4,
+    "tidebreaker": 5,
     "reef-glint": 1,
     "kelp-warden": 2,
     "trench-myth": 4,
@@ -1707,6 +1841,8 @@ Object.assign(sharkPassBadgeMeta, {
     "open-water-ace": { emoji: "\u{2728}" },
     "storm-tracker": { emoji: "\u{26A1}" },
     "apex-voyager": { emoji: "\u{1F451}" },
+    "current-rider": { emoji: "\u{1F30A}" },
+    "tidebreaker": { emoji: "\u{1F4AB}" },
     "reef-glint": { emoji: "🐚" },
     "kelp-warden": { emoji: "🌿" },
     "trench-myth": { emoji: "⚓" },
@@ -1734,6 +1870,263 @@ function getUnlockedPassRewards(profileData = getCurrentProfileData()) {
     const level = getCurrentPlayerLevel(profileData);
     return sharkPassRewards.filter(reward => level >= reward.level);
 }
+
+function getActiveSharkPassSeason(now = Date.now()) {
+    return sharkPassSeasons.find(season => {
+        const startMs = Date.parse(season.startsAt);
+        const endMs = Date.parse(season.endsAt);
+        return Number.isFinite(startMs) && Number.isFinite(endMs) && now >= startMs && now <= endMs;
+    }) || sharkPassSeasons[0];
+}
+
+function getSharkPassMissionClaims(profileData = getCurrentProfileData(), seasonId = getActiveSharkPassSeason()?.id) {
+    const seasonClaims = profileData.sharkPassMissionClaims;
+    if (!seasonClaims || typeof seasonClaims !== "object" || !seasonId) return [];
+    return Array.isArray(seasonClaims[seasonId]) ? seasonClaims[seasonId] : [];
+}
+
+function getSharkPassWeeklyKey(now = Date.now()) {
+    const date = new Date(now);
+    const utcDay = date.getUTCDay() || 7;
+    date.setUTCDate(date.getUTCDate() + 4 - utcDay);
+    const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
+    const week = Math.ceil((((date - yearStart) / 86400000) + 1) / 7);
+    return `${date.getUTCFullYear()}-W${String(week).padStart(2, "0")}`;
+}
+
+function getSharkPassQuestPeriodKey(group, season = getActiveSharkPassSeason(), now = Date.now()) {
+    if (group === "daily") {
+        return typeof getUtcDateKey === "function" ? getUtcDateKey() : new Date(now).toISOString().slice(0, 10);
+    }
+    if (group === "weekly") {
+        return getSharkPassWeeklyKey(now);
+    }
+    return season?.id || SHARK_PASS_ACTIVE_SEASON_ID;
+}
+
+function getSharkPassQuestGroups(season = getActiveSharkPassSeason()) {
+    return [
+        {
+            id: "daily",
+            label: "Daily",
+            cadence: "Resets daily",
+            quests: Array.isArray(season.dailyQuests) ? season.dailyQuests : []
+        },
+        {
+            id: "weekly",
+            label: "Weekly",
+            cadence: "Resets weekly",
+            quests: Array.isArray(season.weeklyQuests) ? season.weeklyQuests : []
+        },
+        {
+            id: "season",
+            label: "Season",
+            cadence: "Runs all season",
+            quests: Array.isArray(season.seasonQuests) ? season.seasonQuests : (Array.isArray(season.missions) ? season.missions : [])
+        }
+    ];
+}
+
+function getSharkPassQuestClaimKey(quest) {
+    return `${quest.group}:${quest.periodKey}:${quest.id}`;
+}
+
+function getSharkPassSeasonQuestList(season = getActiveSharkPassSeason()) {
+    return getSharkPassQuestGroups(season).flatMap(group => {
+        const periodKey = getSharkPassQuestPeriodKey(group.id, season);
+        return group.quests.map(quest => ({
+            ...quest,
+            group: group.id,
+            groupLabel: group.label,
+            cadence: group.cadence,
+            periodKey
+        }));
+    });
+}
+
+function ensureSharkPassSeasonBaseline(profileData = getCurrentProfileData(), season = getActiveSharkPassSeason()) {
+    if (!season?.id) return {};
+    const baselines = profileData.sharkPassSeasonBaselines && typeof profileData.sharkPassSeasonBaselines === "object"
+        ? { ...profileData.sharkPassSeasonBaselines }
+        : {};
+    const quests = getSharkPassSeasonQuestList(season);
+    let changed = false;
+
+    quests.forEach(quest => {
+        if (quest.progressMode === "absolute") return;
+        const baselineKey = `${quest.group}:${quest.periodKey}`;
+        if (!baselines[baselineKey] || typeof baselines[baselineKey] !== "object") {
+            baselines[baselineKey] = {};
+        }
+        if (baselines[baselineKey][quest.metric] === undefined) {
+            baselines[baselineKey][quest.metric] = Number(profileData?.[quest.metric]) || 0;
+            changed = true;
+        }
+    });
+
+    if (changed) {
+        profileData.sharkPassSeasonBaselines = baselines;
+        profileData.sharkPassSeasonId = season.id;
+        saveUserProfileLocally(profileData);
+    }
+
+    return baselines;
+}
+
+function getSharkPassMissionProgress(profileData, mission) {
+    if (!mission) return 0;
+    const season = getActiveSharkPassSeason();
+    const baseline = mission.progressMode === "absolute"
+        ? 0
+        : Number(ensureSharkPassSeasonBaseline(profileData, season)?.[`${mission.group}:${mission.periodKey}`]?.[mission.metric]) || 0;
+    const value = Math.max(0, (Number(profileData?.[mission.metric]) || 0) - baseline);
+    return Math.max(0, Math.min(value, mission.goal));
+}
+
+function getSharkPassSeasonState(profileData = getCurrentProfileData()) {
+    const season = getActiveSharkPassSeason();
+    const claimedMissionIds = getSharkPassMissionClaims(profileData, season.id);
+    const missions = getSharkPassSeasonQuestList(season).map(mission => {
+        const progress = getSharkPassMissionProgress(profileData, mission);
+        const claimKey = getSharkPassQuestClaimKey(mission);
+        return {
+            ...mission,
+            claimKey,
+            progress,
+            complete: progress >= mission.goal,
+            claimed: claimedMissionIds.includes(claimKey) || claimedMissionIds.includes(mission.id)
+        };
+    });
+    const groups = getSharkPassQuestGroups(season).map(group => {
+        const groupMissions = missions.filter(mission => mission.group === group.id);
+        return {
+            ...group,
+            periodKey: getSharkPassQuestPeriodKey(group.id, season),
+            missions: groupMissions,
+            completedCount: groupMissions.filter(mission => mission.complete).length,
+            claimedCount: groupMissions.filter(mission => mission.claimed).length,
+            claimableXp: groupMissions
+                .filter(mission => mission.complete && !mission.claimed)
+                .reduce((sum, mission) => sum + (Number(mission.xp) || 0), 0)
+        };
+    });
+    return {
+        season,
+        missions,
+        groups,
+        claimedMissionIds,
+        completedCount: missions.filter(mission => mission.complete).length,
+        claimedCount: missions.filter(mission => mission.claimed).length,
+        totalMissionXp: missions.reduce((sum, mission) => sum + (Number(mission.xp) || 0), 0),
+        claimableXp: missions
+            .filter(mission => mission.complete && !mission.claimed)
+            .reduce((sum, mission) => sum + (Number(mission.xp) || 0), 0)
+    };
+}
+
+async function claimSharkPassMission(missionId) {
+    const profileData = getCurrentProfileData();
+    const passState = getSharkPassSeasonState(profileData);
+    const mission = passState.missions.find(item => item.id === missionId || item.claimKey === missionId);
+
+    if (!mission) {
+        showNotification("Quest not found for this season.", "error", 3000);
+        return false;
+    }
+    if (!mission.complete) {
+        showNotification("Finish the quest first, then claim the XP.", "info", 3000);
+        return false;
+    }
+    if (mission.claimed) {
+        showNotification("You already claimed this quest.", "info", 3000);
+        return false;
+    }
+
+    const seasonId = passState.season.id;
+    const claims = profileData.sharkPassMissionClaims && typeof profileData.sharkPassMissionClaims === "object"
+        ? { ...profileData.sharkPassMissionClaims }
+        : {};
+    const seasonClaims = Array.isArray(claims[seasonId]) ? [...claims[seasonId]] : [];
+    seasonClaims.push(mission.claimKey || getSharkPassQuestClaimKey(mission));
+    claims[seasonId] = [...new Set(seasonClaims)];
+
+    const xpAward = typeof window.applyLimitedTimeXpBonus === "function"
+        ? window.applyLimitedTimeXpBonus(mission.xp)
+        : { totalXp: mission.xp, multiplier: 1, baseXp: mission.xp };
+
+    profileData.totalXP = (Number(profileData.totalXP) || 0) + xpAward.totalXp;
+    profileData.sharkPassMissionClaims = claims;
+    profileData.sharkPassSeasonId = seasonId;
+    saveUserProfileLocally(profileData, { skipRemoteSync: true });
+
+    if (currentUser && db) {
+        await db.collection("userStats").doc(currentUser.uid).set({
+            totalXP: profileData.totalXP,
+            sharkPassMissionClaims: claims,
+            sharkPassSeasonBaselines: profileData.sharkPassSeasonBaselines || {},
+            sharkPassSeasonId: seasonId,
+            lastUpdated: Date.now()
+        }, { merge: true });
+    }
+
+    await syncSharkPassLevelRewards(profileData);
+
+    if (typeof syncEarnedCosmetics === "function" && currentUser) {
+        syncEarnedCosmetics().catch(error => console.warn("Unable to sync Shark Pass rewards after mission claim:", error));
+    }
+    updateProfileDisplay(profileData);
+    showNotification(`Quest claimed: +${xpAward.totalXp} XP${xpAward.multiplier > 1 ? ` (${xpAward.multiplier}x)` : ""}`, "success", 3600);
+    return true;
+}
+
+window.getActiveSharkPassSeason = getActiveSharkPassSeason;
+window.getSharkPassSeasonState = getSharkPassSeasonState;
+window.claimSharkPassMission = claimSharkPassMission;
+
+async function syncSharkPassLevelRewards(profileData = getCurrentProfileData()) {
+    const playerLevel = getCurrentPlayerLevel(profileData);
+    const claimableLevelRewards = sharkPassRewards.filter(reward =>
+        reward.type === "crate" && reward.level <= playerLevel
+    );
+    if (!claimableLevelRewards.length) return { changed: false, profileData };
+
+    const claimedRewards = Array.isArray(profileData.sharkPassLevelRewardClaims)
+        ? [...profileData.sharkPassLevelRewardClaims]
+        : [];
+    let changed = false;
+    const inventory = getCrateInventory(profileData);
+
+    claimableLevelRewards.forEach(reward => {
+        const rewardClaimId = `${reward.level}:${reward.type}:${reward.crateId || reward.name}`;
+        if (claimedRewards.includes(rewardClaimId)) return;
+        const crateId = reward.crateId || "reef";
+        const crateCount = Math.max(1, Number(reward.crateCount) || 1);
+        inventory[crateId] = (inventory[crateId] || 0) + crateCount;
+        claimedRewards.push(rewardClaimId);
+        changed = true;
+    });
+
+    if (!changed) return { changed: false, profileData };
+
+    profileData.crateInventory = normalizeCrateInventory(inventory);
+    profileData.sharkPassLevelRewardClaims = claimedRewards;
+    saveUserProfileLocally(profileData, { skipRemoteSync: true });
+
+    if (currentUser && db) {
+        await db.collection("userStats").doc(currentUser.uid).set({
+            crateInventory: profileData.crateInventory,
+            sharkPassLevelRewardClaims: claimedRewards,
+            lastUpdated: Date.now()
+        }, { merge: true });
+    }
+
+    if (typeof renderCratesButton === "function") {
+        renderCratesButton();
+    }
+    return { changed: true, profileData };
+}
+
+window.syncSharkPassLevelRewards = syncSharkPassLevelRewards;
 
 function getClaimedAchievementIds() {
     return JSON.parse(localStorage.getItem("claimedAchievements") || "[]");
@@ -1833,6 +2226,88 @@ function getCrateInventory(profileData = getCurrentProfileData()) {
 function getStreakShieldCount(profileData = getCurrentProfileData()) {
     return Math.min(3, Math.max(0, Math.floor(Number(profileData?.streakShields) || 0)));
 }
+
+const PEARLS_PER_WIN = 50;
+const PEARL_BOOST_DURATION_MS = 60 * 60 * 1000;
+const PEARL_SHOP_ITEMS = {
+    "streak-shield": { price: 250, label: "Streak Shield" },
+    "pearl-boost": { price: 500, label: "2x Pearls Boost" },
+    "cosmetic-crate": { price: 500, label: "Cosmetic Crate" },
+    "event-crate": { price: 750, label: "Event Crate" },
+    "season-xp": { price: 3000, label: "Season 2x XP" }
+};
+
+function getPearlCount(profileData = getCurrentProfileData()) {
+    return Math.max(0, Math.floor(Number(profileData?.pearls ?? profileData?.tidePearls) || 0));
+}
+
+function setPearlCount(profileData, nextAmount) {
+    if (!profileData || typeof profileData !== "object") return 0;
+    const normalizedAmount = Math.max(0, Math.floor(Number(nextAmount) || 0));
+    profileData.pearls = normalizedAmount;
+    if (Object.prototype.hasOwnProperty.call(profileData, "tidePearls")) {
+        delete profileData.tidePearls;
+    }
+    return normalizedAmount;
+}
+
+function addPearls(amount, profileData = getCurrentProfileData(), options = {}) {
+    const nextAmount = setPearlCount(profileData, getPearlCount(profileData) + amount);
+    if (!options.deferSave && typeof saveUserProfileLocally === "function") {
+        saveUserProfileLocally(profileData);
+    }
+    if (!options.deferUiUpdate && typeof updateHomeV3Sidebar === "function") {
+        updateHomeV3Sidebar(profileData);
+    }
+    return nextAmount;
+}
+
+function getPearlBoostExpiresAt(profileData = getCurrentProfileData()) {
+    return Math.max(0, Number(profileData?.pearlBoostExpiresAt) || 0);
+}
+
+function isPearlBoostActive(profileData = getCurrentProfileData(), nowMs = Date.now()) {
+    return getPearlBoostExpiresAt(profileData) > nowMs;
+}
+
+function getPearlWinMultiplier(profileData = getCurrentProfileData()) {
+    return isPearlBoostActive(profileData) ? 2 : 1;
+}
+
+function getSeasonXpBoosts(profileData = getCurrentProfileData()) {
+    return profileData?.seasonXpBoosts && typeof profileData.seasonXpBoosts === "object"
+        ? profileData.seasonXpBoosts
+        : {};
+}
+
+function hasSeasonXpBoost(profileData = getCurrentProfileData(), seasonId = SHARK_PASS_ACTIVE_SEASON_ID) {
+    return Boolean(getSeasonXpBoosts(profileData)[seasonId]);
+}
+
+function setSeasonXpBoost(profileData, seasonId = SHARK_PASS_ACTIVE_SEASON_ID) {
+    if (!profileData || typeof profileData !== "object") return;
+    profileData.seasonXpBoosts = {
+        ...getSeasonXpBoosts(profileData),
+        [seasonId]: true
+    };
+    profileData.sharkPassSeasonId = seasonId;
+}
+
+function awardPearlsForWin(profileData = getCurrentProfileData(), options = {}) {
+    const baseAmount = Math.max(0, Math.floor(Number(options.amount ?? PEARLS_PER_WIN) || 0));
+    const amount = baseAmount * getPearlWinMultiplier(profileData);
+    if (!amount) return 0;
+    addPearls(amount, profileData, options);
+    return amount;
+}
+
+window.PEARLS_PER_WIN = PEARLS_PER_WIN;
+window.getPearlCount = getPearlCount;
+window.setPearlCount = setPearlCount;
+window.addPearls = addPearls;
+window.awardPearlsForWin = awardPearlsForWin;
+window.isPearlBoostActive = isPearlBoostActive;
+window.hasSeasonXpBoost = hasSeasonXpBoost;
 
 function setStreakShieldCount(profileData, nextCount) {
     if (!profileData || typeof profileData !== "object") return 0;
@@ -1935,22 +2410,22 @@ function getCratePoolById(crateId) {
 
 const SPIN_WHEEL_LEGENDARY_PFP = {
     name: "Wheel Shark",
-    imagePath: "images/spinPfp/Shark1.png",
+    imagePath: "images/pfp/shark5.png",
     spinReward: true,
     rarity: "legendary"
 };
 
 const spinWheelRewards = [
-    { id: "spin_xp_250", type: "xp", amount: 250, weight: 18, label: "250 XP", rarity: "common", color: "#5adca5", icon: "✨" },
-    { id: "spin_xp_500", type: "xp", amount: 500, weight: 14, label: "500 XP", rarity: "common", color: "#78f0c5", icon: "✨" },
-    { id: "spin_xp_1000", type: "xp", amount: 1000, weight: 10, label: "1000 XP", rarity: "uncommon", color: "#6ee7ff", icon: "💫" },
-    { id: "spin_reef_crate", type: "crate", crateId: "reef", amount: 1, weight: 77, label: "Cosmetic Crate", rarity: "uncommon", color: "#ffb74d", icon: "📦" },
-    { id: "spin_summer_crate", type: "crate", crateId: "summer", amount: 1, weight: 6, label: "Summer Crate", rarity: "rare", color: "#ff8a65", icon: "☀️" },
-    { id: "spin_shield", type: "item", itemId: STREAK_SHIELD_ITEM_ID, quantity: 1, weight: 9, label: "Streak Shield", rarity: "rare", color: "#a99bff", icon: "🛡️" },
-    { id: "spin_pass_level", type: "pass_level", amount: 1, weight: 6, label: "Free Shark Pass Level", rarity: "epic", color: "#ffd47f", icon: "⬆️" },
-    { id: "spin_badge", type: "badge", badgeId: "lucky-fin", name: "Lucky Fin", weight: 7, label: "Lucky Fin Badge", rarity: "epic", color: "#c9a7ff", icon: "🍀" },
-    { id: "spin_theme", type: "theme", themeId: "volcanic-ember", weight: 5, label: "Volcanic Ember Theme", rarity: "epic", color: "#ff7b54", icon: "🎨" },
-    { id: "spin_pfp", type: "pfp", name: SPIN_WHEEL_LEGENDARY_PFP.name, imagePath: SPIN_WHEEL_LEGENDARY_PFP.imagePath, weight: 2, label: "Wheel Shark (Rare!)", rarity: "legendary", color: "#ffd47f", icon: "🦈" }
+    { id: "spin_xp_250", type: "xp", amount: 250, weight: 14, label: "250 XP", wheelLabel: "250 XP", rarity: "common", color: "#5adca5", icon: "✨" },
+    { id: "spin_xp_500", type: "xp", amount: 500, weight: 13, label: "500 XP", wheelLabel: "500 XP", rarity: "common", color: "#78f0c5", icon: "✨" },
+    { id: "spin_xp_1000", type: "xp", amount: 1000, weight: 12, label: "1000 XP", wheelLabel: "1000 XP", rarity: "uncommon", color: "#6ee7ff", icon: "💫" },
+    { id: "spin_reef_crate", type: "crate", crateId: "reef", amount: 1, weight: 14, label: "Cosmetic Crate", wheelLabel: "Crate", rarity: "uncommon", color: "#ffb74d", icon: "📦" },
+    { id: "spin_summer_crate", type: "crate", crateId: "summer", amount: 1, weight: 10, label: "Summer Crate", wheelLabel: "Summer", rarity: "rare", color: "#ff8a65", icon: "☀️" },
+    { id: "spin_shield", type: "item", itemId: STREAK_SHIELD_ITEM_ID, quantity: 1, weight: 10, label: "Streak Shield", wheelLabel: "Shield", rarity: "rare", color: "#a99bff", icon: "🛡️" },
+    { id: "spin_pass_level", type: "pass_level", amount: 1, weight: 8, label: "Free Shark Pass Level", wheelLabel: "Pass +1", rarity: "epic", color: "#ffd47f", icon: "⬆️" },
+    { id: "spin_badge", type: "badge", badgeId: "lucky-fin", name: "Lucky Fin", weight: 7, label: "Lucky Fin Badge", wheelLabel: "Badge", rarity: "epic", color: "#c9a7ff", icon: "🍀" },
+    { id: "spin_theme", type: "theme", themeId: "volcanic-ember", weight: 7, label: "Volcanic Ember Theme", wheelLabel: "Theme", rarity: "epic", color: "#ff7b54", icon: "🎨" },
+    { id: "spin_pfp", type: "pfp", name: SPIN_WHEEL_LEGENDARY_PFP.name, imagePath: SPIN_WHEEL_LEGENDARY_PFP.imagePath, weight: 5, label: "Wheel Shark PFP", wheelLabel: "PFP", rarity: "legendary", color: "#ffe28a", icon: "🦈" }
 ];
 
 let spinWheelRotation = 0;
@@ -2055,17 +2530,65 @@ function getSpinWheelSliceGeometry() {
 
 function buildSpinWheelGradient() {
     const slices = getSpinWheelSliceGeometry();
-    const stops = slices.map(entry => `${entry.reward.color} ${entry.start}deg ${entry.end}deg`);
+    const stops = slices.map(entry => {
+        const separator = Math.min(entry.end, entry.start + 0.65);
+        return `rgba(7, 28, 44, 0.78) ${entry.start}deg ${separator}deg, ${entry.reward.color} ${separator}deg ${entry.end}deg`;
+    });
     return `conic-gradient(from -90deg, ${stops.join(", ")})`;
+}
+
+function getSpinWheelChancePercent(reward) {
+    const totalWeight = spinWheelRewards.reduce((sum, entry) => sum + Math.max(0, Number(entry.weight) || 0), 0);
+    if (!totalWeight) return "0%";
+    const percent = (Math.max(0, Number(reward.weight) || 0) / totalWeight) * 100;
+    return `${Number.isInteger(percent) ? percent : percent.toFixed(1)}%`;
+}
+
+function getSpinWheelLabelRadius(reward) {
+    return ({
+        spin_pass_level: 27,
+        spin_badge: 38,
+        spin_theme: 38,
+        spin_pfp: 24,
+        spin_reef_crate: 31
+    })[reward.id] || 33;
+}
+
+function renderSpinWheelSliceLabels() {
+    const disk = document.getElementById("spin-wheel-disk");
+    if (!disk) return;
+    const slices = getSpinWheelSliceGeometry();
+    disk.innerHTML = slices.map(entry => {
+        const angleRadians = entry.mid * Math.PI / 180;
+        const labelRadius = getSpinWheelLabelRadius(entry.reward);
+        const labelX = 50 + Math.sin(angleRadians) * labelRadius;
+        const labelY = 50 - Math.cos(angleRadians) * labelRadius;
+        let labelAngle = entry.mid - 90;
+        if (labelAngle > 90) labelAngle -= 180;
+        if (labelAngle < -90) labelAngle += 180;
+        return `
+        <div class="spin-wheel-slice-label rarity-${entry.reward.rarity}" style="--slice-x:${labelX.toFixed(2)}%; --slice-y:${labelY.toFixed(2)}%; --label-angle:${labelAngle.toFixed(2)}deg;">
+            <span class="slice-icon">${entry.reward.icon}</span>
+            <span class="slice-copy">
+                <strong>${entry.reward.wheelLabel || entry.reward.label}</strong>
+                <small>${getSpinWheelChancePercent(entry.reward)}</small>
+            </span>
+        </div>
+    `;
+    }).join("");
 }
 
 function renderSpinWheelLegend() {
     const legend = document.getElementById("spin-wheel-legend");
     if (!legend) return;
     legend.innerHTML = spinWheelRewards.map(reward => `
-        <li>
+        <li class="spin-wheel-legend-item rarity-${reward.rarity}">
             <span class="legend-swatch" style="background:${reward.color};"></span>
-            <span>${reward.icon} ${reward.label}</span>
+            <span class="legend-icon">${reward.icon}</span>
+            <span class="legend-copy">
+                <strong>${reward.label}</strong>
+                <small>${reward.rarity}</small>
+            </span>
         </li>
     `).join("");
 }
@@ -2080,7 +2603,7 @@ function updateSpinWheelUI() {
     if (btn) {
         if (currentUser) {
             btn.classList.remove("hidden");
-            btn.disabled = !canSpin;
+            btn.disabled = false;
             btn.classList.toggle("spin-used", !canSpin);
         } else {
             btn.classList.add("hidden");
@@ -2111,6 +2634,7 @@ function openSpinWheelModal() {
     if (!modal || !disk) return;
 
     disk.style.background = buildSpinWheelGradient();
+    renderSpinWheelSliceLabels();
     disk.style.transform = `rotate(${spinWheelRotation}deg)`;
     if (result) {
         result.classList.add("hidden");
@@ -2127,7 +2651,10 @@ function closeSpinWheelModal() {
 }
 
 async function spinDailyWheel() {
-    if (!currentUser || spinWheelSpinning || !canUseDailySpin()) return;
+    if (!currentUser || spinWheelSpinning || !canUseDailySpin()) {
+        updateSpinWheelUI();
+        return;
+    }
 
     const disk = document.getElementById("spin-wheel-disk");
     const result = document.getElementById("spin-wheel-result");
@@ -2290,9 +2817,9 @@ window.resetDailySpin = function() {
     console.log("✅ Daily spin reset. You can spin again.");
 };
 
-window.openSpinWheelModal = openSpinWheelModal;
-window.closeSpinWheelModal = closeSpinWheelModal;
-window.spinDailyWheel = spinDailyWheel;
+window.openSpinWheelModal = function() {};
+window.closeSpinWheelModal = function() {};
+window.spinDailyWheel = function() {};
 
 function getAllCrateRewardPools() {
     return [crateRewardPool, summerCrateRewardPool, christmasCrateRewardPool, halloweenCrateRewardPool];
@@ -2360,8 +2887,12 @@ function applyLimitedTimeXpBonus(baseXp) {
     const safeBaseXp = Math.max(0, Math.round(Number(baseXp) || 0));
     const activeEvent = getActiveLimitedTimeXpEvent();
     const eventMultiplier = activeEvent ? activeEvent.multiplier : 1;
+    const profileData = typeof getCurrentProfileData === "function" ? getCurrentProfileData() : {};
+    const seasonBoostActive = hasSeasonXpBoost(profileData);
+    const seasonMultiplier = seasonBoostActive ? 2 : 1;
+    const totalMultiplier = eventMultiplier * seasonMultiplier;
 
-    if (!activeEvent) {
+    if (totalMultiplier <= 1) {
         return {
             baseXp: safeBaseXp,
             totalXp: safeBaseXp,
@@ -2371,13 +2902,29 @@ function applyLimitedTimeXpBonus(baseXp) {
         };
     }
 
-    const totalXp = Math.round(safeBaseXp * eventMultiplier);
+    const seasonEvent = seasonBoostActive
+        ? {
+            id: `season-xp-${SHARK_PASS_ACTIVE_SEASON_ID}`,
+            label: "Season 2x XP",
+            multiplier: 2,
+            seasonId: SHARK_PASS_ACTIVE_SEASON_ID
+        }
+        : null;
+    const totalXp = Math.round(safeBaseXp * totalMultiplier);
     return {
         baseXp: safeBaseXp,
         totalXp,
         bonusXp: totalXp - safeBaseXp,
-        multiplier: eventMultiplier,
-        event: activeEvent
+        multiplier: totalMultiplier,
+        event: activeEvent && seasonEvent
+            ? {
+                ...activeEvent,
+                label: `${activeEvent.label} + Season 2x XP`,
+                multiplier: totalMultiplier,
+                stacked: true,
+                seasonBoost: seasonEvent
+            }
+            : activeEvent || seasonEvent
     };
 }
 
@@ -2430,11 +2977,27 @@ function ensureXpEventBannerTimer() {
     }
 }
 
+function createCommunityBossRewards(crateId) {
+    return {
+        first: { label: "#1 contributor", xp: 25000, crateId, crateCount: 10, rank: 1 },
+        second: { label: "#2 contributor", xp: 15000, crateId, crateCount: 5, rank: 2 },
+        default: { label: "Everybody else", xp: 10000, crateId, crateCount: 2, rank: null }
+    };
+}
+
+function getCurrentCommunityBossEvent(nowMs = Date.now()) {
+    const startedEvents = COMMUNITY_BOSS_EVENTS
+        .filter(event => nowMs >= event.startMs)
+        .sort((a, b) => a.startMs - b.startMs);
+
+    return startedEvents[startedEvents.length - 1]
+        || COMMUNITY_BOSS_EVENTS.find(event => nowMs < event.startMs)
+        || COMMUNITY_BOSS_EVENTS[COMMUNITY_BOSS_EVENTS.length - 1];
+}
+
 function getCommunityBossPageKind() {
     const path = window.location.pathname.toLowerCase();
     if (document.body?.classList.contains("home-page")) return "home";
-    if (path.endsWith("/daily.html") || path.endsWith("daily.html")) return "daily";
-    if (path.endsWith("/infinite.html") || path.endsWith("infinite.html")) return "infinite";
     return "";
 }
 
@@ -2452,6 +3015,10 @@ function isCommunityBossExpired(nowMs = Date.now()) {
 
 function isCommunityBossComplete(wins = getCommunityBossWins()) {
     return wins >= COMMUNITY_BOSS_EVENT.targetWins;
+}
+
+function getCommunityBossContributionMultiplier() {
+    return Math.max(1, Math.floor(Number(COMMUNITY_BOSS_EVENT.contributionMultiplier) || 1));
 }
 
 function isCommunityBossContributionOpen(nowMs = Date.now()) {
@@ -2477,6 +3044,26 @@ function getCommunityBossRewardForRank(rank) {
     return COMMUNITY_BOSS_EVENT.rewards.default;
 }
 
+function getCommunityBossCrateName(crateId = COMMUNITY_BOSS_EVENT.crateId) {
+    return crateDefinitions[crateId]?.name || "Event Crate";
+}
+
+function formatCommunityBossCrateReward(reward) {
+    const crateCount = Math.max(0, Number(reward.crateCount) || 0);
+    const crateName = getCommunityBossCrateName(reward.crateId);
+    return `${crateCount.toLocaleString()} ${crateName}${crateCount === 1 ? "" : "s"}`;
+}
+
+function getCommunityBossRewardDescription(reward) {
+    return `${formatCommunityBossCrateReward(reward)}, ${reward.xp.toLocaleString()} XP, ${COMMUNITY_BOSS_EVENT.rewardBadgeName} profile badge`;
+}
+
+function getCommunityBossDescription() {
+    const multiplier = getCommunityBossContributionMultiplier();
+    const multiplierCopy = multiplier > 1 ? ` Each win counts as ${multiplier}.` : "";
+    return `Daily and Infinite wins from every logged-in player count together.${multiplierCopy} Reach ${COMMUNITY_BOSS_EVENT.targetWins.toLocaleString()} community wins by the event deadline to bring down the ${COMMUNITY_BOSS_EVENT.bossName}.`;
+}
+
 function resolveCommunityBossProfilePicturePath(path) {
     const storedPath = String(path || "").trim();
     if (!storedPath) return "images/pfp/shark1.png";
@@ -2486,12 +3073,16 @@ function resolveCommunityBossProfilePicturePath(path) {
 }
 
 function getCommunityBossRewardsMarkup() {
+    const rewardRows = [
+        COMMUNITY_BOSS_EVENT.rewards.first,
+        COMMUNITY_BOSS_EVENT.rewards.second,
+        COMMUNITY_BOSS_EVENT.rewards.default
+    ];
+
     return `
         <strong>Rewards</strong>
         <ul class="community-boss-rewards-list">
-            <li><b>#1 contributor</b><span>10 Summer Crates, 25,000 XP, Extinction profile badge</span></li>
-            <li><b>#2 contributor</b><span>5 Summer Crates, 15,000 XP, Extinction profile badge</span></li>
-            <li><b>Everybody else</b><span>2 Summer Crates, 10,000 XP, Extinction profile badge</span></li>
+            ${rewardRows.map(reward => `<li><b>${reward.label}</b><span>${getCommunityBossRewardDescription(reward)}</span></li>`).join("")}
         </ul>
     `;
 }
@@ -2541,7 +3132,7 @@ function ensureCommunityBossRanksModal() {
     modal.innerHTML = `
         <div class="community-boss-ranks-card">
             <button class="community-boss-ranks-close" type="button" onclick="closeCommunityBossRanksModal()" aria-label="Close ranks">×</button>
-            <span class="community-boss-kicker">Megalodon Leaderboard</span>
+            <span class="community-boss-kicker">${COMMUNITY_BOSS_EVENT.bossName} Leaderboard</span>
             <h3>Top Contributors</h3>
             <div id="community-boss-ranks-list" class="community-boss-ranks-list">
                 <p class="community-boss-ranks-empty">Loading ranks...</p>
@@ -2605,6 +3196,132 @@ async function openCommunityBossRanksModal() {
 
 function closeCommunityBossRanksModal() {
     document.getElementById("community-boss-ranks-modal")?.classList.add("hidden");
+}
+
+function getCommunityBossDisplayState() {
+    const wins = Math.min(getCommunityBossWins(), COMMUNITY_BOSS_EVENT.targetWins);
+    const target = COMMUNITY_BOSS_EVENT.targetWins;
+    const progressPercent = Math.max(0, Math.min(100, (wins / target) * 100));
+    const nowMs = Date.now();
+    const complete = isCommunityBossComplete(wins);
+    const claimed = hasClaimedCommunityBossReward();
+    const started = isCommunityBossStarted(nowMs);
+    const expired = isCommunityBossExpired(nowMs);
+    const contributionOpen = isCommunityBossContributionOpen(nowMs);
+
+    let timerText = "";
+    if (!started) {
+        timerText = `Starts in ${formatEventTimeRemaining(COMMUNITY_BOSS_EVENT.startMs - nowMs)}`;
+    } else if (complete) {
+        timerText = "Boss defeated. Rewards are unlocked.";
+    } else if (expired) {
+        timerText = "Event ended.";
+    } else {
+        timerText = `Ends in ${formatEventTimeRemaining(COMMUNITY_BOSS_EVENT.endMs - nowMs)}`;
+    }
+
+    const claimLabel = !currentUser
+        ? "Login to Claim"
+        : claimed
+        ? "Reward Claimed"
+        : complete
+        ? "Claim Reward"
+        : "Locked";
+
+    const contributionCopy = contributionOpen
+        ? `Your next Daily or Infinite win will add ${getCommunityBossContributionMultiplier()} to the global total.`
+        : complete
+        ? "The community did it. Claim your reward while logged in."
+        : "Wins are no longer being counted for this event.";
+
+    return {
+        wins,
+        target,
+        progressPercent,
+        complete,
+        claimed,
+        claimLabel,
+        timerText,
+        contributionCopy
+    };
+}
+
+function ensureCommunityBossEventModal() {
+    let modal = document.getElementById("community-boss-event-modal");
+    if (modal) return modal;
+
+    modal = document.createElement("div");
+    modal.id = "community-boss-event-modal";
+    modal.className = "community-boss-event-modal hidden";
+    modal.innerHTML = `
+        <div class="community-boss-event-card" role="dialog" aria-modal="true" aria-labelledby="community-boss-modal-title">
+            <button class="community-boss-event-close" type="button" onclick="closeCommunityBossEventModal()" aria-label="Close event">×</button>
+            <div id="community-boss-event-modal-body"></div>
+        </div>
+    `;
+    modal.addEventListener("click", (event) => {
+        if (event.target === modal) closeCommunityBossEventModal();
+    });
+    document.body.appendChild(modal);
+    return modal;
+}
+
+function renderCommunityBossEventModal() {
+    const body = document.getElementById("community-boss-event-modal-body");
+    if (!body) return;
+
+    const state = getCommunityBossDisplayState();
+    body.innerHTML = `
+        <section class="community-boss-event community-boss-modal-event community-boss-season-${COMMUNITY_BOSS_EVENT.season}" aria-live="polite">
+            <div class="community-boss-modal-heading">
+                <span class="community-boss-kicker">${COMMUNITY_BOSS_EVENT.seasonLabel}</span>
+                <h2 id="community-boss-modal-title">${COMMUNITY_BOSS_EVENT.title}</h2>
+                <p>${getCommunityBossDescription()}</p>
+            </div>
+            <div class="community-boss-progress-shell community-boss-modal-progress">
+                <div class="community-boss-progress-meta">
+                    <span>${state.wins.toLocaleString()} / ${state.target.toLocaleString()} global wins</span>
+                    <span>${Math.floor(state.progressPercent)}%</span>
+                </div>
+                <div class="community-boss-progress" aria-label="Global Megalodon progress">
+                    <div class="community-boss-progress-fill" style="width:${state.progressPercent}%"></div>
+                </div>
+                <div class="community-boss-status">${state.timerText}</div>
+            </div>
+            <div class="community-boss-modal-lower">
+                <div class="community-boss-reward">
+                    ${getCommunityBossRewardsMarkup()}
+                </div>
+                <div class="community-boss-modal-actions">
+                    <p>${state.contributionCopy}</p>
+                    <div class="community-boss-actions">
+                        <button class="primary" type="button" onclick="navigate('infinite.html')">Play Infinite</button>
+                        <button type="button" onclick="navigate('Daily/index.html')">Daily Challenge</button>
+                        <button type="button" onclick="openCommunityBossRanksModal()">Ranks</button>
+                        <button id="community-boss-modal-claim-btn" type="button">${state.claimLabel}</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+    `;
+
+    const claimBtn = document.getElementById("community-boss-modal-claim-btn");
+    if (claimBtn) {
+        claimBtn.onclick = claimCommunityBossReward;
+        claimBtn.classList.toggle("primary", state.complete && !state.claimed);
+        claimBtn.disabled = Boolean(currentUser && (!state.complete || state.claimed));
+    }
+}
+
+function openCommunityBossEventModal() {
+    ensureCommunityBossStyles();
+    const modal = ensureCommunityBossEventModal();
+    renderCommunityBossEventModal();
+    modal.classList.remove("hidden");
+}
+
+function closeCommunityBossEventModal() {
+    document.getElementById("community-boss-event-modal")?.classList.add("hidden");
 }
 
 async function getCurrentCommunityBossReward() {
@@ -2962,7 +3679,7 @@ function ensureCommunityBossPanel() {
     ensureCommunityBossStyles();
     const panel = document.createElement("section");
     panel.id = "community-boss-event";
-    panel.className = `community-boss-event community-boss-${pageKind}`;
+    panel.className = `community-boss-event community-boss-${pageKind} community-boss-season-${COMMUNITY_BOSS_EVENT.season}`;
     panel.setAttribute("aria-live", "polite");
 
     if (pageKind === "home") {
@@ -2982,63 +3699,41 @@ function ensureCommunityBossPanel() {
 
 function renderCommunityBossPanel() {
     const panel = document.getElementById("community-boss-event");
-    if (!panel) return;
-
-    const wins = Math.min(getCommunityBossWins(), COMMUNITY_BOSS_EVENT.targetWins);
-    const target = COMMUNITY_BOSS_EVENT.targetWins;
-    const progressPercent = Math.max(0, Math.min(100, (wins / target) * 100));
-    const nowMs = Date.now();
-    const complete = isCommunityBossComplete(wins);
-    const claimed = hasClaimedCommunityBossReward();
-    const started = isCommunityBossStarted(nowMs);
-    const expired = isCommunityBossExpired(nowMs);
-    const contributionOpen = isCommunityBossContributionOpen(nowMs);
-
-    let timerText = "";
-    if (!started) {
-        timerText = `Starts in ${formatEventTimeRemaining(COMMUNITY_BOSS_EVENT.startMs - nowMs)}`;
-    } else if (complete) {
-        timerText = "Boss defeated. Rewards are unlocked.";
-    } else if (expired) {
-        timerText = "Event ended.";
-    } else {
-        timerText = `Ends in ${formatEventTimeRemaining(COMMUNITY_BOSS_EVENT.endMs - nowMs)}`;
+    if (!panel) {
+        if (!document.getElementById("community-boss-event-modal")?.classList.contains("hidden")) {
+            renderCommunityBossEventModal();
+        }
+        return;
     }
 
-    const claimLabel = !currentUser
-        ? "Login to Claim"
-        : claimed
-        ? "Reward Claimed"
-        : complete
-        ? "Claim Reward"
-        : "Locked";
+    const state = getCommunityBossDisplayState();
 
     panel.innerHTML = `
         <div class="community-boss-grid">
             <div>
-                <span class="community-boss-kicker">Limited Summer Boss Event</span>
+                <span class="community-boss-kicker">${COMMUNITY_BOSS_EVENT.seasonLabel}</span>
                 <h2>${COMMUNITY_BOSS_EVENT.title}</h2>
-                <p>Daily and Infinite wins from every logged-in player count together. Reach ${COMMUNITY_BOSS_EVENT.targetWins.toLocaleString()} community wins by the event deadline to bring down the Megalodon.</p>
+                <p>${getCommunityBossDescription()}</p>
                 <div class="community-boss-actions">
                     <button class="primary" type="button" onclick="navigate('infinite.html')">Play Infinite</button>
-                    <button type="button" onclick="navigate('daily.html')">Daily Challenge</button>
+                    <button type="button" onclick="navigate('Daily/index.html')">Daily Challenge</button>
                     <button type="button" onclick="openCommunityBossRanksModal()">Ranks</button>
-                    <button id="community-boss-claim-btn" type="button">${claimLabel}</button>
+                    <button id="community-boss-claim-btn" type="button">${state.claimLabel}</button>
                 </div>
-                <div class="community-boss-status" id="community-boss-status">${timerText}</div>
+                <div class="community-boss-status" id="community-boss-status">${state.timerText}</div>
             </div>
             <div class="community-boss-progress-shell">
                 <div class="community-boss-progress-meta">
-                    <span>${wins.toLocaleString()} / ${target.toLocaleString()} wins</span>
-                    <span>${Math.floor(progressPercent)}%</span>
+                    <span>${state.wins.toLocaleString()} / ${state.target.toLocaleString()} wins</span>
+                    <span>${Math.floor(state.progressPercent)}%</span>
                 </div>
                 <div class="community-boss-progress" aria-label="Community boss progress">
-                    <div class="community-boss-progress-fill" style="width:${progressPercent}%"></div>
+                    <div class="community-boss-progress-fill" style="width:${state.progressPercent}%"></div>
                 </div>
                 <div class="community-boss-reward">
                     ${getCommunityBossRewardsMarkup()}
                 </div>
-                <p>${contributionOpen ? "Your next Daily or Infinite win will add 1 to the global total." : complete ? "The community did it. Claim your reward while logged in." : "Wins are no longer being counted for this event."}</p>
+                <p>${state.contributionCopy}</p>
             </div>
         </div>
     `;
@@ -3046,8 +3741,12 @@ function renderCommunityBossPanel() {
     const claimBtn = document.getElementById("community-boss-claim-btn");
     if (claimBtn) {
         claimBtn.onclick = claimCommunityBossReward;
-        claimBtn.classList.toggle("primary", complete && !claimed);
-        claimBtn.disabled = Boolean(currentUser && (!complete || claimed));
+        claimBtn.classList.toggle("primary", state.complete && !state.claimed);
+        claimBtn.disabled = Boolean(currentUser && (!state.complete || state.claimed));
+    }
+
+    if (!document.getElementById("community-boss-event-modal")?.classList.contains("hidden")) {
+        renderCommunityBossEventModal();
     }
 }
 
@@ -3114,6 +3813,7 @@ async function contributeCommunityBossWin(mode = "infinite", options = {}) {
 
     try {
         let didIncrement = false;
+        const contributionValue = getCommunityBossContributionMultiplier();
         await db.runTransaction(async transaction => {
             const snapshot = await transaction.get(eventRef);
             const contributorSnapshot = await transaction.get(contributorRef);
@@ -3126,7 +3826,7 @@ async function contributeCommunityBossWin(mode = "infinite", options = {}) {
             );
 
             const payload = {
-                wins: firebase.firestore.FieldValue.increment(1),
+                wins: firebase.firestore.FieldValue.increment(contributionValue),
                 updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
                 lastContributionMode: normalizedMode,
                 lastContributionUid: currentUser.uid
@@ -3136,7 +3836,7 @@ async function contributeCommunityBossWin(mode = "infinite", options = {}) {
                 transaction.update(eventRef, payload);
             } else {
                 transaction.set(eventRef, {
-                    wins: 1,
+                    wins: contributionValue,
                     updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
                     lastContributionMode: normalizedMode,
                     lastContributionUid: currentUser.uid
@@ -3145,7 +3845,7 @@ async function contributeCommunityBossWin(mode = "infinite", options = {}) {
 
             if (contributorSnapshot.exists) {
                 transaction.update(contributorRef, {
-                    wins: firebase.firestore.FieldValue.increment(1),
+                    wins: firebase.firestore.FieldValue.increment(contributionValue),
                     username: contributorUsername,
                     profilePicture: contributorProfilePicture,
                     updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
@@ -3156,7 +3856,7 @@ async function contributeCommunityBossWin(mode = "infinite", options = {}) {
                     uid: currentUser.uid,
                     username: contributorUsername,
                     profilePicture: contributorProfilePicture,
-                    wins: 1,
+                    wins: contributionValue,
                     firstContributionAt: firebase.firestore.FieldValue.serverTimestamp(),
                     updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
                     lastContributionMode: normalizedMode
@@ -3167,7 +3867,7 @@ async function contributeCommunityBossWin(mode = "infinite", options = {}) {
 
         if (didIncrement) {
             if (storageKey) localStorage.setItem(storageKey, "true");
-            showNotification("Community boss progress +1", "success", 2600);
+            showNotification(`Community boss progress +${contributionValue}`, "success", 2600);
             renderCommunityBossPanel();
             return { contributed: true };
         }
@@ -3194,7 +3894,7 @@ async function claimCommunityBossReward() {
     const wins = Math.max(serverWins, getCommunityBossWins());
 
     if (!isCommunityBossComplete(wins)) {
-        showNotification("The Megalodon is not defeated yet.", "info", 3000);
+        showNotification(`The ${COMMUNITY_BOSS_EVENT.bossName} is not defeated yet.`, "info", 3000);
         return;
     }
 
@@ -3207,10 +3907,12 @@ async function claimCommunityBossReward() {
 
     const reward = await getCurrentCommunityBossReward();
     const rewardBadgeId = COMMUNITY_BOSS_EVENT.rewardBadgeId;
+    const rewardCrateId = reward.crateId || COMMUNITY_BOSS_EVENT.crateId;
+    const rewardCrateCount = Math.max(0, Number(reward.crateCount) || 0);
 
     profileData.totalXP = (Number(profileData.totalXP) || 0) + reward.xp;
     const inventory = getCrateInventory(profileData);
-    inventory.summer = (inventory.summer || 0) + reward.summerCrates;
+    inventory[rewardCrateId] = (inventory[rewardCrateId] || 0) + rewardCrateCount;
     profileData.crateInventory = normalizeCrateInventory(inventory);
     profileData.unlockedBadges = [
         ...new Set([
@@ -3225,7 +3927,9 @@ async function claimCommunityBossReward() {
             claimedAt: Date.now(),
             rank: reward.rank,
             xp: reward.xp,
-            summerCrates: reward.summerCrates,
+            crates: { [rewardCrateId]: rewardCrateCount },
+            crateId: rewardCrateId,
+            crateCount: rewardCrateCount,
             badgeId: rewardBadgeId
         }
     };
@@ -3245,13 +3949,323 @@ async function claimCommunityBossReward() {
     updateProfileBadgeUI();
     renderCratesButton();
     renderCommunityBossPanel();
-    showNotification(`${reward.label} reward claimed: ${reward.xp.toLocaleString()} XP, ${reward.summerCrates} Summer Crates, and the Extinction badge.`, "success", 5600);
+    showNotification(`${reward.label} reward claimed: ${reward.xp.toLocaleString()} XP, ${formatCommunityBossCrateReward(reward)}, and the ${COMMUNITY_BOSS_EVENT.rewardBadgeName} badge.`, "success", 5600);
 }
 
 window.contributeCommunityBossWin = contributeCommunityBossWin;
 window.claimCommunityBossReward = claimCommunityBossReward;
 window.openCommunityBossRanksModal = openCommunityBossRanksModal;
 window.closeCommunityBossRanksModal = closeCommunityBossRanksModal;
+window.openCommunityBossEventModal = openCommunityBossEventModal;
+window.closeCommunityBossEventModal = closeCommunityBossEventModal;
+
+const SHARKDLE_SETTINGS_KEY = "sharkdle_qol_settings_v2";
+const SHARKDLE_SETTINGS_DEFAULTS = {
+    funMode: false,
+    sfx: true,
+    reducedMotion: false,
+    compactUi: false,
+    highContrast: false,
+    animatedOcean: true,
+    ambientAudio: false
+};
+
+let sharkdleSettingsAudioContext = null;
+let sharkdleAmbientAudioNodes = null;
+let sharkdleCursorAnimationStarted = false;
+let sharkdleCursorX = window.innerWidth / 2;
+let sharkdleCursorY = window.innerHeight / 2;
+let sharkdleCursorSmoothX = sharkdleCursorX;
+let sharkdleCursorSmoothY = sharkdleCursorY;
+let sharkdleLastBubbleAt = 0;
+
+function readSharkdleSettings() {
+    try {
+        const saved = JSON.parse(localStorage.getItem(SHARKDLE_SETTINGS_KEY) || "{}");
+        return { ...SHARKDLE_SETTINGS_DEFAULTS, ...(saved && typeof saved === "object" ? saved : {}) };
+    } catch (error) {
+        return { ...SHARKDLE_SETTINGS_DEFAULTS };
+    }
+}
+
+function writeSharkdleSettings(settings) {
+    localStorage.setItem(SHARKDLE_SETTINGS_KEY, JSON.stringify({ ...SHARKDLE_SETTINGS_DEFAULTS, ...settings }));
+}
+
+function getSharkdleAudioContext() {
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContextClass) return null;
+    if (!sharkdleSettingsAudioContext) sharkdleSettingsAudioContext = new AudioContextClass();
+    if (sharkdleSettingsAudioContext.state === "suspended") {
+        sharkdleSettingsAudioContext.resume().catch(() => {});
+    }
+    return sharkdleSettingsAudioContext;
+}
+
+function isSharkdleSfxEnabled() {
+    return Boolean(readSharkdleSettings().sfx);
+}
+
+function playSfx(name = "click") {
+    if (!isSharkdleSfxEnabled()) return;
+    const ctx = getSharkdleAudioContext();
+    if (!ctx) return;
+
+    const playTone = (frequency, duration, type = "triangle", gainValue = 0.025, slideTo = null, delay = 0) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        const startAt = ctx.currentTime + delay;
+        osc.type = type;
+        osc.frequency.setValueAtTime(frequency, startAt);
+        if (slideTo) osc.frequency.exponentialRampToValueAtTime(slideTo, startAt + duration);
+        gain.gain.setValueAtTime(0.0001, startAt);
+        gain.gain.exponentialRampToValueAtTime(gainValue, startAt + 0.01);
+        gain.gain.exponentialRampToValueAtTime(0.0001, startAt + duration);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(startAt);
+        osc.stop(startAt + duration + 0.03);
+    };
+
+    if (name === "success") {
+        playTone(523, 0.08, "sine", 0.04);
+        playTone(659, 0.09, "sine", 0.04, null, 0.075);
+        playTone(784, 0.1, "sine", 0.04, null, 0.15);
+        return;
+    }
+
+    if (name === "toggle") {
+        playTone(330, 0.06, "triangle", 0.03, 440);
+        return;
+    }
+
+    if (name === "crate") {
+        playTone(150, 0.12, "triangle", 0.055, 90);
+        playTone(760, 0.13, "sine", 0.04, 980, 0.12);
+        return;
+    }
+
+    playTone(420, 0.045, "triangle", 0.025);
+}
+
+function startAmbientAudio() {
+    const ctx = getSharkdleAudioContext();
+    if (!ctx || sharkdleAmbientAudioNodes) return;
+
+    const lowOsc = ctx.createOscillator();
+    const highOsc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    const filter = ctx.createBiquadFilter();
+
+    lowOsc.type = "sine";
+    highOsc.type = "triangle";
+    lowOsc.frequency.value = 84;
+    highOsc.frequency.value = 166;
+    filter.type = "lowpass";
+    filter.frequency.value = 420;
+    gain.gain.value = 0.018;
+
+    lowOsc.connect(filter);
+    highOsc.connect(filter);
+    filter.connect(gain);
+    gain.connect(ctx.destination);
+    lowOsc.start();
+    highOsc.start();
+
+    sharkdleAmbientAudioNodes = { lowOsc, highOsc, gain, filter };
+}
+
+function stopAmbientAudio() {
+    if (!sharkdleAmbientAudioNodes) return;
+    Object.values(sharkdleAmbientAudioNodes).forEach(node => {
+        if (typeof node.stop === "function") {
+            try { node.stop(); } catch (error) {}
+        }
+        if (typeof node.disconnect === "function") {
+            try { node.disconnect(); } catch (error) {}
+        }
+    });
+    sharkdleAmbientAudioNodes = null;
+}
+
+function createCursorBubble(x, y) {
+    if (!document.body.classList.contains("fun-mode") || document.body.classList.contains("reduced-motion")) return;
+    const now = Date.now();
+    if (now - sharkdleLastBubbleAt < 95) return;
+    sharkdleLastBubbleAt = now;
+
+    const bubble = document.createElement("span");
+    const size = 8 + Math.random() * 12;
+    bubble.className = "cursor-bubble";
+    bubble.style.width = `${size}px`;
+    bubble.style.height = `${size}px`;
+    bubble.style.left = `${x + 8}px`;
+    bubble.style.top = `${y + 16}px`;
+    bubble.style.setProperty("--drift", Math.random().toFixed(2));
+    document.body.appendChild(bubble);
+    setTimeout(() => bubble.remove(), 1900);
+}
+
+function createBitePop(x, y) {
+    if (!document.body.classList.contains("fun-mode") || document.body.classList.contains("reduced-motion")) return;
+    const bite = document.createElement("span");
+    bite.className = "bite-pop";
+    bite.style.left = `${x}px`;
+    bite.style.top = `${y}px`;
+    document.body.appendChild(bite);
+    setTimeout(() => bite.remove(), 500);
+}
+
+function ensureSharkCursorAnimation() {
+    if (sharkdleCursorAnimationStarted) return;
+    sharkdleCursorAnimationStarted = true;
+
+    const animate = () => {
+        const cursor = document.getElementById("cursor-shark");
+        if (cursor && document.body.classList.contains("fun-mode")) {
+            sharkdleCursorSmoothX += (sharkdleCursorX - sharkdleCursorSmoothX) * 0.28;
+            sharkdleCursorSmoothY += (sharkdleCursorY - sharkdleCursorSmoothY) * 0.28;
+            cursor.style.transform = `translate3d(${sharkdleCursorSmoothX - 12}px, ${sharkdleCursorSmoothY - 12}px, 0) rotate(8deg)`;
+        }
+        requestAnimationFrame(animate);
+    };
+
+    document.addEventListener("mousemove", (event) => {
+        sharkdleCursorX = event.clientX;
+        sharkdleCursorY = event.clientY;
+        const cursor = document.getElementById("cursor-shark");
+        if (document.body.classList.contains("fun-mode")) {
+            cursor?.classList.add("cursor-visible");
+            createCursorBubble(event.clientX, event.clientY);
+        }
+    });
+
+    document.addEventListener("mousedown", (event) => {
+        if (!document.body.classList.contains("fun-mode")) return;
+        document.getElementById("cursor-shark")?.classList.add("cursor-bite");
+        createBitePop(event.clientX, event.clientY);
+        playSfx("click");
+    });
+
+    document.addEventListener("mouseup", () => {
+        document.getElementById("cursor-shark")?.classList.remove("cursor-bite");
+    });
+
+    document.addEventListener("mouseleave", () => {
+        document.getElementById("cursor-shark")?.classList.remove("cursor-visible");
+    });
+
+    document.addEventListener("mouseover", (event) => {
+        const interactive = event.target?.closest?.("button, a, input, select, textarea, [role='button'], .profile-inventory-card, .theme-option, .home-v3-event");
+        document.getElementById("cursor-shark")?.classList.toggle("cursor-hover", Boolean(interactive));
+    });
+
+    animate();
+}
+
+function applySharkdleSettings() {
+    const settings = readSharkdleSettings();
+    document.body.classList.toggle("fun-mode", Boolean(settings.funMode));
+    document.body.classList.toggle("reduced-motion", Boolean(settings.reducedMotion));
+    document.body.classList.toggle("compact-ui", Boolean(settings.compactUi));
+    document.body.classList.toggle("high-contrast", Boolean(settings.highContrast));
+    document.body.classList.toggle("ocean-static", !settings.animatedOcean);
+    document.body.classList.toggle("ambient-audio-on", Boolean(settings.ambientAudio));
+
+    const pairs = {
+        "fun-mode-toggle": settings.funMode,
+        "sfx-toggle": settings.sfx,
+        "reduced-motion-toggle": settings.reducedMotion,
+        "compact-ui-toggle": settings.compactUi,
+        "high-contrast-toggle": settings.highContrast,
+        "animated-ocean-toggle": settings.animatedOcean,
+        "ambient-audio-toggle": settings.ambientAudio
+    };
+
+    Object.entries(pairs).forEach(([id, value]) => {
+        const input = document.getElementById(id);
+        if (input) input.checked = Boolean(value);
+    });
+
+    if (settings.ambientAudio) {
+        startAmbientAudio();
+    } else {
+        stopAmbientAudio();
+    }
+
+    if (!settings.funMode) {
+        document.getElementById("cursor-shark")?.classList.remove("cursor-visible", "cursor-hover", "cursor-bite");
+    }
+
+    localStorage.setItem("sharkdle_fun_mode_enabled", String(Boolean(settings.funMode)));
+}
+
+function setSharkdleSetting(key, value) {
+    const settings = readSharkdleSettings();
+    settings[key] = Boolean(value);
+    writeSharkdleSettings(settings);
+    applySharkdleSettings();
+    playSfx("toggle");
+}
+
+function resetSharkdleSettings() {
+    writeSharkdleSettings({ ...SHARKDLE_SETTINGS_DEFAULTS });
+    applySharkdleSettings();
+    playSfx("success");
+    showNotification("Settings reset.", "success", 2500);
+}
+
+function testSharkdleSound() {
+    const settings = readSharkdleSettings();
+    settings.sfx = true;
+    writeSharkdleSettings(settings);
+    applySharkdleSettings();
+    playSfx("success");
+    showNotification("Sound test played.", "success", 2200);
+}
+
+function bindSharkdleSettings() {
+    ensureSharkCursorAnimation();
+
+    const bindings = [
+        ["fun-mode-toggle", "funMode"],
+        ["sfx-toggle", "sfx"],
+        ["reduced-motion-toggle", "reducedMotion"],
+        ["compact-ui-toggle", "compactUi"],
+        ["high-contrast-toggle", "highContrast"],
+        ["animated-ocean-toggle", "animatedOcean"],
+        ["ambient-audio-toggle", "ambientAudio"]
+    ];
+
+    bindings.forEach(([id, key]) => {
+        const input = document.getElementById(id);
+        if (!input || input.dataset.settingsBound === "true") return;
+        input.dataset.settingsBound = "true";
+        input.addEventListener("change", () => setSharkdleSetting(key, input.checked));
+    });
+
+    const test = document.getElementById("settings-test-sound");
+    if (test && test.dataset.settingsBound !== "true") {
+        test.dataset.settingsBound = "true";
+        test.addEventListener("click", testSharkdleSound);
+    }
+
+    const reset = document.getElementById("settings-reset");
+    if (reset && reset.dataset.settingsBound !== "true") {
+        reset.dataset.settingsBound = "true";
+        reset.addEventListener("click", resetSharkdleSettings);
+    }
+
+    applySharkdleSettings();
+}
+
+document.addEventListener("DOMContentLoaded", bindSharkdleSettings);
+bindSharkdleSettings();
+
+window.applySharkdleSettings = applySharkdleSettings;
+window.resetSharkdleSettings = resetSharkdleSettings;
+window.testSharkdleSound = testSharkdleSound;
+window.playSfx = playSfx;
 
 let consumablesPageInterval = null;
 
@@ -3367,7 +4381,8 @@ function applyIndexTheme(themeId = "default", force = false) {
     if (!body) return "default";
 
     const resolvedThemeId = normalizeIndexThemeId(themeId);
-    const appliedThemeId = (!force && isSeasonalThemeDisabled() && resolvedThemeId !== "default")
+    const modePagesUseDefaultTheme = body.classList.contains("mode-v3-page") && resolvedThemeId !== "default";
+    const appliedThemeId = (modePagesUseDefaultTheme || (!force && isSeasonalThemeDisabled() && resolvedThemeId !== "default"))
         ? "default"
         : resolvedThemeId;
     getValidIndexThemeIds().forEach(id => {
@@ -3446,15 +4461,80 @@ function renderCratesButton() {
     const countEl = document.getElementById("crates-btn-count");
     if (!cratesBtn || !countEl) return;
 
-    if (!currentUser) {
-        cratesBtn.classList.add("hidden");
-        return;
-    }
-
     const inventory = getCrateInventory();
     const crateCount = inventory.reef + inventory.summer + inventory.christmas + inventory.halloween;
     countEl.textContent = crateCount;
     cratesBtn.classList.remove("hidden");
+}
+
+function renderHomeCratesModal() {
+    const profileData = getCurrentProfileData();
+    const inventory = getCrateInventory(profileData);
+    const reefCount = inventory.reef || 0;
+    const summerCount = inventory.summer || 0;
+    const totalCount = Object.values(inventory).reduce((sum, value) => sum + (Number(value) || 0), 0);
+
+    const reefCountEl = document.getElementById("home-crate-reef-count");
+    const summerCountEl = document.getElementById("home-crate-summer-count");
+    const reefBtn = document.getElementById("home-open-reef-crate-btn");
+    const summerBtn = document.getElementById("home-open-summer-crate-btn");
+    const status = document.getElementById("home-crates-status");
+
+    if (reefCountEl) reefCountEl.textContent = reefCount;
+    if (summerCountEl) summerCountEl.textContent = summerCount;
+
+    if (reefBtn) {
+        reefBtn.disabled = !currentUser || reefCount <= 0 || crateOpeningInProgress;
+        reefBtn.textContent = currentUser ? "Open Crate" : "Login Required";
+    }
+    if (summerBtn) {
+        summerBtn.disabled = !currentUser || summerCount <= 0 || crateOpeningInProgress;
+        summerBtn.textContent = currentUser ? "Open Crate" : "Login Required";
+    }
+
+    if (status) {
+        status.textContent = !currentUser
+            ? "Login to open crates and save cosmetic rewards."
+            : totalCount > 0
+                ? `${totalCount} crate${totalCount === 1 ? "" : "s"} ready. Duplicate cosmetics convert into XP.`
+                : "No crates ready yet. Win games or claim pass rewards to earn more.";
+    }
+}
+
+function openHomeCratesModal() {
+    renderHomeCratesModal();
+    const modal = document.getElementById("homeCratesModal");
+    if (modal) modal.classList.remove("hidden");
+}
+
+function closeHomeCratesModal() {
+    const modal = document.getElementById("homeCratesModal");
+    if (modal) modal.classList.add("hidden");
+}
+
+async function openHomeCrate(crateId = "reef") {
+    await openCrate(crateId);
+    renderHomeCratesModal();
+    renderCratesButton();
+}
+
+function openFullCratesModalFromHome() {
+    closeHomeCratesModal();
+    openCraftingModalFromHome();
+}
+
+function openCraftingModalFromHome() {
+    closeHomeCratesModal();
+    closeCratesModal?.();
+    const modal = document.getElementById("craftingModal");
+    if (modal) {
+        updateSummerCrateCraftingUI?.();
+        modal.classList.remove("hidden");
+    }
+}
+
+function closeCraftingModal() {
+    document.getElementById("craftingModal")?.classList.add("hidden");
 }
 
 function renderCratesModal() {
@@ -3498,9 +4578,31 @@ function renderCratesModal() {
     }
 
     const totalCrateCount = crateCount + summerCrateCount + christmasCrateCount + halloweenCrateCount;
-    if (totalCrateCount <= 0) {
-        statusCopy.textContent = "You don't have any crates to open.";
+    if (!currentUser) {
+        statusCopy.textContent = "Login to open crates, save rewards, and keep cosmetic unlocks synced.";
+        ["open-crate-btn", "open-summer-crate-btn", "open-christmas-crate-btn", "open-halloween-crate-btn", "craft-summer-crate-btn"].forEach(id => {
+            const btn = document.getElementById(id);
+            if (btn) {
+                btn.disabled = true;
+                btn.textContent = "Login Required";
+            }
+        });
     } else {
+        const labelMap = {
+            "open-crate-btn": "Open Cosmetic Crate",
+            "open-summer-crate-btn": "Open Summer Crate",
+            "open-christmas-crate-btn": "Open Christmas Crate",
+            "open-halloween-crate-btn": "Open Halloween Crate"
+        };
+        Object.entries(labelMap).forEach(([id, label]) => {
+            const btn = document.getElementById(id);
+            if (btn) btn.textContent = label;
+        });
+    }
+
+    if (currentUser && totalCrateCount <= 0) {
+        statusCopy.textContent = "You don't have any crates to open.";
+    } else if (currentUser) {
         statusCopy.textContent = getCrateInstantOpenEnabled(profileData)
             ? "Instant open is enabled."
             : "Animation reveal is enabled.";
@@ -3552,10 +4654,6 @@ function getMergedUniqueIds(localIds, remoteIds, fallback = []) {
 }
 
 function openCratesModal() {
-    if (!currentUser) {
-        openLoginModal();
-        return;
-    }
     crateOpeningInProgress = false;
     setCratesModalTab("inventory");
     renderCratesModal();
@@ -3645,6 +4743,9 @@ async function persistCrateProfileUpdate(profileData) {
         cratesSinceLegendary: getCratesSinceLegendary(profileData),
         streakShields: getStreakShieldCount(profileData),
         instantCrateOpen: getCrateInstantOpenEnabled(profileData),
+        pearls: getPearlCount(profileData),
+        pearlBoostExpiresAt: getPearlBoostExpiresAt(profileData),
+        seasonXpBoosts: getSeasonXpBoosts(profileData),
         totalXP: Math.max(0, Number(profileData.totalXP) || 0),
         earnedCosmetics: Array.isArray(profileData.earnedCosmetics) ? profileData.earnedCosmetics : [],
         unlockedBadges: Array.isArray(profileData.unlockedBadges) ? profileData.unlockedBadges : ["starter"],
@@ -3918,6 +5019,11 @@ function maybeAwardCrateDrop(source = "win") {
 }
 
 window.openCratesModal = openCratesModal;
+window.setCratesModalTab = setCratesModalTab;
+window.openHomeCratesModal = openHomeCratesModal;
+window.closeHomeCratesModal = closeHomeCratesModal;
+window.openHomeCrate = openHomeCrate;
+window.openFullCratesModalFromHome = openFullCratesModalFromHome;
 window.openCrateDropsModal = openCrateDropsModal;
 window.closeCratesModal = closeCratesModal;
 window.closeCrateDropsModal = closeCrateDropsModal;
@@ -3929,6 +5035,10 @@ window.getStreakShieldCount = getStreakShieldCount;
 window.applyStreakShieldOnLoss = applyStreakShieldOnLoss;
 window.getActiveLimitedTimeXpEvent = getActiveLimitedTimeXpEvent;
 window.applyLimitedTimeXpBonus = applyLimitedTimeXpBonus;
+window.openPearlShopModal = openPearlShopModal;
+window.closePearlShopModal = closePearlShopModal;
+window.buyPearlShopItem = buyPearlShopItem;
+window.renderPearlShop = renderPearlShop;
 window.renderConsumablesPage = renderConsumablesPage;
 window.ensureConsumablesPageTimer = ensureConsumablesPageTimer;
 window.forceXpEventPreview = function(enabled = true) {
@@ -4081,7 +5191,19 @@ function setEquippedCardTheme(themeId) {
 function applyProfileCardTheme(themeId = getEquippedCardTheme()) {
     const profileHero = document.getElementById("profile-hero-card");
     if (!profileHero) return;
-    profileHero.className = `profile-hero-card theme-${themeId}`;
+    const baseClasses = ["profile-hero-card"];
+    if (profileHero.closest(".profile-overhaul-modal")) {
+        baseClasses.unshift("profile-overhaul-card");
+    }
+    profileHero.className = `${baseClasses.join(" ")} theme-${themeId || "default"}`;
+    if (typeof getCardThemeMeta === "function") {
+        const theme = getCardThemeMeta(themeId || "default");
+        profileHero.style.setProperty("background", `
+            radial-gradient(circle at 8% 18%, rgba(255,255,255,.16), transparent 28%),
+            radial-gradient(circle at 92% 12%, rgba(104,226,240,.18), transparent 32%),
+            ${theme.preview}
+        `, "important");
+    }
 }
 
 function applyThemeToProfileCard(elementId, themeId = "default") {
@@ -4156,16 +5278,28 @@ function renderThemeSelection() {
     const unlockedThemes = getUnlockedCardThemes();
     const equippedTheme = getEquippedCardTheme();
     container.innerHTML = "";
-    unlockedThemes.forEach(theme => {
+    unlockedThemes
+        .map(theme => ({ ...theme, ...getThemeCosmeticMeta(theme) }))
+        .filter(theme => shouldShowCosmetic(theme, profileInventoryFilters.themes))
+        .sort((a, b) => {
+            const rarityDiff = getCosmeticRaritySortRank(a.rarity) - getCosmeticRaritySortRank(b.rarity);
+            if (rarityDiff !== 0) return rarityDiff;
+            return String(a.name || "").localeCompare(String(b.name || ""));
+        })
+        .forEach(theme => {
         const button = document.createElement("button");
-        button.className = `theme-option ${theme.id === equippedTheme ? "active" : ""}`;
+        button.className = `theme-option rarity-${theme.rarity} ${theme.id === equippedTheme ? "active" : ""}`;
         button.onclick = () => setEquippedCardTheme(theme.id);
         button.innerHTML = `
             <span class="theme-swatch" style="background:${theme.preview};"></span>
             <span>${theme.name}</span>
+            <small class="cosmetic-chip-row"><b class="rarity-chip rarity-${theme.rarity}">${getCosmeticRarityLabel(theme.rarity)}</b><b class="source-chip" title="${theme.source}">${getShortCosmeticSourceLabel(theme.source)}</b></small>
         `;
         container.appendChild(button);
     });
+    if (!container.innerHTML.trim()) {
+        container.innerHTML = `<div class="profile-empty-card">No themes match this filter.</div>`;
+    }
     applyProfileCardTheme(equippedTheme);
 }
 const allBadges = [
@@ -4174,7 +5308,9 @@ const allBadges = [
     { id: "tester", name: "Tester", emoji: "🎮", description: "Awarded for testing via code redeem.", codeUnlock: true },
     { id: "anniversary", name: "Anniversary", emoji: "🎉", description: "Awarded for redeeming the Anniversary code.", codeUnlock: true },
     { id: "lucky-fin", name: "Lucky Fin", emoji: "🍀", description: "Awarded from the daily prize wheel.", codeUnlock: true },
-    { id: "extinction", name: "Extinction", emoji: "☄️", description: "Awarded for defeating the summer Megalodon community boss.", rarity: "legendary", codeUnlock: true }
+    { id: "extinction", name: "Extinction", emoji: "☄️", description: "Awarded for defeating the summer Megalodon community boss.", rarity: "legendary", codeUnlock: true },
+    { id: "spiral-hunter", name: "Spiral Hunter", emoji: "🌀", description: "Awarded for defeating the Halloween Helicoprion community boss.", rarity: "legendary", codeUnlock: true },
+    { id: "frost-anvil", name: "Frost Anvil", emoji: "❄️", description: "Awarded for defeating the Christmas Stethacanthus community boss.", rarity: "legendary", codeUnlock: true }
 ];
 
 const currentPassBadgeDefs = [
@@ -4184,7 +5320,9 @@ const currentPassBadgeDefs = [
     { id: "abyss-explorer", name: "Oceanic", emoji: "💙", description: "A Shark Pass badge for reaching level 10.", passLevel: 10 },
     { id: "open-water-ace", name: "Subadult", emoji: "✨", description: "A Shark Pass badge for reaching level 12.", passLevel: 12 },
     { id: "storm-tracker", name: "Prime", emoji: "⚡", description: "A Shark Pass badge for reaching level 18.", passLevel: 18 },
-    { id: "apex-voyager", name: "Apex", emoji: "👑", description: "A Shark Pass badge for reaching level 20.", passLevel: 20 }
+    { id: "apex-voyager", name: "Apex", emoji: "👑", description: "A Shark Pass badge for reaching level 20.", passLevel: 20 },
+    { id: "current-rider", name: "Current Rider", emoji: "🌊", description: "A Shark Pass badge for reaching level 22.", passLevel: 22 },
+    { id: "tidebreaker", name: "Tidebreaker", emoji: "💫", description: "A Shark Pass badge for reaching level 26.", passLevel: 26 }
 ];
 
 for (let i = allBadges.length - 1; i >= 0; i--) {
@@ -4274,6 +5412,7 @@ function setEquippedBadge(badgeId) {
     }
     updateProfileBadgeUI();
     renderBadgeSelection();
+    renderProfileInventoryUI(profileData);
 }
 
 function updateProfileBadgeUI() {
@@ -4593,9 +5732,78 @@ function initializeFirebase() {
 
 initializeFirebase();
 
+const APP_ROUTE_MAP = Object.freeze({
+    "daily.html": "Daily/index.html",
+    "Daily/": "Daily/index.html",
+    "infinite.html": "Infinite/index.html",
+    "Infinite/": "Infinite/index.html",
+    "practice.html": "Practice/index.html",
+    "Practice/": "Practice/index.html",
+    "achievements.html": "Achievements/index.html",
+    "Achievements/": "Achievements/index.html",
+    "leaderboards.html": "Leaderboard/index.html",
+    "Leaderboard/": "Leaderboard/index.html",
+    "library.html": "Library/index.html",
+    "Library/": "Library/index.html",
+    "sharkpass.html": "Sharkpass/index.html",
+    "Sharkpass/": "Sharkpass/index.html",
+    "story.html": "Story/index.html",
+    "Story/": "Story/index.html",
+    "rng.html": "Minigames/SharkRNG/index.html",
+    "Minigames/SharkRNG/": "Minigames/SharkRNG/index.html",
+    "secret.html": "shark-rescue/index.html",
+    "shark-rescue/": "shark-rescue/index.html",
+    "updates.html": "Updates/index.html",
+    "Updates/": "Updates/index.html",
+    "early-release.html": "EarlyRelease/index.html",
+    "EarlyRelease/": "EarlyRelease/index.html"
+});
+
+const APP_ROUTE_FOLDERS = Object.freeze([
+    "achievements",
+    "daily",
+    "infinite",
+    "practice",
+    "leaderboard",
+    "library",
+    "sharkpass",
+    "story",
+    "updates",
+    "earlyrelease",
+    "minigames",
+    "shark-rescue"
+]);
+
+function getAppRootUrl() {
+    const rootUrl = new URL(window.location.href);
+    const pathParts = rootUrl.pathname.split("/");
+    const routeIndex = pathParts.findIndex(part => APP_ROUTE_FOLDERS.includes(decodeURIComponent(part).toLowerCase()));
+
+    rootUrl.pathname = routeIndex >= 0
+        ? `${pathParts.slice(0, routeIndex).join("/")}/`
+        : rootUrl.pathname.replace(/[^/]*$/, "");
+    rootUrl.search = "";
+    rootUrl.hash = "";
+    return rootUrl;
+}
+
+function resolveAppPath(page) {
+    const rawPage = String(page || "");
+    if (!rawPage || rawPage.startsWith("#") || /^[a-z][a-z\d+\-.]*:/i.test(rawPage)) {
+        return rawPage;
+    }
+    if (rawPage.startsWith("../") || rawPage.startsWith("./")) {
+        return new URL(rawPage, window.location.href).href;
+    }
+    const mappedPage = APP_ROUTE_MAP[rawPage] || rawPage;
+    return new URL(mappedPage.replace(/^\/+/, ""), getAppRootUrl()).href;
+}
+
+window.resolveAppPath = resolveAppPath;
+
 // Navigation helper function
 function navigate(page) {
-    window.location.href = page;
+    window.location.href = resolveAppPath(page);
 }
 
 // ----- shark pass reward definitions -----
@@ -4953,7 +6161,8 @@ async function updateAuthUI() {
         await initializeDailyLogin();
         await ensureLoginStreakRewards();
         updateSpinWheelUI();
-        ensureNavProfileButton();
+        const legacyProfileBtn = document.getElementById("profile-btn-nav");
+        if (legacyProfileBtn) legacyProfileBtn.remove();
         // Sync local stats to Firebase after daily login initialization to avoid stale login-field overwrites.
         syncStatsToFirebase();
     } else {
@@ -5007,9 +6216,6 @@ async function updateAuthUI() {
             const streak = parseInt(localStorage.getItem("loginStreak")) || 1;
             bonusMsg.style.display = "block";
             bonusMsg.style.cursor = "pointer";
-            bonusMsg.style.transition = "all 0.3s ease";
-            bonusMsg.onmouseover = () => bonusMsg.style.transform = "scale(1.02)";
-            bonusMsg.onmouseout = () => bonusMsg.style.transform = "scale(1)";
             bonusMsg.onclick = () => openDailyLoginModal();
             const cycleNumber = Math.floor((currentLoginDay - 1) / 7) + 1;
             const cycleEndDay = cycleNumber * 7;
@@ -5052,29 +6258,6 @@ async function updateAuthUI() {
     }
 }
 
-function ensureNavProfileButton() {
-    const authContainer = document.getElementById("auth-container");
-    const loginBtn = document.getElementById("login-btn");
-    if (!authContainer) return;
-
-    let profileBtn = document.getElementById("profile-btn-nav");
-    if (!profileBtn) {
-        profileBtn = document.createElement("button");
-        profileBtn.id = "profile-btn-nav";
-        profileBtn.className = "profile-btn";
-        profileBtn.onclick = () => openProfileModal();
-        profileBtn.style.cssText = "background: none; border: none; cursor: pointer; padding: 5px; border-radius: 50%; display: flex; align-items: center;";
-        profileBtn.innerHTML = `<img id="nav-profile-pic" src="images/pfp/shark1.png" alt="Profile" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 2px solid #00b4d8;">`;
-        authContainer.insertBefore(profileBtn, loginBtn);
-    }
-
-    const profileData = getCurrentProfileData();
-    const navProfilePic = document.getElementById("nav-profile-pic");
-    if (navProfilePic) {
-        navProfilePic.src = profileData.profilePicture || "images/pfp/shark1.png";
-    }
-}
-
 function isDefaultEmailUsername(username) {
     if (!currentUser?.email || !username) return false;
     return username === currentUser.email.split("@")[0];
@@ -5082,6 +6265,13 @@ function isDefaultEmailUsername(username) {
 
 function hasMeaningfulProfileData(profile) {
     if (!profile || typeof profile !== 'object') return false;
+    const crateInventory = normalizeCrateInventory(profile.crateInventory);
+    const hasAnyCrates = Object.values(crateInventory).some(count => count > 0);
+    const hasUnlockedBadges = Array.isArray(profile.unlockedBadges) && profile.unlockedBadges.some(id => id && id !== "starter");
+    const hasUnlockedThemes = Array.isArray(profile.unlockedCardThemes) && profile.unlockedCardThemes.some(id => id && id !== "default");
+    const hasSharkPassMissionClaims = Boolean(profile.sharkPassMissionClaims && Object.keys(profile.sharkPassMissionClaims).length);
+    const hasSharkPassSeasonBaselines = Boolean(profile.sharkPassSeasonBaselines && Object.keys(profile.sharkPassSeasonBaselines).length);
+    const hasCommunityBossRewards = Boolean(profile.communityBossRewards && Object.keys(profile.communityBossRewards).length);
     return Boolean(
         profile.totalXP ||
         profile.gamesPlayed ||
@@ -5093,10 +6283,25 @@ function hasMeaningfulProfileData(profile) {
         profile.loginStreak ||
         profile.currentLoginDay ||
         normalizeStoredDateValue(profile.lastLoginDate) ||
-        normalizeCrateInventory(profile.crateInventory).reef ||
+        hasAnyCrates ||
+        profile.cratesOpened ||
+        getCratesSinceLegendary(profile) ||
         getStreakShieldCount(profile) ||
+        getPearlCount(profile) ||
+        getPearlBoostExpiresAt(profile) ||
+        getCrateInstantOpenEnabled(profile) ||
+        Object.keys(getSeasonXpBoosts(profile)).length ||
         (Array.isArray(profile.earnedCosmetics) && profile.earnedCosmetics.length) ||
+        hasUnlockedBadges ||
+        hasUnlockedThemes ||
         (Array.isArray(profile.unlockedTitles) && profile.unlockedTitles.length) ||
+        (Array.isArray(profile.unlockedAchievements) && profile.unlockedAchievements.length) ||
+        (Array.isArray(profile.claimedAchievements) && profile.claimedAchievements.length) ||
+        (Array.isArray(profile.redeemedCodes) && profile.redeemedCodes.length) ||
+        hasSharkPassMissionClaims ||
+        hasSharkPassSeasonBaselines ||
+        (Array.isArray(profile.sharkPassLevelRewardClaims) && profile.sharkPassLevelRewardClaims.length) ||
+        hasCommunityBossRewards ||
         (profile.equippedTitle && profile.equippedTitle !== "") ||
         (profile.username && !isDefaultEmailUsername(profile.username)) ||
         (profile.profilePicture && profile.profilePicture !== "images/pfp/shark1.png")
@@ -5105,19 +6310,34 @@ function hasMeaningfulProfileData(profile) {
 
 function hasPersistedProfileIdentity(profile) {
     if (!profile || typeof profile !== 'object') return false;
+    const crateInventory = normalizeCrateInventory(profile.crateInventory);
+    const hasAnyCrates = Object.values(crateInventory).some(count => count > 0);
     return Boolean(
         (profile.username && !isDefaultEmailUsername(profile.username)) ||
         (profile.profilePicture && profile.profilePicture !== "images/pfp/shark1.png") ||
         (profile.profilePic && profile.profilePic !== "images/pfp/shark1.png") ||
         (profile.equippedBadge && profile.equippedBadge !== "starter") ||
         (profile.equippedCardTheme && profile.equippedCardTheme !== "default") ||
-        normalizeCrateInventory(profile.crateInventory).reef ||
+        hasAnyCrates ||
+        profile.cratesOpened ||
+        getCratesSinceLegendary(profile) ||
         getStreakShieldCount(profile) ||
+        getPearlCount(profile) ||
+        getPearlBoostExpiresAt(profile) ||
+        getCrateInstantOpenEnabled(profile) ||
+        Object.keys(getSeasonXpBoosts(profile)).length ||
         (profile.equippedTitle && profile.equippedTitle !== "") ||
         (Array.isArray(profile.earnedCosmetics) && profile.earnedCosmetics.length) ||
         (Array.isArray(profile.unlockedTitles) && profile.unlockedTitles.length) ||
+        (Array.isArray(profile.unlockedBadges) && profile.unlockedBadges.some(id => id && id !== "starter")) ||
+        (Array.isArray(profile.unlockedCardThemes) && profile.unlockedCardThemes.some(id => id && id !== "default")) ||
         (Array.isArray(profile.unlockedAchievements) && profile.unlockedAchievements.length) ||
-        (Array.isArray(profile.claimedAchievements) && profile.claimedAchievements.length)
+        (Array.isArray(profile.claimedAchievements) && profile.claimedAchievements.length) ||
+        (Array.isArray(profile.redeemedCodes) && profile.redeemedCodes.length) ||
+        Boolean(profile.sharkPassMissionClaims && Object.keys(profile.sharkPassMissionClaims).length) ||
+        Boolean(profile.sharkPassSeasonBaselines && Object.keys(profile.sharkPassSeasonBaselines).length) ||
+        (Array.isArray(profile.sharkPassLevelRewardClaims) && profile.sharkPassLevelRewardClaims.length) ||
+        Boolean(profile.communityBossRewards && Object.keys(profile.communityBossRewards).length)
     );
 }
 
@@ -5449,6 +6669,31 @@ function saveUserProfileLocally(profileData, options = {}) {
     if (profileData.username) {
         cachePreferredUsername(profileData.username, profileData.uid);
     }
+    profileData.crateInventory = normalizeCrateInventory(profileData.crateInventory);
+    profileData.cratesOpened = Math.max(0, Number(profileData.cratesOpened) || 0);
+    profileData.cratesSinceLegendary = getCratesSinceLegendary(profileData);
+    profileData.streakShields = getStreakShieldCount(profileData);
+    profileData.instantCrateOpen = getCrateInstantOpenEnabled(profileData);
+    profileData.pearlBoostExpiresAt = getPearlBoostExpiresAt(profileData);
+    profileData.seasonXpBoosts = getSeasonXpBoosts(profileData);
+    setPearlCount(profileData, getPearlCount(profileData));
+    if (!Array.isArray(profileData.earnedCosmetics)) profileData.earnedCosmetics = [];
+    if (!Array.isArray(profileData.unlockedBadges)) profileData.unlockedBadges = ["starter"];
+    if (!Array.isArray(profileData.unlockedCardThemes)) profileData.unlockedCardThemes = ["default"];
+    if (!Array.isArray(profileData.unlockedTitles)) profileData.unlockedTitles = [];
+    if (!Array.isArray(profileData.claimedAchievements)) profileData.claimedAchievements = [];
+    if (!Array.isArray(profileData.unlockedAchievements)) profileData.unlockedAchievements = [];
+    if (!Array.isArray(profileData.sharkPassLevelRewardClaims)) profileData.sharkPassLevelRewardClaims = [];
+    if (!Array.isArray(profileData.redeemedCodes)) profileData.redeemedCodes = getRedeemedCodes();
+    if (!profileData.communityBossRewards || typeof profileData.communityBossRewards !== "object") {
+        profileData.communityBossRewards = {};
+    }
+    if (!profileData.sharkPassMissionClaims || typeof profileData.sharkPassMissionClaims !== "object") {
+        profileData.sharkPassMissionClaims = {};
+    }
+    if (!profileData.sharkPassSeasonBaselines || typeof profileData.sharkPassSeasonBaselines !== "object") {
+        profileData.sharkPassSeasonBaselines = {};
+    }
     const scopedKey = getScopedUserProfileStorageKey(profileData.uid);
     const scopedBackupKey = getScopedUserProfileBackupKey(profileData.uid);
     localStorage.setItem("userProfile", JSON.stringify(profileData));
@@ -5465,6 +6710,24 @@ function saveUserProfileLocally(profileData, options = {}) {
     if (profileData.totalXP !== undefined) {
         localStorage.setItem("totalXP", String(profileData.totalXP || 0));
     }
+    if (profileData.loginStreak !== undefined) {
+        localStorage.setItem("loginStreak", String(profileData.loginStreak || 0));
+    }
+    if (profileData.currentLoginDay !== undefined) {
+        localStorage.setItem("currentLoginDay", String(profileData.currentLoginDay || 0));
+    }
+    if (profileData.lastLoginDate) {
+        localStorage.setItem("lastLoginDate", normalizeStoredDateValue(profileData.lastLoginDate) || profileData.lastLoginDate);
+    }
+    if (profileData.dailyLoginModalShownToday) {
+        localStorage.setItem(
+            getDailyLoginModalShownStorageKey(profileData.uid),
+            normalizeStoredDateValue(profileData.dailyLoginModalShownToday) || profileData.dailyLoginModalShownToday
+        );
+    }
+    localStorage.setItem("claimedAchievements", JSON.stringify(profileData.claimedAchievements));
+    localStorage.setItem("unlockedAchievements", JSON.stringify(profileData.unlockedAchievements));
+    localStorage.setItem("redeemedCodes", JSON.stringify(profileData.redeemedCodes));
     if (!options.skipRemoteSync) {
         scheduleRemoteProfileSync();
     }
@@ -5569,12 +6832,18 @@ function mergeProfilesSafely(localProfile, firebaseData) {
     const firebaseUpdatedMs = getProfileTimestampMs(firebaseData.lastUpdated);
     const preferredCrateInventory = mergeCrateInventory(localProfile.crateInventory, firebaseData.crateInventory);
     const preferredCratesOpened = maxNumeric(localProfile.cratesOpened, firebaseData.cratesOpened);
+    const preferredPearls = maxNumeric(localProfile.pearls ?? localProfile.tidePearls, firebaseData.pearls ?? firebaseData.tidePearls);
     const preferredCratesSinceLegendary = localUpdatedMs >= firebaseUpdatedMs
         ? getCratesSinceLegendary(localProfile)
         : getCratesSinceLegendary(firebaseData);
     const preferredInstantCrateOpen = localUpdatedMs >= firebaseUpdatedMs
         ? getCrateInstantOpenEnabled(localProfile)
         : getCrateInstantOpenEnabled(firebaseData);
+    const preferredPearlBoostExpiresAt = maxNumeric(localProfile.pearlBoostExpiresAt, firebaseData.pearlBoostExpiresAt);
+    const preferredSeasonXpBoosts = {
+        ...(localProfile.seasonXpBoosts && typeof localProfile.seasonXpBoosts === "object" ? localProfile.seasonXpBoosts : {}),
+        ...(firebaseData.seasonXpBoosts && typeof firebaseData.seasonXpBoosts === "object" ? firebaseData.seasonXpBoosts : {})
+    };
     const preferredStreakShields = localUpdatedMs >= firebaseUpdatedMs
         ? getStreakShieldCount(localProfile)
         : getStreakShieldCount(firebaseData);
@@ -5597,6 +6866,9 @@ function mergeProfilesSafely(localProfile, firebaseData) {
         ? (localProfile.equippedTitle || firebaseData.equippedTitle || "")
         : (firebaseData.equippedTitle || localProfile.equippedTitle || "");
     const mergedLoginProgress = mergeLoginProgress(getLoginProgressFromLocalStorage(currentUser?.uid), firebaseData);
+    const mergedClaimedAchievements = getMergedUniqueIds(localProfile.claimedAchievements, firebaseData.claimedAchievements);
+    const mergedUnlockedAchievements = getMergedUniqueIds(localProfile.unlockedAchievements, firebaseData.unlockedAchievements);
+    const mergedRedeemedCodes = getMergedUniqueIds(localProfile.redeemedCodes, firebaseData.redeemedCodes, getRedeemedCodes());
 
     const localDailyWinsDate = normalizeStoredUtcDateValue(localProfile.dailyWinsUtcDate || localProfile.dailyWinsDate);
     const remoteDailyWinsDate = normalizeStoredUtcDateValue(firebaseData.dailyWinsUtcDate || firebaseData.dailyWinsDate);
@@ -5621,7 +6893,6 @@ function mergeProfilesSafely(localProfile, firebaseData) {
             localMonthlyWinsKey === mergedMonthlyWinsKey ? localMonthlyWins : 0
         )
         : 0;
-
     return {
         uid: currentUser.uid,
         username: preferredUsername,
@@ -5657,6 +6928,9 @@ function mergeProfilesSafely(localProfile, firebaseData) {
         cratesSinceLegendary: preferredCratesSinceLegendary,
         streakShields: preferredStreakShields,
         instantCrateOpen: preferredInstantCrateOpen,
+        pearls: preferredPearls,
+        pearlBoostExpiresAt: preferredPearlBoostExpiresAt,
+        seasonXpBoosts: preferredSeasonXpBoosts,
         earnedCosmetics: getUnifiedCosmeticList(localProfile.earnedCosmetics, firebaseData.earnedCosmetics, "imagePath"),
         testerBadgeUnlocked: Boolean(firebaseData.testerBadgeUnlocked || localProfile.testerBadgeUnlocked),
         equippedBadge: preferredEquippedBadge,
@@ -5669,7 +6943,20 @@ function mergeProfilesSafely(localProfile, firebaseData) {
             ...(localProfile.communityBossRewards && typeof localProfile.communityBossRewards === "object" ? localProfile.communityBossRewards : {}),
             ...(firebaseData.communityBossRewards && typeof firebaseData.communityBossRewards === "object" ? firebaseData.communityBossRewards : {})
         },
+        sharkPassMissionClaims: {
+            ...(localProfile.sharkPassMissionClaims && typeof localProfile.sharkPassMissionClaims === "object" ? localProfile.sharkPassMissionClaims : {}),
+            ...(firebaseData.sharkPassMissionClaims && typeof firebaseData.sharkPassMissionClaims === "object" ? firebaseData.sharkPassMissionClaims : {})
+        },
+        sharkPassSeasonBaselines: {
+            ...(localProfile.sharkPassSeasonBaselines && typeof localProfile.sharkPassSeasonBaselines === "object" ? localProfile.sharkPassSeasonBaselines : {}),
+            ...(firebaseData.sharkPassSeasonBaselines && typeof firebaseData.sharkPassSeasonBaselines === "object" ? firebaseData.sharkPassSeasonBaselines : {})
+        },
+        sharkPassLevelRewardClaims: getMergedUniqueIds(localProfile.sharkPassLevelRewardClaims, firebaseData.sharkPassLevelRewardClaims, []),
+        sharkPassSeasonId: firebaseData.sharkPassSeasonId || localProfile.sharkPassSeasonId || SHARK_PASS_ACTIVE_SEASON_ID,
         crateInventory: preferredCrateInventory,
+        claimedAchievements: mergedClaimedAchievements,
+        unlockedAchievements: mergedUnlockedAchievements,
+        redeemedCodes: mergedRedeemedCodes,
         loginStreak: mergedLoginProgress.loginStreak,
         currentLoginDay: mergedLoginProgress.currentLoginDay,
         lastLoginDate: mergedLoginProgress.lastLoginDate,
@@ -5709,8 +6996,12 @@ async function loadUserProfile(options = {}) {
             if (userData.totalXP !== undefined) {
                 localStorage.setItem("totalXP", String(userData.totalXP || 0));
             }
-            // Load redeemed codes from Firebase
-            localStorage.setItem("redeemedCodes", JSON.stringify(Array.isArray(firebaseData.redeemedCodes) ? firebaseData.redeemedCodes : []));
+            const mergedRedeemedCodes = getMergedUniqueIds(
+                JSON.parse(localStorage.getItem("redeemedCodes") || "[]"),
+                firebaseData.redeemedCodes
+            );
+            localStorage.setItem("redeemedCodes", JSON.stringify(mergedRedeemedCodes));
+            userData.redeemedCodes = mergedRedeemedCodes;
             const mergedLoginProgressPayload = buildLoginProgressSyncPayload(userData);
             if (loginProgressDiffers(firebaseData, mergedLoginProgressPayload)) {
                 await statsRef.set(mergedLoginProgressPayload, { merge: true });
@@ -5735,10 +7026,12 @@ async function loadUserProfile(options = {}) {
             if (
                 mergedClaimedAchievements.length !== (Array.isArray(firebaseData.claimedAchievements) ? firebaseData.claimedAchievements.length : 0)
                 || mergedUnlockedAchievements.length !== (Array.isArray(firebaseData.unlockedAchievements) ? firebaseData.unlockedAchievements.length : 0)
+                || mergedRedeemedCodes.length !== (Array.isArray(firebaseData.redeemedCodes) ? firebaseData.redeemedCodes.length : 0)
             ) {
                 await statsRef.set({
                     claimedAchievements: mergedClaimedAchievements,
-                    unlockedAchievements: mergedUnlockedAchievements
+                    unlockedAchievements: mergedUnlockedAchievements,
+                    redeemedCodes: mergedRedeemedCodes
                 }, { merge: true });
             }
         } else if (hasMeaningfulProfileData(localProfile)) {
@@ -5755,6 +7048,14 @@ async function loadUserProfile(options = {}) {
         } else {
             const cachedPreferredUsername = getStoredPreferredUsername();
             const localLoginProgress = getLoginProgressFromLocalStorage(authUser.uid);
+            const parseStoredAchievementIds = key => {
+                try {
+                    const parsed = JSON.parse(localStorage.getItem(key) || "[]");
+                    return Array.isArray(parsed) ? parsed : [];
+                } catch (error) {
+                    return [];
+                }
+            };
             userData = {
                 uid: authUser.uid,
                 username: cachedPreferredUsername || localProfile.username || authUser.email.split("@")[0],
@@ -5775,6 +7076,9 @@ async function loadUserProfile(options = {}) {
                 cratesOpened: 0,
                 cratesSinceLegendary: 0,
                 streakShields: 0,
+                pearls: 0,
+                pearlBoostExpiresAt: 0,
+                seasonXpBoosts: {},
                 instantCrateOpen: false,
                 earnedCosmetics: [],
                 testerBadgeUnlocked: false,
@@ -5788,7 +7092,14 @@ async function loadUserProfile(options = {}) {
                 currentLoginDay: localLoginProgress.currentLoginDay,
                 lastLoginDate: localLoginProgress.lastLoginDate,
                 dailyLoginModalShownToday: localLoginProgress.dailyLoginModalShownToday,
+                claimedAchievements: parseStoredAchievementIds("claimedAchievements"),
+                unlockedAchievements: parseStoredAchievementIds("unlockedAchievements"),
+                redeemedCodes: getRedeemedCodes(),
                 communityBossRewards: {},
+                sharkPassMissionClaims: {},
+                sharkPassSeasonBaselines: {},
+                sharkPassLevelRewardClaims: [],
+                sharkPassSeasonId: SHARK_PASS_ACTIVE_SEASON_ID,
                 crateInventory: normalizeCrateInventory()
             };
             storeLoginProgressLocally(userData, authUser.uid);
@@ -5854,6 +7165,7 @@ function updateProfileDisplay(userData) {
     if (profilePic) profilePic.src = userData.profilePicture || "images/pfp/shark1.png";
     const navProfilePic = document.getElementById("nav-profile-pic");
     if (navProfilePic) navProfilePic.src = userData.profilePicture || "images/pfp/shark1.png";
+    updateHomeV3Sidebar(userData);
     applyProfileCardTheme(userData.equippedCardTheme || "default");
     updateProfileTitleUI(userData);
     renderTitleSelection();
@@ -5873,8 +7185,259 @@ function updateProfileDisplay(userData) {
     updateIndexStats();
 }
 
+function updateHomeV3Sidebar(profileData = getCurrentProfileData()) {
+    const isLoggedIn = Boolean(currentUser);
+    const data = profileData || {};
+    const totalXP = Number(data.totalXP) || 0;
+    const currentLevel = typeof getLevelFromXP === "function" ? getLevelFromXP(totalXP) : 1;
+    const gamesPlayed = Number(data.gamesPlayed ?? data.games) || 0;
+    const wins = Number(data.wins) || 0;
+    const winRate = gamesPlayed > 0 ? Math.round((wins / gamesPlayed) * 100) : 0;
+    const avatarPath = data.profilePicture || data.profilePic || "images/pfp/shark1.png";
+    const xpIntoLevel = typeof getXPInCurrentLevel === "function" ? getXPInCurrentLevel(totalXP) : totalXP;
+    const xpToNext = typeof getXPToNextLevel === "function" ? getXPToNextLevel(totalXP) : 0;
+    const xpLevelTotal = Math.max(1, xpIntoLevel + xpToNext);
+    const xpPercent = Math.max(0, Math.min(100, (xpIntoLevel / xpLevelTotal) * 100));
+
+    const setText = (id, value) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = value;
+    };
+
+    const avatar = document.getElementById("home-v3-avatar");
+    if (avatar) avatar.src = avatarPath;
+
+    const widget = document.getElementById("home-v3-profile-widget");
+    if (widget) widget.classList.toggle("hidden", !isLoggedIn);
+    setText("home-v3-username", isLoggedIn ? (data.username || currentUser?.email?.split("@")[0] || "Sharkdle Player") : "Guest Shark");
+    setText("home-v3-level-label", isLoggedIn ? `Level ${currentLevel}` : "Level 1");
+    setText("home-v3-xp-label", isLoggedIn ? `XP ${xpIntoLevel}/${xpLevelTotal}` : "XP 0/0");
+    const fill = document.getElementById("home-v3-xp-fill");
+    if (fill) fill.style.width = isLoggedIn ? `${xpPercent}%` : "0%";
+
+    setText("home-v3-games", isLoggedIn ? gamesPlayed : 0);
+    setText("home-v3-winrate", isLoggedIn ? `${winRate}%` : "0%");
+    setText("home-v3-best-streak", isLoggedIn ? (data.highestStreak || 0) : 0);
+    setText("home-v3-total-xp", isLoggedIn ? totalXP : 0);
+
+    const shieldCount = typeof getStreakShieldCount === "function" ? getStreakShieldCount(data) : (Number(data.streakShields) || 0);
+    setText("home-v3-shields", isLoggedIn ? `${shieldCount}/3` : "0/3");
+    const pearls = typeof getPearlCount === "function" ? getPearlCount(data) : (Number(data.pearls ?? data.tidePearls) || 0);
+    setText("home-v3-pearls", isLoggedIn ? pearls.toLocaleString() : "0");
+    renderPearlShop(data);
+}
+
+function formatShopTimeRemaining(msRemaining) {
+    const totalSeconds = Math.max(0, Math.ceil(msRemaining / 1000));
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    if (minutes >= 60) {
+        const hours = Math.floor(minutes / 60);
+        const remainingMinutes = minutes % 60;
+        return `${hours}h ${remainingMinutes}m`;
+    }
+    return `${minutes}m ${String(seconds).padStart(2, "0")}s`;
+}
+
+function getPearlShopEventCrateId() {
+    return COMMUNITY_BOSS_EVENT?.crateId || "summer";
+}
+
+function getPearlShopPurchaseState(itemId, profileData = getCurrentProfileData()) {
+    const item = PEARL_SHOP_ITEMS[itemId];
+    if (!item) return { disabled: true, label: "Unavailable", owned: false, reason: "Unavailable" };
+
+    const pearls = getPearlCount(profileData);
+    const isLoggedIn = Boolean(currentUser);
+    let disabled = !isLoggedIn || pearls < item.price;
+    let label = `${item.price}p`;
+    let owned = false;
+    let reason = !isLoggedIn ? "Login required" : pearls < item.price ? "Need more pearls" : "";
+
+    if (itemId === "streak-shield" && getStreakShieldCount(profileData) >= 3) {
+        disabled = true;
+        label = "Maxed";
+        owned = true;
+        reason = "Max shields";
+    }
+
+    if (itemId === "pearl-boost" && isPearlBoostActive(profileData)) {
+        label = `Extend ${item.price}p`;
+        reason = "";
+    }
+
+    if (itemId === "season-xp" && hasSeasonXpBoost(profileData)) {
+        disabled = true;
+        label = "Owned";
+        owned = true;
+        reason = "Owned";
+    }
+
+    return { disabled, label, owned, reason };
+}
+
+function renderPearlShop(profileData = getCurrentProfileData()) {
+    const status = document.getElementById("home-v3-shop-status");
+    const eventCrateName = document.getElementById("home-v3-event-crate-name");
+    const balance = document.getElementById("pearl-shop-balance");
+    if (!status && !eventCrateName && !balance && !document.querySelector("[data-pearl-shop-item]")) return;
+
+    const eventCrateId = getPearlShopEventCrateId();
+    const eventCrateDef = getCrateDefinition(eventCrateId);
+    if (eventCrateName) eventCrateName.textContent = eventCrateDef.name || "Event Crate";
+
+    const isLoggedIn = Boolean(currentUser);
+    const pearls = getPearlCount(profileData);
+    if (balance) balance.textContent = isLoggedIn ? pearls.toLocaleString() : "0";
+    const pearlBoostMs = getPearlBoostExpiresAt(profileData) - Date.now();
+    if (status) {
+        if (!isLoggedIn) {
+            status.textContent = "Login to spend and save pearls.";
+        } else if (pearlBoostMs > 0 && hasSeasonXpBoost(profileData)) {
+            status.textContent = `2x pearls active for ${formatShopTimeRemaining(pearlBoostMs)}. Season 2x XP owned.`;
+        } else if (pearlBoostMs > 0) {
+            status.textContent = `2x pearls active for ${formatShopTimeRemaining(pearlBoostMs)}.`;
+        } else if (hasSeasonXpBoost(profileData)) {
+            status.textContent = "Season 2x XP owned for the current season.";
+        } else {
+            status.textContent = "Spend pearls on boosts, crates, and streak protection.";
+        }
+    }
+
+    Object.keys(PEARL_SHOP_ITEMS).forEach(itemId => {
+        const state = getPearlShopPurchaseState(itemId, profileData);
+        document.querySelectorAll(`[data-pearl-shop-item="${itemId}"]`).forEach(card => {
+            const button = card.querySelector("button");
+            if (!button) return;
+            button.textContent = state.label;
+            button.disabled = state.disabled;
+            button.title = state.reason || "";
+            card.classList.toggle("owned", state.owned);
+            card.classList.toggle("disabled", state.disabled && !state.owned);
+        });
+    });
+}
+
+function openPearlShopModal() {
+    const modal = document.getElementById("pearlShopModal");
+    if (!modal) return;
+    renderPearlShop(getCurrentProfileData());
+    modal.classList.remove("hidden");
+}
+
+function closePearlShopModal() {
+    document.getElementById("pearlShopModal")?.classList.add("hidden");
+}
+
+function grantPearlShopItem(profileData, itemId) {
+    if (!profileData || typeof profileData !== "object") return { success: false, message: "Profile not ready." };
+
+    if (itemId === "streak-shield") {
+        const currentShields = getStreakShieldCount(profileData);
+        if (currentShields >= 3) return { success: false, message: "You already have the maximum Streak Shields." };
+        setStreakShieldCount(profileData, currentShields + 1);
+        return { success: true, message: "Streak Shield added." };
+    }
+
+    if (itemId === "pearl-boost") {
+        const startsAt = Math.max(Date.now(), getPearlBoostExpiresAt(profileData));
+        profileData.pearlBoostExpiresAt = startsAt + PEARL_BOOST_DURATION_MS;
+        return { success: true, message: "2x Pearls Boost activated for 1 hour." };
+    }
+
+    if (itemId === "cosmetic-crate" || itemId === "event-crate") {
+        const crateId = itemId === "event-crate" ? getPearlShopEventCrateId() : "reef";
+        const inventory = getCrateInventory(profileData);
+        inventory[crateId] = (inventory[crateId] || 0) + 1;
+        profileData.crateInventory = normalizeCrateInventory(inventory);
+        return { success: true, message: `${getCrateDefinition(crateId).name} added.` };
+    }
+
+    if (itemId === "season-xp") {
+        if (hasSeasonXpBoost(profileData)) return { success: false, message: "Season 2x XP is already owned." };
+        setSeasonXpBoost(profileData);
+        return { success: true, message: "Season 2x XP unlocked for the current season." };
+    }
+
+    return { success: false, message: "Unknown shop item." };
+}
+
+function buyPearlShopItem(itemId) {
+    const item = PEARL_SHOP_ITEMS[itemId];
+    if (!item) return;
+    if (!currentUser) {
+        showNotification("Login to spend pearls in the shop.", "error", 3200);
+        return;
+    }
+
+    const profileData = getCurrentProfileData();
+    const state = getPearlShopPurchaseState(itemId, profileData);
+    if (state.disabled && state.reason) {
+        showNotification(state.reason, "error", 2800);
+        return;
+    }
+
+    const pearls = getPearlCount(profileData);
+    if (pearls < item.price) {
+        showNotification(`You need ${item.price - pearls} more pearls.`, "error", 3200);
+        return;
+    }
+
+    const grant = grantPearlShopItem(profileData, itemId);
+    if (!grant.success) {
+        showNotification(grant.message, "error", 3200);
+        renderPearlShop(profileData);
+        return;
+    }
+
+    setPearlCount(profileData, pearls - item.price);
+    saveUserProfileLocally({
+        ...profileData,
+        uid: window.currentUser?.uid || firebase.auth().currentUser?.uid || profileData.uid
+    });
+    updateHomeV3Sidebar(profileData);
+    renderCratesButton();
+    renderCratesModal();
+    updateSeasonalCratePanels(profileData);
+    showNotification(`${grant.message} -${item.price} pearls`, "success", 3400);
+}
+
+function switchHomeV3Tab(tabId = "play") {
+    const tabs = document.querySelectorAll("[data-home-v3-tab]");
+    const panels = document.querySelectorAll("[data-home-v3-panel]");
+    tabs.forEach(tab => {
+        const isActive = tab.dataset.homeV3Tab === tabId;
+        tab.classList.toggle("active", isActive);
+        tab.setAttribute("aria-selected", isActive ? "true" : "false");
+    });
+    panels.forEach(panel => {
+        const isActive = panel.dataset.homeV3Panel === tabId;
+        panel.classList.toggle("active", isActive);
+        panel.hidden = !isActive;
+    });
+}
+
+function initHomeV3Tabs() {
+    document.querySelectorAll("[data-home-v3-tab]").forEach(tab => {
+        if (tab.dataset.homeV3Ready === "true") return;
+        tab.dataset.homeV3Ready = "true";
+        tab.addEventListener("click", () => switchHomeV3Tab(tab.dataset.homeV3Tab || "play"));
+    });
+}
+
+function initHomeV3CratesButton() {
+    const cratesBtn = document.getElementById("crates-btn");
+    if (!cratesBtn || cratesBtn.dataset.homeCratesReady === "true") return;
+    cratesBtn.dataset.homeCratesReady = "true";
+    cratesBtn.addEventListener("click", event => {
+        event.preventDefault();
+        openHomeCratesModal();
+    });
+}
+
 function updateIndexStats() {
         const profileData = getCurrentProfileData();
+        updateHomeV3Sidebar(profileData);
 
         if (currentUser && profileData) {
                 // Logged-in -> use profileData
@@ -5925,6 +7488,7 @@ function updateIndexStats() {
             renderRecentGames();
         }
         renderCratesButton();
+        updateSpinWheelUI();
 }
 // expose for game files
 window.updateIndexStats = updateIndexStats;
@@ -6134,6 +7698,29 @@ function loginUser() {
         });
 }
 
+async function forgotPassword() {
+    const emailInput = document.getElementById("login-email");
+    const errorEl = document.getElementById("auth-error");
+    const email = emailInput ? emailInput.value.trim() : "";
+
+    if (!email) {
+        errorEl.textContent = "Enter your email first, then we'll send the reset link.";
+        errorEl.style.display = "block";
+        return;
+    }
+
+    try {
+        await auth.sendPasswordResetEmail(email);
+        errorEl.style.display = "none";
+        showNotification("Password reset email sent. Check your inbox.", "success");
+    } catch (error) {
+        const message = error.message || "Unable to send reset email.";
+        errorEl.textContent = message;
+        errorEl.style.display = "block";
+        showNotification("Password reset failed: " + message, "error");
+    }
+}
+
 async function signupUser() {
     const email = document.getElementById("signup-email").value.trim();
     const password = document.getElementById("signup-password").value.trim();
@@ -6224,10 +7811,21 @@ async function signupUser() {
             communityBossRewards: localProfile.communityBossRewards && typeof localProfile.communityBossRewards === "object"
                 ? localProfile.communityBossRewards
                 : {},
+            sharkPassMissionClaims: localProfile.sharkPassMissionClaims && typeof localProfile.sharkPassMissionClaims === "object"
+                ? localProfile.sharkPassMissionClaims
+                : {},
+            sharkPassSeasonBaselines: localProfile.sharkPassSeasonBaselines && typeof localProfile.sharkPassSeasonBaselines === "object"
+                ? localProfile.sharkPassSeasonBaselines
+                : {},
+            sharkPassLevelRewardClaims: Array.isArray(localProfile.sharkPassLevelRewardClaims) ? localProfile.sharkPassLevelRewardClaims : [],
+            sharkPassSeasonId: localProfile.sharkPassSeasonId || SHARK_PASS_ACTIVE_SEASON_ID,
             crateInventory: normalizeCrateInventory(localProfile.crateInventory),
             cratesOpened: Math.max(0, Number(localProfile.cratesOpened) || 0),
             streakShields: getStreakShieldCount(localProfile),
             instantCrateOpen: getCrateInstantOpenEnabled(localProfile),
+            pearls: getPearlCount(localProfile),
+            pearlBoostExpiresAt: getPearlBoostExpiresAt(localProfile),
+            seasonXpBoosts: getSeasonXpBoosts(localProfile),
             username: username,
             email: email,
             avatar: "🦈",
@@ -6309,26 +7907,33 @@ function closeLoginModal() {
 }
 
 async function openProfileModal() {
-    if (currentUser) {
-        const profileModal = document.getElementById("profileModal");
-        if (!profileModal) {
-            showNotification("Profile editing is available on the home page.", "info", 3000);
-            return;
-        }
-        // Reload profile data when opening modal
-        await loadUserProfile().catch(err => console.error("Error loading profile:", err));
-        if (document.getElementById("username-edit-container")) {
-            cancelUsernameEdit();
-        }
-        updateProfileBadgeUI();
-        renderThemeSelection();
-        renderTitleSelection();
-        updateSeasonalThemeToggleUI();
-        ensureAdminAbuseVisibility();
-        await ensureFriendDocument(currentUser.uid).catch(err => console.error("Friend network init failed:", err));
-        profileModal.classList.remove("hidden");
+    if (!currentUser) {
+        openLoginModal();
+        return;
     }
+
+    const profileModal = document.getElementById("profileModal");
+    if (!profileModal) {
+        showNotification("Profile editing is available on the home page.", "info", 3000);
+        return;
+    }
+    // Reload profile data when opening modal
+    await loadUserProfile().catch(err => console.error("Error loading profile:", err));
+    if (document.getElementById("username-edit-container")) {
+        cancelUsernameEdit();
+    }
+    updateProfileBadgeUI();
+    renderThemeSelection();
+    renderTitleSelection();
+    updateSeasonalThemeToggleUI();
+    ensureAdminAbuseVisibility();
+    await ensureFriendDocument(currentUser.uid).catch(err => console.error("Friend network init failed:", err));
+    profileModal.classList.remove("hidden");
 }
+
+window.openLoginModal = openLoginModal;
+window.closeLoginModal = closeLoginModal;
+window.openProfileModal = openProfileModal;
 
 async function openUserProfileModal(uid) {
     if (!uid || !currentUser) return;
@@ -6519,6 +8124,7 @@ async function setProfilePicture(picturePath) {
 
         updateProfilePicPickerPreview(picturePath);
         renderProfilePicPicker();
+        renderProfileInventoryUI(profileData);
         const equippedEntry = findProfilePicCatalogEntry(buildProfilePicPickerCatalog(), picturePath);
         showNotification(`${equippedEntry?.name || "Portrait"} equipped.`, "success", 2400);
     } catch (error) {
@@ -6543,7 +8149,7 @@ let pfpPickerControlsBound = false;
 function inferPfpRarityFromPath(imagePath = "") {
     if (/leaderPfp\/Shark19\.png$/i.test(imagePath)) return "legendary";
     if (/leaderPfp\/(Daily|Monthly)\//i.test(imagePath)) return "rare";
-    if (/spinPfp|loginPfp/i.test(imagePath)) return "legendary";
+    if (/loginPfp/i.test(imagePath) || imagePath === SPIN_WHEEL_LEGENDARY_PFP.imagePath) return "legendary";
     if (/codePfp/i.test(imagePath)) return "special";
     if (/levelPfp\/Shark16\.png$/i.test(imagePath)) return "legendary";
     if (/levelPfp\/Shark1[2-5]\.png$/i.test(imagePath)) return "epic";
@@ -6588,7 +8194,7 @@ function getCosmeticSourceLabel(cosmetic = {}) {
     if (/leaderPfp\/Monthly/i.test(cosmetic.imagePath || "")) return "Monthly leaderboard #1";
     if (/codePfp/i.test(cosmetic.imagePath || "")) return "Redeem code reward";
     if (/loginPfp/i.test(cosmetic.imagePath || "")) return "Day 7 login reward";
-    if (/spinPfp/i.test(cosmetic.imagePath || "")) return "Daily prize wheel";
+    if ((cosmetic.imagePath || "") === SPIN_WHEEL_LEGENDARY_PFP.imagePath || cosmetic.spinReward) return "Daily prize wheel";
     if (/cratePfp/i.test(cosmetic.imagePath || "")) return "Cosmetic crate";
     if (cosmetic.level) return `Shark Pass level ${cosmetic.level}`;
     return "Special reward";
@@ -6671,7 +8277,7 @@ function buildProfilePicPickerCatalog() {
         { imagePath: "images/leaderPfp/Daily/Shark1.png", name: "Catshark", source: "Daily leaderboard #1" },
         { imagePath: "images/leaderPfp/Monthly/Shark1.png", name: "Whitetip Reef Shark", source: "Monthly leaderboard #1" },
         { imagePath: "images/leaderPfp/Shark19.png", name: "Port Jackson Shark", source: "All-time leaderboard top 3", isLeader: true },
-        { imagePath: "images/spinPfp/Shark1.png", name: "Wheel Shark", source: "Daily prize wheel" },
+        { imagePath: SPIN_WHEEL_LEGENDARY_PFP.imagePath, name: "Wheel Shark", source: "Daily prize wheel" },
         { imagePath: "images/loginPfp/Shark20.png", name: "Bull Shark", source: "Day 7 login reward" }
     ];
 
@@ -6843,7 +8449,7 @@ const LEADER_REWARD_PFP_NAMES = {
     "images/leaderPfp/Daily/Shark1.png": "Catshark",
     "images/leaderPfp/Monthly/Shark1.png": "Whitetip Reef Shark",
     "images/leaderPfp/Shark19.png": "Port Jackson Shark",
-    "images/spinPfp/Shark1.png": "Wheel Shark"
+    [SPIN_WHEEL_LEGENDARY_PFP.imagePath]: "Wheel Shark"
 };
 
 function getCosmeticDisplayName(cosmetic) {
@@ -6852,7 +8458,7 @@ function getCosmeticDisplayName(cosmetic) {
 }
 
 function isLeaderRewardPfp(cosmetic) {
-    return Boolean(cosmetic?.imagePath && LEADER_REWARD_PFP_NAMES[cosmetic.imagePath]);
+    return /leaderPfp/i.test(cosmetic?.imagePath || "");
 }
 
 function loadAvailablePFPs() {
@@ -7079,6 +8685,9 @@ async function syncStatsToFirebase() {
             cratesSinceLegendary: getCratesSinceLegendary(mergedProfile),
             streakShields: getStreakShieldCount(mergedProfile),
             instantCrateOpen: getCrateInstantOpenEnabled(mergedProfile),
+            pearls: getPearlCount(mergedProfile),
+            pearlBoostExpiresAt: getPearlBoostExpiresAt(mergedProfile),
+            seasonXpBoosts: getSeasonXpBoosts(mergedProfile),
             username: mergedProfile.username || getStoredPreferredUsername() || authUser.email.split("@")[0],
             profilePic: mergedProfile.profilePicture || "images/pfp/shark1.png",
             profilePicture: mergedProfile.profilePicture || "images/pfp/shark1.png",
@@ -7089,6 +8698,16 @@ async function syncStatsToFirebase() {
             communityBossRewards: mergedProfile.communityBossRewards && typeof mergedProfile.communityBossRewards === "object"
                 ? mergedProfile.communityBossRewards
                 : {},
+            sharkPassMissionClaims: mergedProfile.sharkPassMissionClaims && typeof mergedProfile.sharkPassMissionClaims === "object"
+                ? mergedProfile.sharkPassMissionClaims
+                : {},
+            sharkPassSeasonBaselines: mergedProfile.sharkPassSeasonBaselines && typeof mergedProfile.sharkPassSeasonBaselines === "object"
+                ? mergedProfile.sharkPassSeasonBaselines
+                : {},
+            sharkPassLevelRewardClaims: Array.isArray(mergedProfile.sharkPassLevelRewardClaims)
+                ? mergedProfile.sharkPassLevelRewardClaims
+                : [],
+            sharkPassSeasonId: mergedProfile.sharkPassSeasonId || SHARK_PASS_ACTIVE_SEASON_ID,
             crateInventory: normalizeCrateInventory(mergedProfile.crateInventory),
             lastUpdated: new Date()
         };
@@ -7230,7 +8849,7 @@ async function syncAllFirestoreData() {
 
 // Navigation
 function navigate(page){
-    window.location.href = page;
+    window.location.href = typeof resolveAppPath === "function" ? resolveAppPath(page) : page;
 }
 
 // ===== DAILY LOGIN & XP SYSTEM =====
@@ -7527,7 +9146,10 @@ function claimDailyReward(day) {
 }
 
 function openDailyLoginModal() {
-    if (!currentUser) return;
+    if (!currentUser) {
+        openLoginModal();
+        return;
+    }
     const currentDay = parseInt(localStorage.getItem("currentLoginDay")) || 1;
     showDailyLoginModal(currentDay, 0);
 }
@@ -7539,8 +9161,13 @@ function closeDailyLoginModal() {
     }
 }
 
+window.openDailyLoginModal = openDailyLoginModal;
+window.closeDailyLoginModal = closeDailyLoginModal;
+
 // Load stats and streaks
 document.addEventListener("DOMContentLoaded", function() {
+    initHomeV3Tabs();
+    initHomeV3CratesButton();
     // Update displayed stats from localStorage
     if (document.getElementById("games")) {
         document.getElementById("games").textContent = localStorage.getItem("games") || 0;
@@ -7582,8 +9209,11 @@ async function redeemCode() {
     }
 
     const codeInput = document.getElementById("redeem-code-input");
+    if (!codeInput) {
+        showNotification("Code input is unavailable right now.", "error", 3000);
+        return;
+    }
     const code = codeInput.value.trim().toUpperCase();
-    const messageEl = document.getElementById("redeem-message");
 
     if (!code) {
         showRedeemMessage("Please enter a code.", false);
@@ -7699,11 +9329,6 @@ async function redeemCode() {
         renderCratesModal();
         updateSeasonalCratePanels();
 
-        // Close modal after 2 seconds
-        setTimeout(() => {
-            closeProfileModal();
-        }, 2000);
-
     } catch (error) {
         console.error("Error redeeming code:", error);
         showRedeemMessage("An error occurred. Please try again.", false);
@@ -7719,6 +9344,18 @@ function showRedeemMessage(message, isSuccess) {
         messageEl.style.background = isSuccess ? 'rgba(76, 175, 80, 0.1)' : 'rgba(255, 107, 107, 0.1)';
     }
 }
+
+function bindLockerRedeemInput() {
+    const redeemInput = document.getElementById("redeem-code-input");
+    if (!redeemInput || redeemInput.dataset.redeemBound === "true") return;
+    redeemInput.dataset.redeemBound = "true";
+    redeemInput.addEventListener("keydown", event => {
+        if (event.key === "Enter") redeemCode();
+    });
+}
+
+document.addEventListener("DOMContentLoaded", bindLockerRedeemInput);
+bindLockerRedeemInput();
 
 // ----- CONSOLE COMMANDS FOR STAT MANAGEMENT -----
 // Usage in browser console:
@@ -8648,3 +10285,311 @@ function showCommands() {
     console.log("showCommands() - Show this help");
     console.log("================================");
 }
+
+// Profile modal overhaul helpers
+function syncProfileOverviewStats(profileData = getCurrentProfileData()) {
+    const map = {
+        "profile-xp-overview": profileData.totalGuesses ?? 0,
+        "profile-wins-overview": profileData.wins ?? 0,
+        "profile-current-streak-overview": profileData.currentStreak ?? 0,
+        "profile-best-game-overview": profileData.bestGame ?? 0
+    };
+    Object.entries(map).forEach(([id, value]) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = value;
+    });
+    const previewName = document.getElementById("profile-username-overview-preview");
+    const previewPic = document.getElementById("profile-pic-overview-preview");
+    if (previewName) previewName.textContent = profileData.username || currentUser?.email?.split("@")[0] || "Sharkdle Player";
+    if (previewPic) previewPic.src = profileData.profilePicture || "images/pfp/shark1.png";
+}
+
+const profileInventoryFilters = {
+    portraits: "all",
+    badges: "all",
+    themes: "all",
+    items: "all"
+};
+
+const cosmeticFilterLabels = {
+    all: "All",
+    starter: "Starter",
+    pass: "Pass",
+    crate: "Crates",
+    reward: "Rewards",
+    code: "Codes",
+    common: "Common",
+    rare: "Rare",
+    epic: "Epic",
+    legendary: "Legendary",
+    item: "Items"
+};
+
+function normalizeCosmeticFilterValue(value = "all") {
+    return String(value || "all").trim().toLowerCase();
+}
+
+function getCosmeticRarityLabel(rarity = "common") {
+    const key = normalizeCosmeticFilterValue(rarity);
+    return ({
+        core: "Starter",
+        starter: "Starter",
+        special: "Special",
+        code: "Code",
+        common: "Common",
+        uncommon: "Uncommon",
+        rare: "Rare",
+        epic: "Epic",
+        legendary: "Legendary",
+        item: "Item"
+    })[key] || "Common";
+}
+
+function getShortCosmeticSourceLabel(source = "Reward") {
+    const label = String(source || "Reward");
+    const lower = label.toLowerCase();
+    if (lower.includes("starter")) return "Starter";
+    if (lower.includes("summer")) return "Summer";
+    if (lower.includes("christmas")) return "Christmas";
+    if (lower.includes("halloween")) return "Halloween";
+    if (lower.includes("cosmetic crate")) return "Crate";
+    if (lower.includes("crate")) return "Crate";
+    if (lower.includes("shark pass")) return label.replace("Shark Pass level", "Pass Lv.").replace("Shark Pass", "Pass");
+    if (lower.includes("pass lv")) return label;
+    if (lower.includes("redeem") || lower.includes("code")) return "Code";
+    if (lower.includes("leaderboard")) return "Leaderboard";
+    if (lower.includes("login")) return "Login";
+    if (lower.includes("wheel")) return "Wheel";
+    if (lower.includes("achievement")) return "Achievement";
+    return label.length > 12 ? `${label.slice(0, 11)}...` : label;
+}
+
+function getThemeCosmeticMeta(theme) {
+    const passReward = sharkPassRewards.find(reward => reward.type === "theme" && reward.themeId === theme.id);
+    const crateReward = getAllCrateRewardPools()
+        .flat()
+        .find(reward => reward.type === "theme" && reward.themeId === theme.id);
+    if (theme.id === "default") {
+        return { rarity: "core", category: "starter", source: "Starter" };
+    }
+    if (passReward || typeof theme.level === "number") {
+        return {
+            rarity: passReward?.rarity || (theme.level >= 20 ? "legendary" : theme.level >= 15 ? "epic" : "rare"),
+            category: "pass",
+            source: theme.level ? `Pass Lv. ${theme.level}` : "Shark Pass"
+        };
+    }
+    if (crateReward) {
+        const source = crateReward.id?.includes("summer") ? "Summer crate"
+            : crateReward.id?.includes("christmas") ? "Christmas crate"
+            : crateReward.id?.includes("halloween") ? "Halloween crate"
+            : "Cosmetic crate";
+        return { rarity: crateReward.rarity || "rare", category: "crate", source };
+    }
+    return { rarity: "special", category: "reward", source: "Achievement" };
+}
+
+function getBadgeCosmeticMeta(badge) {
+    const rarityMeta = typeof getBadgeRarityMeta === "function"
+        ? getBadgeRarityMeta(badge)
+        : { className: badge?.rarity || "common", label: getCosmeticRarityLabel(badge?.rarity) };
+    const passReward = sharkPassRewards.find(reward => reward.type === "badge" && reward.badgeId === badge.id);
+    const crateReward = getAllCrateBadgeRewards().find(reward => reward.badgeId === badge.id);
+    if (badge.id === "starter") return { rarity: "core", category: "starter", source: "Starter" };
+    if (passReward || badge.passLevel) return { rarity: rarityMeta.className, category: "pass", source: passReward?.level || badge.passLevel ? `Pass Lv. ${passReward?.level || badge.passLevel}` : "Shark Pass" };
+    if (crateReward) return { rarity: rarityMeta.className, category: "crate", source: "Crate" };
+    if (badge.codeUnlock) return { rarity: rarityMeta.className, category: "code", source: "Code" };
+    return { rarity: rarityMeta.className, category: "reward", source: "Reward" };
+}
+
+function shouldShowCosmetic(item, activeFilter) {
+    const filter = normalizeCosmeticFilterValue(activeFilter);
+    if (filter === "all") return true;
+    return normalizeCosmeticFilterValue(item.category) === filter
+        || normalizeCosmeticFilterValue(item.rarity) === filter
+        || normalizeCosmeticFilterValue(item.source).includes(filter);
+}
+
+function getCosmeticRaritySortRank(rarity = "common") {
+    const order = ["core", "starter", "common", "rare", "epic", "legendary"];
+    const rank = order.indexOf(normalizeCosmeticFilterValue(rarity));
+    return rank === -1 ? order.indexOf("common") : rank;
+}
+
+function sortCosmeticsForLocker(items) {
+    return [...items].sort((a, b) => {
+        const rarityDiff = getCosmeticRaritySortRank(a.rarity) - getCosmeticRaritySortRank(b.rarity);
+        if (rarityDiff !== 0) return rarityDiff;
+        const categoryDiff = normalizeCosmeticFilterValue(a.category).localeCompare(normalizeCosmeticFilterValue(b.category));
+        if (categoryDiff !== 0) return categoryDiff;
+        return String(a.name || a.label || "").localeCompare(String(b.name || b.label || ""));
+    });
+}
+
+function ensureProfileInventoryFilterBar(category, filters) {
+    const section = document.querySelector(`[data-profile-inventory-section="${category}"]`);
+    if (!section) return;
+    let bar = section.querySelector(".profile-cosmetic-filters");
+    if (!bar) {
+        bar = document.createElement("div");
+        bar.className = "profile-cosmetic-filters";
+        const title = section.querySelector("h4");
+        title?.insertAdjacentElement("afterend", bar);
+    }
+    const active = profileInventoryFilters[category] || "all";
+    bar.innerHTML = filters.map(filter => `
+        <button type="button" class="${active === filter ? "active" : ""}" onclick="setProfileInventoryFilter('${category}', '${filter}')">${cosmeticFilterLabels[filter] || filter}</button>
+    `).join("");
+}
+
+function setProfileInventoryFilter(category, filter = "all") {
+    profileInventoryFilters[category] = normalizeCosmeticFilterValue(filter);
+    renderProfileInventoryUI();
+    showProfileInventoryCategory(category);
+}
+
+function renderProfileInventoryUI(profileData = getCurrentProfileData()) {
+    const summary = document.getElementById("profile-inventory-summary");
+    const pfpGrid = document.getElementById("profile-inventory-pfps");
+    const badgeGrid = document.getElementById("profile-inventory-badges");
+    const crateGrid = document.getElementById("profile-inventory-crates");
+    if (!pfpGrid && !badgeGrid && !crateGrid && !summary) return;
+
+    const pfps = typeof buildProfilePicPickerCatalog === "function"
+        ? buildProfilePicPickerCatalog().filter(item => item.unlocked)
+        : [];
+    const badges = typeof getUnlockedBadges === "function" ? getUnlockedBadges(currentUser?.uid, profileData) : [];
+    const themes = typeof getUnlockedCardThemes === "function" ? getUnlockedCardThemes(profileData) : [];
+    const inventory = typeof getCrateInventory === "function" ? getCrateInventory(profileData) : {};
+    const shieldCount = Number(profileData.streakShields || profileData.shields || 0);
+
+    if (summary) {
+        summary.innerHTML = `
+            <article><strong>${pfps.length}</strong><span>Portraits</span></article>
+            <article><strong>${badges.length}</strong><span>Badges</span></article>
+            <article><strong>${themes.length}</strong><span>Themes</span></article>
+            <article><strong>${Object.values(inventory).reduce((a, b) => a + Number(b || 0), 0)}</strong><span>Crates</span></article>
+        `;
+    }
+
+    if (pfpGrid) {
+        ensureProfileInventoryFilterBar("portraits", ["all", "starter", "pass", "crate", "reward", "common", "rare", "epic", "legendary"]);
+        const normalizePath = path => String(path || "").replace(/\\/g, "/").replace(/^\.?\//, "").trim().toLowerCase();
+        const equipped = normalizePath(profileData.profilePicture || profileData.profilePic || "images/pfp/shark1.png");
+        const visiblePfps = sortCosmeticsForLocker(pfps.filter(pfp => shouldShowCosmetic(pfp, profileInventoryFilters.portraits))).slice(0, 48);
+        pfpGrid.innerHTML = visiblePfps.map(pfp => `
+            <button class="profile-inventory-card pfp rarity-${pfp.rarity || "common"} ${normalizePath(pfp.imagePath) === equipped ? "equipped" : ""}" onclick="setProfilePicture('${pfp.imagePath.replace(/'/g, "\\'")}')">
+                <img src="${pfp.imagePath}" alt="${pfp.name}">
+                <span>${pfp.name}</span>
+                <small class="cosmetic-chip-row"><b class="rarity-chip rarity-${pfp.rarity || "common"}">${getPfpRarityLabel?.(pfp.rarity) || getCosmeticRarityLabel(pfp.rarity)}</b><b class="source-chip" title="${pfp.source || "Reward"}">${getShortCosmeticSourceLabel(pfp.source)}</b></small>
+            </button>
+        `).join("") || `<div class="profile-empty-card">No portraits match this filter.</div>`;
+    }
+
+    if (badgeGrid) {
+        ensureProfileInventoryFilterBar("badges", ["all", "starter", "pass", "crate", "code", "reward", "common", "rare", "epic", "legendary"]);
+        const normalizeId = id => String(id || "starter").trim().toLowerCase();
+        const equippedBadge = normalizeId(profileData.equippedBadge || getEquippedBadge?.(profileData) || "starter");
+        const visibleBadges = badges
+            .map(badge => ({ ...badge, ...getBadgeCosmeticMeta(badge) }))
+            .filter(badge => shouldShowCosmetic(badge, profileInventoryFilters.badges));
+        badgeGrid.innerHTML = sortCosmeticsForLocker(visibleBadges).map(badge => `
+            <button class="profile-inventory-card badge rarity-${badge.rarity} ${normalizeId(badge.id) === equippedBadge ? "equipped" : ""}" onclick="setEquippedBadge('${badge.id}')">
+                <span class="badge-mark">${badge.emoji || "🏅"}</span>
+                <span>${badge.name}</span>
+                <small class="cosmetic-chip-row"><b class="rarity-chip rarity-${badge.rarity}">${getCosmeticRarityLabel(badge.rarity)}</b><b class="source-chip" title="${badge.source}">${getShortCosmeticSourceLabel(badge.source)}</b></small>
+            </button>
+        `).join("") || `<div class="profile-empty-card">No badges match this filter.</div>`;
+    }
+
+    const themeGrid = document.getElementById("theme-select-container");
+    if (themeGrid) {
+        ensureProfileInventoryFilterBar("themes", ["all", "starter", "pass", "crate", "reward", "rare", "epic", "legendary"]);
+    }
+
+    if (typeof renderThemeSelection === "function") renderThemeSelection();
+
+    if (crateGrid) {
+        ensureProfileInventoryFilterBar("items", ["all", "crate", "item"]);
+        const crates = [
+            { id: "reef", label: "Cosmetic", icon: "fa-box-open", category: "crate", rarity: "item", source: "Crate" },
+            { id: "summer", label: "Summer", icon: "fa-umbrella-beach", category: "crate", rarity: "item", source: "Crate" },
+            { id: "christmas", label: "Christmas", icon: "fa-snowflake", category: "crate", rarity: "item", source: "Crate" },
+            { id: "halloween", label: "Halloween", icon: "fa-ghost", category: "crate", rarity: "item", source: "Crate" }
+        ];
+        const items = [...crates, { id: "shield", label: "Streak Shields", icon: "fa-shield-halved", category: "item", rarity: "epic", source: "Utility", count: shieldCount }];
+        crateGrid.innerHTML = sortCosmeticsForLocker(items.filter(item => shouldShowCosmetic(item, profileInventoryFilters.items))).map(item => `
+            <article class="profile-inventory-card utility rarity-${item.rarity}">
+                <i class="fa-solid ${item.icon}"></i>
+                <span>${item.label}</span>
+                <strong>${Number(item.count ?? inventory[item.id] ?? 0)}</strong>
+                <small class="cosmetic-chip-row"><b class="rarity-chip rarity-${item.rarity}">${getCosmeticRarityLabel(item.rarity)}</b><b class="source-chip" title="${item.source}">${getShortCosmeticSourceLabel(item.source)}</b></small>
+            </article>
+        `).join("") || `<div class="profile-empty-card">No items match this filter.</div>`;
+    }
+}
+
+function showProfileInventoryCategory(category = "portraits") {
+    const validCategories = ["portraits", "badges", "themes", "items", "codes"];
+    const activeCategory = validCategories.includes(category) ? category : "portraits";
+    document.querySelectorAll("[data-profile-inventory-tab]").forEach(button => {
+        button.classList.toggle("active", button.dataset.profileInventoryTab === activeCategory);
+    });
+    document.querySelectorAll("[data-profile-inventory-section]").forEach(section => {
+        const isActive = section.dataset.profileInventorySection === activeCategory;
+        section.hidden = !isActive;
+        section.classList.toggle("active", isActive);
+    });
+    localStorage.setItem("profileInventoryCategory", activeCategory);
+}
+
+const originalShowProfileTab = window.showProfileTab;
+window.showProfileTab = function(tab = "overview") {
+    const validTabs = ["overview", "inventory", "stats", "recent", "friends", "settings"];
+    const activeTab = validTabs.includes(tab) ? tab : "overview";
+    validTabs.forEach(name => {
+        const panel = document.getElementById(name === "inventory" ? "profile-inventory-tab" : `${name}-tab`);
+        const btn = document.getElementById(`${name}-tab-btn`);
+        if (panel) {
+            panel.style.display = name === activeTab ? "block" : "none";
+            panel.classList.toggle("active", name === activeTab);
+        }
+        if (btn) btn.classList.toggle("active", name === activeTab);
+    });
+    if (activeTab === "stats") {
+        saveLastViewedStats?.();
+        animateStatsFromLastView?.();
+    } else if (activeTab === "recent") {
+        saveLastViewedStats?.();
+        renderRecentGames?.();
+    } else if (activeTab === "friends") {
+        populateFriendsTab?.();
+    } else if (activeTab === "inventory") {
+        renderProfileInventoryUI?.();
+        renderThemeSelection?.();
+        showProfileInventoryCategory(localStorage.getItem("profileInventoryCategory") || "portraits");
+    } else if (activeTab === "overview") {
+        syncProfileOverviewStats?.();
+        const overviewList = document.getElementById("recent-games-list-overview");
+        if (overviewList && typeof renderRecentGames === "function") {
+            const mainList = document.getElementById("recent-games-list");
+            renderRecentGames();
+            if (mainList) overviewList.innerHTML = mainList.innerHTML || '<div class="profile-empty-card">No recent games yet.</div>';
+        }
+    }
+    localStorage.setItem("profileLastTab", activeTab);
+};
+
+const originalOpenProfileModal = window.openProfileModal;
+window.openProfileModal = async function() {
+    await originalOpenProfileModal?.();
+    syncProfileOverviewStats?.();
+    renderProfileInventoryUI?.();
+    window.showProfileTab("inventory");
+};
+
+window.openCraftingModalFromHome = openCraftingModalFromHome;
+window.closeCraftingModal = closeCraftingModal;
+window.showProfileInventoryCategory = showProfileInventoryCategory;
+window.setProfileInventoryFilter = setProfileInventoryFilter;
+window.renderProfileInventoryUI = renderProfileInventoryUI;
