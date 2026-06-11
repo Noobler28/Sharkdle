@@ -1,0 +1,2334 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+<link rel="icon" type="image/png" href="images/favicon.png">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <base href="../">
+    <title>Sharkdle Leaderboards</title>
+    <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800;900&family=Barlow:wght@400;500;600;700&family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+    <!-- Firebase App (the core Firebase SDK) -->
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+    <!-- Firebase Analytics (optional) -->
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-analytics-compat.js"></script>
+    <!-- Firebase Firestore (for leaderboard database) -->
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+    <!-- Firebase Auth -->
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+    <script src="Leaderboard/cosmetics-display.js"></script>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="page-shell.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        *{
+margin:0;
+padding:0;
+box-sizing:border-box;
+}
+
+body{
+font-family:Poppins, sans-serif;
+background:
+radial-gradient(circle at top, rgba(77,208,225,0.10), transparent 30%),
+linear-gradient(135deg,#061a40,#0b3c5d);
+color:white;
+min-height:100vh;
+display:flex;
+flex-direction:column;
+align-items:center;
+}
+
+/* NAVBAR */
+
+.navbar{
+
+display:flex;
+justify-content:space-between;
+align-items:center;
+
+padding:20px 40px;
+
+background:#071c2c;
+box-shadow:0 5px 20px rgba(0,0,0,0.5);
+
+width:100%;
+
+}
+
+.logo{
+
+font-size:28px;
+font-weight:800;
+background:linear-gradient(135deg,#4dd0e1,#00b4d8);
+-webkit-background-clip:text;
+-webkit-text-fill-color:transparent;
+background-clip:text;
+
+}
+
+.nav-btn {
+    background: linear-gradient(135deg, #00b4d8, #0088a0);
+    color: white;
+    border: none;
+    padding: 8px 18px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 14px;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 12px rgba(0, 180, 216, 0.3);
+    margin-left: 10px;
+}
+
+.nav-btn:hover {
+    background: linear-gradient(135deg, #0088a0, #006080);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(0, 180, 216, 0.5);
+}
+
+.nav-btn:active {
+    transform: translateY(0);
+}
+
+/* CONTAINER */
+
+.leaderboard-container{
+background:
+radial-gradient(circle at top right, rgba(77,208,225,0.10), transparent 28%),
+linear-gradient(180deg, rgba(11,34,51,0.96), rgba(8,25,39,0.96));
+border:1px solid rgba(77,208,225,0.14);
+border-radius:28px;
+margin-top:46px;
+padding:30px;
+width:95%;
+max-width:980px;
+box-shadow:0 22px 58px rgba(0,0,0,0.42);
+overflow:hidden;
+
+}
+
+.leaderboard-hero{
+display:flex;
+align-items:flex-end;
+justify-content:space-between;
+gap:18px;
+flex-wrap:wrap;
+margin-bottom:18px;
+padding-bottom:18px;
+border-bottom:1px solid rgba(255,255,255,0.08);
+}
+
+.leaderboard-copy{
+max-width:620px;
+}
+
+.leaderboard-kicker{
+display:inline-flex;
+align-items:center;
+padding:6px 12px;
+border-radius:999px;
+background:rgba(77,208,225,0.10);
+border:1px solid rgba(77,208,225,0.16);
+color:#99f3ff;
+font-size:11px;
+font-weight:700;
+letter-spacing:0.08em;
+text-transform:uppercase;
+margin-bottom:12px;
+}
+
+.leaderboard-subtitle{
+color:rgba(214,240,247,0.72);
+font-size:14px;
+line-height:1.6;
+margin-top:8px;
+}
+
+.leaderboard-stats{
+display:flex;
+gap:10px;
+flex-wrap:wrap;
+justify-content:flex-end;
+}
+
+.leaderboard-stat{
+min-width:110px;
+padding:12px 14px;
+border-radius:18px;
+background:rgba(255,255,255,0.04);
+border:1px solid rgba(77,208,225,0.12);
+text-align:left;
+}
+
+.leaderboard-stat-label{
+font-size:11px;
+text-transform:uppercase;
+letter-spacing:0.08em;
+color:rgba(156,239,255,0.72);
+font-weight:700;
+margin-bottom:6px;
+}
+
+.leaderboard-stat-value{
+font-size:20px;
+font-weight:800;
+color:#f4fdff;
+}
+
+.leaderboard-stat-board{
+min-width:300px;
+}
+
+.leaderboard-range-label{
+font-size:10px;
+text-transform:uppercase;
+letter-spacing:0.08em;
+color:rgba(156,239,255,0.66);
+font-weight:700;
+margin-top:8px;
+margin-bottom:6px;
+}
+
+.leaderboard-range-toggle{
+display:flex;
+gap:6px;
+flex-wrap:wrap;
+}
+
+.leaderboard-range-btn{
+border:1px solid rgba(77,208,225,0.32);
+background:rgba(7,35,52,0.76);
+color:#d7fbff;
+font-size:12px;
+font-weight:700;
+padding:5px 10px;
+border-radius:999px;
+cursor:pointer;
+transition:all 0.2s ease;
+}
+
+.leaderboard-range-btn:hover{
+border-color:#7cf0ff;
+transform:translateY(-1px);
+}
+
+.leaderboard-range-btn.active{
+background:linear-gradient(135deg,#00b4d8,#4dd0e1);
+color:#062232;
+border-color:rgba(77,208,225,0.96);
+box-shadow:0 8px 18px rgba(0,180,216,0.26);
+}
+
+.leaderboard-reset-panel{
+display:none;
+min-width:170px;
+padding:12px 14px;
+border-radius:18px;
+background:rgba(255,255,255,0.04);
+border:1px solid rgba(77,208,225,0.12);
+text-align:left;
+}
+
+.leaderboard-reset-panel.visible{
+display:block;
+}
+
+.leaderboard-reset-label{
+font-size:11px;
+text-transform:uppercase;
+letter-spacing:0.08em;
+color:rgba(156,239,255,0.72);
+font-weight:700;
+margin-bottom:6px;
+}
+
+.leaderboard-reset-timer{
+font-size:22px;
+font-weight:800;
+color:#f4fdff;
+font-variant-numeric:tabular-nums;
+letter-spacing:0.04em;
+}
+
+.leaderboard-reset-note{
+margin-top:6px;
+font-size:11px;
+line-height:1.45;
+color:rgba(214,240,247,0.62);
+}
+
+.leaderboard-table-shell{
+border-radius:22px;
+overflow:hidden;
+border:1px solid rgba(77,208,225,0.12);
+background:rgba(5,18,28,0.36);
+box-shadow:inset 0 1px 0 rgba(255,255,255,0.03);
+}
+
+.leaderboard-container > h1{
+display:none;
+}
+
+/* TITLE */
+
+h1{
+
+text-align:left;
+
+font-size:2.3rem;
+
+margin-bottom:0;
+
+background:linear-gradient(135deg,#00b4d8,#4dd0e1);
+
+-webkit-background-clip:text;
+background-clip:text;
+
+color:transparent;
+
+}
+
+/* LOADING TEXT */
+
+.loading{
+
+text-align:left;
+
+color:#b3e5fc;
+
+font-size:1.1rem;
+
+margin:14px 0 4px;
+
+}
+
+/* TABLE */
+
+.leaderboard-table{
+
+width:100%;
+
+border-collapse:collapse;
+
+overflow:hidden;
+
+}
+
+/* HEADER */
+
+.leaderboard-table th{
+
+background:rgba(6,22,35,0.92);
+
+color:#4dd0e1;
+
+padding:14px 12px;
+
+font-size:0.82rem;
+
+text-transform:uppercase;
+
+letter-spacing:1.2px;
+font-weight:800;
+
+}
+
+/* ROWS */
+
+.leaderboard-table td{
+
+padding:14px 12px;
+
+text-align:center;
+
+color:white;
+
+border-bottom:1px solid rgba(255,255,255,0.06);
+
+}
+
+.leaderboard-table tr{
+
+background:#0b2233;
+
+transition:transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+
+}
+
+.leaderboard-table tr.lb-theme-default{
+background:
+radial-gradient(circle at top right, rgba(108,236,255,0.08), transparent 32%),
+linear-gradient(135deg, rgba(14,131,173,0.16), rgba(11,34,51,0.96) 65%);
+}
+
+.leaderboard-table tr.lb-theme-tidal-blue{
+background:
+radial-gradient(circle at 18% 18%, rgba(126,233,255,0.12), transparent 24%),
+radial-gradient(circle at 82% 20%, rgba(89,153,255,0.12), transparent 28%),
+linear-gradient(140deg, rgba(33,114,238,0.20), rgba(10,34,74,0.96) 55%, rgba(4,17,42,0.98));
+}
+
+.leaderboard-table tr.lb-theme-sunken-gold{
+background:
+radial-gradient(circle at 82% 18%, rgba(255,221,133,0.14), transparent 24%),
+radial-gradient(circle at 15% 80%, rgba(255,159,67,0.10), transparent 30%),
+linear-gradient(140deg, rgba(161,113,31,0.20), rgba(35,24,62,0.96) 54%, rgba(16,18,35,0.98));
+}
+
+.leaderboard-table tr.lb-theme-coral-bloom{
+background:
+radial-gradient(circle at 18% 22%, rgba(255,191,161,0.18), transparent 22%),
+radial-gradient(circle at 82% 18%, rgba(255,121,154,0.18), transparent 24%),
+radial-gradient(circle at 55% 78%, rgba(111,243,229,0.10), transparent 28%),
+linear-gradient(140deg, rgba(190,74,118,0.26), rgba(255,155,106,0.14) 34%, rgba(12,82,103,0.96) 72%, rgba(8,29,43,0.99));
+}
+
+.leaderboard-table tr.lb-theme-deep-abyss{
+background:
+radial-gradient(circle at 14% 18%, rgba(109,255,223,0.10), transparent 20%),
+radial-gradient(circle at 86% 24%, rgba(53,214,189,0.08), transparent 22%),
+radial-gradient(circle at 50% 82%, rgba(123,255,238,0.06), transparent 26%),
+linear-gradient(150deg, rgba(6,54,62,0.26), rgba(4,18,31,0.97) 38%, rgba(2,8,18,0.99) 74%, rgba(0,2,8,1));
+}
+
+.leaderboard-table tr.lb-theme-storm-current{
+background:
+radial-gradient(circle at 18% 18%, rgba(166,223,255,0.18), transparent 22%),
+radial-gradient(circle at 78% 16%, rgba(127,159,255,0.14), transparent 24%),
+linear-gradient(115deg, rgba(195,223,255,0.08) 0 8%, transparent 8% 14%, rgba(146,201,255,0.08) 14% 20%, transparent 20% 100%),
+linear-gradient(145deg, rgba(52,102,233,0.22), rgba(14,30,78,0.97) 54%, rgba(6,14,36,1));
+}
+
+.leaderboard-table tr.lb-theme-pearl-reef{
+background:
+radial-gradient(circle at 18% 22%, rgba(255,247,226,0.20), transparent 24%),
+radial-gradient(circle at 82% 18%, rgba(181,251,239,0.12), transparent 25%),
+radial-gradient(circle at 50% 78%, rgba(255,216,173,0.10), transparent 28%),
+linear-gradient(140deg, rgba(214,232,220,0.18), rgba(103,190,179,0.12) 36%, rgba(20,87,110,0.94) 70%, rgba(9,39,52,0.98));
+}
+
+.leaderboard-table tr.lb-theme-volcanic-ember{
+background:
+radial-gradient(circle at 18% 18%, rgba(255,194,122,0.16), transparent 22%),
+radial-gradient(circle at 80% 22%, rgba(255,102,102,0.18), transparent 24%),
+radial-gradient(circle at 48% 82%, rgba(255,149,0,0.10), transparent 28%),
+linear-gradient(140deg, rgba(171,37,37,0.22), rgba(255,120,70,0.10) 36%, rgba(44,10,24,0.98) 72%, rgba(16,5,14,1));
+}
+
+.leaderboard-table tr.lb-theme-kelp-canopy{
+background:
+radial-gradient(circle at 16% 18%, rgba(184,239,144,0.12), transparent 24%),
+radial-gradient(circle at 82% 20%, rgba(72,179,121,0.12), transparent 26%),
+radial-gradient(circle at 46% 80%, rgba(225,255,181,0.08), transparent 28%),
+linear-gradient(145deg, rgba(58,122,59,0.18), rgba(22,72,56,0.97) 48%, rgba(8,30,24,1));
+}
+
+.leaderboard-table tr.lb-theme-glacier-shine{
+background:
+radial-gradient(circle at 18% 18%, rgba(255,255,255,0.14), transparent 22%),
+radial-gradient(circle at 78% 16%, rgba(155,228,255,0.14), transparent 24%),
+radial-gradient(circle at 50% 82%, rgba(195,235,255,0.10), transparent 28%),
+linear-gradient(145deg, rgba(221,245,255,0.16), rgba(93,170,219,0.10) 36%, rgba(33,82,120,0.94) 72%, rgba(10,31,52,1));
+}
+
+.leaderboard-table tr.lb-theme-ocean-breeze{
+background:
+radial-gradient(circle at 20% 20%, rgba(100,200,255,0.14), transparent 24%),
+radial-gradient(circle at 80% 30%, rgba(50,150,200,0.12), transparent 28%),
+linear-gradient(140deg, rgba(100,200,255,0.18), rgba(50,150,200,0.10) 42%, rgba(10,50,80,0.96));
+}
+
+.leaderboard-table tr.lb-theme-horizonflare{
+background:
+radial-gradient(circle at 50% 10%, rgba(255,255,255,0.06), transparent 30%),
+linear-gradient(to top, rgba(255,145,70,0.9) 0%, rgba(255,95,160,0.8) 55%, rgba(140,90,180,0.85) 100%);
+}
+
+.leaderboard-table tr.lb-theme-solsticeglow{
+background:
+radial-gradient(circle at 50% 20%, rgba(255,220,100,0.18), transparent 24%),
+radial-gradient(circle at 30% 70%, rgba(255,180,50,0.10), transparent 28%),
+linear-gradient(140deg, rgba(255,220,100,0.2), rgba(255,180,50,0.12) 42%, rgba(40,30,10,0.98));
+}
+
+.leaderboard-table tr.lb-theme-candycane{
+background:
+radial-gradient(circle at top, rgba(255,255,255,0.1), transparent 30%),
+repeating-linear-gradient(135deg, rgba(255,245,245,0.2) 0 16px, rgba(255,107,107,0.2) 16px 32px),
+linear-gradient(140deg, rgba(110,25,25,0.22), rgba(53,12,20,0.96));
+}
+
+.leaderboard-table tr.lb-theme-elf{
+background:
+radial-gradient(circle at 20% 20%, rgba(50,205,50,0.16), transparent 24%),
+radial-gradient(circle at 80% 30%, rgba(34,139,34,0.12), transparent 28%),
+linear-gradient(140deg, rgba(34,139,34,0.24), rgba(50,205,50,0.16) 50%, rgba(0,80,0,0.92));
+}
+
+.leaderboard-table tr.lb-theme-north-pole{
+background:
+radial-gradient(circle at 20% 30%, rgba(255,255,255,0.24) 1.4px, transparent 2.5px),
+radial-gradient(circle at 80% 20%, rgba(255,255,255,0.2) 1.1px, transparent 2.2px),
+radial-gradient(circle at 50% 20%, rgba(230,247,255,0.18), transparent 28%),
+linear-gradient(140deg, rgba(230,247,255,0.26), rgba(179,224,255,0.16) 50%, rgba(128,208,255,0.2));
+}
+
+.leaderboard-table tr.lb-theme-pumpkin-patch{
+background:
+radial-gradient(36px 22px at 10% 4px, rgba(138,255,112,0.74) 0 68%, transparent 72%),
+radial-gradient(30px 36px at 23% -9px, rgba(122,242,96,0.72) 0 66%, transparent 70%),
+radial-gradient(38px 24px at 42% 6px, rgba(144,255,120,0.72) 0 68%, transparent 72%),
+radial-gradient(30px 40px at 58% -10px, rgba(113,233,89,0.72) 0 66%, transparent 70%),
+radial-gradient(34px 22px at 75% 5px, rgba(132,250,108,0.72) 0 68%, transparent 72%),
+radial-gradient(30px 38px at 90% -8px, rgba(120,236,94,0.72) 0 66%, transparent 70%),
+linear-gradient(180deg, rgba(142,255,113,0.26) 0 18%, transparent 34%),
+linear-gradient(180deg, rgba(102,44,174,0.58), rgba(39,15,72,0.98) 62%, rgba(16,7,31,1));
+}
+
+.leaderboard-table tr.lb-theme-haunted-abyss{
+background:
+radial-gradient(circle at 18% 20%, rgba(255,151,126,0.14), transparent 24%),
+radial-gradient(circle at 82% 18%, rgba(198,132,255,0.18), transparent 26%),
+radial-gradient(circle at 50% 80%, rgba(255,192,133,0.08), transparent 30%),
+linear-gradient(145deg, rgba(104,44,166,0.24), rgba(53,26,93,0.98) 56%, rgba(21,10,38,1));
+}
+
+.leaderboard-table tr.lb-theme-nightmare-reef{
+background:
+radial-gradient(circle at 18% 18%, rgba(168,255,226,0.12), transparent 24%),
+radial-gradient(circle at 82% 22%, rgba(145,224,255,0.12), transparent 26%),
+radial-gradient(circle at 48% 80%, rgba(128,191,255,0.08), transparent 30%),
+linear-gradient(150deg, rgba(45,118,126,0.2), rgba(22,49,66,0.98) 52%, rgba(10,20,35,1));
+}
+
+.leaderboard-table tr.current-user-row{
+outline:2px solid rgba(255,215,0,0.92);
+outline-offset:-2px;
+box-shadow:inset 0 0 0 1px rgba(255,241,194,0.28);
+}
+
+.leaderboard-table tr:hover{
+
+background:#0f2d44;
+
+transform:translateY(-1px);
+box-shadow:inset 0 1px 0 rgba(255,255,255,0.04);
+
+}
+
+/* PROFILE IMAGE */
+
+.leaderboard-table img{
+
+width:40px;
+
+height:40px;
+
+border-radius:50%;
+
+border:2px solid #00b4d8;
+
+object-fit:cover;
+
+}
+
+/* RANK TROPHIES */
+
+.leaderboard-table span i{
+
+font-size:1.2em;
+
+}
+
+.leaderboard-player{
+display:flex;
+flex-direction:column;
+align-items:center;
+gap:6px;
+text-align:center;
+}
+
+.leaderboard-player-name{
+font-weight:700;
+color:#ffffff;
+}
+
+.leaderboard-player-title{
+font-size:0.78em;
+font-weight:700;
+letter-spacing:0.08em;
+text-transform:uppercase;
+color:#96ecff;
+}
+
+.rank-pill{
+display:inline-flex;
+align-items:center;
+justify-content:center;
+min-width:38px;
+height:38px;
+padding:0 10px;
+border-radius:999px;
+background:rgba(255,255,255,0.05);
+border:1px solid rgba(255,255,255,0.08);
+font-weight:800;
+color:#f6fcff;
+}
+
+.rank-pill.rank-top-1{
+background:rgba(255,215,0,0.14);
+border-color:rgba(255,215,0,0.28);
+}
+
+.rank-pill.rank-top-2{
+background:rgba(204,219,230,0.14);
+border-color:rgba(204,219,230,0.28);
+}
+
+.rank-pill.rank-top-3{
+background:rgba(205,127,50,0.18);
+border-color:rgba(205,127,50,0.30);
+}
+
+.leaderboard-metric{
+font-weight:700;
+color:#f2fbff;
+}
+
+/* BACK BUTTON */
+
+.back-btn{
+
+margin-top:30px;
+
+background:#00b4d8;
+
+color:white;
+
+border:none;
+
+border-radius:8px;
+
+padding:12px 28px;
+
+font-size:16px;
+
+font-weight:600;
+
+cursor:pointer;
+
+transition:.2s;
+
+width:100%;
+
+}
+
+.back-btn:hover{
+
+background:#0096c7;
+
+transform:scale(1.03);
+
+}
+
+/* POPUP */
+
+#leaderboard-popup{
+
+display:none;
+
+position:fixed;
+
+top:0;
+left:0;
+
+width:100%;
+height:100%;
+
+background:rgba(0,0,0,0.75);
+
+z-index:1000;
+
+justify-content:center;
+align-items:center;
+
+}
+
+#leaderboard-popup div{
+
+background:#0b2233;
+
+padding:35px;
+
+border-radius:12px;
+
+text-align:center;
+
+box-shadow:0 20px 50px rgba(0,0,0,0.7);
+
+}
+
+/* MOBILE */
+
+@media(max-width:768px){
+
+.navbar {
+    padding: 15px 20px;
+    gap: 10px;
+}
+
+.logo {
+    font-size: 22px;
+    flex-shrink: 0;
+}
+
+.navbar > div {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.nav-btn {
+    padding: 6px 6px;
+    font-size: 9px;
+    margin-left: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    line-height: 1;
+}
+
+.nav-btn i {
+    font-size: 14px;
+}
+
+.nav-btn span {
+    font-size: 8px;
+}
+
+.leaderboard-container{
+    padding:24px 18px;
+    margin-top:24px;
+    width:98%;
+}
+
+.leaderboard-hero{
+    align-items:flex-start;
+}
+
+.leaderboard-stats{
+    justify-content:flex-start;
+}
+
+.leaderboard-stat-board{
+    min-width:260px;
+}
+
+.leaderboard-range-btn{
+    font-size:11px;
+    padding:4px 9px;
+}
+
+h1{
+    font-size:2rem;
+}
+
+.leaderboard-table th,
+.leaderboard-table td{
+    padding:10px 8px;
+    font-size:0.88rem;
+}
+
+.leaderboard-table img{
+    width:36px;
+    height:36px;
+}
+
+.back-btn{
+    padding:10px 24px;
+    font-size:15px;
+}
+
+}
+
+@media(max-width:600px){
+
+.navbar {
+    padding: 10px 12px;
+    flex-direction: row;
+    align-items: center;
+    gap: 6px;
+}
+
+.logo {
+    font-size: 20px;
+    flex-shrink: 0;
+}
+
+.navbar > div {
+    display: flex;
+    flex-direction: row;
+    gap: 3px;
+    flex-wrap: wrap;
+    min-width: 0;
+}
+
+.nav-btn {
+    padding: 4px 6px;
+    font-size: 8px;
+    margin-left: 0;
+    flex: 1 1 auto;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    line-height: 1;
+}
+
+.nav-btn i {
+    font-size: 12px;
+}
+
+.nav-btn span {
+    font-size: 8px;
+}
+
+.leaderboard-container{
+    padding:18px 12px;
+    margin-top:16px;
+    width:96%;
+    max-width:100%;
+}
+
+.leaderboard-hero{
+    gap:14px;
+    margin-bottom:14px;
+    padding-bottom:14px;
+}
+
+.leaderboard-copy,
+.leaderboard-stats{
+    width:100%;
+}
+
+.leaderboard-stats{
+    justify-content:flex-start;
+}
+
+.leaderboard-stat{
+    min-width:96px;
+    flex:1 1 96px;
+}
+
+.leaderboard-stat-board{
+    min-width:100%;
+    flex:1 1 100%;
+}
+
+.leaderboard-stat-value{
+    font-size:17px;
+}
+
+.leaderboard-range-toggle{
+    gap:4px;
+}
+
+.leaderboard-range-btn{
+    font-size:10px;
+    padding:4px 8px;
+}
+
+h1{
+    font-size:1.45rem;
+    margin-bottom:8px;
+}
+
+.leaderboard-table th,
+.leaderboard-table td{
+    padding:7px 4px;
+    font-size:0.74rem;
+}
+
+.leaderboard-table-shell{
+    overflow-x:auto;
+    -webkit-overflow-scrolling:touch;
+}
+
+.leaderboard-table{
+    min-width:580px;
+}
+
+.rank-pill{
+    min-width:32px;
+    height:32px;
+    font-size:0.85rem;
+}
+
+.leaderboard-table img{
+    width:28px;
+    height:28px;
+}
+
+.back-btn{
+    margin-top:20px;
+    padding:10px 16px;
+    font-size:14px;
+}
+
+#leaderboard-popup div{
+    padding:25px;
+    margin:15px;
+}
+
+}
+
+@media(max-width:400px){
+
+.navbar {
+    flex-direction: row;
+    align-items: center;
+    padding: 10px 12px;
+    gap: 8px;
+    justify-content: space-between;
+}
+
+.logo {
+    font-size: 18px;
+    flex-shrink: 0;
+}
+
+.navbar > div {
+    display: flex;
+    flex-direction: row;
+    gap: 3px;
+    flex-wrap: nowrap;
+    min-width: 0;
+}
+
+.nav-btn {
+    padding: 6px 8px;
+    min-height: 36px;
+    font-size: 9px;
+    margin-left: 0;
+    margin-bottom: 0;
+    flex: 1;
+    min-width: 0;
+    white-space: nowrap;
+}
+
+.leaderboard-container{
+    padding:14px 10px;
+    margin-top:15px;
+    width:100%;
+}
+
+.leaderboard-stat{
+    min-width:0;
+    width:100%;
+}
+
+.leaderboard-range-btn{
+    font-size:9px;
+    padding:4px 7px;
+}
+
+h1{
+    font-size:1.16rem;
+}
+
+.leaderboard-table th,
+.leaderboard-table td{
+    padding:5px 2px;
+    font-size:0.68rem;
+}
+
+.leaderboard-table{
+    min-width:540px;
+}
+
+.leaderboard-table img{
+    width:24px;
+    height:24px;
+}
+
+.back-btn{
+    margin-top:15px;
+    padding:10px 12px;
+    font-size:13px;
+    min-height:40px;
+}
+
+#leaderboard-popup div{
+    padding:20px 15px;
+    max-width:calc(100% - 30px);
+    margin:15px auto;
+}
+
+}
+
+/* Index-theme polish for leaderboards */
+body.leaderboards-page {
+    font-family: 'Barlow', 'Poppins', sans-serif;
+    align-items: stretch;
+    background:
+        radial-gradient(900px 420px at 78% 6%, rgba(44, 196, 196, 0.14), transparent 62%),
+        radial-gradient(700px 360px at 8% 14%, rgba(232, 168, 34, 0.08), transparent 58%),
+        linear-gradient(180deg, #020a12 0%, #041522 46%, #020912 100%);
+}
+
+body.leaderboards-page::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    background:
+        linear-gradient(135deg, rgba(255,255,255,0.026) 0 1px, transparent 1px 18px),
+        radial-gradient(circle at 24% 22%, rgba(44, 196, 196, 0.08), transparent 26%),
+        radial-gradient(circle at 82% 78%, rgba(44, 196, 196, 0.06), transparent 24%);
+    z-index: 0;
+}
+
+body.leaderboards-page .navbar {
+    position: relative;
+    z-index: 2;
+    width: min(1380px, calc(100% - 32px));
+    margin: 16px auto 0;
+    padding: 16px 20px;
+    border: 1px solid rgba(44, 196, 196, 0.18);
+    border-radius: 12px;
+    background:
+        radial-gradient(circle at 4% 0%, rgba(44, 196, 196, 0.12), transparent 34%),
+        linear-gradient(180deg, rgba(4, 21, 37, 0.96), rgba(2, 13, 24, 0.98));
+    box-shadow: 0 20px 60px rgba(0,0,0,0.36);
+}
+
+body.leaderboards-page .logo {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 32px;
+    font-weight: 900;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    background: linear-gradient(135deg, #ffffff, #7ef0ff 48%, #20bfd9);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+}
+
+body.leaderboards-page .nav-btn {
+    min-height: 40px;
+    border: 1px solid rgba(44, 196, 196, 0.18);
+    border-radius: 10px;
+    background: rgba(44, 196, 196, 0.08);
+    color: rgba(225, 246, 250, 0.86);
+    box-shadow: none;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 900;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}
+
+body.leaderboards-page .nav-btn:hover {
+    border-color: rgba(44, 196, 196, 0.38);
+    background: rgba(44, 196, 196, 0.14);
+    color: #ffffff;
+}
+
+body.leaderboards-page .leaderboard-container {
+    position: relative;
+    z-index: 1;
+    width: min(1180px, calc(100% - 40px));
+    max-width: 1180px;
+    margin: 22px auto 64px;
+    padding: 0;
+    border-radius: 12px;
+    border: 1px solid rgba(44, 196, 196, 0.18);
+    background:
+        radial-gradient(ellipse at 84% 0%, rgba(44, 196, 196, 0.12), transparent 44%),
+        linear-gradient(180deg, rgba(6, 30, 48, 0.92), rgba(2, 13, 24, 0.96));
+    box-shadow: 0 24px 70px rgba(0,0,0,0.36), inset 0 1px 0 rgba(255,255,255,0.04);
+}
+
+body.leaderboards-page .leaderboard-hero {
+    min-height: 250px;
+    margin: 0;
+    padding: 28px;
+    border: 0;
+    border-bottom: 1px solid rgba(44, 196, 196, 0.14);
+    background:
+        linear-gradient(90deg, rgba(2, 13, 24, 0.98) 0%, rgba(3, 20, 35, 0.92) 48%, rgba(2, 13, 24, 0.34) 100%),
+        radial-gradient(ellipse at 84% 24%, rgba(44, 196, 196, 0.2), transparent 42%),
+        url("images/home-v3/great-white.png") right center / contain no-repeat,
+        linear-gradient(180deg, rgba(6, 30, 48, 0.98), rgba(2, 13, 24, 0.98));
+}
+
+body.leaderboards-page .leaderboard-kicker,
+body.leaderboards-page .leaderboard-range-btn,
+body.leaderboards-page .leaderboard-stat-label,
+body.leaderboards-page .leaderboard-range-label,
+body.leaderboards-page .leaderboard-reset-label {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 900;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}
+
+body.leaderboards-page .leaderboard-kicker {
+    border: 1px solid rgba(44, 196, 196, 0.2);
+    background: rgba(44, 196, 196, 0.09);
+    color: #7ef0ff;
+    border-radius: 999px;
+}
+
+body.leaderboards-page h1,
+body.leaderboards-page .leaderboard-container > h1,
+body.leaderboards-page .leaderboard-stat-value,
+body.leaderboards-page .leaderboard-reset-timer,
+body.leaderboards-page .leaderboard-player-name,
+body.leaderboards-page .leaderboard-metric {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 900;
+    letter-spacing: .5px;
+    text-transform: uppercase;
+}
+
+body.leaderboards-page h1 {
+    margin: 0;
+    max-width: 640px;
+    font-size: clamp(3rem, 6.2vw, 5.2rem);
+    line-height: .86;
+    background: none;
+    color: #ffffff;
+    text-shadow: 0 16px 38px rgba(0,0,0,0.34);
+}
+
+body.leaderboards-page .leaderboard-subtitle,
+body.leaderboards-page .leaderboard-reset-note,
+body.leaderboards-page .loading {
+    color: rgba(225, 246, 250, 0.72);
+}
+
+body.leaderboards-page .leaderboard-stats {
+    align-items: stretch;
+}
+
+body.leaderboards-page .leaderboard-stat,
+body.leaderboards-page .leaderboard-reset-panel {
+    border-radius: 10px;
+    border: 1px solid rgba(104, 226, 240, 0.14);
+    background:
+        radial-gradient(circle at 100% 0%, rgba(49, 190, 214, 0.11), transparent 42%),
+        linear-gradient(180deg, rgba(15, 58, 72, 0.72), rgba(3, 24, 36, 0.78));
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
+}
+
+body.leaderboards-page .leaderboard-stat-value,
+body.leaderboards-page .leaderboard-reset-timer {
+    color: #ffffff;
+}
+
+body.leaderboards-page .leaderboard-stat-label,
+body.leaderboards-page .leaderboard-range-label,
+body.leaderboards-page .leaderboard-reset-label {
+    color: rgba(126, 240, 255, 0.76);
+}
+
+body.leaderboards-page .leaderboard-range-btn {
+    border-radius: 999px;
+    border-color: rgba(44, 196, 196, 0.18);
+    background: rgba(44, 196, 196, 0.08);
+    color: rgba(225, 246, 250, 0.84);
+    box-shadow: none;
+}
+
+body.leaderboards-page .leaderboard-range-btn.active {
+    border-color: rgba(126, 240, 255, 0.38);
+    background: linear-gradient(135deg, #20bfd9, #0b80aa);
+    color: #ffffff;
+}
+
+body.leaderboards-page .loading {
+    margin: 20px 28px 0;
+    font-weight: 700;
+}
+
+body.leaderboards-page .leaderboard-table-shell {
+    margin: 18px 28px 0;
+    padding: 10px;
+    border-radius: 12px;
+    border: 1px solid rgba(44, 196, 196, 0.14);
+    background: rgba(1, 12, 20, 0.58);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
+}
+
+body.leaderboards-page .leaderboard-table {
+    border-collapse: separate;
+    border-spacing: 0 8px;
+}
+
+body.leaderboards-page .leaderboard-table th {
+    padding: 11px 12px;
+    border: 0;
+    background: transparent;
+    color: rgba(126, 240, 255, 0.82);
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 900;
+    letter-spacing: 1.4px;
+}
+
+body.leaderboards-page .leaderboard-table tbody tr:not([class*="lb-theme-"]) {
+    background:
+        radial-gradient(circle at 100% 0%, rgba(49, 190, 214, 0.11), transparent 42%),
+        linear-gradient(180deg, rgba(15, 58, 72, 0.72), rgba(3, 24, 36, 0.78));
+}
+
+body.leaderboards-page .leaderboard-table tbody tr:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 18px 42px rgba(0,0,0,0.28);
+}
+
+body.leaderboards-page .leaderboard-table td {
+    padding: 13px 12px;
+    border: 0;
+    color: rgba(245, 253, 255, 0.94);
+    background: transparent;
+}
+
+body.leaderboards-page .leaderboard-table tbody td:first-child {
+    border-radius: 10px 0 0 10px;
+}
+
+body.leaderboards-page .leaderboard-table tbody td:last-child {
+    border-radius: 0 10px 10px 0;
+}
+
+body.leaderboards-page .leaderboard-table img {
+    width: 44px;
+    height: 44px;
+    border: 2px solid rgba(126, 240, 255, 0.5);
+    box-shadow: 0 8px 22px rgba(0,0,0,0.24);
+}
+
+body.leaderboards-page .rank-pill {
+    min-width: 42px;
+    height: 42px;
+    border-radius: 10px;
+    border-color: rgba(104, 226, 240, 0.18);
+    background: rgba(1, 12, 20, 0.58);
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 18px;
+    font-weight: 900;
+}
+
+body.leaderboards-page .rank-pill.rank-top-1 {
+    color: #ffd47a;
+    border-color: rgba(232, 168, 34, 0.5);
+    background: rgba(232, 168, 34, 0.14);
+}
+
+body.leaderboards-page .rank-pill.rank-top-2 {
+    color: #dff6ff;
+    border-color: rgba(204, 234, 242, 0.34);
+}
+
+body.leaderboards-page .rank-pill.rank-top-3 {
+    color: #ffbf7a;
+    border-color: rgba(255, 170, 94, 0.38);
+}
+
+body.leaderboards-page .leaderboard-player-title {
+    color: rgba(126, 240, 255, 0.76);
+}
+
+body.leaderboards-page .back-btn {
+    width: calc(100% - 56px);
+    margin: 20px 28px 28px;
+    min-height: 44px;
+    border-radius: 10px;
+    border: 1px solid rgba(44, 196, 196, 0.18);
+    background: rgba(44, 196, 196, 0.08);
+    color: rgba(225, 246, 250, 0.86);
+    box-shadow: none;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 900;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}
+
+body.leaderboards-page .back-btn:hover {
+    border-color: rgba(44, 196, 196, 0.38);
+    background: rgba(44, 196, 196, 0.14);
+    transform: translateY(-2px);
+}
+
+body.leaderboards-page #leaderboard-popup {
+    background: rgba(1, 8, 15, 0.82) !important;
+    backdrop-filter: blur(10px);
+}
+
+body.leaderboards-page #leaderboard-popup > div,
+body.leaderboards-page #friendProfileModal .profile-modal-content {
+    width: min(760px, calc(100vw - 48px)) !important;
+    max-width: 760px !important;
+    max-height: calc(100vh - 96px) !important;
+    overflow-y: auto !important;
+    border-radius: 18px !important;
+    border: 1px solid rgba(44, 196, 196, 0.2) !important;
+    background:
+        radial-gradient(ellipse at 84% 0%, rgba(44, 196, 196, 0.12), transparent 44%),
+        linear-gradient(180deg, rgba(6, 30, 48, 0.96), rgba(2, 13, 24, 0.98)) !important;
+    box-shadow: 0 24px 70px rgba(0,0,0,0.44) !important;
+    margin: 0 auto !important;
+}
+
+body.leaderboards-page #friendProfileModal {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px 16px;
+    box-sizing: border-box;
+}
+
+body.leaderboards-page #friendProfileModal .profile-modal-content .stat-card {
+    padding: 14px 14px 12px !important;
+    min-height: 76px !important;
+}
+
+body.leaderboards-page #friendProfileModal .profile-modal-content .stat-value {
+    font-size: 24px !important;
+}
+
+@media(max-width:768px) {
+    body.leaderboards-page .navbar {
+        width: calc(100% - 18px);
+        border-radius: 10px;
+    }
+
+    body.leaderboards-page .leaderboard-container {
+        width: calc(100% - 18px);
+        margin-top: 18px;
+    }
+
+    body.leaderboards-page .leaderboard-hero {
+        min-height: 0;
+        background:
+            linear-gradient(180deg, rgba(2, 13, 24, 0.96), rgba(2, 13, 24, 0.78)),
+            url("images/home-v3/great-white.png") right bottom / 78% auto no-repeat,
+            linear-gradient(180deg, rgba(6, 30, 48, 0.98), rgba(2, 13, 24, 0.98));
+    }
+
+    body.leaderboards-page .leaderboard-table-shell {
+        margin: 14px 12px 0;
+    }
+
+    body.leaderboards-page .back-btn {
+        width: calc(100% - 24px);
+        margin: 16px 12px 18px;
+    }
+}
+
+    </style>
+</head>
+<body class="leaderboards-page shell-page">
+    <header class="navbar">
+        <div class="logo">🦈 Sharkdle</div>
+        <div>
+            <button onclick="navigate('index.html')" class="nav-btn" title="Home"><i class="fas fa-home"></i><span>Home</span></button>
+        <!-- Popup Modal for Leaderboard Error -->
+            <button onclick="navigate('sharkpass.html')" class="nav-btn" title="Shark Pass"><i class="fas fa-id-card"></i><span>Pass</span></button>
+            <button onclick="navigate('achievements.html')" class="nav-btn" title="Achievements"><i class="fas fa-trophy"></i><span>Achieve</span></button>
+        </div>
+    </header>
+    <div class="leaderboard-container">
+        <div class="leaderboard-hero">
+            <div class="leaderboard-copy">
+                <div class="leaderboard-kicker">Competitive Waters</div>
+                <h1>Sharkdle Global Leaderboards</h1>
+                <div class="leaderboard-subtitle" id="leaderboard-subtitle">View the TOP 25 Sharkdle players. Can you reach number 1?</div>
+            </div>
+            <div class="leaderboard-stats">
+                <div class="leaderboard-stat leaderboard-stat-board">
+                    <div class="leaderboard-stat-label">Board Size</div>
+                    <div class="leaderboard-stat-value" id="board-size-value">Top 25</div>
+                    <div class="leaderboard-range-label">Range</div>
+                    <div class="leaderboard-range-toggle" id="leaderboard-range-toggle">
+                        <button type="button" class="leaderboard-range-btn" data-range="daily">Daily</button>
+                        <button type="button" class="leaderboard-range-btn" data-range="monthly">Monthly</button>
+                        <button type="button" class="leaderboard-range-btn active" data-range="all_time">All Time</button>
+                    </div>
+                </div>
+                <div class="leaderboard-stat">
+                    <div class="leaderboard-stat-label">Primary Rank</div>
+                    <div class="leaderboard-stat-value" id="primary-rank-value">Wins (All Time)</div>
+                </div>
+                <div class="leaderboard-reset-panel" id="leaderboard-reset-panel">
+                    <div class="leaderboard-reset-label" id="leaderboard-reset-label">Reset in</div>
+                    <div class="leaderboard-reset-timer" id="leaderboard-reset-timer">--:--:--</div>
+                    <div class="leaderboard-reset-note" id="leaderboard-reset-note">#1 when the board resets earns a permanent profile icon.</div>
+                </div>
+            </div>
+        </div>
+        <h1>🦈 Sharkdle Global Leaderboards</h1>
+        <div id="leaderboard-loading" class="loading">Loading leaderboard...</div>
+        <div class="leaderboard-table-shell">
+        <table class="leaderboard-table" id="leaderboard-table" style="display:none;">
+            <thead>
+                <tr>
+                    <th>Rank</th>
+                    <th>Profile</th>
+                    <th>Username</th>
+                    <th id="wins-header">Wins</th>
+                    <th id="level-header">Level</th>
+                    <th id="streak-header">Streak</th>
+                    <th id="games-header">Games</th>
+                </tr>
+            </thead>
+            <tbody id="leaderboard-body">
+                <!-- Leaderboard rows will be inserted here -->
+            </tbody>
+        </table>
+        </div>
+        <button class="back-btn" onclick="window.location.href=resolveAppPath('index.html')">
+            ⬅️ Back to Main Menu
+        </button>
+    </div>
+
+    <!-- Popup Modal for Leaderboard Error -->
+    <div id="leaderboard-popup" style="display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(10,36,99,0.75);z-index:1000;align-items:center;justify-content:center;">
+        <div style="background:#1b263b;padding:32px 24px;border-radius:16px;box-shadow:0 8px 32px rgba(0,0,0,0.4);max-width:340px;margin:auto;text-align:center;">
+            <h2 style="color:#fff;margin-bottom:12px;font-size:1.3rem;">Leaderboard Unavailable</h2>
+            <p style="color:#b3e5fc;font-size:1.05rem;margin-bottom:18px;">Sorry, the leaderboard is currently not working.<br>Please try again later.</p>
+            <button onclick="closeLeaderboardPopup()" style="background:linear-gradient(135deg,#3e92cc,#2a9d8f);color:#fff;border:none;border-radius:8px;padding:10px 28px;font-size:1rem;font-weight:600;cursor:pointer;">OK</button>
+        </div>
+    </div>
+    <!-- Friend Profile Modal (click a leaderboard row to open) -->
+    <div id="friendProfileModal" class="modal hidden">
+        <div class="modal-content profile-modal-content">
+            <div id="friend-profile-hero-card" class="profile-hero-card friend-profile-hero theme-default" style="gap: 12px; margin-bottom: 20px;">
+                <img id="friend-profile-pic" src="images/pfp/shark1.png" alt="Profile" style="width: 60px; height: 60px; border-radius: 50%; object-fit: cover;">
+                <div class="profile-identity-block">
+                    <div class="profile-name-cluster">
+                        <h2 id="friend-profile-username" style="margin: 0; font-size: 24px;">Username</h2>
+                        <span id="friend-profile-leaderboard-badge" class="profile-leaderboard-badge hidden"></span>
+                    </div>
+                    <p id="friend-profile-uid" style="margin: 5px 0 0 0; color: #888; font-size: 12px;">UID</p>
+                </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; margin-bottom: 20px;">
+                <div class="stat-card">
+                    <div class="stat-label">Total Guesses</div>
+                    <div class="stat-value" id="friend-profile-total-guesses">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Games Played</div>
+                    <div class="stat-value" id="friend-profile-games">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Wins</div>
+                    <div class="stat-value" id="friend-profile-wins">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Losses</div>
+                    <div class="stat-value" id="friend-profile-losses">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Avg Guesses</div>
+                    <div class="stat-value" id="friend-profile-avg">0.00</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Best Game</div>
+                    <div class="stat-value" id="friend-profile-best">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Current Streak</div>
+                    <div class="stat-value" id="friend-profile-current">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Highest Streak</div>
+                    <div class="stat-value" id="friend-profile-highest">0</div>
+                </div>
+            </div>
+
+            <div id="friend-profile-action" style="margin-bottom:12px; display:flex; gap:8px; align-items:center;">
+                <!-- Filled dynamically: add friend button or friends label -->
+            </div>
+
+            <button onclick="closeFriendProfileModal()" style="width: 100%; padding: 12px; background: #ccc; color: #333; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">Close</button>
+        </div>
+    </div>
+    <script>
+        // Navigation helper function
+        function navigate(page) {
+            const routes = {
+                "index.html": "../index.html",
+                "sharkpass.html": "../Sharkpass/index.html",
+                "achievements.html": "../Achievements/index.html"
+            };
+            window.location.href = new URL(routes[page] || page, window.location.href).href;
+        }
+
+        // Firebase config
+        const firebaseConfig = {
+            apiKey: "AIzaSyAS9l8O1jRMafPt3r0lF6mqjr2-gl-EbZ0",
+            authDomain: "sharkdle-leaderboard.firebaseapp.com",
+            projectId: "sharkdle-leaderboard",
+            storageBucket: "sharkdle-leaderboard.firebasestorage.app",
+            messagingSenderId: "429123174628",
+            appId: "1:429123174628:web:42ae9baed69c4b087c2cf1",
+            measurementId: "G-HV5FFNKM5C"
+        };
+        // Initialize Firebase
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+        }
+        // if (firebase.analytics) {
+        //     firebase.analytics();
+        // }
+        const db = firebase.firestore();
+        const auth = firebase.auth();
+
+        // Check for user profile in localStorage first (for immediate cross-domain detection)
+        let currentUserUID = null;
+        let currentUsername = null;
+        let currentUserEmail = null;
+        const profileData = localStorage.getItem("userProfile");
+        if (profileData) {
+            try {
+                const profile = JSON.parse(profileData);
+                currentUsername = profile.username;
+                currentUserEmail = profile.email;
+            } catch (e) {
+                console.log("", e);
+            }
+        }
+        const LEADERBOARD_LIMIT = 25;
+        const LEADERBOARD_QUERY_LIMIT = 200;
+        const leaderboardRangeConfig = {
+            daily: {
+                id: "daily",
+                label: "Daily",
+                orderField: "dailyWins",
+                metricField: "dailyWins",
+                metricHeader: "Daily Wins",
+                primaryRankLabel: "Daily Wins",
+                subtitle: "Today's top players. #1 when the daily board resets earns a permanent profile icon.",
+                emptyState: "No daily wins recorded yet today.",
+                resetNote: "#1 when the daily board resets earns a permanent profile icon."
+            },
+            monthly: {
+                id: "monthly",
+                label: "Monthly",
+                orderField: "monthlyWins",
+                metricField: "monthlyWins",
+                metricHeader: "Monthly Wins",
+                primaryRankLabel: "Monthly Wins",
+                subtitle: "This month's top players. #1 when the monthly board resets earns a permanent profile icon.",
+                emptyState: "No monthly wins recorded yet.",
+                resetNote: "#1 when the monthly board resets earns a permanent profile icon."
+            },
+            all_time: {
+                id: "all_time",
+                label: "All Time",
+                orderField: "wins",
+                metricField: "wins",
+                metricHeader: "Wins",
+                primaryRankLabel: "Wins (All Time)",
+                subtitle: "View the TOP 25 Sharkdle players. Can you reach number 1?",
+                emptyState: "No leaderboard data yet."
+            }
+        };
+        let selectedLeaderboardRange = "all_time";
+
+        function getLocalDateKey(dateValue = new Date()) {
+            const date = dateValue instanceof Date ? dateValue : new Date(dateValue);
+            if (Number.isNaN(date.getTime())) return "";
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, "0");
+            const day = String(date.getDate()).padStart(2, "0");
+            return `${year}-${month}-${day}`;
+        }
+
+        function getUtcDateKey(dateValue = new Date()) {
+            const date = dateValue instanceof Date ? dateValue : new Date(dateValue);
+            if (Number.isNaN(date.getTime())) return "";
+            const year = date.getUTCFullYear();
+            const month = String(date.getUTCMonth() + 1).padStart(2, "0");
+            const day = String(date.getUTCDate()).padStart(2, "0");
+            return `${year}-${month}-${day}`;
+        }
+
+        function parseDateLikeValue(rawValue) {
+            if (rawValue === null || rawValue === undefined || rawValue === "") return null;
+            if (rawValue instanceof Date) return Number.isNaN(rawValue.getTime()) ? null : rawValue;
+            if (typeof rawValue === "number" && Number.isFinite(rawValue)) {
+                const numericDate = new Date(rawValue);
+                return Number.isNaN(numericDate.getTime()) ? null : numericDate;
+            }
+            if (typeof rawValue === "object") {
+                if (typeof rawValue.toDate === "function") {
+                    const timestampDate = rawValue.toDate();
+                    return timestampDate instanceof Date && !Number.isNaN(timestampDate.getTime()) ? timestampDate : null;
+                }
+                if (typeof rawValue.seconds === "number") {
+                    const millis = rawValue.seconds * 1000 + Math.floor((rawValue.nanoseconds || 0) / 1000000);
+                    const timestampDate = new Date(millis);
+                    return Number.isNaN(timestampDate.getTime()) ? null : timestampDate;
+                }
+                if (typeof rawValue._seconds === "number") {
+                    const millis = rawValue._seconds * 1000 + Math.floor((rawValue._nanoseconds || 0) / 1000000);
+                    const timestampDate = new Date(millis);
+                    return Number.isNaN(timestampDate.getTime()) ? null : timestampDate;
+                }
+                return null;
+            }
+            if (typeof rawValue !== "string") return null;
+            const value = rawValue.trim();
+            if (!value) return null;
+            if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+                const [year, month, day] = value.split("-").map(Number);
+                return new Date(year, month - 1, day);
+            }
+            const parsedDate = new Date(value);
+            return Number.isNaN(parsedDate.getTime()) ? null : parsedDate;
+        }
+
+        function normalizeStoredDateValue(rawValue) {
+            const parsedDate = parseDateLikeValue(rawValue);
+            return parsedDate ? getLocalDateKey(parsedDate) : "";
+        }
+
+        function normalizeStoredUtcDateValue(rawValue) {
+            if (typeof rawValue === "string") {
+                const value = rawValue.trim();
+                if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+                    return value;
+                }
+            }
+            const parsedDate = parseDateLikeValue(rawValue);
+            if (!parsedDate) return "";
+            const year = parsedDate.getUTCFullYear();
+            const month = String(parsedDate.getUTCMonth() + 1).padStart(2, "0");
+            const day = String(parsedDate.getUTCDate()).padStart(2, "0");
+            return `${year}-${month}-${day}`;
+        }
+
+        function normalizeStoredMonthValue(rawValue) {
+            if (typeof rawValue === "string" && /^\d{4}-\d{2}$/.test(rawValue.trim())) {
+                return rawValue.trim();
+            }
+            const normalizedDate = normalizeStoredDateValue(rawValue);
+            return normalizedDate ? normalizedDate.slice(0, 7) : "";
+        }
+
+        function normalizeStoredUtcMonthValue(rawValue) {
+            if (typeof rawValue === "string") {
+                const value = rawValue.trim();
+                if (/^\d{4}-\d{2}$/.test(value)) return value;
+                if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value.slice(0, 7);
+            }
+            const normalizedDate = normalizeStoredUtcDateValue(rawValue);
+            return normalizedDate ? normalizedDate.slice(0, 7) : "";
+        }
+
+        function getCurrentMonthKey() {
+            const today = getUtcDateKey();
+            return today ? today.slice(0, 7) : "";
+        }
+
+        function getRangeConfig(rangeKey = selectedLeaderboardRange) {
+            return leaderboardRangeConfig[rangeKey] || leaderboardRangeConfig.all_time;
+        }
+
+        const ALL_TIME_TOP3_PFP = {
+            name: "Port Jackson Shark",
+            imagePath: "images/leaderPfp/Shark19.png",
+            special: true,
+            leaderCrown: true,
+            revocable: true
+        };
+        const DAILY_LEADER_PFP = {
+            name: "Catshark",
+            imagePath: "images/leaderPfp/Daily/Shark1.png",
+            special: true,
+            leaderReward: "daily",
+            permanent: true
+        };
+        const MONTHLY_LEADER_PFP = {
+            name: "Whitetip Reef Shark",
+            imagePath: "images/leaderPfp/Monthly/Shark1.png",
+            special: true,
+            leaderReward: "monthly",
+            permanent: true
+        };
+
+        let leaderboardResetTimer = null;
+
+        function matchesLeaderboardUser(userRef) {
+            if (!userRef) return false;
+            return Boolean(
+                (currentUserUID && userRef.uid === currentUserUID) ||
+                (currentUserEmail && userRef.email && userRef.email === currentUserEmail) ||
+                (currentUsername && userRef.username && userRef.username === currentUsername.toLowerCase())
+            );
+        }
+
+        function loadCachedLeaderboardProfileData() {
+            const scopedProfileKey = currentUserUID ? `userProfile_${currentUserUID}` : "userProfile";
+            const scopedBackupKey = currentUserUID ? `userProfileBackup_${currentUserUID}` : "userProfileBackup";
+            try {
+                return JSON.parse(localStorage.getItem(scopedProfileKey) || localStorage.getItem("userProfile") || "{}");
+            } catch (error) {
+                console.warn("Unable to parse cached leaderboard profile.", error);
+                return {};
+            }
+        }
+
+        function saveCachedLeaderboardProfileData(profileData) {
+            const scopedProfileKey = currentUserUID ? `userProfile_${currentUserUID}` : "userProfile";
+            const scopedBackupKey = currentUserUID ? `userProfileBackup_${currentUserUID}` : "userProfileBackup";
+            localStorage.setItem("userProfile", JSON.stringify(profileData));
+            localStorage.setItem(scopedProfileKey, JSON.stringify(profileData));
+            localStorage.setItem("userProfileBackup", JSON.stringify(profileData));
+            localStorage.setItem(scopedBackupKey, JSON.stringify(profileData));
+        }
+
+        async function syncLeaderboardCosmeticsToFirestore() {
+            if (!currentUserUID || !window.SharkdleCosmeticsDisplay) return;
+            const payload = window.SharkdleCosmeticsDisplay.buildCosmeticSyncPayload(loadCachedLeaderboardProfileData());
+            if (!Object.keys(payload).length) return;
+            try {
+                await db.collection("userStats").doc(currentUserUID).set(payload, { merge: true });
+            } catch (error) {
+                console.warn("Unable to sync leaderboard cosmetics:", error);
+            }
+        }
+
+        function hasEarnedLeaderPfp(profileData, pfpDef) {
+            return (profileData.earnedCosmetics || []).some(c => c.imagePath === pfpDef.imagePath || c.name === pfpDef.name);
+        }
+
+        async function grantPermanentLeaderPfp(pfpDef) {
+            if (!currentUserUID) return false;
+            const profileData = loadCachedLeaderboardProfileData();
+            if (!profileData.earnedCosmetics) profileData.earnedCosmetics = [];
+            if (hasEarnedLeaderPfp(profileData, pfpDef)) return false;
+            profileData.earnedCosmetics.push({ ...pfpDef });
+            saveCachedLeaderboardProfileData(profileData);
+            await db.collection("userStats").doc(currentUserUID).set({
+                earnedCosmetics: profileData.earnedCosmetics
+            }, { merge: true });
+            if (typeof loadAvailablePFPs === "function") loadAvailablePFPs();
+            if (typeof loadEarnedCosmetics === "function") loadEarnedCosmetics();
+            return true;
+        }
+
+        function revokeLeaderPfp(pfpDef) {
+            if (!currentUserUID) return Promise.resolve(false);
+            const profileData = loadCachedLeaderboardProfileData();
+            const previousCosmetics = profileData.earnedCosmetics || [];
+            const nextCosmetics = previousCosmetics.filter(c => c.imagePath !== pfpDef.imagePath && c.name !== pfpDef.name);
+            if (nextCosmetics.length === previousCosmetics.length) return Promise.resolve(false);
+            profileData.earnedCosmetics = nextCosmetics;
+            const equippedPath = profileData.profilePicture || profileData.profilePic || "";
+            if (equippedPath === pfpDef.imagePath || /leaderPfp\/Shark19\.png$/.test(equippedPath)) {
+                profileData.profilePicture = "images/pfp/shark1.png";
+                profileData.profilePic = "images/pfp/shark1.png";
+            }
+            saveCachedLeaderboardProfileData(profileData);
+            return db.collection("userStats").doc(currentUserUID).set({
+                earnedCosmetics: profileData.earnedCosmetics,
+                profilePicture: profileData.profilePicture,
+                profilePic: profileData.profilePic
+            }, { merge: true }).then(() => {
+                if (typeof loadAvailablePFPs === "function") loadAvailablePFPs();
+                if (typeof loadEarnedCosmetics === "function") loadEarnedCosmetics();
+                return true;
+            });
+        }
+
+        function showLeaderRewardPopup(pfpDef, popupStorageKey, titleText) {
+            if (!popupStorageKey || localStorage.getItem(popupStorageKey)) return;
+            localStorage.setItem(popupStorageKey, "true");
+            const notification = document.createElement("div");
+            notification.setAttribute("data-notification", "true");
+            const topPosition = (typeof getNotificationPosition === "function") ? getNotificationPosition() : 20;
+            notification.style.cssText = `
+                position: fixed;
+                top: ${topPosition}px;
+                right: 20px;
+                background: linear-gradient(135deg, #FFD700, #222 80%);
+                color: #222;
+                padding: 20px 30px;
+                border-radius: 10px;
+                box-shadow: 0 4px 16px rgba(0,0,0,0.35);
+                z-index: 10000;
+                font-weight: 700;
+                max-width: 320px;
+                animation: slideIn 0.3s ease-out;
+                border: 2px solid #FFD700;
+                transition: top 0.3s ease;
+            `;
+            notification.innerHTML = `
+                <div style="display:flex;align-items:center;gap:14px;">
+                    <div style="font-size:2.2em;">🏆</div>
+                    <div>
+                        <div style="font-weight:800;font-size:1.15em;color:#FFD700;">${titleText}</div>
+                        <div style="font-size:1em;color:#222;font-weight:700;">${pfpDef.name}</div>
+                        <div style="margin-top:6px;"><img src="${pfpDef.imagePath}" alt="PFP ${pfpDef.name}" style="width:48px;height:48px;border-radius:8px;border:2px solid #FFD700;box-shadow:0 2px 8px #0002;vertical-align:middle;background:#fff;"></div>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(notification);
+            setTimeout(() => {
+                notification.style.animation = "slideIn 0.3s ease-out reverse";
+                setTimeout(() => notification.remove(), 300);
+            }, 4000);
+        }
+
+        function getLocalLeaderboardMeta(metaId) {
+            try {
+                return JSON.parse(localStorage.getItem(`leaderboardMeta_${metaId}`) || "{}");
+            } catch (error) {
+                console.warn("Unable to read local leaderboard meta.", error);
+                return {};
+            }
+        }
+
+        function setLocalLeaderboardMeta(metaId, data) {
+            localStorage.setItem(`leaderboardMeta_${metaId}`, JSON.stringify({
+                ...data,
+                updatedAt: Date.now()
+            }));
+        }
+
+        async function processPeriodLeaderReward(rangeType, top1Ref, periodKey) {
+            try {
+                const metaId = rangeType === "daily" ? "daily" : "monthly";
+                const pfpDef = rangeType === "daily" ? DAILY_LEADER_PFP : MONTHLY_LEADER_PFP;
+                const meta = getLocalLeaderboardMeta(metaId);
+
+                if (meta.periodKey && meta.periodKey !== periodKey && meta.leaderUid && meta.leaderUid === currentUserUID) {
+                    const newlyEarned = await grantPermanentLeaderPfp(pfpDef);
+                    if (newlyEarned) {
+                        showLeaderRewardPopup(
+                            pfpDef,
+                            `${metaId}_leader_pfp_popup_shown`,
+                            rangeType === "daily" ? "Daily Leaderboard Reward!" : "Monthly Leaderboard Reward!"
+                        );
+                    }
+                }
+
+                setLocalLeaderboardMeta(metaId, {
+                    periodKey,
+                    leaderUid: top1Ref?.uid || null,
+                    leaderMetric: top1Ref?.metricValue || 0
+                });
+            } catch (error) {
+                console.warn("Period leaderboard reward processing failed:", error);
+            }
+        }
+
+        function getLeaderboardResetTarget(rangeKey) {
+            const now = new Date();
+            if (rangeKey === "daily") {
+                return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1, 0, 0, 0, 0));
+            }
+            if (rangeKey === "monthly") {
+                return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1, 0, 0, 0, 0));
+            }
+            return null;
+        }
+
+        function formatLeaderboardCountdown(remainingMs) {
+            const safeMs = Math.max(0, remainingMs);
+            const totalSeconds = Math.floor(safeMs / 1000);
+            const days = Math.floor(totalSeconds / 86400);
+            const hours = Math.floor((totalSeconds % 86400) / 3600);
+            const minutes = Math.floor((totalSeconds % 3600) / 60);
+            const seconds = totalSeconds % 60;
+            if (days > 0) {
+                return `${days}d ${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+            }
+            return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+        }
+
+        function updateLeaderboardResetCountdown() {
+            const panel = document.getElementById("leaderboard-reset-panel");
+            const timerEl = document.getElementById("leaderboard-reset-timer");
+            const labelEl = document.getElementById("leaderboard-reset-label");
+            const noteEl = document.getElementById("leaderboard-reset-note");
+            const config = getRangeConfig();
+            if (!panel || !timerEl) return;
+
+            if (config.id !== "daily" && config.id !== "monthly") {
+                panel.classList.remove("visible");
+                return;
+            }
+
+            panel.classList.add("visible");
+            if (labelEl) labelEl.textContent = config.id === "daily" ? "Daily reset in" : "Monthly reset in";
+            if (noteEl) noteEl.textContent = config.resetNote || "#1 when the board resets earns a permanent profile icon.";
+            const target = getLeaderboardResetTarget(config.id);
+            timerEl.textContent = target ? formatLeaderboardCountdown(target.getTime() - Date.now()) : "--:--:--";
+        }
+
+        function startLeaderboardResetCountdown() {
+            updateLeaderboardResetCountdown();
+            if (leaderboardResetTimer) clearInterval(leaderboardResetTimer);
+            leaderboardResetTimer = setInterval(() => {
+                const config = getRangeConfig();
+                const target = getLeaderboardResetTarget(config.id);
+                updateLeaderboardResetCountdown();
+                if ((config.id === "daily" || config.id === "monthly") && target && target.getTime() - Date.now() <= 1000) {
+                    loadLeaderboard(config.id);
+                }
+            }, 1000);
+        }
+
+        function updateLeaderboardRangeUI(rangeKey = selectedLeaderboardRange) {
+            const config = getRangeConfig(rangeKey);
+            const winsHeader = document.getElementById("wins-header");
+            const levelHeader = document.getElementById("level-header");
+            const streakHeader = document.getElementById("streak-header");
+            const gamesHeader = document.getElementById("games-header");
+            const primaryRankValue = document.getElementById("primary-rank-value");
+            const subtitle = document.getElementById("leaderboard-subtitle");
+            const boardSizeValue = document.getElementById("board-size-value");
+            if (winsHeader) winsHeader.textContent = config.metricHeader;
+            const isAllTimeRange = config.id === "all_time";
+            if (levelHeader) levelHeader.textContent = isAllTimeRange ? "Level" : "Level (AT)";
+            if (streakHeader) streakHeader.textContent = isAllTimeRange ? "Streak" : "Streak (AT)";
+            if (gamesHeader) gamesHeader.textContent = isAllTimeRange ? "Games" : "Games (AT)";
+            if (primaryRankValue) primaryRankValue.textContent = config.primaryRankLabel;
+            if (subtitle) subtitle.textContent = config.subtitle;
+            if (boardSizeValue) boardSizeValue.textContent = `Top ${LEADERBOARD_LIMIT}`;
+
+            const buttons = document.querySelectorAll(".leaderboard-range-btn");
+            buttons.forEach(button => {
+                button.classList.toggle("active", button.dataset.range === config.id);
+            });
+            startLeaderboardResetCountdown();
+        }
+
+        function getLeaderboardMetricValue(data, rangeKey) {
+            const config = getRangeConfig(rangeKey);
+            const metricValue = Number(data?.[config.metricField]) || 0;
+            if (config.id === "daily") {
+                const todayKey = getUtcDateKey();
+                const dailyDate = normalizeStoredUtcDateValue(data?.dailyWinsUtcDate || data?.dailyWinsDate);
+                if (dailyDate !== todayKey) return 0;
+                if (metricValue <= 0) return 0;
+                return metricValue;
+            }
+            if (config.id === "monthly") {
+                const monthKey = getCurrentMonthKey();
+                const monthlyKey = normalizeStoredUtcMonthValue(data?.monthlyWinsUtcKey || data?.monthlyWinsKey);
+                if (monthlyKey !== monthKey) return 0;
+                if (metricValue <= 0) return 0;
+                return metricValue;
+            }
+            return metricValue;
+        }
+
+        function setupLeaderboardRangeToggle() {
+            const buttons = document.querySelectorAll(".leaderboard-range-btn");
+            buttons.forEach(button => {
+                button.addEventListener("click", () => {
+                    const nextRange = button.dataset.range;
+                    if (!nextRange || nextRange === selectedLeaderboardRange) return;
+                    selectedLeaderboardRange = nextRange;
+                    updateLeaderboardRangeUI();
+                    loadLeaderboard(selectedLeaderboardRange);
+                });
+            });
+        }
+
+        setupLeaderboardRangeToggle();
+        updateLeaderboardRangeUI();
+
+        // Wait for auth state before loading leaderboard
+        auth.onAuthStateChanged(async user => {
+            if (user) {
+                currentUserUID = user.uid;
+                currentUserEmail = user.email;
+                console.log("Auth state loaded. Current user UID:", user.uid, "Email:", user.email);
+                await syncLeaderboardCosmeticsToFirestore();
+            }
+            loadLeaderboard(selectedLeaderboardRange);
+        });
+
+        // Fetch leaderboard data from Firestore
+        function showLeaderboardPopup() {
+            document.getElementById('leaderboard-popup').style.display = 'flex';
+        }
+        function closeLeaderboardPopup() {
+            document.getElementById('leaderboard-popup').style.display = 'none';
+        }
+
+        async function getLeaderboardCandidateRows(rangeConfig) {
+            const candidates = [];
+            const baseCollection = db.collection("userStats");
+            const queryLimit = rangeConfig.id === "all_time" ? LEADERBOARD_LIMIT : LEADERBOARD_QUERY_LIMIT;
+            let lastDoc = null;
+            let pageCount = 0;
+            const maxPages = rangeConfig.id === "all_time" ? 1 : 8;
+            let orderField = rangeConfig.orderField;
+            let usingFallbackOrder = false;
+
+            while (pageCount < maxPages && candidates.length < LEADERBOARD_LIMIT) {
+                let snapshot;
+                try {
+                    let query = baseCollection
+                        .orderBy(orderField, "desc")
+                        .limit(queryLimit);
+                    if (lastDoc) {
+                        query = query.startAfter(lastDoc);
+                    }
+                    snapshot = await query.get();
+                } catch (error) {
+                    if (rangeConfig.id === "all_time") throw error;
+                    if (usingFallbackOrder) throw error;
+                    console.warn(`Leaderboard query fallback for ${rangeConfig.id}:`, error);
+                    orderField = "wins";
+                    usingFallbackOrder = true;
+                    lastDoc = null;
+                    pageCount = 0;
+                    candidates.length = 0;
+                    continue;
+                }
+
+                if (snapshot.empty) break;
+                pageCount++;
+                lastDoc = snapshot.docs[snapshot.docs.length - 1];
+
+                for (const doc of snapshot.docs) {
+                    const data = doc.data();
+                    const totalWins = Number(data?.wins) || 0;
+                    if (totalWins <= 0) continue;
+
+                    const metricValue = getLeaderboardMetricValue(data, rangeConfig.id);
+                    if (rangeConfig.id !== "all_time" && metricValue <= 0) continue;
+
+                    candidates.push({
+                        doc,
+                        data,
+                        metricValue
+                    });
+                }
+
+                if (snapshot.size < queryLimit) break;
+            }
+
+            return candidates
+                .sort((a, b) => b.metricValue - a.metricValue)
+                .slice(0, LEADERBOARD_LIMIT);
+        }
+
+        async function loadLeaderboard(rangeKey = selectedLeaderboardRange) {
+            selectedLeaderboardRange = rangeKey;
+            updateLeaderboardRangeUI(selectedLeaderboardRange);
+            const rangeConfig = getRangeConfig(selectedLeaderboardRange);
+            const loadingDiv = document.getElementById('leaderboard-loading');
+            const table = document.getElementById('leaderboard-table');
+            const tbody = document.getElementById('leaderboard-body');
+            loadingDiv.style.display = '';
+            loadingDiv.textContent = 'Loading leaderboard...';
+            table.style.display = 'none';
+            tbody.innerHTML = '';
+            try {
+                const candidateRows = await getLeaderboardCandidateRows(rangeConfig);
+                if (!candidateRows.length) {
+                    loadingDiv.textContent = rangeConfig.emptyState;
+                    if (rangeConfig.id === "daily") {
+                        await processPeriodLeaderReward("daily", null, getUtcDateKey());
+                    } else if (rangeConfig.id === "monthly") {
+                        await processPeriodLeaderReward("monthly", null, getCurrentMonthKey());
+                    }
+                    loadingDiv.style.display = "";
+                    return;
+                }
+
+                const top1Ref = {
+                    uid: candidateRows[0].doc.id,
+                    email: candidateRows[0].data.email,
+                    username: candidateRows[0].data.username ? candidateRows[0].data.username.toLowerCase() : null,
+                    metricValue: candidateRows[0].metricValue
+                };
+                
+                let rank = 1;
+                let top3Users = [];
+                const cosmetics = window.SharkdleCosmeticsDisplay;
+                const cachedProfileData = loadCachedLeaderboardProfileData();
+                candidateRows.forEach(({ doc, data, metricValue }) => {
+                    if (rank > LEADERBOARD_LIMIT) return;
+                    const tr = document.createElement('tr');
+                    const isCurrentUser = (currentUserUID && doc.id === currentUserUID) || 
+                        (currentUserEmail && data.email && data.email === currentUserEmail) ||
+                        (currentUsername && data.username && data.username.toLowerCase() === currentUsername.toLowerCase()) ||
+                        (auth.currentUser && (
+                            doc.id === auth.currentUser.uid ||    
+                            data.uid === auth.currentUser.uid ||
+                            data.email === auth.currentUser.email
+                        ));
+                    const rowData = isCurrentUser && cosmetics
+                        ? cosmetics.mergeRowCosmetics(data, cachedProfileData)
+                        : data;
+                    const cardTheme = cosmetics
+                        ? cosmetics.sanitizeCardTheme(rowData.equippedCardTheme)
+                        : (rowData.equippedCardTheme || "default");
+                    tr.classList.add(`lb-theme-${cardTheme}`);
+                    const profilePicPath = cosmetics
+                        ? cosmetics.resolveProfilePicturePath(rowData.profilePicture || rowData.profilePic)
+                        : "images/pfp/shark1.png";
+                    const profilePicImg = cosmetics
+                        ? cosmetics.buildProfilePicHtml(profilePicPath, isCurrentUser)
+                        : `<img src="${profilePicPath}" alt="Profile" onerror="this.onerror=null;this.src='images/pfp/shark1.png';" style="width:38px;height:38px;border-radius:50%;border:2px solid #3e92cc;background:#18304a;object-fit:cover;">`;
+                    const username = rowData.username ? rowData.username : 'Anonymous';
+                    let rankCell = '';
+                    if (rank === 1) {
+                        rankCell = `<span class="rank-pill rank-top-1">🥇</span>`;
+                    } else if (rank === 2) {
+                        rankCell = `<span class="rank-pill rank-top-2">🥈</span>`;
+                    } else if (rank === 3) {
+                        rankCell = `<span class="rank-pill rank-top-3">🥉</span>`;
+                    } else {
+                        rankCell = `<span class="rank-pill">${rank}</span>`;
+                    }
+                    const badgeId = rowData.equippedBadge || "starter";
+                    const usernameDisplay = `<div class="leaderboard-player"><div class="leaderboard-player-name">${username}</div></div>`;
+                    const badgeDisplay = cosmetics
+                        ? cosmetics.buildBadgeHtml(badgeId)
+                        : "";
+                    if (isCurrentUser) {
+                        tr.classList.add('current-user-row');
+                    }
+                    tr.innerHTML = `
+                        <td>${rankCell}</td>
+                        <td>${profilePicImg}</td>
+                        <td>${usernameDisplay}${badgeDisplay}</td> 
+                        <td class="leaderboard-metric">${metricValue}</td>
+                        <td class="leaderboard-metric">${rowData.currentLevel || 0}</td>
+                        <td class="leaderboard-metric">${rowData.currentStreak || 0}</td>
+                        <td class="leaderboard-metric">${rowData.gamesPlayed || 0}</td>
+                    `;
+                    tbody.appendChild(tr);
+                    // Make rows clickable to view user profile (like friend items)
+                    tr.style.cursor = 'pointer';
+                    tr.addEventListener('click', () => {
+                        try { openUserProfileModal(doc.id); } catch (e) { console.warn('Unable to open profile modal:', e); }
+                    });
+                    if (rank <= 3) {
+                        top3Users.push({
+                            uid: doc.id,
+                            email: data.email,
+                            username: data.username ? data.username.toLowerCase() : null
+                        });
+                    }
+                    rank++;
+                });
+                if (rank === 1) {
+                    loadingDiv.textContent = rangeConfig.emptyState;
+                    return;
+                }
+                try {
+                    if (selectedLeaderboardRange === "daily") {
+                        await processPeriodLeaderReward("daily", top1Ref, getUtcDateKey());
+                    } else if (selectedLeaderboardRange === "monthly") {
+                        await processPeriodLeaderReward("monthly", top1Ref, getCurrentMonthKey());
+                    } else if (selectedLeaderboardRange === "all_time" && currentUserUID) {
+                        const isTop3 = top3Users.some(matchesLeaderboardUser);
+                        if (isTop3) {
+                            const profileData = loadCachedLeaderboardProfileData();
+                            const newlyEarned = !hasEarnedLeaderPfp(profileData, ALL_TIME_TOP3_PFP);
+                            await grantPermanentLeaderPfp(ALL_TIME_TOP3_PFP);
+                            if (newlyEarned) {
+                                showLeaderRewardPopup(ALL_TIME_TOP3_PFP, "pjshark_pfp_popup_shown", "All-Time Top 3 Reward!");
+                            }
+                        } else {
+                            await revokeLeaderPfp(ALL_TIME_TOP3_PFP);
+                        }
+                    }
+                } catch (rewardError) {
+                    console.warn("Leaderboard reward processing failed:", rewardError);
+                }
+                loadingDiv.style.display = 'none';
+                table.style.display = '';
+                
+            } catch (err) {
+                loadingDiv.textContent = 'Failed to load leaderboard.';
+                showLeaderboardPopup();
+                console.error(err);
+            }
+        }
+
+        // Open a user's profile modal by UID (fetches from userStats)
+        async function openUserProfileModal(uid) {
+            if (!uid || !db) return;
+            try {
+                const doc = await db.collection('userStats').doc(uid).get();
+                if (!doc.exists) {
+                    showLeaderboardPopup();
+                    return;
+                }
+                const profileData = doc.data() || {};
+                const usernameEl = document.getElementById('friend-profile-username');
+                const uidEl = document.getElementById('friend-profile-uid');
+                const picEl = document.getElementById('friend-profile-pic');
+                const totalGuessesEl = document.getElementById('friend-profile-total-guesses');
+                const gamesEl = document.getElementById('friend-profile-games');
+                const winsEl = document.getElementById('friend-profile-wins');
+                const lossesEl = document.getElementById('friend-profile-losses');
+                const avgEl = document.getElementById('friend-profile-avg');
+                const bestEl = document.getElementById('friend-profile-best');
+                const currentEl = document.getElementById('friend-profile-current');
+                const highestEl = document.getElementById('friend-profile-highest');
+                const badgeEl = document.getElementById('friend-profile-leaderboard-badge');
+                const heroCard = document.getElementById('friend-profile-hero-card');
+
+                if (usernameEl) usernameEl.textContent = profileData.username || uid;
+                if (uidEl) uidEl.textContent = uid;
+                if (picEl) picEl.src = profileData.profilePicture || 'images/pfp/shark1.png';
+                if (totalGuessesEl) totalGuessesEl.textContent = profileData.totalGuesses ?? 0;
+                if (gamesEl) gamesEl.textContent = profileData.gamesPlayed ?? profileData.games ?? 0;
+                if (winsEl) winsEl.textContent = profileData.wins ?? 0;
+                if (lossesEl) lossesEl.textContent = profileData.losses ?? 0;
+                let avg = profileData.averageGuesses;
+                if (typeof avg !== 'number') avg = Number(avg);
+                if (isNaN(avg)) avg = 0;
+                if (avgEl) avgEl.textContent = avg.toFixed(2);
+                if (bestEl) bestEl.textContent = profileData.bestGame ?? 0;
+                if (currentEl) currentEl.textContent = profileData.currentStreak ?? 0;
+                if (highestEl) highestEl.textContent = profileData.highestStreak ?? 0;
+
+                // Apply theme class if present
+                const themeId = (profileData.equippedCardTheme || 'default');
+                if (heroCard) heroCard.className = `profile-hero-card friend-profile-hero theme-${themeId}`;
+
+                // Compute placement among top 25 for current metric (best-effort)
+                try {
+                    const metricField = leaderboardRangeConfig[selectedLeaderboardRange].metricField || 'wins';
+                    const snapshot = await db.collection('userStats').orderBy(metricField, 'desc').limit(25).get();
+                    let r = 1;
+                    let placement = null;
+                    snapshot.forEach(d => {
+                        if (placement !== null) return;
+                        if (d.id === uid) placement = r;
+                        r++;
+                    });
+                    if (badgeEl) {
+                        badgeEl.className = 'profile-leaderboard-badge hidden';
+                        badgeEl.textContent = '';
+                        if (placement === 1 || placement === 2 || placement === 3) {
+                            badgeEl.textContent = placement === 1 ? '🏆 #1' : (placement === 2 ? '🥈 #2' : '🥉 #3');
+                            badgeEl.className = `profile-leaderboard-badge rank-${placement}`;
+                        }
+                    }
+                } catch (rankErr) {
+                    console.warn('Unable to compute placement:', rankErr);
+                }
+
+                // Update friend action area (Add Friend / You are friends / Request sent)
+                const actionEl = document.getElementById('friend-profile-action');
+                if (actionEl) {
+                    actionEl.innerHTML = '';
+                    const current = auth.currentUser;
+                    if (!current) {
+                        actionEl.innerHTML = `<button disabled style="padding:8px 12px;border-radius:8px;border:none;background:#4b5563;color:#fff;font-weight:700;">Login to add friend</button>`;
+                    } else if (current.uid === uid) {
+                        actionEl.innerHTML = `<span style="color:#cbd5e1;font-weight:700;">This is you</span>`;
+                    } else {
+                        try {
+                            const myRef = db.collection('friendNetwork').doc(current.uid);
+                            const targetRef = db.collection('friendNetwork').doc(uid);
+                            const [myDoc, targetDoc] = await Promise.all([myRef.get(), targetRef.get()]);
+                            const myData = myDoc.exists ? myDoc.data() : { friends: [], friendRequests: [] };
+                            const targetData = targetDoc.exists ? targetDoc.data() : { friends: [], friendRequests: [] };
+                            const myFriends = Array.isArray(myData.friends) ? myData.friends : [];
+                            const targetRequests = Array.isArray(targetData.friendRequests) ? targetData.friendRequests : [];
+
+                            if (myFriends.includes(uid)) {
+                                actionEl.innerHTML = `<span style="color:#9fdf9f;font-weight:700;">You are friends</span><button id="remove-friend-btn" style="margin-left:8px;padding:8px 10px;border-radius:8px;border:none;background:#ff6b6b;color:#fff;font-weight:700;">Remove</button>`;
+                                document.getElementById('remove-friend-btn').addEventListener('click', async (e) => {
+                                    e.stopPropagation();
+                                    try {
+                                        const otherRef = db.collection('friendNetwork').doc(uid);
+                                        const [uDoc, oDoc] = await Promise.all([myRef.get(), otherRef.get()]);
+                                        const uData = uDoc.exists ? uDoc.data() : { friends: [] };
+                                        const oData = oDoc.exists ? oDoc.data() : { friends: [] };
+                                        let uFriends = Array.isArray(uData.friends) ? uData.friends : [];
+                                        let oFriends = Array.isArray(oData.friends) ? oData.friends : [];
+                                        uFriends = uFriends.filter(x => x !== uid);
+                                        oFriends = oFriends.filter(x => x !== current.uid);
+                                        await Promise.all([myRef.set({ friends: uFriends }, { merge: true }), otherRef.set({ friends: oFriends }, { merge: true })]);
+                                        actionEl.innerHTML = `<button id="send-friend-btn" style="padding:8px 12px;border-radius:8px;border:none;background:#00b4d8;color:#fff;font-weight:700;">Add Friend</button>`;
+                                        document.getElementById('send-friend-btn').addEventListener('click', async (ev) => {
+                                            ev.stopPropagation();
+                                            await sendFriendRequestFromModal(uid, actionEl);
+                                        });
+                                    } catch (remErr) {
+                                        console.warn('Failed to remove friend:', remErr);
+                                    }
+                                });
+                            } else if (targetRequests.includes(current.uid)) {
+                                actionEl.innerHTML = `<span style="color:#ffd47f;font-weight:700;">Request sent</span>`;
+                            } else {
+                                actionEl.innerHTML = `<button id="send-friend-btn" style="padding:8px 12px;border-radius:8px;border:none;background:#00b4d8;color:#fff;font-weight:700;">Add Friend</button>`;
+                                document.getElementById('send-friend-btn').addEventListener('click', async (ev) => {
+                                    ev.stopPropagation();
+                                    await sendFriendRequestFromModal(uid, actionEl);
+                                });
+                            }
+                        } catch (frErr) {
+                            console.warn('Unable to determine friend status:', frErr);
+                        }
+                    }
+                }
+
+                document.getElementById('friendProfileModal').classList.remove('hidden');
+            } catch (err) {
+                console.warn('openUserProfileModal failed:', err);
+                showLeaderboardPopup();
+            }
+        }
+
+        function closeFriendProfileModal() {
+            document.getElementById('friendProfileModal').classList.add('hidden');
+        }
+
+        // Helper: send friend request and update provided action container
+        async function sendFriendRequestFromModal(targetUid, actionEl) {
+            if (!auth.currentUser) return;
+            const current = auth.currentUser;
+            if (current.uid === targetUid) return;
+            try {
+                const targetRef = db.collection('friendNetwork').doc(targetUid);
+                const targetDoc = await targetRef.get();
+                const targetData = targetDoc.exists ? targetDoc.data() : { friends: [], friendRequests: [] };
+                const requests = Array.isArray(targetData.friendRequests) ? targetData.friendRequests : [];
+                const friends = Array.isArray(targetData.friends) ? targetData.friends : [];
+                if (requests.includes(current.uid)) {
+                    if (actionEl) actionEl.innerHTML = `<span style="color:#ffd47f;font-weight:700;">Request sent</span>`;
+                    return;
+                }
+                if (friends.includes(current.uid)) {
+                    if (actionEl) actionEl.innerHTML = `<span style="color:#9fdf9f;font-weight:700;">You are friends</span>`;
+                    return;
+                }
+                requests.push(current.uid);
+                await targetRef.set({ friendRequests: requests, friends }, { merge: true });
+                if (actionEl) actionEl.innerHTML = `<span style="color:#ffd47f;font-weight:700;">Request sent</span>`;
+            } catch (err) {
+                console.warn('Failed to send friend request:', err);
+                if (actionEl) actionEl.innerHTML = `<button id="send-friend-btn" style="padding:8px 12px;border-radius:8px;border:none;background:#00b4d8;color:#fff;font-weight:700;">Add Friend</button>`;
+            }
+        }
+    </script>
+<script src="global-broadcast.js"></script>
+</body>
+</html>
+
+
+

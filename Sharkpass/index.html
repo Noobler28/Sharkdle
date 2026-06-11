@@ -1,0 +1,133 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+<link rel="icon" type="image/png" href="images/favicon.png">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<base href="../">
+<title>Shark Pass</title>
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800;900&family=Barlow:wght@400;500;600;700&family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+</head>
+<body class="sharkpass-page shell-page">
+<header class="navbar">
+<div class="logo">
+🦈 Sharkdle
+</div>
+<nav>
+<button onclick="navigate('index.html')" class="nav-btn" title="Home"><i class="fas fa-home"></i><span>Home</span></button>
+<button onclick="navigate('library.html')" class="nav-btn" title="Library"><i class="fas fa-fish"></i><span>Library</span></button>
+<button onclick="navigate('leaderboards.html')" class="nav-btn" title="Leaderboards"><i class="fas fa-ranking-star"></i><span>Board</span></button>
+<button onclick="navigate('achievements.html')" class="nav-btn" title="Achievements"><i class="fas fa-trophy"></i><span>Achieve</span></button>
+</nav>
+</header>
+
+<main class="sharkpass-container">
+<section class="pass-hero-shell">
+    <div class="pass-hero-copy">
+        <div class="pass-kicker" id="pass-season-name">Season Loading</div>
+        <h1>Shark Pass</h1>
+        <p class="sharkpass-desc" id="next-reward-copy">Keep playing to unlock the next reward.</p>
+        <div class="pass-hero-badges">
+            <span><i class="fas fa-calendar"></i><span id="pass-season-ends">--</span></span>
+            <span><i class="fas fa-bolt"></i><span id="pass-season-xp">0 XP ready</span></span>
+            <span><i class="fas fa-id-card"></i><span id="pass-status-label">Getting Started</span></span>
+        </div>
+    </div>
+
+    <section class="pass-level-card" aria-label="Shark Pass progress">
+        <div class="pass-progress-row">
+            <div class="pass-level-orb">
+                <span>Level</span>
+                <strong id="current-level">1</strong>
+            </div>
+            <div class="pass-level-details">
+                <div class="pass-level-line">
+                    <div class="level-info">Current Progress</div>
+                    <div class="pass-total-xp"><span id="pass-total-xp">0</span> XP</div>
+                </div>
+                <div class="xp-bar-container">
+                    <div class="xp-bar-fill" id="xp-bar-fill"></div>
+                    <div class="xp-text"><span id="current-xp">0</span> / <span id="xp-to-next">0</span> XP</div>
+                </div>
+                <section class="pass-stat-grid">
+                    <article class="pass-stat-card">
+                        <span class="pass-stat-label">Rewards</span>
+                        <span class="pass-stat-value" id="pass-unlocked-count">0</span>
+                    </article>
+                    <article class="pass-stat-card">
+                        <span class="pass-stat-label">Next</span>
+                        <span class="pass-stat-value" id="pass-next-milestone">Level 2</span>
+                    </article>
+                    <article class="pass-stat-card">
+                        <span class="pass-stat-label">Quests</span>
+                        <span class="pass-stat-value" id="pass-mission-summary">0/0</span>
+                    </article>
+                </section>
+            </div>
+        </div>
+        <article class="pass-next-reward-card" id="pass-next-reward-card">
+            <div class="pass-next-reward-media" id="pass-next-reward-media"><i class="fas fa-star"></i></div>
+            <div class="pass-next-reward-copy">
+                <span id="pass-next-reward-type">Next Reward</span>
+                <strong id="pass-next-reward-name">Loading</strong>
+                <small id="pass-next-reward-level">Level 2</small>
+            </div>
+        </article>
+    </section>
+</section>
+
+<section class="pass-tabs-shell">
+    <div class="pass-tab-list" role="tablist" aria-label="Shark Pass sections">
+        <button class="pass-tab-btn active" type="button" role="tab" aria-selected="true" aria-controls="pass-panel-missions" data-pass-tab="missions">
+            <i class="fas fa-list-check"></i><span>Quests</span>
+        </button>
+        <button class="pass-tab-btn" type="button" role="tab" aria-selected="false" aria-controls="pass-panel-rewards" data-pass-tab="rewards">
+            <i class="fas fa-route"></i><span>Rewards</span>
+        </button>
+        <button class="pass-tab-btn" type="button" role="tab" aria-selected="false" aria-controls="pass-panel-loadout" data-pass-tab="loadout">
+            <i class="fas fa-user-astronaut"></i><span>Loadout</span>
+        </button>
+    </div>
+
+    <section class="pass-tab-panel active" id="pass-panel-missions" role="tabpanel" data-pass-panel="missions">
+        <div class="panel-header">
+            <div>
+                <h2>Quests</h2>
+                <p>Complete daily, weekly, and season quests for bonus XP.</p>
+            </div>
+        </div>
+        <div class="pass-mission-grid" id="pass-mission-grid"></div>
+    </section>
+
+    <section class="pass-tab-panel" id="pass-panel-rewards" role="tabpanel" data-pass-panel="rewards" hidden>
+        <div class="panel-header">
+            <div>
+                <h2>Reward Track</h2>
+                <p>Rewards unlock automatically as your level rises.</p>
+            </div>
+        </div>
+        <div class="level-grid" id="level-pfp-grid"></div>
+    </section>
+
+    <section class="pass-tab-panel" id="pass-panel-loadout" role="tabpanel" data-pass-panel="loadout" hidden>
+        <div class="panel-header">
+            <div>
+                <h2>Current Loadout</h2>
+                <p>Your equipped Shark Pass cosmetics.</p>
+            </div>
+        </div>
+        <div class="pass-loadout-grid" id="pass-loadout-grid"></div>
+    </section>
+</section>
+</main>
+
+<script src="script.js"></script>
+<script src="Sharkpass/sharkpass.js"></script>
+<script src="global-broadcast.js"></script>
+</body>
+</html>
