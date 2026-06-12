@@ -5041,6 +5041,9 @@ window.buyPearlShopItem = buyPearlShopItem;
 window.openHomeQuickAccessModal = openHomeQuickAccessModal;
 window.closeHomeQuickAccessModal = closeHomeQuickAccessModal;
 window.resetHomeQuickAccess = resetHomeQuickAccess;
+window.openHomeQuickStatsModal = openHomeQuickStatsModal;
+window.closeHomeQuickStatsModal = closeHomeQuickStatsModal;
+window.resetHomeQuickStats = resetHomeQuickStats;
 window.renderPearlShop = renderPearlShop;
 window.renderConsumablesPage = renderConsumablesPage;
 window.ensureConsumablesPageTimer = ensureConsumablesPageTimer;
@@ -5754,8 +5757,6 @@ const APP_ROUTE_MAP = Object.freeze({
     "Story/": "Story/index.html",
     "rng.html": "Minigames/SharkRNG/index.html",
     "Minigames/SharkRNG/": "Minigames/SharkRNG/index.html",
-    "cards.html": "Minigames/SharkCards/index.html",
-    "Minigames/SharkCards/": "Minigames/SharkCards/index.html",
     "secret.html": "shark-rescue/index.html",
     "shark-rescue/": "shark-rescue/index.html",
     "updates.html": "Updates/index.html",
@@ -7220,15 +7221,11 @@ function updateHomeV3Sidebar(profileData = getCurrentProfileData()) {
     const fill = document.getElementById("home-v3-xp-fill");
     if (fill) fill.style.width = isLoggedIn ? `${xpPercent}%` : "0%";
 
-    setText("home-v3-games", isLoggedIn ? gamesPlayed : 0);
-    setText("home-v3-winrate", isLoggedIn ? `${winRate}%` : "0%");
-    setText("home-v3-best-streak", isLoggedIn ? (data.highestStreak || 0) : 0);
-    setText("home-v3-total-xp", isLoggedIn ? totalXP : 0);
-
     const shieldCount = typeof getStreakShieldCount === "function" ? getStreakShieldCount(data) : (Number(data.streakShields) || 0);
     setText("home-v3-shields", isLoggedIn ? `${shieldCount}/3` : "0/3");
     const pearls = typeof getPearlCount === "function" ? getPearlCount(data) : (Number(data.pearls ?? data.tidePearls) || 0);
     setText("home-v3-pearls", isLoggedIn ? pearls.toLocaleString() : "0");
+    renderHomeQuickStats(data);
     renderPearlShop(data);
 }
 
@@ -7545,6 +7542,189 @@ function resetHomeQuickAccess() {
     renderHomeQuickAccessPanel();
     renderHomeQuickAccessOptions();
     showNotification("Quick Access reset.", "success", 2200);
+}
+
+const HOME_QUICK_STATS_STORAGE_KEY = "sharkdle_home_quick_stats_v1";
+const HOME_QUICK_STATS_LIMIT = 4;
+const HOME_QUICK_STATS_DEFAULTS = ["games", "wins", "winRate", "bestStreak"];
+const HOME_QUICK_STATS_ITEMS = [
+    { id: "games", label: "Games", meta: "Played", icon: "fa-gamepad" },
+    { id: "wins", label: "Wins", meta: "Solved", icon: "fa-trophy" },
+    { id: "losses", label: "Losses", meta: "Misses", icon: "fa-xmark" },
+    { id: "winRate", label: "Win Rate", meta: "Percent", icon: "fa-chart-pie" },
+    { id: "currentStreak", label: "Current Streak", meta: "Run", icon: "fa-fire" },
+    { id: "bestStreak", label: "Best Streak", meta: "Record", icon: "fa-ranking-star" },
+    { id: "totalGuesses", label: "Guesses", meta: "Total", icon: "fa-list-ol" },
+    { id: "avgGuesses", label: "Avg Guesses", meta: "Per Game", icon: "fa-calculator" },
+    { id: "shields", label: "Shields", meta: "Protection", icon: "fa-shield-halved" }
+];
+
+function getHomeQuickStatsItem(id) {
+    return HOME_QUICK_STATS_ITEMS.find(item => item.id === id) || null;
+}
+
+function normalizeHomeQuickStatsSelection(selection) {
+    const validIds = new Set(HOME_QUICK_STATS_ITEMS.map(item => item.id));
+    const normalized = [];
+    const sourceSelection = Array.isArray(selection) ? selection : HOME_QUICK_STATS_DEFAULTS;
+    sourceSelection.forEach(id => {
+        if (validIds.has(id) && !normalized.includes(id) && normalized.length < HOME_QUICK_STATS_LIMIT) {
+            normalized.push(id);
+        }
+    });
+    const droppedSavedStats = sourceSelection.length !== normalized.length;
+    if ((sourceSelection.length >= HOME_QUICK_STATS_LIMIT || droppedSavedStats) && normalized.length < HOME_QUICK_STATS_LIMIT) {
+        HOME_QUICK_STATS_DEFAULTS.forEach(id => {
+            if (validIds.has(id) && !normalized.includes(id) && normalized.length < HOME_QUICK_STATS_LIMIT) {
+                normalized.push(id);
+            }
+        });
+    }
+    if (!normalized.length) return [...HOME_QUICK_STATS_DEFAULTS];
+    return normalized;
+}
+
+function readHomeQuickStatsSelection() {
+    try {
+        const saved = JSON.parse(localStorage.getItem(HOME_QUICK_STATS_STORAGE_KEY) || "null");
+        const normalized = normalizeHomeQuickStatsSelection(saved);
+        if (JSON.stringify(saved) !== JSON.stringify(normalized)) {
+            localStorage.setItem(HOME_QUICK_STATS_STORAGE_KEY, JSON.stringify(normalized));
+        }
+        return normalized;
+    } catch (error) {
+        return [...HOME_QUICK_STATS_DEFAULTS];
+    }
+}
+
+function writeHomeQuickStatsSelection(selection) {
+    const normalized = normalizeHomeQuickStatsSelection(selection);
+    localStorage.setItem(HOME_QUICK_STATS_STORAGE_KEY, JSON.stringify(normalized));
+    return normalized;
+}
+
+function getHomeQuickStatValues(profileData = getCurrentProfileData()) {
+    const isLoggedIn = Boolean(currentUser);
+    const data = profileData || {};
+    const gamesPlayed = Number(data.gamesPlayed ?? data.games) || 0;
+    const wins = Number(data.wins) || 0;
+    const losses = Number(data.losses) || 0;
+    const winRate = gamesPlayed > 0 ? Math.round((wins / gamesPlayed) * 100) : 0;
+    const averageGuesses = Number(data.averageGuesses) || 0;
+    const shieldCount = typeof getStreakShieldCount === "function" ? getStreakShieldCount(data) : (Number(data.streakShields) || 0);
+
+    const loggedOutValues = {
+        games: "0",
+        wins: "0",
+        losses: "0",
+        winRate: "0%",
+        currentStreak: "0",
+        bestStreak: "0",
+        totalGuesses: "0",
+        avgGuesses: "0.0",
+        shields: "0/3"
+    };
+
+    if (!isLoggedIn) return loggedOutValues;
+
+    return {
+        games: gamesPlayed.toLocaleString(),
+        wins: wins.toLocaleString(),
+        losses: losses.toLocaleString(),
+        winRate: `${winRate}%`,
+        currentStreak: (Number(data.currentStreak) || 0).toLocaleString(),
+        bestStreak: (Number(data.highestStreak) || 0).toLocaleString(),
+        totalGuesses: (Number(data.totalGuesses) || 0).toLocaleString(),
+        avgGuesses: averageGuesses > 0 ? averageGuesses.toFixed(1) : "0.0",
+        shields: `${shieldCount}/3`
+    };
+}
+
+function renderHomeQuickStats(profileData = getCurrentProfileData()) {
+    const list = document.getElementById("home-v3-quick-stats-list");
+    if (!list) return;
+
+    const values = getHomeQuickStatValues(profileData);
+    const selectedIds = readHomeQuickStatsSelection();
+    const items = selectedIds.map(getHomeQuickStatsItem).filter(Boolean);
+
+    list.innerHTML = items.map(item => `
+        <div class="home-v3-stat-row" data-home-quick-stat="${item.id}">
+            <span><i class="fa-solid ${item.icon}" aria-hidden="true"></i>${escapeHtml(item.label)}</span>
+            <strong>${escapeHtml(values[item.id] ?? "0")}</strong>
+        </div>
+    `).join("");
+}
+
+function renderHomeQuickStatsOptions() {
+    const options = document.getElementById("home-quick-stats-options");
+    if (!options) return;
+
+    const selectedIds = readHomeQuickStatsSelection();
+    options.innerHTML = HOME_QUICK_STATS_ITEMS.map(item => {
+        const checked = selectedIds.includes(item.id);
+        const disabled = !checked && selectedIds.length >= HOME_QUICK_STATS_LIMIT;
+        return `
+            <label class="home-quick-option home-stat-option ${checked ? "active" : ""} ${disabled ? "disabled" : ""}">
+                <input type="checkbox" value="${item.id}" ${checked ? "checked" : ""} ${disabled ? "disabled" : ""}>
+                <span class="home-quick-option-icon"><i class="fa-solid ${item.icon}" aria-hidden="true"></i></span>
+                <span class="home-quick-option-copy">
+                    <strong>${escapeHtml(item.label)}</strong>
+                    <small>${escapeHtml(item.meta)}</small>
+                </span>
+                <span class="home-quick-option-check"><i class="fa-solid fa-check" aria-hidden="true"></i></span>
+            </label>
+        `;
+    }).join("");
+
+    options.querySelectorAll("input[type='checkbox']").forEach(input => {
+        input.addEventListener("change", () => toggleHomeQuickStat(input.value, input.checked));
+    });
+}
+
+function toggleHomeQuickStat(itemId, shouldSelect) {
+    const currentSelection = readHomeQuickStatsSelection();
+    let nextSelection = [...currentSelection];
+
+    if (shouldSelect) {
+        if (!nextSelection.includes(itemId)) nextSelection.push(itemId);
+        if (nextSelection.length > HOME_QUICK_STATS_LIMIT) {
+            showNotification(`Quick Stats can hold ${HOME_QUICK_STATS_LIMIT} numbers.`, "info", 2400);
+            nextSelection = currentSelection;
+        }
+    } else {
+        nextSelection = nextSelection.filter(id => id !== itemId);
+        if (!nextSelection.length) {
+            showNotification("Quick Stats needs at least one number.", "info", 2400);
+            nextSelection = currentSelection;
+        }
+    }
+
+    writeHomeQuickStatsSelection(nextSelection);
+    renderHomeQuickStats();
+    renderHomeQuickStatsOptions();
+}
+
+function initHomeQuickStats() {
+    renderHomeQuickStats();
+    renderHomeQuickStatsOptions();
+}
+
+function openHomeQuickStatsModal() {
+    renderHomeQuickStatsOptions();
+    const modal = document.getElementById("homeQuickStatsModal");
+    if (modal) modal.classList.remove("hidden");
+}
+
+function closeHomeQuickStatsModal() {
+    document.getElementById("homeQuickStatsModal")?.classList.add("hidden");
+}
+
+function resetHomeQuickStats() {
+    writeHomeQuickStatsSelection(HOME_QUICK_STATS_DEFAULTS);
+    renderHomeQuickStats();
+    renderHomeQuickStatsOptions();
+    showNotification("Quick Stats reset.", "success", 2200);
 }
 
 function switchHomeV3Tab(tabId = "play") {
@@ -9314,6 +9494,7 @@ document.addEventListener("DOMContentLoaded", function() {
     initHomeV3Tabs();
     initHomeV3CratesButton();
     initHomeQuickAccess();
+    initHomeQuickStats();
     // Update displayed stats from localStorage
     if (document.getElementById("games")) {
         document.getElementById("games").textContent = localStorage.getItem("games") || 0;
