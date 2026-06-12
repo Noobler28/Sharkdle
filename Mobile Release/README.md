@@ -4,9 +4,11 @@
 
 The app automatically checks for updates and will direct you here when a new version is available.
 
-To Update
+# To Update
 Download the newest APK.
+
 Open the downloaded file.
+
 Tap Install.
 
 Updating will not affect your saved progress or settings.
