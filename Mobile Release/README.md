@@ -1,7 +1,14 @@
 # Sharkdle Android Release
 
-Download the latest public Android APK from this folder when a signed release build is uploaded.
+## Download the latest Sharkdle Android APK below.
 
-## App Update Check
+The app automatically checks for updates and will direct you here when a new version is available.
 
-The Android app checks `latest.json` for the latest release version. When the version is newer than the installed app, Sharkdle opens this release folder so the player can download and install the update manually.
+To Update
+Download the newest APK.
+Open the downloaded file.
+Tap Install.
+
+Updating will not affect your saved progress or settings.
+
+Note: Because Sharkdle is distributed directly as an APK and not through the Google Play Store, Android or Google Play Protect may display a security warning. This is expected and can be safely ignored when downloading Sharkdle from this official release page.
