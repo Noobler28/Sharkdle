@@ -3496,6 +3496,60 @@ body.home-v3-page > .home-shell {
     font-size: 12px;
 }
 
+.home-v3-stats-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 9px;
+}
+
+.home-v3-stats-head p {
+    margin: 5px 0 0;
+    color: rgba(212,234,248,.58);
+    font-size: 12px;
+    line-height: 1.35;
+}
+
+.home-v3-stats-edit {
+    width: 34px;
+    height: 34px;
+    flex: 0 0 34px;
+    display: inline-grid;
+    place-items: center;
+    border: 1px solid rgba(142,239,235,.24);
+    border-radius: 8px;
+    background: rgba(44,196,196,.10);
+    color: #dffeff;
+    cursor: pointer;
+    transition: transform .16s ease, border-color .16s ease, background .16s ease;
+}
+
+.home-v3-stats-edit:hover,
+.home-v3-stats-edit:focus-visible {
+    transform: translateY(-1px);
+    border-color: rgba(232,168,34,.44);
+    background: rgba(232,168,34,.14);
+    outline: none;
+}
+
+.home-v3-stats-list {
+    display: grid;
+}
+
+.home-v3-stat-row span {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.home-v3-stat-row span i {
+    width: 20px;
+    color: rgba(142,239,235,.72);
+    font-size: 12px;
+    text-align: center;
+}
+
 .home-v3-quick-access-mobile {
     display: none;
 }
@@ -4785,6 +4839,7 @@ body.home-v3-page #homeCratesModal,
 body.home-v3-page #crateDropsModal,
 body.home-v3-page #pearlShopModal,
 body.home-v3-page #homeQuickAccessModal,
+body.home-v3-page #homeQuickStatsModal,
 body.home-v3-page #dailyLoginModal {
     background:
         radial-gradient(ellipse at 50% 0%, rgba(44,196,196,.12), transparent 58%),
