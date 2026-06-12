@@ -13,4 +13,4 @@ Tap Install.
 
 Updating will not affect your saved progress or settings.
 
-Note: Because Sharkdle is distributed directly as an APK and not through the Google Play Store, Android or Google Play Protect may display a security warning. This is expected and can be safely ignored when downloading Sharkdle from this official release page.
+Note: Because Sharkdle is distributed directly as an APK and not through the Google Play Store, Android or Google Play Protect may display a security warning. This is expected and can be safely ignored when downloading Sharkdle from this AND ONLY THIS official release page.
