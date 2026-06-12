@@ -1,6 +1,8 @@
-# Sharkdle Android Release
+# Sharkdle Mobile Release
 
-### Download the latest Sharkdle Android APK below.
+### Currently, Sharkdle Mobile is available on Android only. An iOS release is planned for the future.
+
+## Download the latest Sharkdle Mobile App below.
 
 The app automatically checks for updates and will direct you here when a new version is available.
 
