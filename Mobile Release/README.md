@@ -4,8 +4,8 @@
 
 The app automatically checks for updates and will direct you here when a new version is available.
 
-# To Install and Update
-Download the newest APK from **Sharkdle-download.**
+## To Install and Update
+Download the newest APK from **Sharkdle-download**.
 
 Open the downloaded file.
 
