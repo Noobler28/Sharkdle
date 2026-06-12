@@ -155,10 +155,6 @@ content="Play Sharkdle, the daily shark guessing game. Guess shark species from 
                     <strong>Shark RNG</strong>
                     <p>Roll, upgrade, and chase rare finds.</p>
                 </a>
-                <a class="home-v3-mode-card" href="Minigames/SharkCards/index.html" style="--mode-bg:url('images/home-v3/shark-bg.png')">
-                    <strong>Shark Cards</strong>
-                    <p>Build an apex deck and climb the upgrade tree.</p>
-                </a>
                 <a class="home-v3-mode-card" href="shark-rescue/index.html" style="--mode-bg:url('images/home-v3/mako.png')">
                     <strong>Rescue Command</strong>
                     <p>Save sharks and build your base.</p>
@@ -286,12 +282,22 @@ content="Play Sharkdle, the daily shark guessing game. Guess shark species from 
             <div class="home-v3-click-view"><i class="fa-solid fa-arrow-pointer"></i><span>Click to view</span></div>
         </section>
 
-        <section class="home-v3-side-section">
-            <div class="home-v3-section-label">Quick Stats</div>
-            <div class="home-v3-stat-row"><span>Games</span><strong id="home-v3-games">0</strong></div>
-            <div class="home-v3-stat-row"><span>Win Rate</span><strong id="home-v3-winrate">0%</strong></div>
-            <div class="home-v3-stat-row"><span>Best Streak</span><strong id="home-v3-best-streak">0</strong></div>
-            <div class="home-v3-stat-row"><span>Total XP</span><strong id="home-v3-total-xp">0</strong></div>
+        <section class="home-v3-side-section home-v3-quick-stats" aria-labelledby="home-v3-quick-stats-heading">
+            <div class="home-v3-stats-head">
+                <div>
+                    <div class="home-v3-section-label" id="home-v3-quick-stats-heading">Quick Stats</div>
+                    <p>Your chosen profile numbers.</p>
+                </div>
+                <button class="home-v3-stats-edit" type="button" onclick="openHomeQuickStatsModal()" aria-label="Customize quick stats">
+                    <i class="fa-solid fa-sliders" aria-hidden="true"></i>
+                </button>
+            </div>
+            <div class="home-v3-stats-list" id="home-v3-quick-stats-list">
+                <div class="home-v3-stat-row"><span>Games</span><strong id="home-v3-games">0</strong></div>
+                <div class="home-v3-stat-row"><span>Wins</span><strong id="home-v3-wins">0</strong></div>
+                <div class="home-v3-stat-row"><span>Win Rate</span><strong id="home-v3-winrate">0%</strong></div>
+                <div class="home-v3-stat-row"><span>Best Streak</span><strong id="home-v3-best-streak">0</strong></div>
+            </div>
         </section>
     </aside>
 </main>
@@ -368,6 +374,22 @@ content="Play Sharkdle, the daily shark guessing game. Guess shark species from 
         <div class="home-quick-modal-actions">
             <button type="button" onclick="resetHomeQuickAccess()">Reset</button>
             <button type="button" onclick="closeHomeQuickAccessModal()">Done</button>
+        </div>
+    </div>
+</div>
+
+<div id="homeQuickStatsModal" class="modal hidden" onclick="if(event.target===this) closeHomeQuickStatsModal()">
+    <div class="modal-content home-quick-access-modal-content home-quick-stats-modal-content">
+        <button type="button" class="modal-x-btn" onclick="closeHomeQuickStatsModal()" aria-label="Close quick stats modal">×</button>
+        <div class="home-quick-modal-head">
+            <div class="new-modal-kicker">Quick Stats</div>
+            <h2>Customize Stats</h2>
+            <p>Four home-screen numbers.</p>
+        </div>
+        <div class="home-quick-options home-stat-options" id="home-quick-stats-options"></div>
+        <div class="home-quick-modal-actions">
+            <button type="button" onclick="resetHomeQuickStats()">Reset</button>
+            <button type="button" onclick="closeHomeQuickStatsModal()">Done</button>
         </div>
     </div>
 </div>
