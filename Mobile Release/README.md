@@ -7,11 +7,12 @@
 The app automatically checks for updates and will direct you here when a new version is available.
 
 ## To Install and Update
-Download the newest APK from **Sharkdle-download**.
 
-Open the downloaded file.
+Download the latest version for your device.
 
-Tap **Install** or **Update**.
+Open the downloaded file or installation link.
+
+Follow the on-screen instructions to **install** or **update** Sharkdle.
 
 Updating will not affect your saved progress or settings.
 
