@@ -17,7 +17,8 @@ function generateDailyShareText() {
     });
     const body = rows.join('\n');
     const url = new URL("./", window.location.href).href;
-    return `${title}\n${body}\n\nPlay: ${url}`;
+    const tag = " #Sharkdle";
+    return `${title}\n${body}\n\nPlay: ${url}\n\n${tag}`;
 }
 
 async function shareDailyResults() {
