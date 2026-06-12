@@ -1,6 +1,6 @@
 # Sharkdle Android Release
 
-## Download the latest Sharkdle Android APK below.
+### Download the latest Sharkdle Android APK below.
 
 The app automatically checks for updates and will direct you here when a new version is available.
 
