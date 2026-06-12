@@ -1,40 +1,13 @@
-🦈 Sharkdle Mobile
+# Sharkdle Android Release
 
-The Number 1 Shark guessing experience, now on mobile.
+Download the latest public Android APK from this folder when a signed release build is uploaded.
 
-Take Sharkdle with you wherever you go.
+## Updating
 
-Features
-📅 Daily Sharkdle - Play the daily puzzle on the go and maintain your streak.
+Android only allows an APK to update an installed app when both APKs use the same signing key. Sharkdle uses the package id `com.sharkdle.app`, so each public APK must be signed with the original Sharkdle release keystore.
 
-♾️ Infinite Mode - Practice as much as you want, earn XP, and improve your shark knowledge.
+If Android says "App not installed", the APK is probably unsigned, debug-signed, or signed with a different key than the version already on the phone.
 
-🏆 Achievements & Progression - Unlock achievements, level up, and collect rewards as you play.
+## App Update Check
 
-📚 Sharchive - Browse and discover hundreds of shark species you've encountered.
-
-🎮 Mini Games - Enjoy additional shark-themed game modes and side activities.
-
-🌍 World Map - Complete challenges and progress through regions filled with new sharks to discover.
-
-☁️ Cloud Sync - Keep your progress, achievements, and statistics synchronized across devices.
-
-📊 Stats Tracking - Track wins, streaks, discoveries, and overall progression.
-
-What's New on Mobile?
-
-- Optimized touch controls
-
-- Push notifications for new daily challenges
-
-- Improved performance and UI on mobile devices
-
-- Play anywhere, anytime
-
-
-
-Support
-
-Need help or found a bug? - Visit Sharkdle.online and contact support through the website.
-
-THANK YOU FOR PLAYING SHARKDLE
+The Android app checks `latest.json` for the latest release version. When the version is newer than the installed app, Sharkdle opens this release folder so the player can download and install the update manually.

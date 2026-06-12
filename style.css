@@ -3466,6 +3466,7 @@ body.home-v3-page .hero-subtitle {
 
 .home-v3-play-btn,
 .home-v3-ghost-btn,
+.home-v3-download-btn,
 body.home-v3-page .auth-btn,
 .home-v3-reward-pill,
 .home-v3-shield-pill,
@@ -3496,6 +3497,7 @@ body.home-v3-page .auth-btn {
 }
 
 .home-v3-ghost-btn,
+.home-v3-download-btn,
 .home-v3-reward-pill,
 .home-v3-shield-pill,
 body.home-v3-page .hero-crates-btn {
@@ -3506,6 +3508,7 @@ body.home-v3-page .hero-crates-btn {
 
 .home-v3-play-btn:hover,
 .home-v3-ghost-btn:hover,
+.home-v3-download-btn:hover,
 body.home-v3-page .auth-btn:hover,
 .home-v3-reward-pill:hover,
 body.home-v3-page .hero-crates-btn:hover {
@@ -4913,7 +4916,8 @@ body.home-v3-page #crateDropsModal button[onclick="closeCrateDropsModal()"] {
     }
 
     .home-v3-play-btn,
-    .home-v3-ghost-btn {
+    .home-v3-ghost-btn,
+    .home-v3-download-btn {
         width: 100%;
     }
 
@@ -17797,10 +17801,265 @@ body.story-map-page #challenges-container .challenge-btn:disabled {
         display: grid;
     }
 
-    body.story-map-page .map-pin-btn {
+body.story-map-page .map-pin-btn {
         width: 38px;
         height: 38px;
         border-radius: 10px;
         font-size: 15px;
+    }
+}
+
+/* Android release and locker mobile polish */
+body.home-v3-page .home-v3-download-btn {
+    border-color: rgba(126, 240, 255, .28);
+    background: linear-gradient(135deg, rgba(32, 191, 217, .22), rgba(34, 197, 94, .18));
+    color: #eaffff;
+}
+
+body.home-v3-page .app-update-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 18px;
+    background: rgba(0, 10, 18, .78);
+    backdrop-filter: blur(14px);
+}
+
+body.home-v3-page .app-update-card {
+    width: min(100%, 420px);
+    display: grid;
+    gap: 14px;
+    padding: 22px;
+    border: 1px solid rgba(126, 240, 255, .26);
+    border-radius: 18px;
+    background:
+        radial-gradient(circle at top, rgba(32, 191, 217, .16), transparent 40%),
+        linear-gradient(160deg, rgba(4, 27, 45, .98), rgba(0, 13, 22, .98));
+    color: #f5feff;
+    box-shadow: 0 28px 90px rgba(0,0,0,.52);
+}
+
+body.home-v3-page .app-update-card span {
+    color: #9beef7;
+    font-size: 11px;
+    font-weight: 900;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+}
+
+body.home-v3-page .app-update-card h2 {
+    margin: 0;
+    color: #ffffff;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 34px;
+    line-height: 1;
+    letter-spacing: .6px;
+    text-transform: uppercase;
+}
+
+body.home-v3-page .app-update-card p {
+    margin: 0;
+    color: rgba(226, 247, 250, .72);
+    line-height: 1.45;
+}
+
+body.home-v3-page .app-update-actions {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 10px;
+    align-items: center;
+}
+
+body.home-v3-page .app-update-actions a,
+body.home-v3-page .app-update-actions button {
+    min-height: 42px;
+    border-radius: 12px;
+    padding: 0 14px;
+    font-weight: 900;
+    cursor: pointer;
+}
+
+body.home-v3-page .app-update-actions a {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #00b4d8, #22c55e);
+    color: #02131f;
+    text-decoration: none;
+}
+
+body.home-v3-page .app-update-actions button {
+    border: 1px solid rgba(126, 240, 255, .20);
+    background: rgba(255,255,255,.06);
+    color: rgba(236, 252, 255, .78);
+}
+
+body.home-v3-page .profile-inventory-tabs,
+body.home-v3-page .profile-cosmetic-filters,
+body.home-v3-page .profile-cosmetic-gallery,
+body.home-v3-page .profile-inventory-card,
+body.home-v3-page #theme-select-container .theme-option {
+    min-width: 0 !important;
+}
+
+body.home-v3-page .profile-inventory-tabs {
+    grid-template-columns: repeat(auto-fit, minmax(84px, 1fr)) !important;
+    gap: 7px !important;
+}
+
+body.home-v3-page .profile-inventory-tabs button {
+    min-height: 38px !important;
+    padding: 7px 8px !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+    line-height: 1 !important;
+}
+
+body.home-v3-page .profile-cosmetic-gallery {
+    grid-template-columns: repeat(auto-fill, minmax(126px, 1fr)) !important;
+    align-items: stretch !important;
+    gap: 10px !important;
+}
+
+body.home-v3-page .profile-inventory-card,
+body.home-v3-page #theme-select-container .theme-option {
+    min-height: 154px !important;
+    display: grid !important;
+    grid-template-rows: auto minmax(34px, auto) auto !important;
+    align-content: start !important;
+    justify-items: center !important;
+    gap: 7px !important;
+    padding: 12px !important;
+    overflow: hidden !important;
+    text-align: center !important;
+}
+
+body.home-v3-page .profile-inventory-card img,
+body.home-v3-page .profile-inventory-card .badge-mark {
+    flex: none !important;
+    width: 58px !important;
+    height: 58px !important;
+    margin: 6px auto 0 !important;
+}
+
+body.home-v3-page .profile-inventory-card.utility i {
+    width: 48px !important;
+    height: 48px !important;
+    margin-top: 8px !important;
+}
+
+body.home-v3-page .profile-inventory-card span:not(.badge-mark),
+body.home-v3-page #theme-select-container .theme-option span:last-child {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    display: -webkit-box !important;
+    -webkit-box-orient: vertical !important;
+    -webkit-line-clamp: 2 !important;
+    overflow: hidden !important;
+    color: #f5feff !important;
+    font-size: 12px !important;
+    line-height: 1.12 !important;
+    overflow-wrap: anywhere !important;
+    text-align: center !important;
+}
+
+body.home-v3-page .profile-inventory-card.utility strong {
+    max-width: 100% !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    font-size: 30px !important;
+    line-height: .9 !important;
+}
+
+body.home-v3-page .cosmetic-chip-row {
+    width: 100% !important;
+    min-width: 0 !important;
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    justify-items: center !important;
+    gap: 4px !important;
+    margin: 0 !important;
+}
+
+body.home-v3-page .source-chip {
+    width: min(100%, 104px) !important;
+    max-width: 104px !important;
+    min-width: 0 !important;
+    padding: 0 6px !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+}
+
+body.home-v3-page .profile-inventory-card.equipped::after,
+body.home-v3-page #theme-select-container .theme-option.active::after {
+    max-width: calc(100% - 12px) !important;
+    top: 6px !important;
+    right: 6px !important;
+    padding: 3px 6px !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+    font-size: 8px !important;
+    line-height: 1.1 !important;
+}
+
+@media (max-width: 560px) {
+    body.home-v3-page .home-v3-hero-actions {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    body.home-v3-page .home-v3-download-btn {
+        grid-column: 1 / -1;
+    }
+
+    body.home-v3-page .profile-cosmetic-gallery {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        max-height: none !important;
+        padding: 10px !important;
+    }
+
+    body.home-v3-page .profile-inventory-card,
+    body.home-v3-page #theme-select-container .theme-option {
+        min-height: 142px !important;
+        padding: 10px !important;
+    }
+
+    body.home-v3-page .profile-inventory-card img,
+    body.home-v3-page .profile-inventory-card .badge-mark {
+        width: 52px !important;
+        height: 52px !important;
+    }
+
+    body.home-v3-page .profile-inventory-tabs {
+        grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    }
+
+    body.home-v3-page .profile-cosmetic-filters button {
+        min-height: 30px !important;
+        padding: 0 8px !important;
+        font-size: 10px !important;
+    }
+}
+
+@media (max-width: 390px) {
+    body.home-v3-page .profile-inventory-tabs {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    }
+
+    body.home-v3-page .profile-cosmetic-gallery {
+        gap: 8px !important;
+    }
+
+    body.home-v3-page .profile-inventory-card,
+    body.home-v3-page #theme-select-container .theme-option {
+        min-height: 136px !important;
+        gap: 5px !important;
     }
 }

@@ -10593,3 +10593,114 @@ window.closeCraftingModal = closeCraftingModal;
 window.showProfileInventoryCategory = showProfileInventoryCategory;
 window.setProfileInventoryFilter = setProfileInventoryFilter;
 window.renderProfileInventoryUI = renderProfileInventoryUI;
+
+const SHARKDLE_ANDROID_VERSION = "1.0.1";
+const SHARKDLE_ANDROID_VERSION_CODE = 10001;
+const SHARKDLE_ANDROID_UPDATE_MANIFEST_URL = "https://raw.githubusercontent.com/Noobler28/Sharkdle/main/Mobile%20Release/latest.json";
+const SHARKDLE_ANDROID_DOWNLOAD_URL = "https://github.com/Noobler28/Sharkdle/tree/main/Mobile%20Release";
+
+function compareVersionStrings(a = "0.0.0", b = "0.0.0") {
+    const left = String(a).split(".").map(part => Number.parseInt(part, 10) || 0);
+    const right = String(b).split(".").map(part => Number.parseInt(part, 10) || 0);
+    const length = Math.max(left.length, right.length);
+    for (let index = 0; index < length; index += 1) {
+        const diff = (left[index] || 0) - (right[index] || 0);
+        if (diff !== 0) return diff;
+    }
+    return 0;
+}
+
+function isNewerAndroidRelease(release = {}) {
+    const remoteCode = Number(release.versionCode || 0);
+    if (remoteCode && remoteCode > SHARKDLE_ANDROID_VERSION_CODE) return true;
+    if (remoteCode && remoteCode <= SHARKDLE_ANDROID_VERSION_CODE) return false;
+    return compareVersionStrings(release.version, SHARKDLE_ANDROID_VERSION) > 0;
+}
+
+function openAndroidUpdateDownload(url = SHARKDLE_ANDROID_DOWNLOAD_URL) {
+    const target = url || SHARKDLE_ANDROID_DOWNLOAD_URL;
+    try {
+        const opened = window.open(target, "_system");
+        if (opened) return;
+    } catch (error) {
+        // Fall through to same-window navigation.
+    }
+    window.location.href = target;
+}
+
+function escapeHtml(value = "") {
+    return String(value)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+}
+
+function showAndroidUpdatePrompt(release = {}) {
+    const version = release.version || "new";
+    const sessionKey = `sharkdle-update-dismissed-${version}`;
+    if (sessionStorage.getItem(sessionKey) === "true") return;
+    if (document.getElementById("android-update-prompt")) return;
+
+    const downloadUrl = release.downloadUrl || SHARKDLE_ANDROID_DOWNLOAD_URL;
+    const backdrop = document.createElement("div");
+    backdrop.id = "android-update-prompt";
+    backdrop.className = "app-update-backdrop";
+    backdrop.innerHTML = `
+        <section class="app-update-card" role="dialog" aria-modal="true" aria-labelledby="android-update-title">
+            <span>Android update</span>
+            <h2 id="android-update-title">Update available</h2>
+            <p>${escapeHtml(release.message || "A new Sharkdle Android update is available.")}</p>
+            <div class="app-update-actions">
+                <a href="${escapeHtml(downloadUrl)}" target="_blank" rel="noopener">Download update</a>
+                <button type="button" data-update-dismiss>Later</button>
+            </div>
+        </section>
+    `;
+
+    const closePrompt = () => {
+        sessionStorage.setItem(sessionKey, "true");
+        backdrop.remove();
+    };
+
+    backdrop.querySelector("[data-update-dismiss]")?.addEventListener("click", closePrompt);
+    backdrop.querySelector("a")?.addEventListener("click", event => {
+        event.preventDefault();
+        closePrompt();
+        openAndroidUpdateDownload(downloadUrl);
+    });
+
+    document.body.appendChild(backdrop);
+}
+
+async function checkSharkdleAndroidUpdate(options = {}) {
+    const manifestUrl = options.manifestUrl || SHARKDLE_ANDROID_UPDATE_MANIFEST_URL;
+    try {
+        const response = await fetch(manifestUrl, { cache: "no-store" });
+        if (!response.ok) return null;
+        const release = await response.json();
+        if (!isNewerAndroidRelease(release)) return release;
+        showAndroidUpdatePrompt(release);
+        return release;
+    } catch (error) {
+        return null;
+    }
+}
+
+function isCordovaAndroidShell() {
+    return Boolean(window.cordova) && /Android/i.test(navigator.userAgent || "");
+}
+
+function initAndroidUpdateCheck() {
+    if (!isCordovaAndroidShell()) return;
+    checkSharkdleAndroidUpdate();
+}
+
+if (window.cordova) {
+    document.addEventListener("deviceready", initAndroidUpdateCheck, false);
+}
+
+window.checkSharkdleAndroidUpdate = checkSharkdleAndroidUpdate;
+window.isNewerAndroidRelease = isNewerAndroidRelease;
+window.showAndroidUpdatePrompt = showAndroidUpdatePrompt;
