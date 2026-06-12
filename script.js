@@ -5038,6 +5038,9 @@ window.applyLimitedTimeXpBonus = applyLimitedTimeXpBonus;
 window.openPearlShopModal = openPearlShopModal;
 window.closePearlShopModal = closePearlShopModal;
 window.buyPearlShopItem = buyPearlShopItem;
+window.openHomeQuickAccessModal = openHomeQuickAccessModal;
+window.closeHomeQuickAccessModal = closeHomeQuickAccessModal;
+window.resetHomeQuickAccess = resetHomeQuickAccess;
 window.renderPearlShop = renderPearlShop;
 window.renderConsumablesPage = renderConsumablesPage;
 window.ensureConsumablesPageTimer = ensureConsumablesPageTimer;
@@ -5751,6 +5754,8 @@ const APP_ROUTE_MAP = Object.freeze({
     "Story/": "Story/index.html",
     "rng.html": "Minigames/SharkRNG/index.html",
     "Minigames/SharkRNG/": "Minigames/SharkRNG/index.html",
+    "cards.html": "Minigames/SharkCards/index.html",
+    "Minigames/SharkCards/": "Minigames/SharkCards/index.html",
     "secret.html": "shark-rescue/index.html",
     "shark-rescue/": "shark-rescue/index.html",
     "updates.html": "Updates/index.html",
@@ -7400,6 +7405,146 @@ function buyPearlShopItem(itemId) {
     renderCratesModal();
     updateSeasonalCratePanels(profileData);
     showNotification(`${grant.message} -${item.price} pearls`, "success", 3400);
+}
+
+const HOME_QUICK_ACCESS_STORAGE_KEY = "sharkdle_home_quick_access_v1";
+const HOME_QUICK_ACCESS_LIMIT = 2;
+const HOME_QUICK_ACCESS_DEFAULTS = ["sharchive", "leaderboard"];
+const HOME_QUICK_ACCESS_ITEMS = [
+    { id: "sharchive", label: "Sharchive", meta: "Archive", href: "Library/index.html", icon: "fa-book-open" },
+    { id: "story", label: "Story Map", meta: "Explore", href: "Story/index.html", icon: "fa-map-location-dot" },
+    { id: "sharkpass", label: "Shark Pass", meta: "Rewards", href: "Sharkpass/index.html", icon: "fa-ticket" },
+    { id: "achievements", label: "Achievements", meta: "Progress", href: "Achievements/index.html", icon: "fa-trophy" },
+    { id: "leaderboard", label: "Leaderboards", meta: "Ranks", href: "Leaderboard/index.html", icon: "fa-ranking-star" },
+    { id: "updates", label: "Updates", meta: "News", href: "Updates/index.html", icon: "fa-newspaper" }
+];
+
+function getHomeQuickAccessItem(id) {
+    return HOME_QUICK_ACCESS_ITEMS.find(item => item.id === id) || null;
+}
+
+function normalizeHomeQuickAccessSelection(selection) {
+    const validIds = new Set(HOME_QUICK_ACCESS_ITEMS.map(item => item.id));
+    const normalized = [];
+    (Array.isArray(selection) ? selection : HOME_QUICK_ACCESS_DEFAULTS).forEach(id => {
+        if (validIds.has(id) && !normalized.includes(id) && normalized.length < HOME_QUICK_ACCESS_LIMIT) {
+            normalized.push(id);
+        }
+    });
+    if (!normalized.length) return [...HOME_QUICK_ACCESS_DEFAULTS];
+    return normalized;
+}
+
+function readHomeQuickAccessSelection() {
+    try {
+        const saved = JSON.parse(localStorage.getItem(HOME_QUICK_ACCESS_STORAGE_KEY) || "null");
+        const normalized = normalizeHomeQuickAccessSelection(saved);
+        if (JSON.stringify(saved) !== JSON.stringify(normalized)) {
+            localStorage.setItem(HOME_QUICK_ACCESS_STORAGE_KEY, JSON.stringify(normalized));
+        }
+        return normalized;
+    } catch (error) {
+        return [...HOME_QUICK_ACCESS_DEFAULTS];
+    }
+}
+
+function writeHomeQuickAccessSelection(selection) {
+    const normalized = normalizeHomeQuickAccessSelection(selection);
+    localStorage.setItem(HOME_QUICK_ACCESS_STORAGE_KEY, JSON.stringify(normalized));
+    return normalized;
+}
+
+function renderHomeQuickAccessPanel() {
+    const lists = Array.from(document.querySelectorAll("[data-home-quick-access-list]"));
+    if (!lists.length) return;
+
+    const selectedIds = readHomeQuickAccessSelection();
+    const items = selectedIds.map(getHomeQuickAccessItem).filter(Boolean);
+    const markup = items.map(item => `
+        <a class="home-v3-quick-link" href="${item.href}">
+            <span class="home-v3-quick-icon"><i class="fa-solid ${item.icon}" aria-hidden="true"></i></span>
+            <span class="home-v3-quick-copy">
+                <strong>${escapeHtml(item.label)}</strong>
+                <small>${escapeHtml(item.meta)}</small>
+            </span>
+            <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
+        </a>
+    `).join("");
+
+    lists.forEach(list => {
+        list.innerHTML = markup;
+    });
+}
+
+function renderHomeQuickAccessOptions() {
+    const options = document.getElementById("home-quick-access-options");
+    if (!options) return;
+
+    const selectedIds = readHomeQuickAccessSelection();
+    options.innerHTML = HOME_QUICK_ACCESS_ITEMS.map(item => {
+        const checked = selectedIds.includes(item.id);
+        const disabled = !checked && selectedIds.length >= HOME_QUICK_ACCESS_LIMIT;
+        return `
+            <label class="home-quick-option ${checked ? "active" : ""} ${disabled ? "disabled" : ""}">
+                <input type="checkbox" value="${item.id}" ${checked ? "checked" : ""} ${disabled ? "disabled" : ""}>
+                <span class="home-quick-option-icon"><i class="fa-solid ${item.icon}" aria-hidden="true"></i></span>
+                <span class="home-quick-option-copy">
+                    <strong>${escapeHtml(item.label)}</strong>
+                    <small>${escapeHtml(item.meta)}</small>
+                </span>
+                <span class="home-quick-option-check"><i class="fa-solid fa-check" aria-hidden="true"></i></span>
+            </label>
+        `;
+    }).join("");
+
+    options.querySelectorAll("input[type='checkbox']").forEach(input => {
+        input.addEventListener("change", () => toggleHomeQuickAccessItem(input.value, input.checked));
+    });
+}
+
+function toggleHomeQuickAccessItem(itemId, shouldSelect) {
+    const currentSelection = readHomeQuickAccessSelection();
+    let nextSelection = [...currentSelection];
+
+    if (shouldSelect) {
+        if (!nextSelection.includes(itemId)) nextSelection.push(itemId);
+        if (nextSelection.length > HOME_QUICK_ACCESS_LIMIT) {
+            showNotification(`Quick Access can hold ${HOME_QUICK_ACCESS_LIMIT} shortcuts.`, "info", 2400);
+            nextSelection = currentSelection;
+        }
+    } else {
+        nextSelection = nextSelection.filter(id => id !== itemId);
+        if (!nextSelection.length) {
+            showNotification("Quick Access needs at least one shortcut.", "info", 2400);
+            nextSelection = currentSelection;
+        }
+    }
+
+    writeHomeQuickAccessSelection(nextSelection);
+    renderHomeQuickAccessPanel();
+    renderHomeQuickAccessOptions();
+}
+
+function initHomeQuickAccess() {
+    renderHomeQuickAccessPanel();
+    renderHomeQuickAccessOptions();
+}
+
+function openHomeQuickAccessModal() {
+    renderHomeQuickAccessOptions();
+    const modal = document.getElementById("homeQuickAccessModal");
+    if (modal) modal.classList.remove("hidden");
+}
+
+function closeHomeQuickAccessModal() {
+    document.getElementById("homeQuickAccessModal")?.classList.add("hidden");
+}
+
+function resetHomeQuickAccess() {
+    writeHomeQuickAccessSelection(HOME_QUICK_ACCESS_DEFAULTS);
+    renderHomeQuickAccessPanel();
+    renderHomeQuickAccessOptions();
+    showNotification("Quick Access reset.", "success", 2200);
 }
 
 function switchHomeV3Tab(tabId = "play") {
@@ -9168,6 +9313,7 @@ window.closeDailyLoginModal = closeDailyLoginModal;
 document.addEventListener("DOMContentLoaded", function() {
     initHomeV3Tabs();
     initHomeV3CratesButton();
+    initHomeQuickAccess();
     // Update displayed stats from localStorage
     if (document.getElementById("games")) {
         document.getElementById("games").textContent = localStorage.getItem("games") || 0;
