@@ -69,6 +69,30 @@ content="Play Sharkdle, the daily shark guessing game. Guess shark species from 
             <a href="Updates/index.html"><i class="fa-solid fa-newspaper"></i><span>Updates</span></a>
         </nav>
 
+        <section class="home-v3-quick-access home-v3-quick-access-mobile" aria-labelledby="home-v3-mobile-quick-access-heading">
+            <div class="home-v3-quick-head">
+                <div>
+                    <div class="home-v3-section-label" id="home-v3-mobile-quick-access-heading">Quick Access</div>
+                    <p>Your favorite Sharkdle stops.</p>
+                </div>
+                <button class="home-v3-quick-edit" type="button" onclick="openHomeQuickAccessModal()" aria-label="Customize quick access">
+                    <i class="fa-solid fa-sliders" aria-hidden="true"></i>
+                </button>
+            </div>
+            <div class="home-v3-quick-list" id="home-v3-mobile-quick-access-list" data-home-quick-access-list>
+                <a class="home-v3-quick-link" href="Library/index.html">
+                    <span class="home-v3-quick-icon"><i class="fa-solid fa-book-open" aria-hidden="true"></i></span>
+                    <span class="home-v3-quick-copy"><strong>Sharchive</strong><small>Archive</small></span>
+                    <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
+                </a>
+                <a class="home-v3-quick-link" href="Leaderboard/index.html">
+                    <span class="home-v3-quick-icon"><i class="fa-solid fa-ranking-star" aria-hidden="true"></i></span>
+                    <span class="home-v3-quick-copy"><strong>Leaderboards</strong><small>Ranks</small></span>
+                    <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
+                </a>
+            </div>
+        </section>
+
         <div class="home-v3-fact">
             <span>Fact of the Day</span>
             <p>Sharks have been around longer than trees.</p>
@@ -99,7 +123,7 @@ content="Play Sharkdle, the daily shark guessing game. Guess shark species from 
                 <div class="home-v3-hero-actions">
                     <a class="home-v3-play-btn" href="Daily/index.html"><i class="fa-solid fa-play"></i><span>Play Daily Challenge</span></a>
                     <a class="home-v3-ghost-btn" href="Infinite/index.html"><i class="fa-solid fa-infinity"></i><span>Infinite</span></a>
-                    <a class="home-v3-download-btn" href="https://github.com/Noobler28/Sharkdle/tree/main/Mobile%20Release" target="_blank" rel="noopener"><i class="fa-brands fa-android"></i><span>Android App</span></a>
+                    <a class="home-v3-download-btn" href="https://github.com/Noobler28/Sharkdle/tree/main/Mobile%20Release" target="_blank" rel="noopener"><i class="fa-brands fa-android"></i><span>Mobile App</span></a>
                 </div>
                 <div id="login-warning" class="login-warning hero-alert hidden">
                     You are not logged in. Your stats and XP won't be saved.
@@ -130,6 +154,10 @@ content="Play Sharkdle, the daily shark guessing game. Guess shark species from 
                 <a class="home-v3-mode-card" href="Minigames/SharkRNG/index.html" style="--mode-bg:url('images/home-v3/whale.png')">
                     <strong>Shark RNG</strong>
                     <p>Roll, upgrade, and chase rare finds.</p>
+                </a>
+                <a class="home-v3-mode-card" href="Minigames/SharkCards/index.html" style="--mode-bg:url('images/home-v3/shark-bg.png')">
+                    <strong>Shark Cards</strong>
+                    <p>Build an apex deck and climb the upgrade tree.</p>
                 </a>
                 <a class="home-v3-mode-card" href="shark-rescue/index.html" style="--mode-bg:url('images/home-v3/mako.png')">
                     <strong>Rescue Command</strong>
@@ -217,6 +245,30 @@ content="Play Sharkdle, the daily shark guessing game. Guess shark species from 
             </div>
         </div>
 
+        <section class="home-v3-quick-access home-v3-quick-access-sidebar" aria-labelledby="home-v3-quick-access-heading">
+            <div class="home-v3-quick-head">
+                <div>
+                    <div class="home-v3-section-label" id="home-v3-quick-access-heading">Quick Access</div>
+                    <p>Your favorite Sharkdle stops.</p>
+                </div>
+                <button class="home-v3-quick-edit" type="button" onclick="openHomeQuickAccessModal()" aria-label="Customize quick access">
+                    <i class="fa-solid fa-sliders" aria-hidden="true"></i>
+                </button>
+            </div>
+            <div class="home-v3-quick-list" id="home-v3-quick-access-list" data-home-quick-access-list>
+                <a class="home-v3-quick-link" href="Library/index.html">
+                    <span class="home-v3-quick-icon"><i class="fa-solid fa-book-open" aria-hidden="true"></i></span>
+                    <span class="home-v3-quick-copy"><strong>Sharchive</strong><small>Archive</small></span>
+                    <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
+                </a>
+                <a class="home-v3-quick-link" href="Leaderboard/index.html">
+                    <span class="home-v3-quick-icon"><i class="fa-solid fa-ranking-star" aria-hidden="true"></i></span>
+                    <span class="home-v3-quick-copy"><strong>Leaderboards</strong><small>Ranks</small></span>
+                    <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
+                </a>
+            </div>
+        </section>
+
         <div id="daily-bonus-msg" class="hero-bonus-banner home-v3-bonus"></div>
 
         <div id="xp-event-banner" class="xp-event-banner hidden" aria-live="polite">
@@ -300,6 +352,22 @@ content="Play Sharkdle, the daily shark guessing game. Guess shark species from 
                 </div>
                 <button type="button" onclick="buyPearlShopItem('season-xp')">3000p</button>
             </article>
+        </div>
+    </div>
+</div>
+
+<div id="homeQuickAccessModal" class="modal hidden" onclick="if(event.target===this) closeHomeQuickAccessModal()">
+    <div class="modal-content home-quick-access-modal-content">
+        <button type="button" class="modal-x-btn" onclick="closeHomeQuickAccessModal()" aria-label="Close quick access modal">×</button>
+        <div class="home-quick-modal-head">
+            <div class="new-modal-kicker">Quick Access</div>
+            <h2>Customize Panel</h2>
+            <p>Two home-screen slots.</p>
+        </div>
+        <div class="home-quick-options" id="home-quick-access-options"></div>
+        <div class="home-quick-modal-actions">
+            <button type="button" onclick="resetHomeQuickAccess()">Reset</button>
+            <button type="button" onclick="closeHomeQuickAccessModal()">Done</button>
         </div>
     </div>
 </div>
