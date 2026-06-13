@@ -47,6 +47,8 @@ do {
 let targetShark = sharks[targetIndex];
 localStorage.setItem('infiniteLastFamily', targetShark.family);
 let attempts = 12;
+let categoryReveal = null;
+let categoryRevealGameCompleted = false;
 // practice mode removed; always count down and store stats
 
 const sizeThresholds = {
@@ -60,6 +62,255 @@ const sizeThresholds = {
 function getSizeWithThreshold(size) {
     const threshold = sizeThresholds[size];
     return threshold ? `${size} (${threshold})` : size;
+}
+
+const CATEGORY_REVEAL_PRICE = 25;
+const CATEGORY_REVEAL_OPTIONS = [
+    { key: "family", label: "Family", getValue: shark => shark.family },
+    { key: "order", label: "Order", getValue: shark => shark.order },
+    { key: "genus", label: "Genus", getValue: shark => shark.genus },
+    { key: "size", label: "Size", getValue: shark => getSizeWithThreshold(shark.size) },
+    { key: "habitat", label: "Habitat", getValue: shark => shark.habitat },
+    { key: "yod", label: "Year of Discovery", getValue: shark => shark.yod }
+];
+
+function getCategoryRevealOption(key) {
+    return CATEGORY_REVEAL_OPTIONS.find(option => option.key === key) || null;
+}
+
+function getDiscoveredCategoryKeys() {
+    const discovered = new Set();
+
+    sharks.forEach(shark => {
+        if (!shark.guessed) return;
+        CATEGORY_REVEAL_OPTIONS.forEach(option => {
+            if (option.getValue(shark) === option.getValue(targetShark)) {
+                discovered.add(option.key);
+            }
+        });
+    });
+
+    if (categoryReveal?.key) {
+        discovered.add(categoryReveal.key);
+    }
+
+    return discovered;
+}
+
+function getAvailableCategoryRevealOptions() {
+    const discovered = getDiscoveredCategoryKeys();
+    return CATEGORY_REVEAL_OPTIONS.filter(option => !discovered.has(option.key));
+}
+
+function getCategoryRevealCommonName(option) {
+    if (!["family", "order", "genus"].includes(option.key)) return "";
+    const value = option.getValue(targetShark);
+    return (typeof window.getSharkTaxonomyCommonName === "function"
+        ? window.getSharkTaxonomyCommonName(value)
+        : "") || common_names.find(commonName => commonName.scientific === value)?.Common || "";
+}
+
+function formatCategoryRevealText(option) {
+    const value = option.getValue(targetShark);
+    const commonName = getCategoryRevealCommonName(option);
+    return commonName ? `${option.label}: ${value} (${commonName})` : `${option.label}: ${value}`;
+}
+
+function getCategoryRevealProfile() {
+    if (typeof window.getBestLocalProfile === "function") {
+        return window.getBestLocalProfile();
+    }
+
+    try {
+        return JSON.parse(localStorage.getItem("userProfile") || "{}");
+    } catch (error) {
+        return {};
+    }
+}
+
+function getCategoryRevealPearls(profileData) {
+    if (typeof window.getPearlCount === "function") {
+        return window.getPearlCount(profileData);
+    }
+
+    return Math.max(0, Math.floor(Number(profileData?.pearls ?? profileData?.tidePearls) || 0));
+}
+
+function spendCategoryRevealPearls(profileData, amount) {
+    const currentPearls = getCategoryRevealPearls(profileData);
+    const nextPearls = currentPearls - amount;
+
+    if (typeof window.setPearlCount === "function") {
+        window.setPearlCount(profileData, nextPearls);
+    } else {
+        profileData.pearls = Math.max(0, nextPearls);
+    }
+
+    return Math.max(0, nextPearls);
+}
+
+async function persistCategoryRevealProfile(profileData, authUser) {
+    const nextProfile = {
+        ...profileData,
+        uid: window.currentUser?.uid || authUser?.uid || profileData.uid
+    };
+
+    if (typeof window.saveUserProfileLocally === "function") {
+        window.saveUserProfileLocally(nextProfile, { skipRemoteSync: true });
+    } else {
+        localStorage.setItem("userProfile", JSON.stringify(nextProfile));
+    }
+
+    if (authUser && typeof db !== "undefined") {
+        try {
+            await db.collection("userStats").doc(authUser.uid).set({
+                pearls: getCategoryRevealPearls(nextProfile),
+                lastCategoryRevealPurchase: {
+                    mode: "infinite",
+                    targetShark: targetShark.name,
+                    category: categoryReveal?.key || "",
+                    price: CATEGORY_REVEAL_PRICE,
+                    purchasedAt: new Date()
+                },
+                lastUpdated: new Date()
+            }, { merge: true });
+        } catch (error) {
+            console.warn("Error saving category reveal pearl spend:", error);
+        }
+    }
+
+    if (typeof updateHomeV3Sidebar === "function") {
+        updateHomeV3Sidebar(nextProfile);
+    }
+    if (typeof renderPearlShop === "function") {
+        renderPearlShop(nextProfile);
+    }
+}
+
+function setCategoryRevealMessage(text, type = "info") {
+    const messageDiv = document.getElementById("message");
+    if (messageDiv) messageDiv.textContent = text;
+    if (typeof showNotification === "function") {
+        showNotification(text, type, 3000);
+    }
+}
+
+function updateCategoryRevealPanel() {
+    const panel = document.getElementById("category-reveal-panel");
+    if (!panel) return;
+
+    const result = document.getElementById("category-reveal-result");
+    const balance = document.getElementById("category-reveal-balance");
+    const button = document.getElementById("category-reveal-btn");
+    const authUser = firebase.auth().currentUser;
+    const profileData = getCategoryRevealProfile();
+    const pearls = getCategoryRevealPearls(profileData);
+    const revealedOption = categoryReveal?.key ? getCategoryRevealOption(categoryReveal.key) : null;
+    const availableOptions = getAvailableCategoryRevealOptions();
+
+    panel.classList.toggle("revealed", Boolean(revealedOption));
+
+    if (balance) {
+        balance.textContent = authUser ? `${pearls.toLocaleString()} pearls available` : "Login required to spend pearls";
+    }
+
+    if (revealedOption) {
+        if (result) result.textContent = `Revealed: ${formatCategoryRevealText(revealedOption)}`;
+        if (button) {
+            button.disabled = true;
+            button.textContent = "Category Revealed";
+        }
+        return;
+    }
+
+    if (!availableOptions.length) {
+        if (result) result.textContent = "Every category has already been discovered.";
+        if (button) {
+            button.disabled = true;
+            button.textContent = "All Categories Found";
+        }
+        return;
+    }
+
+    if (categoryRevealGameCompleted) {
+        if (result) result.textContent = "Category reveal is unavailable after the game ends.";
+        if (button) {
+            button.disabled = true;
+            button.textContent = "Game Complete";
+        }
+        return;
+    }
+
+    if (!authUser) {
+        if (result) result.textContent = `Reveal one undiscovered category for ${CATEGORY_REVEAL_PRICE} pearls.`;
+        if (button) {
+            button.disabled = true;
+            button.textContent = "Login Required";
+        }
+        return;
+    }
+
+    if (pearls < CATEGORY_REVEAL_PRICE) {
+        if (result) result.textContent = `Reveal one undiscovered category for ${CATEGORY_REVEAL_PRICE} pearls.`;
+        if (button) {
+            button.disabled = true;
+            button.textContent = `Need ${CATEGORY_REVEAL_PRICE - pearls} More`;
+        }
+        return;
+    }
+
+    if (result) result.textContent = "Reveal one random category you have not discovered yet.";
+    if (button) {
+        button.disabled = false;
+        button.textContent = `Reveal Category - ${CATEGORY_REVEAL_PRICE}p`;
+    }
+}
+
+async function buyCategoryReveal() {
+    if (categoryRevealGameCompleted) {
+        setCategoryRevealMessage("Category reveal is unavailable after the game ends.", "error");
+        updateCategoryRevealPanel();
+        return;
+    }
+
+    if (categoryReveal?.key) {
+        setCategoryRevealMessage("You already revealed a category this game.", "error");
+        updateCategoryRevealPanel();
+        return;
+    }
+
+    const availableOptions = getAvailableCategoryRevealOptions();
+    if (!availableOptions.length) {
+        setCategoryRevealMessage("You already discovered every category.", "info");
+        updateCategoryRevealPanel();
+        return;
+    }
+
+    const authUser = firebase.auth().currentUser;
+    if (!authUser) {
+        setCategoryRevealMessage("Login to spend pearls on a category reveal.", "error");
+        updateCategoryRevealPanel();
+        return;
+    }
+
+    const profileData = getCategoryRevealProfile();
+    const pearls = getCategoryRevealPearls(profileData);
+    if (pearls < CATEGORY_REVEAL_PRICE) {
+        setCategoryRevealMessage(`You need ${CATEGORY_REVEAL_PRICE - pearls} more pearls.`, "error");
+        updateCategoryRevealPanel();
+        return;
+    }
+
+    const option = availableOptions[Math.floor(Math.random() * availableOptions.length)];
+    categoryReveal = {
+        key: option.key,
+        revealedAt: Date.now()
+    };
+
+    spendCategoryRevealPearls(profileData, CATEGORY_REVEAL_PRICE);
+    await persistCategoryRevealProfile(profileData, authUser);
+    updateCategoryRevealPanel();
+    setCategoryRevealMessage(`${formatCategoryRevealText(option)} revealed.`, "success");
 }
 
 
@@ -204,6 +455,8 @@ function makeGuess() {
         const newestFeedback = cards[0].querySelector('.feedback');
         newestFeedback.style.display = 'flex';
     }
+
+    updateCategoryRevealPanel();
     
     if (normalizeInput(guessedShark.name) === normalizeInput(targetShark.name)) {
         const guessesTaken = 12 - attempts;
@@ -249,8 +502,10 @@ function makeGuess() {
         }
         
         // Disable input
+        categoryRevealGameCompleted = true;
         document.getElementById("sharkGuess").disabled = true;
         document.getElementById("guessBtn").disabled = true;
+        updateCategoryRevealPanel();
         
         // Display win screen
         winLoseScreen.innerHTML = `
@@ -284,8 +539,10 @@ function makeGuess() {
         }
         
         // Disable input
+        categoryRevealGameCompleted = true;
         document.getElementById("sharkGuess").disabled = true;
         document.getElementById("guessBtn").disabled = true;
+        updateCategoryRevealPanel();
         
         // Display lose screen
         winLoseScreen.innerHTML = `
@@ -406,6 +663,13 @@ document.getElementById("sharkGuess").addEventListener("keydown", function(event
 });
 
 document.getElementById("guessBtn").addEventListener("click", makeGuess);
+document.getElementById("category-reveal-btn")?.addEventListener("click", buyCategoryReveal);
+
+if (typeof firebase !== "undefined" && firebase.auth) {
+    firebase.auth().onAuthStateChanged(() => updateCategoryRevealPanel());
+}
+
+updateCategoryRevealPanel();
 
 const sharkGuessInput = document.getElementById("sharkGuess");
 const suggestionsDiv = document.getElementById("suggestions");

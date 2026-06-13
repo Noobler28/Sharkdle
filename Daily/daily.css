@@ -308,9 +308,74 @@ button:hover {
     min-height: 46px;
 }
 
+.category-reveal-panel {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(174px, auto);
+    align-items: stretch;
+    gap: 10px;
+    padding: 10px;
+    border-radius: 14px;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.015));
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.025);
+}
+
+.category-reveal-copy {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.category-reveal-kicker,
+#category-reveal-balance {
+    color: rgba(212, 234, 248, 0.64);
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+}
+
+#category-reveal-result {
+    display: block;
+    padding: 8px 10px;
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(255, 255, 255, 0.08);
+    color: #dff9ff;
+    font-size: 0.92rem;
+    font-weight: 800;
+    line-height: 1.25;
+}
+
+.category-reveal-panel.revealed #category-reveal-result {
+    border-color: transparent;
+    background: #43e97b;
+    color: #061e30;
+}
+
+.category-reveal-btn {
+    min-height: 44px;
+    white-space: nowrap;
+    align-self: center;
+    border: 1px solid rgba(44, 196, 196, 0.26) !important;
+    background: linear-gradient(135deg, #18b9d5, #0794b0) !important;
+    box-shadow: 0 10px 20px rgba(13, 167, 200, 0.18) !important;
+}
+
+.category-reveal-btn:disabled {
+    cursor: not-allowed;
+    opacity: 0.72;
+    filter: none;
+    box-shadow: none;
+    background: rgba(255, 255, 255, 0.08) !important;
+    color: rgba(223, 249, 255, 0.78) !important;
+}
+
 #message {
-    color: #ffd86b;
+    color: rgba(142, 245, 239, 0.92);
     text-align: center;
+    font-weight: 800;
     min-height: 20px;
     margin-top: 14px;
 }
@@ -670,18 +735,27 @@ button:hover {
         text-align: left;
     }
 
-    .home-btn {
+    body.mode-v3-page .home-btn {
         width: 100%;
     }
 
-    .guess-hero {
+    body.mode-v3-page .guess-hero {
         grid-template-columns: 1fr;
         padding: 20px 18px;
     }
 
-    .guess-hero-copy,
-    .guess-hero-art {
+    body.mode-v3-page .guess-hero-copy,
+    body.mode-v3-page .guess-hero-art {
         min-height: 180px;
+    }
+
+    .category-reveal-panel {
+        grid-template-columns: 1fr;
+    }
+
+    .category-reveal-btn {
+        width: 100%;
+        white-space: normal;
     }
 
     .topbar h1 {

@@ -66,6 +66,7 @@ let guesses = []
 let gameCompleted = false
 let gameWon = false
 let lastLoadedDate = today
+let categoryReveal = null
 
 const messageDiv = document.getElementById("message");
 
@@ -80,6 +81,268 @@ const sizeThresholds = {
 function getSizeWithThreshold(size) {
     const threshold = sizeThresholds[size];
     return threshold ? `${size} (${threshold})` : size;
+}
+
+const CATEGORY_REVEAL_PRICE = 25;
+const CATEGORY_REVEAL_OPTIONS = [
+    { key: "family", label: "Family", getValue: shark => shark.family },
+    { key: "order", label: "Order", getValue: shark => shark.order },
+    { key: "genus", label: "Genus", getValue: shark => shark.genus },
+    { key: "size", label: "Size", getValue: shark => getSizeWithThreshold(shark.size) },
+    { key: "habitat", label: "Habitat", getValue: shark => shark.habitat },
+    { key: "yod", label: "Year of Discovery", getValue: shark => shark.yod }
+];
+
+function getCategoryRevealOption(key) {
+    return CATEGORY_REVEAL_OPTIONS.find(option => option.key === key) || null;
+}
+
+function normalizeCategoryRevealState(rawReveal) {
+    if (!rawReveal || typeof rawReveal !== "object") return null;
+    const option = getCategoryRevealOption(rawReveal.key);
+    if (!option) return null;
+    return {
+        key: option.key,
+        revealedAt: Number(rawReveal.revealedAt) || null
+    };
+}
+
+function getDiscoveredCategoryKeys() {
+    const discovered = new Set();
+
+    guesses.forEach(guess => {
+        const feedback = guess && guess.feedback;
+        if (!feedback || typeof feedback !== "object") return;
+
+        CATEGORY_REVEAL_OPTIONS.forEach(option => {
+            if (feedback[option.key]) {
+                discovered.add(option.key);
+            }
+        });
+    });
+
+    if (categoryReveal?.key) {
+        discovered.add(categoryReveal.key);
+    }
+
+    return discovered;
+}
+
+function getAvailableCategoryRevealOptions() {
+    const discovered = getDiscoveredCategoryKeys();
+    return CATEGORY_REVEAL_OPTIONS.filter(option => !discovered.has(option.key));
+}
+
+function getCategoryRevealCommonName(option) {
+    if (!["family", "order", "genus"].includes(option.key)) return "";
+    const value = option.getValue(targetShark);
+    return typeof window.getSharkTaxonomyCommonName === "function"
+        ? window.getSharkTaxonomyCommonName(value)
+        : "";
+}
+
+function formatCategoryRevealText(option) {
+    const value = option.getValue(targetShark);
+    const commonName = getCategoryRevealCommonName(option);
+    return commonName ? `${option.label}: ${value} (${commonName})` : `${option.label}: ${value}`;
+}
+
+function getCategoryRevealProfile() {
+    if (typeof window.getBestLocalProfile === "function") {
+        return window.getBestLocalProfile();
+    }
+
+    try {
+        return JSON.parse(localStorage.getItem("userProfile") || "{}");
+    } catch (error) {
+        return {};
+    }
+}
+
+function getCategoryRevealPearls(profileData) {
+    if (typeof window.getPearlCount === "function") {
+        return window.getPearlCount(profileData);
+    }
+
+    return Math.max(0, Math.floor(Number(profileData?.pearls ?? profileData?.tidePearls) || 0));
+}
+
+function spendCategoryRevealPearls(profileData, amount) {
+    const currentPearls = getCategoryRevealPearls(profileData);
+    const nextPearls = currentPearls - amount;
+
+    if (typeof window.setPearlCount === "function") {
+        window.setPearlCount(profileData, nextPearls);
+    } else {
+        profileData.pearls = Math.max(0, nextPearls);
+    }
+
+    return Math.max(0, nextPearls);
+}
+
+async function persistCategoryRevealProfile(profileData, authUser) {
+    const nextProfile = {
+        ...profileData,
+        uid: window.currentUser?.uid || authUser?.uid || profileData.uid
+    };
+
+    if (typeof window.saveUserProfileLocally === "function") {
+        window.saveUserProfileLocally(nextProfile, { skipRemoteSync: true });
+    } else {
+        localStorage.setItem("userProfile", JSON.stringify(nextProfile));
+    }
+
+    if (authUser && typeof db !== "undefined") {
+        try {
+            await db.collection("userStats").doc(authUser.uid).set({
+                pearls: getCategoryRevealPearls(nextProfile),
+                lastCategoryRevealPurchase: {
+                    mode: "daily",
+                    gameKey: today,
+                    targetShark: targetShark.name,
+                    category: categoryReveal?.key || "",
+                    price: CATEGORY_REVEAL_PRICE,
+                    purchasedAt: new Date()
+                },
+                lastUpdated: new Date()
+            }, { merge: true });
+        } catch (error) {
+            console.warn("Error saving category reveal pearl spend:", error);
+        }
+    }
+
+    if (typeof updateHomeV3Sidebar === "function") {
+        updateHomeV3Sidebar(nextProfile);
+    }
+    if (typeof renderPearlShop === "function") {
+        renderPearlShop(nextProfile);
+    }
+}
+
+function setCategoryRevealMessage(text, type = "info") {
+    if (messageDiv) messageDiv.textContent = text;
+    if (typeof showNotification === "function") {
+        showNotification(text, type, 3000);
+    }
+}
+
+function updateCategoryRevealPanel() {
+    const panel = document.getElementById("category-reveal-panel");
+    if (!panel) return;
+
+    const result = document.getElementById("category-reveal-result");
+    const balance = document.getElementById("category-reveal-balance");
+    const button = document.getElementById("category-reveal-btn");
+    const authUser = firebase.auth().currentUser;
+    const profileData = getCategoryRevealProfile();
+    const pearls = getCategoryRevealPearls(profileData);
+    const revealedOption = categoryReveal?.key ? getCategoryRevealOption(categoryReveal.key) : null;
+    const availableOptions = getAvailableCategoryRevealOptions();
+
+    panel.classList.toggle("revealed", Boolean(revealedOption));
+
+    if (balance) {
+        balance.textContent = authUser ? `${pearls.toLocaleString()} pearls available` : "Login required to spend pearls";
+    }
+
+    if (revealedOption) {
+        if (result) result.textContent = `Revealed: ${formatCategoryRevealText(revealedOption)}`;
+        if (button) {
+            button.disabled = true;
+            button.textContent = "Category Revealed";
+        }
+        return;
+    }
+
+    if (!availableOptions.length) {
+        if (result) result.textContent = "Every category has already been discovered.";
+        if (button) {
+            button.disabled = true;
+            button.textContent = "All Categories Found";
+        }
+        return;
+    }
+
+    if (gameCompleted) {
+        if (result) result.textContent = "Category reveal is unavailable after the game ends.";
+        if (button) {
+            button.disabled = true;
+            button.textContent = "Game Complete";
+        }
+        return;
+    }
+
+    if (!authUser) {
+        if (result) result.textContent = `Reveal one undiscovered category for ${CATEGORY_REVEAL_PRICE} pearls.`;
+        if (button) {
+            button.disabled = true;
+            button.textContent = "Login Required";
+        }
+        return;
+    }
+
+    if (pearls < CATEGORY_REVEAL_PRICE) {
+        if (result) result.textContent = `Reveal one undiscovered category for ${CATEGORY_REVEAL_PRICE} pearls.`;
+        if (button) {
+            button.disabled = true;
+            button.textContent = `Need ${CATEGORY_REVEAL_PRICE - pearls} More`;
+        }
+        return;
+    }
+
+    if (result) result.textContent = "Reveal one random category you have not discovered yet.";
+    if (button) {
+        button.disabled = false;
+        button.textContent = `Reveal Category - ${CATEGORY_REVEAL_PRICE}p`;
+    }
+}
+
+async function buyCategoryReveal() {
+    if (gameCompleted) {
+        setCategoryRevealMessage("Category reveal is unavailable after the game ends.", "error");
+        updateCategoryRevealPanel();
+        return;
+    }
+
+    if (categoryReveal?.key) {
+        setCategoryRevealMessage("You already revealed a category this game.", "error");
+        updateCategoryRevealPanel();
+        return;
+    }
+
+    const availableOptions = getAvailableCategoryRevealOptions();
+    if (!availableOptions.length) {
+        setCategoryRevealMessage("You already discovered every category.", "info");
+        updateCategoryRevealPanel();
+        return;
+    }
+
+    const authUser = firebase.auth().currentUser;
+    if (!authUser) {
+        setCategoryRevealMessage("Login to spend pearls on a category reveal.", "error");
+        updateCategoryRevealPanel();
+        return;
+    }
+
+    const profileData = getCategoryRevealProfile();
+    const pearls = getCategoryRevealPearls(profileData);
+    if (pearls < CATEGORY_REVEAL_PRICE) {
+        setCategoryRevealMessage(`You need ${CATEGORY_REVEAL_PRICE - pearls} more pearls.`, "error");
+        updateCategoryRevealPanel();
+        return;
+    }
+
+    const option = availableOptions[Math.floor(Math.random() * availableOptions.length)];
+    categoryReveal = {
+        key: option.key,
+        revealedAt: Date.now()
+    };
+
+    spendCategoryRevealPearls(profileData, CATEGORY_REVEAL_PRICE);
+    await persistCategoryRevealProfile(profileData, authUser);
+    await saveGameState();
+    updateCategoryRevealPanel();
+    setCategoryRevealMessage(`${formatCategoryRevealText(option)} revealed.`, "success");
 }
 
 
@@ -97,6 +360,7 @@ async function loadGameState() {
             attempts = state.attempts || 12
             gameCompleted = state.completed || false
             gameWon = state.won || false
+            categoryReveal = normalizeCategoryRevealState(state.categoryReveal)
             lastLoadedDate = today
         } else {
             // Date mismatch in localStorage - device date was likely changed. Start fresh.
@@ -129,6 +393,7 @@ async function loadGameState() {
                         attempts = firebaseData.attempts || 12
                         gameCompleted = firebaseData.completed || false
                         gameWon = firebaseData.won || false
+                        categoryReveal = normalizeCategoryRevealState(firebaseData.categoryReveal)
                         lastLoadedDate = today
                         return; // Don't allow resetting if already played today
                     } else if (lastPlayUTC !== today && firebaseData.date === today) {
@@ -139,6 +404,7 @@ async function loadGameState() {
                         attempts = 12
                         gameCompleted = false
                         gameWon = false
+                        categoryReveal = null
                         lastLoadedDate = today
                         return;
                     }
@@ -150,6 +416,7 @@ async function loadGameState() {
                     attempts = firebaseData.attempts || 12
                     gameCompleted = firebaseData.completed || false
                     gameWon = firebaseData.won || false
+                    categoryReveal = normalizeCategoryRevealState(firebaseData.categoryReveal)
                     lastLoadedDate = today
                 } else if (firebaseData.date && firebaseData.date !== today) {
                     // Date mismatch: likely device date was changed. Reset the game
@@ -158,6 +425,7 @@ async function loadGameState() {
                     attempts = 12
                     gameCompleted = false
                     gameWon = false
+                    categoryReveal = null
                     lastLoadedDate = today
                 }
             }
@@ -174,6 +442,7 @@ async function saveGameState() {
         attempts: attempts,
         completed: gameCompleted,
         won: gameWon,
+        categoryReveal: categoryReveal,
         date: today
     }
     
@@ -233,6 +502,8 @@ async function initializeGame() {
             feedbackDiv.style.display = 'none';
         }
     });
+
+    updateCategoryRevealPanel();
 }
 
 // Start the initialization when the page loads
@@ -294,6 +565,11 @@ return Math.abs(hash)
 
 
 document.getElementById("guessBtn").onclick = makeGuess
+document.getElementById("category-reveal-btn")?.addEventListener("click", buyCategoryReveal)
+
+if (typeof firebase !== "undefined" && firebase.auth) {
+    firebase.auth().onAuthStateChanged(() => updateCategoryRevealPanel());
+}
 
 // Allow Enter key to submit guess
 document.getElementById("sharkGuess").addEventListener("keydown", function(event) {
@@ -408,6 +684,8 @@ if (cards.length > 0) {
     newestFeedback.style.display = 'flex';
 }
 
+updateCategoryRevealPanel();
+
 if(shark.name === targetShark.name){
 
     // Track total guesses for this game
@@ -484,6 +762,7 @@ if(shark.name === targetShark.name){
     gameCompleted = true
     gameWon = true
     saveGameState()
+    updateCategoryRevealPanel()
 
     // Update display
     if (typeof window.updateIndexStats !== 'undefined') {
@@ -560,6 +839,7 @@ if(attempts===0){
     gameCompleted = true
     gameWon = false
     saveGameState()
+    updateCategoryRevealPanel()
 
     // Update display
     if (typeof window.updateIndexStats !== 'undefined') {
