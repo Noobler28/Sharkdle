@@ -1518,7 +1518,7 @@
             <div style="text-align:center;">
                 <div class="library-kicker">Species Archive</div>
                 <h1>The Sharchive</h1>
-                <p>Browse every shark in the collection. Help narrow down your target shark using the filter options.</p>
+                <p>Browse every shark and ray in the collection. Help narrow down your target species using the filter options.</p>
             </div>
             <div class="library-summary">
                 <div class="summary-card">
@@ -1556,10 +1556,10 @@
             <input 
                 type="text" 
                 id="shark-search" 
-                placeholder="Search sharks by name, family, genus, or order..."
+                placeholder="Search species by name, family, genus, or order..."
             >
             </div>
-            <button id="heart-filter" class="filter-btn" title="Show only hearted sharks">Show Favorites</button>
+            <button id="heart-filter" class="filter-btn" title="Show only hearted species">Show Favorites</button>
         </div>
     </div>
 
@@ -1598,10 +1598,11 @@
         <div class="results-note">Tap a card to flip it and inspect the species details.</div>
     </div>
     <div id="orders-container"></div>
-    <div id="no-results" class="no-results" style="display:none;">No sharks found matching your search.</div>
+    <div id="no-results" class="no-results" style="display:none;">No species found matching your search.</div>
     </main>
     <!-- Shark list -->
     <script src="sharks.js"></script>
+    <script src="rays.js"></script>
     <script src="Library/library.js"></script>
     <script>
         function navigate(page) {
@@ -1650,6 +1651,10 @@
             {"scientific": "Pristiophoriformes", "Common": "Saw Sharks"},
             {"scientific": "Squaliformes", "Common": "Dog Sharks"},
             {"scientific": "Hexanchiformes", "Common": "Cow and Frilled Sharks"},
+            {"scientific": "Myliobatiformes", "Common": "Stingrays and Eagle Rays"},
+            {"scientific": "Rajiformes", "Common": "Skates"},
+            {"scientific": "Rhinopristiformes", "Common": "Guitarfishes and Sawfishes"},
+            {"scientific": "Torpediniformes", "Common": "Electric Rays"},
             // Families
             {"scientific": "Sphyrnidae", "Common": "Hammerhead Sharks"},
             {"scientific": "Carcharhinidae", "Common": "Requiem Sharks"},
@@ -1684,14 +1689,29 @@
             return entry ? entry.Common : null;
         }
 
-        // Size category mapping to actual shark data values
+        function getLibrarySourceSpecies() {
+            const speciesByName = new Map();
+            const sourcePools = [
+                Array.isArray(window.sharks) ? window.sharks : [],
+                Array.isArray(window.rays) ? window.rays : []
+            ];
+
+            sourcePools.flat().forEach(species => {
+                if (!species?.name || speciesByName.has(species.name)) return;
+                speciesByName.set(species.name, species);
+            });
+
+            return Array.from(speciesByName.values());
+        }
+
+        // Size category mapping to actual species data values
         function mapSizeCategoryToDataValues(category) {
             const sizeMapping = {
-                'Tiny': ['Tiny'],      // Tiny sharks
-                'Small': ['Small'],     // Small sharks
-                'Medium': ['Medium'],   // Medium sharks
-                'Large': ['Large'],     // Large sharks
-                'Giant': ['Giant']      // Giant sharks
+                'Tiny': ['Tiny'],
+                'Small': ['Small'],
+                'Medium': ['Medium'],
+                'Large': ['Large'],
+                'Giant': ['Giant']
             };
             return sizeMapping[category] || [];
         }
@@ -1993,7 +2013,7 @@
             noResults.style.display = 'none';
             
             // Show species count
-            document.getElementById('species-count').textContent = `Showing ${filteredSharks.length} of ${allSharks.length} sharks`;
+            document.getElementById('species-count').textContent = `Showing ${filteredSharks.length} of ${allSharks.length} species`;
             
             ordersContainer.innerHTML = '';
             const orderGroups = {};
@@ -2016,7 +2036,7 @@
                 header.innerHTML = `
                     <div class="order-title">
                         <span class="order-name">${order}</span>
-                        <span class="order-meta">${getCommonName(order) || 'Shark order archive'} / ${orderGroups[order].length} species</span>
+                        <span class="order-meta">${getCommonName(order) || 'Species order archive'} / ${orderGroups[order].length} species</span>
                     </div>
                     <span class="order-arrow">&#9660;</span>
                 `;
@@ -2040,7 +2060,7 @@
                     const card = document.createElement('div');
                     card.className = 'shark-card';
                     card.tabIndex = 0;
-                    card.setAttribute('aria-label', `Shark card for ${shark.name}`);
+                    card.setAttribute('aria-label', `Species card for ${shark.name}`);
                     const sharkKey = getSharkLikeKey(shark.name);
                     const globalLikes = sharkLikeCounts.get(sharkKey) || 0;
                     card.innerHTML = `
@@ -2102,7 +2122,7 @@
         }
 
         function updateSpeciesCount() {
-            document.getElementById('species-count').textContent = `Showing ${filteredSharks.length} of ${allSharks.length} sharks`;
+            document.getElementById('species-count').textContent = `Showing ${filteredSharks.length} of ${allSharks.length} species`;
             updateLibrarySummary();
         }
 
@@ -2110,7 +2130,7 @@
             initializeLibraryFirebase();
             loadHeartedSharks();
             loadCollapsedSections();
-            allSharks = Array.isArray(sharks) ? [...sharks] : [];
+            allSharks = getLibrarySourceSpecies();
             filteredSharks = [...allSharks];
             renderSharkGalleryByOrder();
             updateSpeciesCount();
