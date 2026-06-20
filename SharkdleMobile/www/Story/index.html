@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<link rel="icon" type="image/png" href="images/favicon.png">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <base href="../">
+<title>Sharkdle Map</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800;900&family=Barlow:wght@400;500;600;700&family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+    <script defer src="script.js"></script>
+    <script defer src="Achievements/achievements.js"></script>
+    <script defer src="Story/story.js"></script>
+    <link rel="stylesheet" href="mobile.css">
+</head>
+<body class="story-map-page shell-page">
+    <header class="navbar">
+        <div class="logo">🦈 Sharkdle</div>
+     <div id="auth-container" class="auth-container">
+         <button onclick="window.location.href=resolveAppPath('index.html')" class="nav-btn">Home</button>
+         <button onclick="window.location.href=resolveAppPath('practice.html')" class="nav-btn">Practice Mode</button>
+         <button onclick="window.location.href=resolveAppPath('achievements.html')" class="nav-btn">Achievements</button>
+         <button id="login-btn" onclick="openLoginModal()" class="auth-btn">Login</button>
+     </div>
+    </header>
+
+    <section class="hero story-map-hero">
+        <div class="story-map-kicker">Story Mode</div>
+        <h1>World Map</h1>
+        <p class="story-desc">Travel the globe, restore corrupted shark records, and complete each region to unlock the next chapter.</p>
+    </section>
+
+    <div class="world-map-shell">
+        <aside class="world-map-sidebar">
+            <div class="world-map-heading">
+                <span>Campaign Board</span>
+                <strong>Chapter progress updates live</strong>
+            </div>
+            <div id="map-summary" class="world-map-summary"></div>
+        </aside>
+        <div class="world-map-container">
+            <div class="world-map-heading">
+                <span>Global Shark Database</span>
+                <strong>Click an unlocked signal pin to open a chapter</strong>
+            </div>
+            <img src="images/storyMode/worldmap.png" alt="World Map" class="world-map-bg">
+            <div id="map-pins"></div>
+        </div>
+    </div>
+
+    <div id="area-modal" class="modal hidden">
+        <div class="modal-content story-modal-modern">
+            <span id="close-modal" class="close">&times;</span>
+            <div class="story-modal-header">
+                <div class="story-modal-title-group">
+                    <h2 id="modal-title"></h2>
+                    <div class="story-modal-area-label"><span class="area-icon">🌊</span> Atlantic Ocean</div>
+                    <div class="story-modal-brief">
+                        <p id="story-modal-narrative"></p>
+                    </div>
+                </div>
+            </div>
+            <div class="story-modal-progress">
+                <div class="story-modal-progress-bar-bg">
+                    <div id="story-modal-progress-bar" class="story-modal-progress-bar"></div>
+                </div>
+                <span id="story-modal-progress-label" class="story-modal-progress-label">0/10 Missions Complete</span>
+            </div>
+            <div id="area-species-container"></div>
+        </div>
+    </div>
+    <div id="mission-modal" class="modal hidden">
+        <div class="modal-content story-modal-modern story-mission-modal" style="z-index: 10005;">
+            <span id="close-mission-modal" class="close">&times;</span>
+            <div class="story-modal-header">
+                <div class="story-modal-title-group">
+                    <div class="story-modal-kicker">Mission Room</div>
+                    <h2 id="mission-modal-title"></h2>
+                    <div class="story-modal-brief">
+                        <p id="mission-modal-story"></p>
+                    </div>
+                </div>
+            </div>
+            <div id="mission-modal-body"></div>
+        </div>
+    </div>
+<script src="global-broadcast.js"></script>
+</body>
+</html>

@@ -1517,6 +1517,23 @@ const COMMUNITY_BOSS_EVENTS = [
         rewards: createCommunityBossRewards("summer")
     },
     {
+        id: "summer-cladoselache-2026",
+        season: "summer",
+        seasonLabel: "Limited Summer Boss Event",
+        bossName: "Cladoselache",
+        title: "Defeat the Cladoselache",
+        targetWins: 150,
+        // Event counter only: leaderboard/profile wins remain +1 in the mode scripts.
+        contributionMultiplier: 1,
+        startMs: new Date("2026-06-20T00:00:00Z").getTime(),
+        endMs: new Date("2026-07-05T00:00:00Z").getTime(),
+        crateId: "summer",
+        rewardBadgeId: "extinction",
+        rewardBadgeName: "Extinction",
+        rewardMode: "milestone",
+        rewards: createCommunityBossMilestoneRewards("summer")
+    },
+    {
         id: "halloween-helicoprion-2026",
         season: "halloween",
         seasonLabel: "Limited Halloween Boss Event",
@@ -2985,6 +3002,14 @@ function createCommunityBossRewards(crateId) {
     };
 }
 
+function createCommunityBossMilestoneRewards(crateId) {
+    return [
+        { id: "tier-50", label: "50-win reward", goal: 50, xp: 10000, crateId, crateCount: 2, rank: null },
+        { id: "tier-100", label: "100-win reward", goal: 100, xp: 15000, crateId, crateCount: 5, rank: null },
+        { id: "tier-150", label: "150-win final reward", goal: 150, xp: 25000, crateId, crateCount: 10, rank: null }
+    ];
+}
+
 function getCurrentCommunityBossEvent(nowMs = Date.now()) {
     const startedEvents = COMMUNITY_BOSS_EVENTS
         .filter(event => nowMs >= event.startMs)
@@ -3017,6 +3042,10 @@ function isCommunityBossComplete(wins = getCommunityBossWins()) {
     return wins >= COMMUNITY_BOSS_EVENT.targetWins;
 }
 
+function isCommunityBossMilestoneEvent(event = COMMUNITY_BOSS_EVENT) {
+    return event?.rewardMode === "milestone" || Array.isArray(event?.rewards);
+}
+
 function getCommunityBossContributionMultiplier() {
     return Math.max(1, Math.floor(Number(COMMUNITY_BOSS_EVENT.contributionMultiplier) || 1));
 }
@@ -3025,8 +3054,49 @@ function isCommunityBossContributionOpen(nowMs = Date.now()) {
     return isCommunityBossStarted(nowMs) && !isCommunityBossExpired(nowMs) && !isCommunityBossComplete();
 }
 
-function hasClaimedCommunityBossReward(profileData = getCurrentProfileData()) {
-    return Boolean(profileData?.communityBossRewards?.[COMMUNITY_BOSS_EVENT.id]);
+function getCommunityBossRewardClaim(profileData = getCurrentProfileData()) {
+    return profileData?.communityBossRewards?.[COMMUNITY_BOSS_EVENT.id] || null;
+}
+
+function getClaimedCommunityBossRewardIds(profileData = getCurrentProfileData()) {
+    const claim = getCommunityBossRewardClaim(profileData);
+    if (!claim || typeof claim !== "object") return new Set();
+    if (Array.isArray(claim.claimedRewardIds)) return new Set(claim.claimedRewardIds.map(String));
+    if (claim.rewardId) return new Set([String(claim.rewardId)]);
+    return new Set();
+}
+
+function getCommunityBossRewardTiers() {
+    if (isCommunityBossMilestoneEvent()) {
+        return [...(Array.isArray(COMMUNITY_BOSS_EVENT.rewards) ? COMMUNITY_BOSS_EVENT.rewards : [])]
+            .sort((a, b) => (Number(a.goal) || 0) - (Number(b.goal) || 0));
+    }
+
+    return [
+        COMMUNITY_BOSS_EVENT.rewards.first,
+        COMMUNITY_BOSS_EVENT.rewards.second,
+        COMMUNITY_BOSS_EVENT.rewards.default
+    ].filter(Boolean);
+}
+
+function getUnlockedCommunityBossRewards(wins = getCommunityBossWins()) {
+    if (!isCommunityBossMilestoneEvent()) return [];
+    return getCommunityBossRewardTiers().filter(reward => wins >= (Number(reward.goal) || 0));
+}
+
+function getPendingCommunityBossRewards(wins = getCommunityBossWins(), profileData = getCurrentProfileData()) {
+    if (!isCommunityBossMilestoneEvent()) return [];
+    const claimedRewardIds = getClaimedCommunityBossRewardIds(profileData);
+    return getUnlockedCommunityBossRewards(wins).filter(reward => !claimedRewardIds.has(String(reward.id)));
+}
+
+function hasClaimedCommunityBossReward(profileData = getCurrentProfileData(), wins = getCommunityBossWins()) {
+    if (isCommunityBossMilestoneEvent()) {
+        const unlockedRewards = getUnlockedCommunityBossRewards(wins);
+        return unlockedRewards.length > 0 && getPendingCommunityBossRewards(wins, profileData).length === 0;
+    }
+
+    return Boolean(getCommunityBossRewardClaim(profileData));
 }
 
 function getCommunityBossDocRef() {
@@ -3054,6 +3124,17 @@ function formatCommunityBossCrateReward(reward) {
     return `${crateCount.toLocaleString()} ${crateName}${crateCount === 1 ? "" : "s"}`;
 }
 
+function formatCommunityBossCrateAwards(crateAwards) {
+    return Object.entries(crateAwards || {})
+        .filter(([, count]) => Number(count) > 0)
+        .map(([crateId, count]) => {
+            const crateCount = Math.max(0, Number(count) || 0);
+            const crateName = getCommunityBossCrateName(crateId);
+            return `${crateCount.toLocaleString()} ${crateName}${crateCount === 1 ? "" : "s"}`;
+        })
+        .join(", ");
+}
+
 function getCommunityBossRewardDescription(reward) {
     return `${formatCommunityBossCrateReward(reward)}, ${reward.xp.toLocaleString()} XP, ${COMMUNITY_BOSS_EVENT.rewardBadgeName} profile badge`;
 }
@@ -3061,6 +3142,12 @@ function getCommunityBossRewardDescription(reward) {
 function getCommunityBossDescription() {
     const multiplier = getCommunityBossContributionMultiplier();
     const multiplierCopy = multiplier > 1 ? ` Each win counts as ${multiplier}.` : "";
+    if (isCommunityBossMilestoneEvent()) {
+        const goals = getCommunityBossRewardTiers()
+            .map(reward => (Number(reward.goal) || 0).toLocaleString())
+            .join(", ");
+        return `Daily and Infinite wins from every logged-in player count together.${multiplierCopy} Unlock shared rewards at ${goals} community wins before the deadline to bring down the ${COMMUNITY_BOSS_EVENT.bossName}.`;
+    }
     return `Daily and Infinite wins from every logged-in player count together.${multiplierCopy} Reach ${COMMUNITY_BOSS_EVENT.targetWins.toLocaleString()} community wins by the event deadline to bring down the ${COMMUNITY_BOSS_EVENT.bossName}.`;
 }
 
@@ -3072,17 +3159,28 @@ function resolveCommunityBossProfilePicturePath(path) {
     return `images/pfp/${storedPath}`;
 }
 
-function getCommunityBossRewardsMarkup() {
-    const rewardRows = [
-        COMMUNITY_BOSS_EVENT.rewards.first,
-        COMMUNITY_BOSS_EVENT.rewards.second,
-        COMMUNITY_BOSS_EVENT.rewards.default
-    ];
+function getCommunityBossRewardsMarkup(wins = getCommunityBossWins(), profileData = getCurrentProfileData()) {
+    const rewardRows = getCommunityBossRewardTiers();
+    const claimedRewardIds = getClaimedCommunityBossRewardIds(profileData);
+    const heading = isCommunityBossMilestoneEvent() ? "Community Milestones" : "Rewards";
 
     return `
-        <strong>Rewards</strong>
+        <strong>${heading}</strong>
         <ul class="community-boss-rewards-list">
-            ${rewardRows.map(reward => `<li><b>${reward.label}</b><span>${getCommunityBossRewardDescription(reward)}</span></li>`).join("")}
+            ${rewardRows.map(reward => {
+                const goal = Number(reward.goal) || 0;
+                const claimed = claimedRewardIds.has(String(reward.id));
+                const unlocked = !isCommunityBossMilestoneEvent() || wins >= goal;
+                const status = isCommunityBossMilestoneEvent()
+                    ? claimed
+                        ? "Claimed"
+                        : unlocked
+                        ? "Unlocked"
+                        : `${Math.max(0, goal - wins).toLocaleString()} wins to unlock`
+                    : "";
+                const statusMarkup = status ? `<em>${status}</em>` : "";
+                return `<li class="${claimed ? "claimed" : unlocked ? "unlocked" : "locked"}"><b>${reward.label}</b><span>${getCommunityBossRewardDescription(reward)}${statusMarkup}</span></li>`;
+            }).join("")}
         </ul>
     `;
 }
@@ -3160,24 +3258,25 @@ function renderCommunityBossRanks(rows) {
     if (!list) return;
 
     if (!rows.length) {
-        list.innerHTML = `<p class="community-boss-ranks-empty">No contributions yet. First win gets the lead.</p>`;
+        list.innerHTML = `<p class="community-boss-ranks-empty">No contributions yet.</p>`;
         return;
     }
 
     list.innerHTML = rows.map((row, index) => {
         const rank = index + 1;
-        const rankClass = rank <= 2 ? ` top-${rank}` : "";
+        const rankClass = !isCommunityBossMilestoneEvent() && rank <= 2 ? ` top-${rank}` : "";
         const username = escapeCommunityBossHtml(row.username || "Anonymous");
         const profilePic = escapeCommunityBossHtml(resolveCommunityBossProfilePicturePath(row.profilePicture || row.profilePic));
         const wins = Math.max(0, Number(row.wins) || 0);
-        const reward = getCommunityBossRewardForRank(rank);
+        const reward = isCommunityBossMilestoneEvent() ? null : getCommunityBossRewardForRank(rank);
+        const rewardCopy = reward ? ` - ${reward.label}` : "";
         return `
             <article class="community-boss-rank-row${rankClass}">
                 <span class="community-boss-rank-number">#${rank}</span>
                 <img class="community-boss-rank-avatar" src="${profilePic}" alt="${username}" onerror="this.onerror=null;this.src='images/pfp/shark1.png';">
                 <div>
                     <strong>${username}</strong>
-                    <span>${wins.toLocaleString()} contribution${wins === 1 ? "" : "s"} · ${reward.label}</span>
+                    <span>${wins.toLocaleString()} contribution${wins === 1 ? "" : "s"}${rewardCopy}</span>
                 </div>
             </article>
         `;
@@ -3204,18 +3303,28 @@ function getCommunityBossDisplayState() {
     const progressPercent = Math.max(0, Math.min(100, (wins / target) * 100));
     const nowMs = Date.now();
     const complete = isCommunityBossComplete(wins);
-    const claimed = hasClaimedCommunityBossReward();
+    const profileData = getCurrentProfileData();
+    const pendingRewards = getPendingCommunityBossRewards(wins, profileData);
+    const canClaim = isCommunityBossMilestoneEvent()
+        ? pendingRewards.length > 0
+        : complete && !hasClaimedCommunityBossReward(profileData, wins);
+    const claimed = isCommunityBossMilestoneEvent()
+        ? getUnlockedCommunityBossRewards(wins).length > 0 && pendingRewards.length === 0
+        : hasClaimedCommunityBossReward(profileData, wins);
     const started = isCommunityBossStarted(nowMs);
     const expired = isCommunityBossExpired(nowMs);
     const contributionOpen = isCommunityBossContributionOpen(nowMs);
+    const bossGotAway = expired && !complete;
 
     let timerText = "";
     if (!started) {
         timerText = `Starts in ${formatEventTimeRemaining(COMMUNITY_BOSS_EVENT.startMs - nowMs)}`;
     } else if (complete) {
         timerText = "Boss defeated. Rewards are unlocked.";
+    } else if (canClaim) {
+        timerText = `${pendingRewards.length} reward${pendingRewards.length === 1 ? "" : "s"} unlocked.`;
     } else if (expired) {
-        timerText = "Event ended.";
+        timerText = `The ${COMMUNITY_BOSS_EVENT.bossName} got away.`;
     } else {
         timerText = `Ends in ${formatEventTimeRemaining(COMMUNITY_BOSS_EVENT.endMs - nowMs)}`;
     }
@@ -3223,15 +3332,19 @@ function getCommunityBossDisplayState() {
     const claimLabel = !currentUser
         ? "Login to Claim"
         : claimed
-        ? "Reward Claimed"
-        : complete
-        ? "Claim Reward"
+        ? "Rewards Claimed"
+        : canClaim
+        ? pendingRewards.length > 1 ? "Claim Rewards" : "Claim Reward"
         : "Locked";
 
     const contributionCopy = contributionOpen
-        ? `Your next Daily or Infinite win will add ${getCommunityBossContributionMultiplier()} to the global total.`
+        ? canClaim
+            ? "A shared reward is unlocked. Claim it now, and keep winning for the next milestone."
+            : `Your next Daily or Infinite win will add ${getCommunityBossContributionMultiplier()} to the global total.`
         : complete
-        ? "The community did it. Claim your reward while logged in."
+        ? "The community did it. Claim every unlocked reward while logged in."
+        : bossGotAway
+        ? `The ${COMMUNITY_BOSS_EVENT.bossName} got away, so wins are no longer being counted for this event.`
         : "Wins are no longer being counted for this event.";
 
     return {
@@ -3240,9 +3353,15 @@ function getCommunityBossDisplayState() {
         progressPercent,
         complete,
         claimed,
+        canClaim,
         claimLabel,
+        pendingRewardCount: pendingRewards.length,
         timerText,
-        contributionCopy
+        contributionCopy,
+        title: bossGotAway ? `The ${COMMUNITY_BOSS_EVENT.bossName} Got Away` : COMMUNITY_BOSS_EVENT.title,
+        description: bossGotAway
+            ? `The event has ended, and the ${COMMUNITY_BOSS_EVENT.bossName} got away before the community reached ${target.toLocaleString()} global wins.`
+            : getCommunityBossDescription()
     };
 }
 
@@ -3275,29 +3394,29 @@ function renderCommunityBossEventModal() {
         <section class="community-boss-event community-boss-modal-event community-boss-season-${COMMUNITY_BOSS_EVENT.season}" aria-live="polite">
             <div class="community-boss-modal-heading">
                 <span class="community-boss-kicker">${COMMUNITY_BOSS_EVENT.seasonLabel}</span>
-                <h2 id="community-boss-modal-title">${COMMUNITY_BOSS_EVENT.title}</h2>
-                <p>${getCommunityBossDescription()}</p>
+                <h2 id="community-boss-modal-title">${state.title}</h2>
+                <p>${state.description}</p>
             </div>
             <div class="community-boss-progress-shell community-boss-modal-progress">
                 <div class="community-boss-progress-meta">
                     <span>${state.wins.toLocaleString()} / ${state.target.toLocaleString()} global wins</span>
                     <span>${Math.floor(state.progressPercent)}%</span>
                 </div>
-                <div class="community-boss-progress" aria-label="Global Megalodon progress">
+                <div class="community-boss-progress" aria-label="Global ${COMMUNITY_BOSS_EVENT.bossName} progress">
                     <div class="community-boss-progress-fill" style="width:${state.progressPercent}%"></div>
                 </div>
                 <div class="community-boss-status">${state.timerText}</div>
             </div>
             <div class="community-boss-modal-lower">
                 <div class="community-boss-reward">
-                    ${getCommunityBossRewardsMarkup()}
+                    ${getCommunityBossRewardsMarkup(state.wins)}
                 </div>
                 <div class="community-boss-modal-actions">
                     <p>${state.contributionCopy}</p>
                     <div class="community-boss-actions">
                         <button class="primary" type="button" onclick="navigate('infinite.html')">Play Infinite</button>
                         <button type="button" onclick="navigate('Daily/index.html')">Daily Challenge</button>
-                        <button type="button" onclick="openCommunityBossRanksModal()">Ranks</button>
+                        ${isCommunityBossMilestoneEvent() ? "" : `<button type="button" onclick="openCommunityBossRanksModal()">Ranks</button>`}
                         <button id="community-boss-modal-claim-btn" type="button">${state.claimLabel}</button>
                     </div>
                 </div>
@@ -3308,8 +3427,8 @@ function renderCommunityBossEventModal() {
     const claimBtn = document.getElementById("community-boss-modal-claim-btn");
     if (claimBtn) {
         claimBtn.onclick = claimCommunityBossReward;
-        claimBtn.classList.toggle("primary", state.complete && !state.claimed);
-        claimBtn.disabled = Boolean(currentUser && (!state.complete || state.claimed));
+        claimBtn.classList.toggle("primary", state.canClaim);
+        claimBtn.disabled = Boolean(currentUser && !state.canClaim);
     }
 }
 
@@ -3515,6 +3634,16 @@ function ensureCommunityBossStyles() {
             font-size: 12px;
             line-height: 1.35;
         }
+        .community-boss-rewards-list em {
+            display: block;
+            margin-top: 3px;
+            color: #a7edf7;
+            font-style: normal;
+            font-weight: 900;
+        }
+        .community-boss-rewards-list li.claimed em {
+            color: #9df7bc;
+        }
         .community-boss-actions {
             display: flex;
             flex-wrap: wrap;
@@ -3717,7 +3846,7 @@ function renderCommunityBossPanel() {
                 <div class="community-boss-actions">
                     <button class="primary" type="button" onclick="navigate('infinite.html')">Play Infinite</button>
                     <button type="button" onclick="navigate('Daily/index.html')">Daily Challenge</button>
-                    <button type="button" onclick="openCommunityBossRanksModal()">Ranks</button>
+                    ${isCommunityBossMilestoneEvent() ? "" : `<button type="button" onclick="openCommunityBossRanksModal()">Ranks</button>`}
                     <button id="community-boss-claim-btn" type="button">${state.claimLabel}</button>
                 </div>
                 <div class="community-boss-status" id="community-boss-status">${state.timerText}</div>
@@ -3731,7 +3860,7 @@ function renderCommunityBossPanel() {
                     <div class="community-boss-progress-fill" style="width:${state.progressPercent}%"></div>
                 </div>
                 <div class="community-boss-reward">
-                    ${getCommunityBossRewardsMarkup()}
+                    ${getCommunityBossRewardsMarkup(state.wins)}
                 </div>
                 <p>${state.contributionCopy}</p>
             </div>
@@ -3741,8 +3870,8 @@ function renderCommunityBossPanel() {
     const claimBtn = document.getElementById("community-boss-claim-btn");
     if (claimBtn) {
         claimBtn.onclick = claimCommunityBossReward;
-        claimBtn.classList.toggle("primary", state.complete && !state.claimed);
-        claimBtn.disabled = Boolean(currentUser && (!state.complete || state.claimed));
+        claimBtn.classList.toggle("primary", state.canClaim);
+        claimBtn.disabled = Boolean(currentUser && !state.canClaim);
     }
 
     if (!document.getElementById("community-boss-event-modal")?.classList.contains("hidden")) {
@@ -3892,13 +4021,119 @@ async function claimCommunityBossReward() {
     const snapshot = eventRef ? await eventRef.get().catch(() => null) : null;
     const serverWins = snapshot?.exists ? Math.max(0, Number(snapshot.data()?.wins) || 0) : 0;
     const wins = Math.max(serverWins, getCommunityBossWins());
+    const profileData = getCurrentProfileData();
+
+    if (isCommunityBossMilestoneEvent()) {
+        const pendingRewards = getPendingCommunityBossRewards(wins, profileData);
+        if (!pendingRewards.length) {
+            const nextReward = getCommunityBossRewardTiers().find(reward => wins < (Number(reward.goal) || 0));
+            const message = getUnlockedCommunityBossRewards(wins).length
+                ? "You already claimed every unlocked community reward."
+                : nextReward
+                ? `Reach ${Number(nextReward.goal).toLocaleString()} community wins to unlock the first reward.`
+                : "No community rewards are unlocked right now.";
+            showNotification(message, "info", 3200);
+            renderCommunityBossPanel();
+            return;
+        }
+
+        const claimTime = Date.now();
+        const rewardBadgeId = COMMUNITY_BOSS_EVENT.rewardBadgeId;
+        const unlockedBadgesBefore = getUnlockedBadgeIds(profileData);
+        const shouldGrantBadge = pendingRewards.some(reward => reward.badge !== false);
+        const grantsNewBadge = shouldGrantBadge && !unlockedBadgesBefore.includes(rewardBadgeId);
+        const claimedRewardIds = getClaimedCommunityBossRewardIds(profileData);
+        const existingClaim = getCommunityBossRewardClaim(profileData) || {};
+        const existingClaims = existingClaim.claims && typeof existingClaim.claims === "object" ? existingClaim.claims : {};
+        const existingCrates = existingClaim.crates && typeof existingClaim.crates === "object" ? existingClaim.crates : {};
+        const existingMilestones = Array.isArray(existingClaim.claimedMilestones) ? existingClaim.claimedMilestones : [];
+        const claimedMilestones = new Set(existingMilestones.map(goal => Number(goal)).filter(Boolean));
+        const nextClaims = { ...existingClaims };
+        const totalCrates = { ...existingCrates };
+        const cratesAwarded = {};
+        let totalXpAwarded = 0;
+
+        pendingRewards.forEach(reward => {
+            const rewardId = String(reward.id);
+            const rewardCrateId = reward.crateId || COMMUNITY_BOSS_EVENT.crateId;
+            const rewardCrateCount = Math.max(0, Number(reward.crateCount) || 0);
+            const rewardXp = Math.max(0, Number(reward.xp) || 0);
+            const rewardGoal = Number(reward.goal) || 0;
+
+            claimedRewardIds.add(rewardId);
+            if (rewardGoal) claimedMilestones.add(rewardGoal);
+            totalXpAwarded += rewardXp;
+            cratesAwarded[rewardCrateId] = (cratesAwarded[rewardCrateId] || 0) + rewardCrateCount;
+            totalCrates[rewardCrateId] = (Number(totalCrates[rewardCrateId]) || 0) + rewardCrateCount;
+            nextClaims[rewardId] = {
+                claimedAt: claimTime,
+                goal: rewardGoal,
+                xp: rewardXp,
+                crates: { [rewardCrateId]: rewardCrateCount },
+                crateId: rewardCrateId,
+                crateCount: rewardCrateCount,
+                badgeId: shouldGrantBadge ? rewardBadgeId : null
+            };
+        });
+
+        profileData.totalXP = (Number(profileData.totalXP) || 0) + totalXpAwarded;
+        const inventory = getCrateInventory(profileData);
+        Object.entries(cratesAwarded).forEach(([crateId, count]) => {
+            inventory[crateId] = (inventory[crateId] || 0) + count;
+        });
+        profileData.crateInventory = normalizeCrateInventory(inventory);
+
+        if (shouldGrantBadge) {
+            profileData.unlockedBadges = [
+                ...new Set([
+                    ...unlockedBadgesBefore,
+                    rewardBadgeId
+                ])
+            ];
+            profileData.equippedBadge = rewardBadgeId;
+        }
+
+        profileData.communityBossRewards = {
+            ...(profileData.communityBossRewards && typeof profileData.communityBossRewards === "object" ? profileData.communityBossRewards : {}),
+            [COMMUNITY_BOSS_EVENT.id]: {
+                claimedAt: Number(existingClaim.claimedAt) || claimTime,
+                updatedAt: claimTime,
+                rewardMode: "milestone",
+                claimedRewardIds: [...claimedRewardIds],
+                claimedMilestones: [...claimedMilestones].sort((a, b) => a - b),
+                xp: (Number(existingClaim.xp) || 0) + totalXpAwarded,
+                crates: totalCrates,
+                claims: nextClaims,
+                badgeId: shouldGrantBadge ? rewardBadgeId : existingClaim.badgeId || null
+            }
+        };
+        profileData.lastUpdated = Date.now();
+
+        saveUserProfileLocally(profileData);
+        await db.collection("userStats").doc(currentUser.uid).set({
+            totalXP: profileData.totalXP,
+            crateInventory: profileData.crateInventory,
+            unlockedBadges: getUnlockedBadgeIds(profileData),
+            equippedBadge: getEquippedBadge(),
+            communityBossRewards: profileData.communityBossRewards,
+            lastUpdated: new Date()
+        }, { merge: true });
+
+        updateProfileDisplay(profileData);
+        updateProfileBadgeUI();
+        renderCratesButton();
+        renderCommunityBossPanel();
+
+        const badgeText = grantsNewBadge ? `, and the ${COMMUNITY_BOSS_EVENT.rewardBadgeName} badge` : "";
+        showNotification(`Community rewards claimed: ${totalXpAwarded.toLocaleString()} XP, ${formatCommunityBossCrateAwards(cratesAwarded)}${badgeText}.`, "success", 5600);
+        return;
+    }
 
     if (!isCommunityBossComplete(wins)) {
         showNotification(`The ${COMMUNITY_BOSS_EVENT.bossName} is not defeated yet.`, "info", 3000);
         return;
     }
 
-    const profileData = getCurrentProfileData();
     if (hasClaimedCommunityBossReward(profileData)) {
         showNotification("You already claimed this community reward.", "info", 3000);
         renderCommunityBossPanel();
@@ -3958,6 +4193,103 @@ window.openCommunityBossRanksModal = openCommunityBossRanksModal;
 window.closeCommunityBossRanksModal = closeCommunityBossRanksModal;
 window.openCommunityBossEventModal = openCommunityBossEventModal;
 window.closeCommunityBossEventModal = closeCommunityBossEventModal;
+
+const MEGALODON_ESCAPE_AWARD_ID = "summer-megaladon-2026-participation";
+const MEGALODON_ESCAPE_AWARD_STORAGE_KEY = "megalodonEscapeParticipationAwardClaimed";
+const MEGALODON_ESCAPE_AWARD_XP = 1000;
+const MEGALODON_ESCAPE_AWARD_CRATE_ID = "summer";
+const MEGALODON_ESCAPE_AWARD_CRATE_COUNT = 1;
+let megalodonEscapeAwardShowTimer = null;
+
+function getMegalodonEscapeAwardStorageKey(uid = currentUser?.uid) {
+    return uid ? `${MEGALODON_ESCAPE_AWARD_STORAGE_KEY}_${uid}` : MEGALODON_ESCAPE_AWARD_STORAGE_KEY;
+}
+
+function hasClaimedMegalodonEscapeAward(profileData = getCurrentProfileData()) {
+    const rewardClaim = profileData?.communityBossRewards?.[MEGALODON_ESCAPE_AWARD_ID];
+    return Boolean(rewardClaim) || localStorage.getItem(getMegalodonEscapeAwardStorageKey()) === "true";
+}
+
+function closeMegalodonEscapeAwardModal() {
+    const modal = document.getElementById("megalodonEscapeAwardModal");
+    if (modal) modal.classList.add("hidden");
+}
+
+function grantMegalodonEscapeAward() {
+    const profileData = getCurrentProfileData();
+    if (hasClaimedMegalodonEscapeAward(profileData)) return false;
+
+    if (currentUser) {
+        profileData.uid = currentUser.uid;
+        profileData.email = profileData.email || currentUser.email;
+        profileData.username = profileData.username || getStoredPreferredUsername() || currentUser.email?.split("@")[0] || "Sharkdle Player";
+    }
+
+    const inventory = getCrateInventory(profileData);
+    inventory[MEGALODON_ESCAPE_AWARD_CRATE_ID] = (inventory[MEGALODON_ESCAPE_AWARD_CRATE_ID] || 0) + MEGALODON_ESCAPE_AWARD_CRATE_COUNT;
+    profileData.crateInventory = normalizeCrateInventory(inventory);
+    profileData.totalXP = (Number(profileData.totalXP) || 0) + MEGALODON_ESCAPE_AWARD_XP;
+    profileData.communityBossRewards = {
+        ...(profileData.communityBossRewards && typeof profileData.communityBossRewards === "object" ? profileData.communityBossRewards : {}),
+        [MEGALODON_ESCAPE_AWARD_ID]: {
+            claimedAt: Date.now(),
+            participation: true,
+            xp: MEGALODON_ESCAPE_AWARD_XP,
+            crates: { [MEGALODON_ESCAPE_AWARD_CRATE_ID]: MEGALODON_ESCAPE_AWARD_CRATE_COUNT },
+            crateId: MEGALODON_ESCAPE_AWARD_CRATE_ID,
+            crateCount: MEGALODON_ESCAPE_AWARD_CRATE_COUNT
+        }
+    };
+    profileData.lastUpdated = Date.now();
+
+    saveUserProfileLocally(profileData);
+    localStorage.setItem(getMegalodonEscapeAwardStorageKey(profileData.uid), "true");
+
+    if (currentUser && db) {
+        db.collection("userStats").doc(currentUser.uid).set({
+            totalXP: profileData.totalXP,
+            crateInventory: profileData.crateInventory,
+            communityBossRewards: profileData.communityBossRewards,
+            lastUpdated: new Date()
+        }, { merge: true }).catch(error => console.warn("Megalodon participation award sync failed:", error));
+    }
+
+    updateProfileDisplay(profileData);
+    updateIndexStats();
+    renderCratesButton();
+    renderHomeCratesModal();
+    showNotification("Megalodon participation award added: +1 Summer Crate and +1,000 XP.", "success", 4800);
+    return true;
+}
+
+function maybeShowMegalodonEscapeAwardModal() {
+    const modal = document.getElementById("megalodonEscapeAwardModal");
+    if (!modal || modal.dataset.awardHandled === "true" || hasClaimedMegalodonEscapeAward()) return;
+
+    const hasBlockingModal = Array.from(document.querySelectorAll(".modal:not(.hidden)"))
+        .some(openModal => openModal.id !== "megalodonEscapeAwardModal");
+
+    if (hasBlockingModal) {
+        if (!megalodonEscapeAwardShowTimer) {
+            megalodonEscapeAwardShowTimer = setTimeout(() => {
+                megalodonEscapeAwardShowTimer = null;
+                maybeShowMegalodonEscapeAwardModal();
+            }, 1200);
+        }
+        return;
+    }
+
+    try {
+        if (!grantMegalodonEscapeAward()) return;
+        modal.dataset.awardHandled = "true";
+        modal.classList.remove("hidden");
+    } catch (error) {
+        console.warn("Unable to show Megalodon participation award:", error);
+    }
+}
+
+window.closeMegalodonEscapeAwardModal = closeMegalodonEscapeAwardModal;
+window.maybeShowMegalodonEscapeAwardModal = maybeShowMegalodonEscapeAwardModal;
 
 const SHARKDLE_SETTINGS_KEY = "sharkdle_qol_settings_v2";
 const SHARKDLE_SETTINGS_DEFAULTS = {
@@ -5314,7 +5646,7 @@ const allBadges = [
     { id: "tester", name: "Tester", emoji: "🎮", description: "Awarded for testing via code redeem.", codeUnlock: true },
     { id: "anniversary", name: "Anniversary", emoji: "🎉", description: "Awarded for redeeming the Anniversary code.", codeUnlock: true },
     { id: "lucky-fin", name: "Lucky Fin", emoji: "🍀", description: "Awarded from the daily prize wheel.", codeUnlock: true },
-    { id: "extinction", name: "Extinction", emoji: "☄️", description: "Awarded for defeating the summer Megalodon community boss.", rarity: "legendary", codeUnlock: true },
+    { id: "extinction", name: "Extinction", emoji: "☄️", description: "Awarded for defeating a summer community boss.", rarity: "legendary", codeUnlock: true },
     { id: "spiral-hunter", name: "Spiral Hunter", emoji: "🌀", description: "Awarded for defeating the Halloween Helicoprion community boss.", rarity: "legendary", codeUnlock: true },
     { id: "frost-anvil", name: "Frost Anvil", emoji: "❄️", description: "Awarded for defeating the Christmas Stethacanthus community boss.", rarity: "legendary", codeUnlock: true }
 ];
@@ -5757,6 +6089,8 @@ const APP_ROUTE_MAP = Object.freeze({
     "Story/": "Story/index.html",
     "rng.html": "Minigames/SharkRNG/index.html",
     "Minigames/SharkRNG/": "Minigames/SharkRNG/index.html",
+    "slots.html": "Minigames/SharkSlots/index.html",
+    "Minigames/SharkSlots/": "Minigames/SharkSlots/index.html",
     "secret.html": "shark-rescue/index.html",
     "shark-rescue/": "shark-rescue/index.html",
     "updates.html": "Updates/index.html",
@@ -6196,6 +6530,7 @@ async function updateAuthUI() {
     ensureXpEventBannerTimer();
     ensureCommunityBossUiTimer();
     renderCommunityBossPanel();
+    maybeShowMegalodonEscapeAwardModal();
     if (typeof renderConsumablesPage === "function") {
         renderConsumablesPage();
     }
@@ -7402,6 +7737,70 @@ function buyPearlShopItem(itemId) {
     renderCratesModal();
     updateSeasonalCratePanels(profileData);
     showNotification(`${grant.message} -${item.price} pearls`, "success", 3400);
+}
+
+const SHARK_FACTS_OF_THE_DAY = [
+    "Sharks have existed for more than 400 million years.",
+    "Some sharks replace thousands of teeth in their lifetime.",
+    "Whale sharks are the largest fish alive today.",
+    "Dwarf lantern sharks are small enough to fit in an adult human hand.",
+    "Hammerhead sharks' wide heads help them scan the seafloor for prey.",
+    "Many sharks can sense tiny electric fields through ampullae of Lorenzini.",
+    "Greenland sharks can live for centuries and are among the longest-lived vertebrates.",
+    "Nurse sharks can rest motionless on the seafloor.",
+    "Some shark species lay egg cases often called mermaid's purses.",
+    "Great white sharks are warm-bodied compared with the surrounding water.",
+    "Whale sharks feed by filtering plankton and small fish from the water.",
+    "Basking sharks are filter feeders, despite their giant mouths.",
+    "Thresher sharks use their long tail fins to stun schooling fish.",
+    "Cookiecutter sharks leave round bite marks on larger animals.",
+    "Sawsharks have tooth-lined snouts that help them detect and slash at prey.",
+    "Angel sharks ambush prey while partly buried in sand.",
+    "Zebra sharks are born striped and become spotted as adults.",
+    "Lemon sharks can form social groups in shallow coastal water.",
+    "Some reef sharks return to the same resting caves for long periods.",
+    "Sharks do not have bones; their skeletons are made of cartilage.",
+    "Shark skin feels rough because it is covered in tiny tooth-like scales.",
+    "The scales on shark skin are called dermal denticles.",
+    "Many sharks have a powerful sense of smell.",
+    "Some sharks must keep swimming to move water over their gills.",
+    "Other sharks can pump water over their gills while resting.",
+    "Frilled sharks have long, eel-like bodies and six pairs of gill slits.",
+    "Mako sharks are among the fastest shark species.",
+    "Tiger sharks eat a wide variety of prey and are known as generalist feeders.",
+    "Bull sharks can tolerate fresh water better than most sharks.",
+    "Some bull sharks have traveled far up rivers.",
+    "Port Jackson sharks can crush shelled prey with blunt rear teeth.",
+    "Horn sharks use strong fins to crawl along rocky seabeds.",
+    "Wobbegong sharks use camouflage patterns to blend with reefs and sand.",
+    "Epaulette sharks can move across shallow tide pools using their fins.",
+    "Megamouth sharks are rare filter-feeding sharks discovered in 1976.",
+    "Sharks play important roles as ocean predators and scavengers.",
+    "Not all sharks are top predators; some eat plankton or small invertebrates.",
+    "Female sharks of some species can store sperm for months or years.",
+    "Some sharks have live births, while others lay eggs.",
+    "Shark pups are usually independent as soon as they are born or hatch.",
+    "Blue sharks are known for long migrations across open oceans.",
+    "Sharks use lateral lines to sense movement and vibration in water.",
+    "The largest known ancient shark was megalodon, which is extinct.",
+    "Many deep-sea sharks have large eyes suited to dim light.",
+    "Lantern sharks can produce light through organs called photophores.",
+    "Some sharks use countershading, with darker backs and lighter bellies.",
+    "Shark teeth vary by diet, from pointed grasping teeth to flat crushing teeth.",
+    "The smallest sharks live in deep water and may be less than a foot long.",
+    "Reef sharks help keep coral reef food webs balanced.",
+    "Scientists identify individual whale sharks by their unique spot patterns."
+];
+
+function getDailySharkFactIndex(date = new Date()) {
+    const utcDay = Math.floor(date.getTime() / 86400000);
+    return ((utcDay % SHARK_FACTS_OF_THE_DAY.length) + SHARK_FACTS_OF_THE_DAY.length) % SHARK_FACTS_OF_THE_DAY.length;
+}
+
+function renderFactOfTheDay() {
+    const factEl = document.getElementById("home-v3-daily-fact");
+    if (!factEl) return;
+    factEl.textContent = SHARK_FACTS_OF_THE_DAY[getDailySharkFactIndex()];
 }
 
 const HOME_QUICK_ACCESS_STORAGE_KEY = "sharkdle_home_quick_access_v1";
@@ -9491,6 +9890,7 @@ window.closeDailyLoginModal = closeDailyLoginModal;
 
 // Load stats and streaks
 document.addEventListener("DOMContentLoaded", function() {
+    renderFactOfTheDay();
     initHomeV3Tabs();
     initHomeV3CratesButton();
     initHomeQuickAccess();

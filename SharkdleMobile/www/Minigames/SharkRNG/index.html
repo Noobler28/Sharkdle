@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link rel="icon" type="image/png" href="images/favicon.png">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <base href="../../">
+<title>Sharkdle - Shark RNG</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="page-shell.css">
+    <link rel="stylesheet" href="Minigames/SharkRNG/rng.css">
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+    <script src="sharks.js"></script>
+    <link rel="stylesheet" href="mobile.css">
+</head>
+<body class="rng-page shell-page">
+
+<div id="rng-ambient" class="rng-ambient" aria-hidden="true"></div>
+
+<header class="rng-topbar">
+    <a class="rng-brand" href="index.html">&#x1F988; Shark RNG</a>
+    <div class="rng-rank-hud">
+        <span id="rng-rank-icon" class="rng-rank-icon">&#x1F3D6;&#xFE0F;</span>
+        <div class="rng-rank-meta">
+            <span id="rng-rank-name" class="rng-rank-name">Level 1 · +0% Luck</span>
+            <div class="rng-xp-track"><span id="rng-xp-fill" class="rng-xp-fill"></span></div>
+            <span id="rng-xp-text" class="rng-xp-text">0 / 450 XP</span>
+        </div>
+    </div>
+    <div class="rng-topbar-stats">
+        <div class="rng-chip" id="rng-top-coins"><i class="fa-solid fa-coins"></i> <span>0</span></div>
+        <div class="rng-chip" id="rng-top-prestige"><i class="fa-solid fa-gem"></i> <span>0</span></div>
+        <div class="rng-chip" id="rng-top-luck"><i class="fa-solid fa-clover"></i> <span>x1.00</span></div>
+        <div class="rng-chip" id="rng-top-collection"><i class="fa-solid fa-fish"></i> <span>0/0</span></div>
+    </div>
+    <button id="rng-settings-open-btn" class="rng-icon-btn" type="button" title="Settings">
+        <i class="fa-solid fa-gear"></i>
+    </button>
+    <button class="rng-icon-btn" type="button" onclick="window.location.href=resolveAppPath('index.html')" title="Home">
+        <i class="fa-solid fa-house"></i>
+    </button>
+</header>
+
+<main class="rng-app rng-game-shell">
+    <section class="rng-stage">
+        <div class="rng-equipped-bar">
+            <div>
+                <span class="rng-label">Equipped Species</span>
+                <strong id="rng-equipped-name" class="rng-equipped-name common">—</strong>
+                <span id="rng-equipped-meta" class="rng-equipped-meta">Roll to discover your first shark</span>
+            </div>
+            <button id="rng-collection-open-btn" class="rng-btn rng-btn-ghost" type="button" title="Collection">
+                <i class="fa-solid fa-book"></i>
+            </button>
+        </div>
+
+        <div class="rng-roll-stage">
+            <div class="rng-roll-frame"></div>
+            <p id="rng-roll-display" class="rng-roll-display common">Ready to roll</p>
+            <div id="rng-result" class="rng-result"></div>
+            <div id="rng-float-layer" class="rng-float-layer"></div>
+        </div>
+
+        <div id="rng-active-effects" class="rng-buff-row" data-empty="true"></div>
+
+        <div class="rng-action-row">
+            <button id="rng-auto-btn" class="rng-btn" type="button" title="Auto roll">
+                <i class="fa-solid fa-repeat"></i>
+            </button>
+            <button id="rng-roll-btn" class="rng-btn rng-btn-roll" type="button">
+                <i class="fa-solid fa-dice"></i> Roll
+            </button>
+            <button id="rng-hide-btn" class="rng-btn" type="button" title="Hide roll text">
+                <i class="fa-solid fa-eye-slash"></i>
+            </button>
+        </div>
+
+        <div class="rng-quick-stats">
+            <div class="rng-quick-stat"><span>Rolls</span><strong id="rng-roll-text">0</strong></div>
+            <div class="rng-quick-stat"><span>Best</span><strong id="rng-best-text">—</strong></div>
+            <div class="rng-quick-stat" id="rng-streak-stat"><span>Streak</span><strong id="rng-streak-text">10/10 → ×2</strong></div>
+            <div class="rng-quick-stat"><span>Cooldown</span><strong id="rng-cooldown-text">1.6s</strong></div>
+        </div>
+    </section>
+
+    <aside class="rng-sidebar">
+        <nav class="rng-tabs" role="tablist">
+            <button class="rng-tab active" type="button" data-tab="upgrades">Upgrades</button>
+            <button class="rng-tab" type="button" data-tab="prestige">Prestige</button>
+            <button class="rng-tab" type="button" data-tab="potions">Potions</button>
+            <button class="rng-tab" type="button" data-tab="info">Rarities</button>
+            <button class="rng-tab" type="button" data-tab="leaderboard">Leaderboard</button>
+        </nav>
+
+        <div class="rng-tab-panel active" id="rng-tab-upgrades">
+            <div id="rng-upgrade-shop" class="rng-upgrade-scroll"></div>
+        </div>
+
+        <div class="rng-tab-panel" id="rng-tab-prestige">
+            <div id="rng-prestige-panel" class="rng-prestige-panel"></div>
+        </div>
+
+        <div class="rng-tab-panel" id="rng-tab-potions">
+            <div id="rng-potion-shop" class="rng-potion-grid"></div>
+        </div>
+
+        <div class="rng-tab-panel" id="rng-tab-info">
+            <div id="rng-tier-legend" class="rng-tier-legend"></div>
+        </div>
+
+        <div class="rng-tab-panel" id="rng-tab-leaderboard">
+            <div class="rng-leaderboard-panel">
+                <div class="rng-leaderboard-head">
+                    <div>
+                        <span class="rng-leaderboard-kicker">RNG Leaderboard</span>
+                        <h3>Top Pulls</h3>
+                        <p>Top 10 BEST Rolls Globally!</p>
+                    </div>
+                    <button id="rng-leaderboard-refresh" class="rng-btn rng-btn-ghost" type="button" title="Refresh RNG leaderboard">
+                        <i class="fa-solid fa-rotate-right"></i>
+                    </button>
+                </div>
+                <div id="rng-leaderboard-self" class="rng-leaderboard-self"></div>
+                <div id="rng-leaderboard-status" class="rng-leaderboard-status">Loading RNG leaderboard...</div>
+                <div id="rng-leaderboard-list" class="rng-leaderboard-list"></div>
+            </div>
+        </div>
+    </aside>
+</main>
+
+<div id="rng-collection-modal" class="rng-modal rng-collection-modal hidden">
+    <div class="rng-modal-content">
+        <div class="rng-modal-header">
+            <h2>Shark Index</h2>
+            <button id="rng-collection-close-btn" class="rng-btn rng-btn-ghost" type="button">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+        <div id="rng-index-summary" class="rng-index-summary"></div>
+        <div id="rng-index-rewards" class="rng-index-rewards"></div>
+        <div class="rng-index-controls">
+            <select id="rng-collection-filter" class="rng-select">
+                <option value="all">All index entries</option>
+                <option value="base">Base species</option>
+                <option value="Common">Common</option>
+                <option value="Uncommon">Uncommon</option>
+                <option value="Rare">Rare</option>
+                <option value="Epic">Epic</option>
+                <option value="Legendary">Legendary</option>
+                <option value="Mythical">Mythical</option>
+                <option value="Secret">Secret</option>
+                <option value="Ultra">Ultra</option>
+                <option value="Hyper">Hyper</option>
+                <option value="Omega">Omega</option>
+                <option value="Singularity">Singularity</option>
+                <option value="melanistic">Melanistic</option>
+                <option value="albino">Albino</option>
+                <option value="shiny">Shiny</option>
+                <option value="bioluminescent">Bioluminescent</option>
+                <option value="copper">Copper</option>
+                <option value="golden">Golden</option>
+                <option value="spectral">Spectral</option>
+                <option value="abyssal">Abyssal</option>
+                <option value="megatooth">Megatooth</option>
+                <option value="cosmic">Cosmic</option>
+                <option value="apex">Apex</option>
+            </select>
+            <div class="search-bar">
+                <i class="fas fa-search" aria-hidden="true"></i>
+                <input type="text" id="rng-collection-search" placeholder="Search collection...">
+            </div>
+            <button id="rng-collection-sort-rarity" class="rng-btn" type="button">
+                Sort by Rarity
+            </button>
+        </div>
+        <div id="rng-collection-grid" class="rng-collection-grid"></div>
+    </div>
+</div>
+
+<div id="rng-celebration" class="rng-celebration"></div>
+<div id="rng-cutscene" class="rng-cutscene"></div>
+
+<div id="rng-settings-modal" class="rng-modal hidden">
+    <div class="rng-modal-content rng-settings-content">
+        <div class="rng-modal-header">
+            <h2>Settings</h2>
+            <button id="rng-settings-close-btn" class="rng-btn rng-btn-ghost" type="button">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+        <label class="rng-setting-row">
+            <input id="rng-setting-sound" type="checkbox" checked>
+            <div>
+                <strong>Sound effects</strong>
+                <span>Roll sounds, rare fanfares, and upgrade chimes.</span>
+            </div>
+        </label>
+        <label class="rng-setting-row">
+            <input id="rng-setting-disable-popups" type="checkbox">
+            <div>
+                <strong>Remove popup for rare sharks</strong>
+                <span>Skips Legendary–Secret cards. Ultra rare (1M+) cutscenes still play.</span>
+            </div>
+        </label>
+        <div class="rng-setting-row rng-setting-column">
+            <div>
+                <strong>Skip repeat cutscenes</strong>
+                <span>Choose which ultra-rare cutscenes can auto-skip after you have seen that tier once.</span>
+            </div>
+            <div class="rng-cutscene-skip-grid">
+                <label><input id="rng-setting-skip-ultra" type="checkbox" data-cutscene-skip="Ultra"> Ultra</label>
+                <label><input id="rng-setting-skip-hyper" type="checkbox" data-cutscene-skip="Hyper"> Hyper</label>
+                <label><input id="rng-setting-skip-omega" type="checkbox" data-cutscene-skip="Omega"> Omega</label>
+                <label><input id="rng-setting-skip-singularity" type="checkbox" data-cutscene-skip="Singularity"> Singularity</label>
+            </div>
+        </div>
+        <div class="rng-setting-row">
+            <button id="rng-reset-progress-btn" class="rng-btn rng-btn-buy" type="button">Reset progress</button>
+            <div>
+                <strong>Reset progress</strong>
+                <span>Clear coins, collection, upgrades, potions, and settings.</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="rng-toast" class="rng-toast hidden"></div>
+
+<script src="script.js"></script>
+<script src="Minigames/SharkRNG/rng-mode.js"></script>
+<script src="global-broadcast.js"></script>
+<script>
+    document.addEventListener("DOMContentLoaded", () => {
+        if (typeof initRngMode === "function") initRngMode();
+    });
+</script>
+</body>
+</html>

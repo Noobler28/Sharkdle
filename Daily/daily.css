@@ -99,6 +99,41 @@ body.mode-v3-page .topbar {
     line-height: 1.35;
 }
 
+.species-mode-switcher {
+    display: inline-flex;
+    align-items: center;
+    align-self: flex-start;
+    gap: 6px;
+    padding: 5px;
+    border-radius: 999px;
+    border: 1px solid rgba(44, 196, 196, 0.18);
+    background: rgba(2, 13, 24, 0.42);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.species-mode-switcher a {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 32px;
+    padding: 0 13px;
+    border-radius: 999px;
+    color: rgba(212, 234, 248, 0.76);
+    font-size: 12px;
+    font-weight: 900;
+    letter-spacing: 0.08em;
+    text-decoration: none;
+    text-transform: uppercase;
+    transition: color 0.18s ease, background 0.18s ease, box-shadow 0.18s ease;
+}
+
+.species-mode-switcher a:hover,
+.species-mode-switcher a.active {
+    color: #061e30;
+    background: linear-gradient(135deg, #8ff5ef, #2cc4c4);
+    box-shadow: 0 8px 18px rgba(44, 196, 196, 0.22);
+}
+
 body.mode-v3-page .home-btn {
     padding: 12px 18px;
     border-radius: 999px;
@@ -180,14 +215,16 @@ body.mode-v3-page .guess-hero h2 {
     inset: 0;
     width: 100%;
     height: 100%;
-    object-fit: cover;
     pointer-events: none;
 }
 
 .guess-hero-bg {
     opacity: 0.4;
     transform: scale(1.02);
+    object-fit: cover;
     filter: saturate(1.05) brightness(0.85);
+    z-index: 1;
+    transition: opacity 0.25s ease, transform 0.25s ease, filter 0.25s ease;
 }
 
 .guess-hero-fg {
@@ -196,6 +233,34 @@ body.mode-v3-page .guess-hero h2 {
     object-fit: contain;
     object-position: right center;
     filter: drop-shadow(0 28px 40px rgba(0,0,0,0.4));
+    z-index: 2;
+    transition: opacity 0.25s ease, transform 0.25s ease;
+}
+
+body.species-mode-rays .guess-hero-bg {
+    opacity: 0.42;
+    transform: scale(1.28) rotate(-3deg);
+    object-fit: contain;
+    object-position: center;
+    filter: saturate(1.1) brightness(0.75);
+}
+
+body.species-mode-rays .guess-hero-fg {
+    opacity: 0.95;
+    transform: translateX(4%) scale(1.08);
+    object-position: center;
+}
+
+body.species-mode-mixed .guess-hero-bg {
+    opacity: 0.46;
+    transform: scale(1.04);
+    filter: saturate(1.05) brightness(0.78);
+}
+
+body.species-mode-mixed .guess-hero-fg {
+    opacity: 0.94;
+    transform: translateX(2%) scale(1.04);
+    object-position: center;
 }
 
 body.mode-v3-page .input-panel,
@@ -636,6 +701,64 @@ button:hover {
     font-weight: 900 !important;
 }
 
+.daily-result-variants {
+    margin: 18px 0 4px;
+    padding: 14px;
+    border: 1px solid rgba(142, 245, 239, 0.22);
+    border-radius: 18px;
+    background: rgba(255, 255, 255, 0.055);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.daily-result-variants span {
+    display: block;
+    margin-bottom: 10px;
+    color: rgba(224, 245, 255, 0.72);
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 14px;
+    font-weight: 900;
+    letter-spacing: 1.6px;
+    text-transform: uppercase;
+}
+
+.daily-result-variant-list {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.daily-result-variant {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 40px;
+    padding: 8px 10px;
+    border: 1px solid rgba(142, 245, 239, 0.16);
+    border-radius: 12px;
+    background: rgba(0, 18, 30, 0.58);
+    color: #e8fbff;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 15px;
+    font-weight: 900;
+    letter-spacing: 1.2px;
+    text-decoration: none;
+    text-transform: uppercase;
+    transition: border-color 0.18s ease, background 0.18s ease, transform 0.18s ease;
+}
+
+.daily-result-variant:hover {
+    border-color: rgba(142, 245, 239, 0.52);
+    background: rgba(24, 185, 213, 0.24);
+    transform: translateY(-1px);
+}
+
+.daily-result-variant.active {
+    border-color: rgba(142, 245, 239, 0.64);
+    background: linear-gradient(135deg, rgba(24, 185, 213, 0.58), rgba(7, 148, 176, 0.38));
+    color: #ffffff;
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.18);
+}
+
 .result-action-row,
 #win-screen > div[style*="display: flex"],
 #win-lose-screen > div[style*="display: flex"] {
@@ -742,6 +865,16 @@ button:hover {
     body.mode-v3-page .guess-hero {
         grid-template-columns: 1fr;
         padding: 20px 18px;
+    }
+
+    .species-mode-switcher {
+        width: 100%;
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .species-mode-switcher a {
+        padding: 0 8px;
     }
 
     body.mode-v3-page .guess-hero-copy,

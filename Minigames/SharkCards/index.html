@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <base href="../../">
+    <title>Sharkdle - Shark Cards</title>
+    <link rel="icon" type="image/png" href="images/favicon.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;800;900&family=Poppins:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="Minigames/SharkCards/shark-cards.css?v=3">
+    <script src="sharks.js"></script>
+</head>
+<body class="cards-page">
+    <div class="sc-world" aria-hidden="true">
+        <img class="sc-world-shark sc-world-shark-left" src="images/home-v3/hammerhead.png" alt="">
+        <img class="sc-world-shark sc-world-shark-right" src="images/home-v3/mako.png" alt="">
+        <div class="sc-world-grid"></div>
+        <div class="sc-world-ridge"></div>
+    </div>
+
+    <header class="sc-topbar">
+        <a class="sc-brand" href="index.html" aria-label="Back to Sharkdle home">
+            <span class="sc-brand-mark"><img src="images/favicon.png" alt=""></span>
+            <span>
+                <strong>Shark Cards</strong>
+                <em>Apex Deck</em>
+            </span>
+        </a>
+
+        <nav class="sc-view-tabs" aria-label="Shark Cards views">
+            <button class="active" type="button" data-sc-view="battle">
+                <i class="fa-solid fa-layer-group"></i>
+                <span>Battle</span>
+            </button>
+            <button type="button" data-sc-view="upgrades">
+                <i class="fa-solid fa-sitemap"></i>
+                <span>Tree</span>
+            </button>
+            <button type="button" data-sc-view="deck">
+                <i class="fa-solid fa-book-open"></i>
+                <span>Deck</span>
+            </button>
+        </nav>
+
+        <div class="sc-hud" aria-label="Shark Cards currencies">
+            <div class="sc-chip" title="Fins"><i class="fa-solid fa-coins"></i><span id="sc-fins">0</span></div>
+            <div class="sc-chip" title="Apex pearls"><i class="fa-solid fa-gem"></i><span id="sc-pearls">0</span></div>
+            <div class="sc-chip" title="Collection"><i class="fa-solid fa-fish"></i><span id="sc-collection-count">0/0</span></div>
+            <div class="sc-chip sc-rank-chip" title="Captain rank"><i class="fa-solid fa-star"></i><span id="sc-rank">R1</span></div>
+        </div>
+
+        <button id="sc-settings-btn" class="sc-icon-btn" type="button" title="Settings" aria-label="Settings">
+            <i class="fa-solid fa-gear"></i>
+        </button>
+        <a class="sc-icon-btn" href="index.html" title="Home" aria-label="Home">
+            <i class="fa-solid fa-house"></i>
+        </a>
+    </header>
+
+    <main class="sc-shell">
+        <section class="sc-view sc-battle-view active" id="sc-view-battle" data-sc-panel="battle">
+            <section class="sc-arena" aria-label="Card battle arena">
+                <div class="sc-arena-top">
+                    <div class="sc-tide-badge">
+                        <span>Current Tide</span>
+                        <strong id="sc-tide-label">1</strong>
+                    </div>
+                    <div class="sc-energy" id="sc-energy" aria-label="Energy"></div>
+                    <div class="sc-hull-badge">
+                        <span>Hull</span>
+                        <strong id="sc-player-hull">0/0</strong>
+                        <div class="sc-hull-track"><span id="sc-player-hull-fill"></span></div>
+                    </div>
+                    <div class="sc-streak">
+                        <span>Win Streak</span>
+                        <strong id="sc-streak">0</strong>
+                    </div>
+                </div>
+
+                <section class="sc-boss-panel" aria-label="Rival tide">
+                    <div class="sc-boss-art">
+                        <img id="sc-boss-img" src="images/home-v3/great-white.png" alt="">
+                    </div>
+                    <div class="sc-boss-copy">
+                        <span id="sc-boss-kicker">Reef Rival</span>
+                        <h1 id="sc-boss-name">Coral Bruiser</h1>
+                        <div class="sc-health">
+                            <span id="sc-boss-health-fill"></span>
+                        </div>
+                        <p id="sc-boss-health">0 / 0 Guard</p>
+                    </div>
+                    <div class="sc-boss-reward">
+                        <span>Reward</span>
+                        <strong id="sc-boss-reward">0</strong>
+                    </div>
+                </section>
+
+                <section class="sc-table" aria-label="Card table">
+                    <div class="sc-enemy-lane" aria-label="Enemy cards">
+                        <div class="sc-turn-banner" id="sc-turn-banner">Your move</div>
+                        <div class="sc-enemy-hand" id="sc-enemy-hand"></div>
+                    </div>
+                    <div class="sc-play-zone" id="sc-play-zone">
+                        <div class="sc-play-placeholder">
+                            <i class="fa-solid fa-burst"></i>
+                            <span id="sc-combo-label">No combo</span>
+                        </div>
+                    </div>
+                    <div class="sc-hand" id="sc-hand"></div>
+                </section>
+
+                <div class="sc-actions" aria-label="Battle actions">
+                    <button id="sc-draw-btn" class="sc-btn sc-btn-soft" type="button">
+                        <i class="fa-solid fa-shuffle"></i>
+                        <span>Draw</span>
+                    </button>
+                    <button id="sc-pack-btn" class="sc-btn sc-btn-pack" type="button">
+                        <i class="fa-solid fa-box-open"></i>
+                        <span>Open Pack</span>
+                    </button>
+                    <button id="sc-next-btn" class="sc-btn sc-btn-primary" type="button">
+                        <i class="fa-solid fa-forward"></i>
+                        <span>Next Tide</span>
+                    </button>
+                </div>
+            </section>
+
+            <aside class="sc-battle-side" aria-label="Battle stats">
+                <section class="sc-mini-panel">
+                    <div class="sc-panel-head">
+                        <span>Run</span>
+                        <strong id="sc-run-name">Reef Circuit</strong>
+                    </div>
+                    <div class="sc-stat-grid">
+                        <div><span>Damage</span><strong id="sc-damage-mult">x1.00</strong></div>
+                        <div><span>Luck</span><strong id="sc-luck-mult">x1.00</strong></div>
+                        <div><span>Coins</span><strong id="sc-coin-mult">x1.00</strong></div>
+                        <div><span>Hand</span><strong id="sc-hand-size">4</strong></div>
+                    </div>
+                </section>
+                <section class="sc-mini-panel sc-log-panel">
+                    <div class="sc-panel-head">
+                        <span>Signal Log</span>
+                        <button id="sc-clear-log-btn" class="sc-icon-btn sc-icon-btn-small" type="button" title="Clear log" aria-label="Clear log">
+                            <i class="fa-solid fa-eraser"></i>
+                        </button>
+                    </div>
+                    <div id="sc-log" class="sc-log"></div>
+                </section>
+            </aside>
+        </section>
+
+        <section class="sc-view sc-upgrade-view" id="sc-view-upgrades" data-sc-panel="upgrades" hidden>
+            <div class="sc-tree-toolbar">
+                <div>
+                    <span>Upgrade Tree</span>
+                    <strong id="sc-tree-summary">0 branches active</strong>
+                </div>
+                <div class="sc-tree-currencies">
+                    <div class="sc-chip"><i class="fa-solid fa-coins"></i><span id="sc-tree-fins">0</span></div>
+                    <div class="sc-chip"><i class="fa-solid fa-gem"></i><span id="sc-tree-pearls">0</span></div>
+                </div>
+            </div>
+            <div class="sc-tree-scroll" id="sc-tree-scroll" aria-label="Shark Cards upgrade tree">
+                <div class="sc-tree-canvas" id="sc-tree-canvas">
+                    <svg class="sc-tree-links" id="sc-tree-links" aria-hidden="true"></svg>
+                    <div id="sc-upgrade-tree"></div>
+                </div>
+            </div>
+        </section>
+
+        <section class="sc-view sc-deck-view" id="sc-view-deck" data-sc-panel="deck" hidden>
+            <section class="sc-deck-column">
+                <div class="sc-panel-head">
+                    <span>Active Deck</span>
+                    <strong id="sc-deck-count">0/12</strong>
+                </div>
+                <div id="sc-active-deck" class="sc-deck-list"></div>
+            </section>
+            <section class="sc-deck-column sc-collection-column">
+                <div class="sc-panel-head">
+                    <span>Collection</span>
+                    <div class="sc-filter-row">
+                        <select id="sc-collection-filter" class="sc-select" aria-label="Filter collection">
+                            <option value="all">All</option>
+                            <option value="Common">Common</option>
+                            <option value="Uncommon">Uncommon</option>
+                            <option value="Rare">Rare</option>
+                            <option value="Epic">Epic</option>
+                            <option value="Legendary">Legendary</option>
+                            <option value="Mythic">Mythic</option>
+                            <option value="Ancient">Ancient</option>
+                            <option value="Apex">Apex</option>
+                        </select>
+                        <input id="sc-collection-search" class="sc-search" type="search" placeholder="Search sharks">
+                    </div>
+                </div>
+                <div id="sc-collection-grid" class="sc-collection-grid"></div>
+            </section>
+        </section>
+    </main>
+
+    <div id="sc-pack-modal" class="sc-modal hidden" role="dialog" aria-modal="true" aria-labelledby="sc-pack-title">
+        <div class="sc-modal-card sc-pack-modal-card">
+            <div class="sc-modal-head">
+                <div>
+                    <span>Pack Opened</span>
+                    <h2 id="sc-pack-title">New Sharks</h2>
+                </div>
+                <button id="sc-pack-close-btn" class="sc-icon-btn" type="button" title="Close" aria-label="Close">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div id="sc-pack-results" class="sc-pack-results"></div>
+        </div>
+    </div>
+
+    <div id="sc-settings-modal" class="sc-modal hidden" role="dialog" aria-modal="true" aria-labelledby="sc-settings-title">
+        <div class="sc-modal-card sc-settings-card">
+            <div class="sc-modal-head">
+                <div>
+                    <span>Settings</span>
+                    <h2 id="sc-settings-title">Shark Cards</h2>
+                </div>
+                <button id="sc-settings-close-btn" class="sc-icon-btn" type="button" title="Close" aria-label="Close">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <button id="sc-reset-btn" class="sc-btn sc-btn-danger" type="button">
+                <i class="fa-solid fa-rotate-left"></i>
+                <span>Reset Progress</span>
+            </button>
+        </div>
+    </div>
+
+    <div id="sc-toast" class="sc-toast hidden"></div>
+    <div id="sc-effect-layer" class="sc-effect-layer" aria-hidden="true"></div>
+
+    <script src="Minigames/SharkCards/shark-cards.js?v=4"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            if (typeof initSharkCards === "function") initSharkCards();
+        });
+    </script>
+</body>
+</html>

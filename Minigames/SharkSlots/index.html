@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <base href="../../">
+    <title>Sharkdle - Shark Slots</title>
+    <link rel="icon" type="image/png" href="images/favicon.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;800;900&family=Poppins:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="Minigames/SharkSlots/shark-slots.css?v=1">
+</head>
+<body class="slots-page">
+    <div class="ss-world" aria-hidden="true">
+        <img class="ss-world-shark ss-world-shark-left" src="images/home-v3/hammerhead.png" alt="">
+        <img class="ss-world-shark ss-world-shark-right" src="images/home-v3/great-white.png" alt="">
+        <div class="ss-world-current"></div>
+        <div class="ss-world-floor"></div>
+    </div>
+
+    <header class="ss-topbar">
+        <a class="ss-brand" href="index.html" aria-label="Back to Sharkdle home">
+            <span class="ss-brand-mark"><img src="images/favicon.png" alt=""></span>
+            <span>
+                <strong>Shark Slots</strong>
+                <em>Reef Jackpot</em>
+            </span>
+        </a>
+
+        <div class="ss-hud" aria-label="Shark Slots stats">
+            <div class="ss-chip" title="Bank"><i class="fa-solid fa-coins"></i><span id="ss-bank">0</span></div>
+            <div class="ss-chip" title="Best win"><i class="fa-solid fa-trophy"></i><span id="ss-best">0</span></div>
+            <div class="ss-chip ss-jackpot-chip" title="Jackpot"><i class="fa-solid fa-crown"></i><span id="ss-jackpot-top">0</span></div>
+        </div>
+
+        <button id="ss-reset-btn" class="ss-icon-btn" type="button" title="Reset progress" aria-label="Reset progress">
+            <i class="fa-solid fa-rotate-left"></i>
+        </button>
+        <a class="ss-icon-btn" href="index.html" title="Home" aria-label="Home">
+            <i class="fa-solid fa-house"></i>
+        </a>
+    </header>
+
+    <main class="ss-shell">
+        <section class="ss-machine-panel" aria-label="Shark slot machine">
+            <div class="ss-machine-head">
+                <div>
+                    <span class="ss-kicker">Apex reels</span>
+                    <h1>Reef Jackpot</h1>
+                </div>
+                <div class="ss-jackpot">
+                    <span>Jackpot</span>
+                    <strong id="ss-jackpot">0</strong>
+                </div>
+            </div>
+
+            <div class="ss-machine" id="ss-machine">
+                <div class="ss-payline ss-payline-mid" data-line-marker="0"></div>
+                <div class="ss-payline ss-payline-top" data-line-marker="1"></div>
+                <div class="ss-payline ss-payline-bottom" data-line-marker="2"></div>
+                <div class="ss-reels" id="ss-reels" aria-live="polite"></div>
+                <div class="ss-machine-glass"></div>
+            </div>
+
+            <div class="ss-result-row">
+                <div>
+                    <span>Last result</span>
+                    <strong id="ss-last-result">Ready to spin</strong>
+                </div>
+                <div>
+                    <span>Win streak</span>
+                    <strong id="ss-streak">0</strong>
+                </div>
+            </div>
+
+            <div class="ss-controls" aria-label="Slot controls">
+                <div class="ss-control-block">
+                    <span>Bet</span>
+                    <div class="ss-stepper">
+                        <button id="ss-bet-down" type="button" title="Lower bet" aria-label="Lower bet">
+                            <i class="fa-solid fa-minus"></i>
+                        </button>
+                        <strong id="ss-bet">0</strong>
+                        <button id="ss-bet-up" type="button" title="Raise bet" aria-label="Raise bet">
+                            <i class="fa-solid fa-plus"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="ss-control-block">
+                    <span>Lines</span>
+                    <div class="ss-line-toggle" id="ss-line-toggle" role="group" aria-label="Active lines">
+                        <button type="button" data-lines="1">1</button>
+                        <button type="button" data-lines="3">3</button>
+                        <button type="button" data-lines="5">5</button>
+                    </div>
+                </div>
+
+                <button id="ss-spin-btn" class="ss-spin-btn" type="button">
+                    <i class="fa-solid fa-play"></i>
+                    <span>Spin</span>
+                </button>
+                <button id="ss-auto-btn" class="ss-soft-btn" type="button" title="Auto spin" aria-label="Auto spin">
+                    <i class="fa-solid fa-repeat"></i>
+                    <span>Auto</span>
+                </button>
+            </div>
+        </section>
+
+        <aside class="ss-side-panel" aria-label="Shark Slots details">
+            <section class="ss-panel-section">
+                <div class="ss-panel-head">
+                    <span>Session</span>
+                    <strong id="ss-spins">0 spins</strong>
+                </div>
+                <div class="ss-stat-grid">
+                    <div><span>Wagered</span><strong id="ss-wagered">0</strong></div>
+                    <div><span>Won</span><strong id="ss-won">0</strong></div>
+                    <div><span>Net</span><strong id="ss-net">0</strong></div>
+                    <div><span>Lines</span><strong id="ss-active-lines">1</strong></div>
+                </div>
+            </section>
+
+            <section class="ss-panel-section ss-paytable-section">
+                <div class="ss-panel-head">
+                    <span>Paytable</span>
+                    <strong>3 match</strong>
+                </div>
+                <div id="ss-paytable" class="ss-paytable"></div>
+            </section>
+
+            <section class="ss-panel-section ss-log-section">
+                <div class="ss-panel-head">
+                    <span>Reel Log</span>
+                    <button id="ss-clear-log" class="ss-mini-btn" type="button" title="Clear log" aria-label="Clear log">
+                        <i class="fa-solid fa-eraser"></i>
+                    </button>
+                </div>
+                <div id="ss-log" class="ss-log"></div>
+            </section>
+        </aside>
+    </main>
+
+    <div id="ss-toast" class="ss-toast hidden"></div>
+    <div id="ss-float-layer" class="ss-float-layer" aria-hidden="true"></div>
+
+    <script src="Minigames/SharkSlots/shark-slots.js?v=1"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            if (typeof initSharkSlots === "function") initSharkSlots();
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,139 @@
+/* Shared shell styles to bring secondary pages closer to the index theme */
+:root {
+    --shell-bg-0: #04111d;
+    --shell-bg-1: #06192a;
+    --shell-surface: rgba(8, 28, 44, 0.92);
+    --shell-surface-2: rgba(10, 36, 56, 0.88);
+    --shell-border: rgba(77, 208, 225, 0.16);
+    --shell-border-strong: rgba(77, 208, 225, 0.28);
+    --shell-text: #e8f9ff;
+    --shell-muted: rgba(214, 240, 247, 0.72);
+    --shell-accent: #4dd0e1;
+    --shell-accent-2: #00b4d8;
+}
+
+body.shell-page {
+    margin: 0;
+    min-height: 100vh;
+    font-family: 'Barlow', 'Montserrat', sans-serif;
+    color: var(--shell-text);
+    background:
+        radial-gradient(circle at top, rgba(77, 208, 225, 0.12), transparent 26%),
+        radial-gradient(circle at 82% 12%, rgba(255, 196, 87, 0.06), transparent 16%),
+        linear-gradient(180deg, var(--shell-bg-0) 0%, var(--shell-bg-1) 52%, #01070e 100%);
+    overflow-x: hidden;
+}
+
+body.shell-page::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    background:
+        radial-gradient(circle at 20% 20%, rgba(77, 208, 225, 0.08), transparent 28%),
+        radial-gradient(circle at 85% 80%, rgba(0, 180, 216, 0.08), transparent 24%);
+    z-index: 0;
+}
+
+.shell-page .navbar,
+.shell-page .topbar {
+    position: relative;
+    z-index: 1;
+    width: min(1380px, calc(100% - 32px));
+    margin: 18px auto 0;
+    padding: 18px 22px;
+    border: 1px solid var(--shell-border);
+    border-radius: 24px;
+    background:
+        radial-gradient(circle at top left, rgba(77, 208, 225, 0.12), transparent 34%),
+        linear-gradient(180deg, rgba(8, 28, 44, 0.95), rgba(7, 22, 34, 0.96));
+    box-shadow: 0 18px 46px rgba(0, 0, 0, 0.28);
+    backdrop-filter: blur(14px);
+}
+
+.shell-page .logo,
+.shell-page .navbar-logo,
+.shell-page .topbar h1 {
+    background: linear-gradient(135deg, #f6feff, #7ef0ff 38%, var(--shell-accent-2));
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+}
+
+.shell-page .nav-btn,
+.shell-page button:not(.pass-tab-btn):not(.home-v3-nav button):not(.leaderboard-range-btn) {
+    border-radius: 14px;
+    background: linear-gradient(135deg, var(--shell-accent-2), #0088a0);
+    color: #ffffff;
+    border: none;
+    box-shadow: 0 10px 22px rgba(0, 180, 216, 0.22);
+}
+
+.shell-page .nav-btn:hover,
+.shell-page button:not(.pass-tab-btn):not(.home-v3-nav button):not(.leaderboard-range-btn):hover {
+    transform: translateY(-2px);
+    box-shadow: 0 14px 24px rgba(0, 180, 216, 0.3);
+}
+
+.shell-page .mode-subtitle,
+.shell-page .story-desc,
+.shell-page .leaderboard-subtitle {
+    color: var(--shell-muted);
+}
+
+.shell-page .game-container,
+.shell-page .leaderboard-container,
+.shell-page .library-shell,
+.shell-page .sharkpass-container,
+.shell-page .pass-tabs-shell,
+.shell-page .story-modal-modern {
+    position: relative;
+    z-index: 1;
+    border: 1px solid var(--shell-border);
+    background:
+        radial-gradient(circle at top right, rgba(77, 208, 225, 0.10), transparent 30%),
+        linear-gradient(180deg, rgba(8, 28, 44, 0.96), rgba(6, 20, 31, 0.98));
+    box-shadow: 0 22px 60px rgba(0, 0, 0, 0.34);
+}
+
+.shell-page .game-container,
+.shell-page .leaderboard-container {
+    border-radius: 28px;
+}
+
+.shell-page .input-panel,
+.shell-page #guesses,
+.shell-page .pass-tab-panel,
+.shell-page .panel-card,
+.shell-page .leaderboard-reset-panel,
+.shell-page .leaderboard-stat,
+.shell-page .leaderboard-stat-board {
+    background: linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02));
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 20px;
+}
+
+.shell-page input {
+    background: rgba(245, 252, 255, 0.98);
+    border: 1px solid rgba(77, 208, 225, 0.16);
+}
+
+.shell-page input:focus {
+    box-shadow: 0 0 0 4px rgba(77, 208, 225, 0.14);
+}
+
+.shell-page a {
+    color: #8feeff;
+}
+
+@media (max-width: 900px) {
+    .shell-page .navbar,
+    .shell-page .topbar {
+        width: calc(100% - 18px);
+        padding: 16px;
+        border-radius: 20px;
+    }
+}

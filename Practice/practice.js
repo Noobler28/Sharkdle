@@ -39,13 +39,109 @@ const common_names = [
     {"scientific": "Haploblepharus", "Common": "ShySharks"},
 ];
 
-let lastFamily = localStorage.getItem('practiceLastFamily');
+function getRequestedSpeciesMode() {
+    const requestedMode = new URLSearchParams(window.location.search).get("pool") || "sharks";
+    const normalizedMode = requestedMode.toLowerCase();
+    if (["ray", "rays"].includes(normalizedMode)) return "rays";
+    if (["mixed", "all", "elasmobranch", "elasmobranchs"].includes(normalizedMode)) return "mixed";
+    return "sharks";
+}
+
+const HERO_ART = {
+    sharkBg: "images/home-v3/shark-bg.png",
+    sharkFg: "images/home-v3/shark-fg.png",
+    manta: "images/home-v3/manta-ray.png"
+};
+
+function getSpeciesModeConfig(modeKey) {
+    const configs = {
+        sharks: {
+            key: "sharks",
+            title: "Sharkdle - Practice",
+            kicker: "Practice Mode",
+            heading: "Guess the Shark",
+            lead: "Think you know this shark? Make your guess below.",
+            placeholder: "Enter shark name...",
+            animal: "shark",
+            animalTitle: "Shark",
+            heroBackground: HERO_ART.sharkBg,
+            heroForeground: HERO_ART.sharkFg
+        },
+        rays: {
+            key: "rays",
+            title: "Raydle - Practice",
+            kicker: "Practice Rays",
+            heading: "Guess the Ray",
+            lead: "Think you know this ray? Make your guess below.",
+            placeholder: "Enter ray name...",
+            animal: "ray",
+            animalTitle: "Ray",
+            heroBackground: HERO_ART.manta,
+            heroForeground: HERO_ART.manta
+        },
+        mixed: {
+            key: "mixed",
+            title: "Sharkdle - Mixed Practice",
+            kicker: "Mixed Practice",
+            heading: "Guess the Species",
+            lead: "Sharks and rays share the board. Make your guess below.",
+            placeholder: "Enter shark or ray name...",
+            animal: "species",
+            animalTitle: "Species",
+            heroBackground: HERO_ART.sharkBg,
+            heroForeground: HERO_ART.manta
+        }
+    };
+
+    return configs[modeKey] || configs.sharks;
+}
+
+function getActiveSpeciesPool(modeKey) {
+    const sharkPool = Array.isArray(window.sharks) ? window.sharks : [];
+    const rayPool = Array.isArray(window.rays) ? window.rays : [];
+    if (modeKey === "rays") return rayPool.length ? rayPool : sharkPool;
+    if (modeKey === "mixed") return [...sharkPool, ...rayPool];
+    return sharkPool;
+}
+
+function applySpeciesModeCopy() {
+    document.title = speciesMode.title;
+    document.body.classList.remove("species-mode-sharks", "species-mode-rays", "species-mode-mixed");
+    document.body.classList.add(`species-mode-${speciesMode.key}`);
+
+    document.querySelectorAll("[data-pool-mode]").forEach(link => {
+        link.classList.toggle("active", link.dataset.poolMode === speciesMode.key);
+    });
+
+    const title = document.getElementById("mode-title");
+    const kicker = document.getElementById("mode-kicker");
+    const heading = document.getElementById("guess-heading");
+    const lead = document.getElementById("mode-lead");
+    const input = document.getElementById("sharkGuess");
+    const heroBackground = document.querySelector(".guess-hero-bg");
+    const heroForeground = document.querySelector(".guess-hero-fg");
+
+    if (title) title.textContent = speciesMode.title;
+    if (kicker) kicker.textContent = speciesMode.kicker;
+    if (heading) heading.textContent = speciesMode.heading;
+    if (lead) lead.textContent = speciesMode.lead;
+    if (input) input.placeholder = speciesMode.placeholder;
+    if (heroBackground) heroBackground.src = speciesMode.heroBackground;
+    if (heroForeground) heroForeground.src = speciesMode.heroForeground;
+}
+
+const speciesMode = getSpeciesModeConfig(getRequestedSpeciesMode());
+const activeSpecies = getActiveSpeciesPool(speciesMode.key).map(species => ({ ...species, guessed: false }));
+
+applySpeciesModeCopy();
+
+let lastFamily = localStorage.getItem(speciesMode.key === "sharks" ? "practiceLastFamily" : `practiceLastFamily_${speciesMode.key}`);
 let targetIndex;
 do {
-  targetIndex = Math.floor(Math.random() * sharks.length);
-} while (lastFamily && sharks[targetIndex].family === lastFamily);
-let targetShark = sharks[targetIndex];
-localStorage.setItem('practiceLastFamily', targetShark.family);
+  targetIndex = Math.floor(Math.random() * activeSpecies.length);
+} while (lastFamily && activeSpecies.length > 1 && activeSpecies[targetIndex].family === lastFamily);
+let targetShark = activeSpecies[targetIndex];
+localStorage.setItem(speciesMode.key === "sharks" ? "practiceLastFamily" : `practiceLastFamily_${speciesMode.key}`, targetShark.family);
 let guessesMade = 0;
 
 const sizeThresholds = {
@@ -70,7 +166,16 @@ function getLessSpecificName(sharkName) {
 }
 
 function normalizeInput(input) {
-    return input.replace(/\s+/g, '').toLowerCase();
+    return String(input || "").replace(/\s+/g, "").toLowerCase();
+}
+
+function escapeHtml(value) {
+    return String(value)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
 }
 
 function makeGuess() {
@@ -80,18 +185,18 @@ function makeGuess() {
     const winLoseScreen = document.getElementById("win-lose-screen");
 
     if (!guessInput) {
-        messageDiv.textContent = "Enter a shark name.";
+        messageDiv.textContent = `Enter a ${speciesMode.animal} name.`;
         return;
     }
 
-    const guessedShark = sharks.find(s => normalizeInput(s.name) === guessInput);
+    const guessedShark = activeSpecies.find(s => normalizeInput(s.name) === guessInput);
     if (!guessedShark) {
-        messageDiv.textContent = "Shark not found in the list.";
+        messageDiv.textContent = `${speciesMode.animalTitle} not found in the list.`;
         return;
     }
 
     if (guessedShark.guessed) {
-        messageDiv.textContent = "You already guessed this shark.";
+        messageDiv.textContent = `You already guessed this ${speciesMode.animal}.`;
         return;
     }
 
@@ -133,7 +238,7 @@ function makeGuess() {
         winLoseScreen.innerHTML = `
             <button onclick="document.getElementById('win-lose-screen').style.display='none'; document.getElementById('show-results-btn').style.display='block';" style="position: absolute; top: 8px; right: 8px; width: 32px; height: 32px; background: rgba(0,0,0,0.3); border: none; border-radius: 50%; color: inherit; font-size: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.2s; font-weight: bold;">×</button>
             <h2 style="margin-top: 0; font-size: 32px; margin-bottom: 20px;">🎉 You Found It!</h2>
-            <p style="font-size: 18px; margin: 10px 0; color: inherit;">The shark was <b>${targetShark.name}</b></p>
+            <p style="font-size: 18px; margin: 10px 0; color: inherit;">The ${speciesMode.animal} was <b>${targetShark.name}</b></p>
             <p style="font-size: 16px; margin: 10px 0; opacity: 0.9;">Discovered in ${targetShark.yod}</p>
             <p style="font-size: 16px; margin: 10px 0; opacity: 0.9;">You took ${guessesMade} guess${guessesMade !== 1 ? 'es' : ''}.</p>
             <div style="margin: 20px 0; padding: 15px; background: linear-gradient(135deg, rgba(0, 180, 216, 0.15), rgba(77, 208, 225, 0.1)); border-radius: 8px; border: 2px solid rgba(77, 208, 225, 0.3);">
@@ -244,30 +349,32 @@ const sharkGuessInput = document.getElementById("sharkGuess");
 const suggestionsDiv = document.getElementById("suggestions");
 
 sharkGuessInput.addEventListener("input", function() {
-    const input = this.value.toLowerCase().trim();
-    
+    const input = normalizeInput(this.value);
+
     if (input.length === 0) {
         suggestionsDiv.classList.remove("active");
         return;
     }
-    
-    // Filter sharks that match the input
-    const matches = sharks.filter(shark => 
-        shark.name.toLowerCase().includes(input)
+
+    // Filter species that match the input
+    const matches = activeSpecies.filter(shark =>
+        normalizeInput(shark.name).includes(input)
     );
-    
+
     if (matches.length === 0) {
         suggestionsDiv.classList.remove("active");
         return;
     }
-    
+
     // Build suggestions HTML
     suggestionsDiv.innerHTML = matches.map(shark => {
         const isGuessed = shark.guessed === true;
         const guessedClass = isGuessed ? 'guessed' : '';
-        return `<div class="suggestion-item ${guessedClass}" onclick="${isGuessed ? '' : `selectShark('${shark.name}')`}">${shark.name}</div>`;
+        const speciesName = encodeURIComponent(shark.name);
+        const disabledAttr = isGuessed ? 'aria-disabled="true"' : `data-species-name="${speciesName}"`;
+        return `<div class="suggestion-item ${guessedClass}" ${disabledAttr}>${escapeHtml(shark.name)}</div>`;
     }).join("");
-    
+
     suggestionsDiv.classList.add("active");
 });
 
@@ -276,6 +383,12 @@ document.addEventListener("click", function(event) {
     if (event.target !== sharkGuessInput && !event.target.closest(".suggestions-dropdown")) {
         suggestionsDiv.classList.remove("active");
     }
+});
+
+suggestionsDiv.addEventListener("click", function(event) {
+    const item = event.target.closest(".suggestion-item[data-species-name]");
+    if (!item) return;
+    selectShark(decodeURIComponent(item.dataset.speciesName));
 });
 
 function selectShark(sharkName) {
@@ -317,5 +430,5 @@ window.revealShark = function() {
         console.log("Access denied. This command is for developers only.");
         return;
     }
-    console.log("TESTING ONLY: The target shark is: " + targetShark.name);
+    console.log(`TESTING ONLY: The target ${speciesMode.animal} is: ${targetShark.name}`);
 };

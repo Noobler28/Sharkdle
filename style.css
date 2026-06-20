@@ -4840,7 +4840,8 @@ body.home-v3-page #crateDropsModal,
 body.home-v3-page #pearlShopModal,
 body.home-v3-page #homeQuickAccessModal,
 body.home-v3-page #homeQuickStatsModal,
-body.home-v3-page #dailyLoginModal {
+body.home-v3-page #dailyLoginModal,
+body.home-v3-page #megalodonEscapeAwardModal {
     background:
         radial-gradient(ellipse at 50% 0%, rgba(44,196,196,.12), transparent 58%),
         rgba(1, 8, 15, .82);
@@ -4851,7 +4852,8 @@ body.home-v3-page #cratesModal .modal-content,
 body.home-v3-page #homeCratesModal .modal-content,
 body.home-v3-page #crateDropsModal .modal-content,
 body.home-v3-page #pearlShopModal .modal-content,
-body.home-v3-page #dailyLoginModal .modal-content {
+body.home-v3-page #dailyLoginModal .modal-content,
+body.home-v3-page #megalodonEscapeAwardModal .modal-content {
     border-radius: 12px !important;
     border: 1px solid rgba(44,196,196,.22) !important;
     background:
@@ -4865,6 +4867,133 @@ body.home-v3-page #dailyLoginModal .modal-content {
     width: min(94vw, 680px) !important;
     max-height: 88vh;
     overflow-y: auto;
+}
+
+.megalodon-award-modal-content {
+    position: relative;
+    width: min(92vw, 540px) !important;
+    max-height: 88vh;
+    overflow: hidden;
+    padding: 28px !important;
+    display: grid;
+    gap: 18px;
+    text-align: left !important;
+}
+
+.megalodon-award-modal-content::before {
+    content: "";
+    position: absolute;
+    inset: 0 0 auto;
+    height: 4px;
+    background: linear-gradient(90deg, #59d9e5, #ffc85a, #ff8f70);
+}
+
+.megalodon-award-hero {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    grid-template-columns: 58px minmax(0, 1fr);
+    align-items: start;
+    gap: 14px;
+    padding-right: 34px;
+}
+
+.megalodon-award-icon {
+    width: 58px;
+    height: 58px;
+    display: grid;
+    place-items: center;
+    border-radius: 8px;
+    background:
+        radial-gradient(circle at 30% 25%, rgba(255,255,255,.24), transparent 38%),
+        linear-gradient(135deg, rgba(44,196,196,.28), rgba(232,168,34,.2));
+    color: #9ffcff;
+    font-size: 24px;
+}
+
+.megalodon-award-hero h2 {
+    margin: 6px 0 8px;
+    color: #fff;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: clamp(34px, 8vw, 50px);
+    font-weight: 900;
+    line-height: .92;
+    text-transform: uppercase;
+}
+
+.megalodon-award-hero p {
+    margin: 0;
+    color: rgba(212,234,248,.76);
+    font-size: 14px;
+    line-height: 1.45;
+}
+
+.megalodon-award-rewards {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.megalodon-award-reward {
+    display: grid;
+    grid-template-columns: 38px minmax(0, 1fr);
+    grid-template-rows: auto auto;
+    align-items: center;
+    gap: 2px 10px;
+    min-height: 78px;
+    padding: 12px;
+    border: 1px solid rgba(142,239,235,.18);
+    border-radius: 8px;
+    background: rgba(255,255,255,.045);
+}
+
+.megalodon-award-reward i {
+    grid-row: 1 / span 2;
+    width: 38px;
+    height: 38px;
+    display: grid;
+    place-items: center;
+    border-radius: 8px;
+    background: rgba(44,196,196,.12);
+    color: #9ffcff;
+}
+
+.megalodon-award-reward span {
+    color: rgba(212,234,248,.68);
+    font-size: 12px;
+    font-weight: 800;
+    text-transform: uppercase;
+}
+
+.megalodon-award-reward strong {
+    color: #fff;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 24px;
+    line-height: 1;
+}
+
+.megalodon-award-close {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    margin-top: 0 !important;
+}
+
+@media (max-width: 520px) {
+    .megalodon-award-modal-content {
+        padding: 24px 18px !important;
+    }
+
+    .megalodon-award-hero {
+        grid-template-columns: 1fr;
+        padding-right: 24px;
+    }
+
+    .megalodon-award-rewards {
+        grid-template-columns: 1fr;
+    }
 }
 
 body.home-v3-page .home-crates-modal-content {

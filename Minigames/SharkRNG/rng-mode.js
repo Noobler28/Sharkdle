@@ -217,7 +217,7 @@
             id: "abyssBounty",
             name: "Abyss Bounty",
             icon: "fa-sack-dollar",
-            desc: "Mutated sharks pay more coins forever.",
+            desc: "Mutated species pay more coins forever.",
             costs: [2, 4, 7, 11, 16],
             format: (level) => `+${Math.round(level * 10)}% mutated coins`
         },
@@ -791,7 +791,7 @@
     };
 
     // === MUTATION SYSTEM ===
-    // Visual mutations can roll on any shark and massively inflate its oneIn.
+    // Visual mutations can roll on any species and massively inflate its oneIn.
     // Apex is natural-only and uses its own upgrade path, not mutation potions.
     // With no mutation Luck upgrades the base chance is essentially zero.
     const MUTATION_TYPES = {
@@ -878,7 +878,7 @@
         apex: {
             name: "Apex",
             icon: "\u{1F988}",
-            oneInMult: 120,  // shark becomes 120\u00d7 rarer
+            oneInMult: 120,  // species becomes 120\u00d7 rarer
             color: "#fb923c",
             scoreBonus: 45,
             naturalOnly: true
@@ -1762,25 +1762,40 @@ let rollPool = [];
         return isKnownTierName(oddsTier) ? oddsTier : getBaseTierName(entry);
     }
 
+    function getRngSourceSpecies() {
+        const speciesByName = new Map();
+        const sourcePools = [
+            Array.isArray(window.sharks) ? window.sharks : [],
+            Array.isArray(window.rays) ? window.rays : []
+        ];
+
+        sourcePools.flat().forEach((species) => {
+            if (!species?.name || speciesByName.has(species.name)) return;
+            speciesByName.set(species.name, species);
+        });
+
+        return Array.from(speciesByName.values());
+    }
+
     function buildRollPool() {
-        const source = Array.isArray(window.sharks) ? window.sharks : [];
-        rollPool = source.map((shark) => {
-            const tierName = scoreToTierName(computeRarityScore(shark));
+        const source = getRngSourceSpecies();
+        rollPool = source.map((species) => {
+            const tierName = scoreToTierName(computeRarityScore(species));
             const tierMeta = getTierMeta(tierName);
-            const oneIn = buildOneIn(shark, tierName, tierMeta);
+            const oneIn = buildOneIn(species, tierName, tierMeta);
 
             return {
-                name: shark.name,
-                family: shark.family,
-                order: shark.order,
-                size: shark.size,
-                habitat: shark.habitat,
-                yod: shark.yod,
+                name: species.name,
+                family: species.family,
+                order: species.order,
+                size: species.size,
+                habitat: species.habitat,
+                yod: species.yod,
                 tier: tierName,
                 baseTier: tierName,
                 oddsTier: tierName,
                 oneIn,
-                coinReward: Math.round(tierMeta.coinReward * (0.9 + ((hashString(shark.name + "coin") % 20) / 100))),
+                coinReward: Math.round(tierMeta.coinReward * (0.9 + ((hashString(species.name + "coin") % 20) / 100))),
                 className: tierMeta.className
             };
         });
@@ -3250,7 +3265,7 @@ function updateActiveEffectsUi() {
             : 0;
         const lastRun = lastBest
             ? `Last: +${player.prestigeHistory[0].gain} at 1/${formatOneIn(lastBest)}`
-            : "First prestige keeps collection, best pull, equipped shark, and index claims.";
+            : "First prestige keeps collection, best pull, equipped species, and index claims.";
 
         panel.classList.toggle("ready", ready);
         panel.innerHTML = `
@@ -4129,7 +4144,7 @@ async function performRoll() {
             `Prestige now for ${gain.toLocaleString()} point${gain === 1 ? "" : "s"}?`,
             "",
             "This resets coins, rolls, upgrades, potions, active boosts, and RNG level.",
-            "Collection, best pull, equipped shark, settings, and claimed index rewards stay."
+            "Collection, best pull, equipped species, settings, and claimed index rewards stay."
         ].join("\n");
 
         if (!confirm(message)) return;

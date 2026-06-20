@@ -1,0 +1,11 @@
+{
+  "android": {
+    "release": {
+      "keystore": "sharkdle-release-key.jks",
+      "storePassword": "replace-with-keystore-password",
+      "alias": "replace-with-key-alias",
+      "password": "replace-with-key-password",
+      "keystoreType": ""
+    }
+  }
+}

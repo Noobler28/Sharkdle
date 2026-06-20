@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <base href="../">
+    <title>Sharkdle Testers</title>
+    <link rel="icon" type="image/png" href="images/favicon.png">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            color-scheme: dark;
+            font-family: 'Poppins', sans-serif;
+            background: radial-gradient(circle at top, #0e4666 0%, #03121f 45%, #020812 100%);
+            color: #f4fbff;
+        }
+        * {
+            box-sizing: border-box;
+        }
+        body {
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            background-color: #020812;
+        }
+        .page-shell {
+            width: min(1180px, calc(100% - 32px));
+            margin: 0 auto;
+            padding: 32px 0 64px;
+        }
+        .brand-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            margin-bottom: 44px;
+        }
+        .brand-logo {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 1.15rem;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+        }
+        .brand-logo .icon {
+            font-size: 1.8rem;
+        }
+        .flag-pill {
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.12);
+            color: #9fe6ff;
+            padding: 8px 14px;
+            border-radius: 999px;
+            font-size: 0.85rem;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+        .hero {
+            display: grid;
+            grid-template-columns: 1.3fr 0.9fr;
+            gap: 32px;
+            align-items: center;
+            margin-bottom: 48px;
+        }
+        .hero-copy {
+            max-width: 620px;
+        }
+        .hero-copy h1 {
+            margin: 0;
+            font-size: clamp(3rem, 5vw, 4.6rem);
+            line-height: 0.98;
+            letter-spacing: -0.05em;
+        }
+        .hero-copy p {
+            margin: 24px 0 0;
+            max-width: 540px;
+            font-size: 1.05rem;
+            color: #cdefff;
+            line-height: 1.75;
+        }
+        .hero-copy .hero-meta {
+            margin-top: 28px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+        .hero-copy .hero-meta a,
+        .hero-copy .hero-meta button {
+            background: linear-gradient(135deg, #16d6ff, #1b7cff);
+            border: none;
+            color: #03131f;
+            padding: 16px 24px;
+            border-radius: 14px;
+            font-weight: 700;
+            text-decoration: none;
+            cursor: pointer;
+            transition: transform 0.2s, opacity 0.2s;
+        }
+        .hero-copy .hero-meta button:hover,
+        .hero-copy .hero-meta a:hover {
+            transform: translateY(-2px);
+            opacity: 0.96;
+        }
+        .hero-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.10);
+            padding: 12px 16px;
+            border-radius: 999px;
+            color: #c6f4ff;
+            font-size: 0.95rem;
+            margin-top: 20px;
+        }
+        .hero-visual {
+            border-radius: 28px;
+            padding: 28px;
+            background: linear-gradient(180deg, rgba(13, 33, 57, 0.95), rgba(0, 6, 16, 0.85));
+            border: 1px solid rgba(255,255,255,0.08);
+            box-shadow: 0 24px 60px rgba(0,0,0,0.35);
+        }
+        .hero-visual .card {
+            border-radius: 22px;
+            background: linear-gradient(180deg, rgba(2,18,38,0.98), rgba(6,34,64,0.95));
+            border: 1px solid rgba(255,255,255,0.08);
+            padding: 24px;
+        }
+        .hero-visual h2 {
+            margin: 0 0 16px;
+            font-size: 1.35rem;
+            color: #e3f8ff;
+        }
+        .hero-visual ul {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+            display: grid;
+            gap: 16px;
+        }
+        .hero-visual li {
+            display: grid;
+            grid-template-columns: auto 1fr;
+            gap: 12px;
+            align-items: start;
+            color: #dbefff;
+        }
+        .hero-visual li strong {
+            color: #9ff0ff;
+        }
+        .section-title {
+            margin: 0 0 16px;
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: #fff;
+        }
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 20px;
+            margin-top: 30px;
+        }
+        .feature-card {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 22px;
+            padding: 24px;
+            min-height: 180px;
+            backdrop-filter: blur(12px);
+        }
+        .feature-card h3 {
+            margin-top: 0;
+            margin-bottom: 12px;
+            font-size: 1.05rem;
+            color: #f4fcff;
+        }
+        .feature-card p {
+            margin: 0;
+            line-height: 1.75;
+            color: #c9ecff;
+            font-size: 0.98rem;
+        }
+        .tester-grid {
+            display: grid;
+            grid-template-columns: 1.1fr 0.9fr;
+            gap: 24px;
+            margin-top: 30px;
+        }
+        .tester-panel {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 26px;
+            padding: 28px;
+            backdrop-filter: blur(14px);
+        }
+        .tester-panel h3 {
+            margin-top: 0;
+            margin-bottom: 16px;
+            font-size: 1.2rem;
+            color: #f8fdff;
+        }
+        .tester-panel p,
+        .tester-panel li {
+            color: #dbefff;
+            line-height: 1.8;
+            font-size: 1rem;
+        }
+        .tester-panel ul {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+            display: grid;
+            gap: 14px;
+        }
+        .tester-panel li::before {
+            content: '✔';
+            display: inline-block;
+            margin-right: 12px;
+            color: #7fe6ff;
+        }
+        .notice-banner {
+            margin-top: 38px;
+            padding: 22px 24px;
+            border-radius: 22px;
+            background: rgba(12, 31, 50, 0.9);
+            border: 1px solid rgba(86, 193, 255, 0.14);
+            color: #b9e8ff;
+        }
+        .notice-banner strong {
+            color: #f4fbff;
+        }
+        .footer-note {
+            margin-top: 44px;
+            padding: 20px 22px;
+            border-radius: 20px;
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.08);
+            color: #acdfff;
+            font-size: 0.95rem;
+            line-height: 1.7;
+        }
+        @media (max-width: 900px) {
+            .hero,
+            .tester-grid {
+                grid-template-columns: 1fr;
+            }
+            .feature-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        @media (max-width: 640px) {
+            .page-shell {
+                width: calc(100% - 24px);
+                padding: 24px 0 48px;
+            }
+            .brand-bar {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            .hero-copy h1 {
+                font-size: 2.8rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- TEMPORARY testers landing page for Sharkdle -->
+    <div class="page-shell">
+        <header class="brand-bar">
+            <div class="brand-logo"><span class="icon">🦈</span> Sharkdle</div>
+            <div class="flag-pill">Testers Page</div>
+        </header>
+
+        <section class="hero">
+            <div class="hero-copy">
+                <h1>Sharkdle Testers: early access for update preview.</h1>
+                <p>Join the team testing updates before they land. Play preview builds, give quick feedback, and help us polish Sharkdle for everyone.</p>
+                <div class="hero-meta">
+                    <a href="Daily/index.html">Try the Daily</a>
+                    <a href="Infinite/index.html">Jump into Infinite</a>
+                </div>
+                <div class="hero-badge">For testers only — new content ships here first.</div>
+            </div>
+
+            <div class="hero-visual">
+                <div class="card">
+                    <h2>What testers do</h2>
+                    <ul>
+                        <li><strong>Preview updates:</strong> play new features and modes before release.</li>
+                        <li><strong>Report bugs:</strong> help us find issues with gameplay, UI, and balance.</li>
+                        <li><strong>Share feedback:</strong> suggest improvements for the next version.</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <section>
+            <h2 class="section-title">Tester benefits</h2>
+            <div class="feature-grid">
+                <article class="feature-card">
+                    <h3>Exclusive access</h3>
+                    <p>Play builds and updates before they hit the public app. Testers get first dibs on new mechanics.</p>
+                </article>
+                <article class="feature-card">
+                    <h3>Fast feedback loop</h3>
+                    <p>Send bug reports and improvement ideas directly to the team. Your input shapes the final release.</p>
+                </article>
+                <article class="feature-card">
+                    <h3>Special rewards</h3>
+                    <p>Earn early participant recognition and bonus cosmetics as a thank-you for testing.</p>
+                </article>
+            </div>
+        </section>
+
+        <section class="tester-grid">
+            <div class="tester-panel">
+                <h3>How to get involved</h3>
+                <p>Testers should:</p>
+                <ul>
+                    <li>Play the latest update daily.</li>
+                    <li>Check for glitches in puzzles and resources.</li>
+                    <li>Note anything that feels unfair or confusing.</li>
+                    <li>Submit issues through the feedback channel.</li>
+                </ul>
+            </div>
+            <div class="tester-panel">
+                <h3>What we’re looking for</h3>
+                <ul>
+                    <li>Gameplay balance and scoring clarity.</li>
+                    <li>UI layout issues on desktop and mobile.</li>
+                    <li>Cosmetic unlock and progression accuracy.</li>
+                    <li>Reliable cloud save and sync behavior.</li>
+                </ul>
+            </div>
+        </section>
+
+        <section class="notice-banner">
+            <strong>Reminder:</strong> this is a test page for early feedback. If you find a bug or want to suggest a change, note it here or share it with the Sharkdle team.
+        </section>
+
+        <section class="footer-note">
+            This page is temporary and designed for Sharkdle testers only. It may be updated often as we ship new fixes and features.
+        </section>
+    </div>
+</body>
+</html>

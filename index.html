@@ -95,7 +95,7 @@ content="Play Sharkdle, the daily shark guessing game. Guess shark species from 
 
         <div class="home-v3-fact">
             <span>Fact of the Day</span>
-            <p>Sharks have been around longer than trees.</p>
+            <p id="home-v3-daily-fact">Sharks have been around longer than trees.</p>
         </div>
 
         <section class="home-v3-about-links" aria-label="Sharkdle links">
@@ -119,7 +119,7 @@ content="Play Sharkdle, the daily shark guessing game. Guess shark species from 
             <div class="home-v3-hero-copy">
                 <p class="home-v3-eyebrow">The ultimate shark guessing game</p>
                 <h1>Welcome to <span>Sharkdle</span></h1>
-                <p class="hero-subtitle">Dive into daily puzzles, streaks, crates, duels, and the full Sharchive.</p>
+                <p class="hero-subtitle">Dive into the ULTIMATE shark guessing experience.</p>
                 <div class="home-v3-hero-actions">
                     <a class="home-v3-play-btn" href="Daily/index.html"><i class="fa-solid fa-play"></i><span>Play Daily Challenge</span></a>
                     <a class="home-v3-ghost-btn" href="Infinite/index.html"><i class="fa-solid fa-infinity"></i><span>Infinite</span></a>
@@ -277,8 +277,8 @@ content="Play Sharkdle, the daily shark guessing game. Guess shark species from 
 
         <section class="home-v3-event" role="button" tabindex="0" onclick="openCommunityBossEventModal()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openCommunityBossEventModal();}">
             <span>Current Event</span>
-            <strong>Global Megalodon</strong>
-            <p id="home-v3-event-copy">Team up with every player to defeat the Megalodon, climb the contribution ranks, and unlock global event rewards.</p>
+            <strong>Global Cladoselache</strong>
+            <p id="home-v3-event-copy">Team up with every player to defeat the Cladoselache and unlock shared community milestone rewards.</p>
             <div class="home-v3-click-view"><i class="fa-solid fa-arrow-pointer"></i><span>Click to view</span></div>
         </section>
 
@@ -977,6 +977,33 @@ content="Play Sharkdle, the daily shark guessing game. Guess shark species from 
 </div>
 
 <button onclick="closeDailyLoginModal()" class="modal-secondary-btn">Close</button>
+</div>
+</div>
+
+<div id="megalodonEscapeAwardModal" class="modal hidden shark-modal-backdrop" onclick="if(event.target===this) closeMegalodonEscapeAwardModal()">
+<div class="modal-content megalodon-award-modal-content new-site-modal">
+<button type="button" class="modal-x-btn" onclick="closeMegalodonEscapeAwardModal()" aria-label="Close event award modal">&times;</button>
+<div class="megalodon-award-hero">
+<div class="megalodon-award-icon"><i class="fa-solid fa-water" aria-hidden="true"></i></div>
+<div>
+<div class="new-modal-kicker">Event Complete</div>
+<h2>The Megalodon Got Away</h2>
+<p>The event has ended, and the Megalodon got away. Thanks for joining the hunt; your participation award has been added.</p>
+</div>
+</div>
+<div class="megalodon-award-rewards" aria-label="Participation award">
+<div class="megalodon-award-reward">
+<i class="fa-solid fa-umbrella-beach" aria-hidden="true"></i>
+<span>Summer Crate</span>
+<strong>+1</strong>
+</div>
+<div class="megalodon-award-reward">
+<i class="fa-solid fa-star" aria-hidden="true"></i>
+<span>XP</span>
+<strong>+1,000</strong>
+</div>
+</div>
+<button type="button" class="modal-primary-btn megalodon-award-close" onclick="closeMegalodonEscapeAwardModal()">Awesome</button>
 </div>
 </div>
 

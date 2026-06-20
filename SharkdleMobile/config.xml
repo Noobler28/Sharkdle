@@ -1,0 +1,23 @@
+<?xml version='1.0' encoding='utf-8'?>
+<widget id="com.sharkdle.app" version="1.0.1" android-versionCode="10001" xmlns="http://www.w3.org/ns/widgets" xmlns:cdv="http://cordova.apache.org/ns/1.0">
+    <name>Sharkdle</name>
+    <description>
+        A guess the shark game!
+    </description>
+    <author href="https://github.com/Noobler28/sharkdle">
+        Sharkdle
+    </author>
+    <content src="index.html" />
+    <icon src="res/icon.png" />
+    <access origin="*" />
+    <allow-navigation href="https://*/*" />
+    <allow-navigation href="http://*/*" />
+    <allow-intent href="http://*/*" />
+    <allow-intent href="https://*/*" />
+    <allow-intent href="mailto:*" />
+    <preference name="DisallowOverscroll" value="true" />
+    <preference name="Orientation" value="portrait" />
+    <preference name="AndroidWindowSplashScreenBackground" value="#041B2D" />
+    <preference name="AndroidWindowSplashScreenAnimatedIcon" value="res/icon.png" />
+    <preference name="SplashScreenDelay" value="1500" />
+</widget>

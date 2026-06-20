@@ -23,8 +23,8 @@
 
 <header class="topbar">
 <div class="mode-header">
-<p class="panel-kicker mode-kicker">Daily Challenge</p>
-<h1>Sharkdle - Daily</h1>
+<p class="panel-kicker mode-kicker" id="mode-kicker">Daily Challenge</p>
+<h1 id="mode-title">Sharkdle - Daily</h1>
 <button class="home-btn" type="button" onclick="window.location.href='index.html'">Home</button>
 </div>
 </header>
@@ -33,8 +33,13 @@
 <div class="game-container">
 <section class="guess-hero">
 <div class="guess-hero-copy">
-<h2>Guess the Shark</h2>
-<p class="mode-lead">Think you know this shark? Make your guess below.</p>
+<nav class="species-mode-switcher" aria-label="Daily species mode">
+<a href="Daily/index.html" data-pool-mode="sharks">Sharks</a>
+<a href="Daily/index.html?pool=rays" data-pool-mode="rays">Rays</a>
+<a href="Daily/index.html?pool=mixed" data-pool-mode="mixed">Mixed</a>
+</nav>
+<h2 id="guess-heading">Guess the Shark</h2>
+<p class="mode-lead" id="mode-lead">Think you know this shark? Make your guess below.</p>
 <div style="position: relative;">
 <input id="sharkGuess" placeholder="Enter shark name..." autocomplete="off">
 <div id="suggestions" class="suggestions-dropdown"></div>
@@ -74,6 +79,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="sharks.js"></script>
+<script src="rays.js"></script>
 <script src="script.js"></script>
 <script src="Achievements/achievements.js"></script>
 <script src="Daily/daily.js"></script>

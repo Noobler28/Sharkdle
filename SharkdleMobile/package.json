@@ -1,0 +1,33 @@
+{
+  "name": "com.sharkdle.app",
+  "displayName": "Sharkdle",
+  "version": "1.0.1",
+  "description": "A Cordova mobile wrapper for Sharkdle.",
+  "main": "index.js",
+  "scripts": {
+    "serve": "cordova run browser",
+    "android:add": "cordova platform add android",
+    "android:requirements": "cordova requirements android",
+    "android:build": "cordova build android",
+    "android:run": "cordova run android",
+    "android:release": "cordova build android --release",
+    "android:release:apk": "cordova build android --release --buildConfig=build-release.json -- --packageType=apk"
+  },
+  "keywords": [
+    "ecosystem:cordova"
+  ],
+  "author": "Sharkdle",
+  "license": "UNLICENSED",
+  "devDependencies": {
+    "cordova-android": "^15.0.0",
+    "cordova-browser": "^7.0.0",
+    "cordova-ios": "^8.0.1"
+  },
+  "cordova": {
+    "platforms": [
+      "browser",
+      "android",
+      "ios"
+    ]
+  }
+}

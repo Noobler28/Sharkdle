@@ -1,0 +1,1282 @@
+<head>
+<link rel="icon" type="image/png" href="images/favicon.png">
+<link rel="shortcut icon" href="images/favicon.png" type="image/png">
+<link rel="apple-touch-icon" href="images/favicon.png">
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Sharkdle - Shark Wordle</title>
+
+<meta name="description"
+content="Play Sharkdle, the daily shark guessing game. Guess shark species from classifications and test your shark knowledge in this educational game." />
+
+<!-- Open Graph / Social Preview -->
+<meta property="og:title" content="Sharkdle - Shark Wordle" />
+<meta property="og:description" content="Play Sharkdle, the daily shark guessing game." />
+<meta property="og:image" content="https://sharkdle.online/images/favicon.png" />
+<meta property="og:url" content="https://sharkdle.online" />
+<meta property="og:type" content="website" />
+
+<!-- Twitter Preview -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Sharkdle - Shark Wordle">
+<meta name="twitter:description" content="Play Sharkdle, the daily shark guessing game.">
+<meta name="twitter:image" content="https://sharkdle.online/images/favicon.png">
+
+<link rel="stylesheet" href="style.css">
+
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800;900&family=Barlow:wght@400;500;600;700&family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+<!-- Firebase SDKs -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+
+<script src="sharks.js"></script>
+
+    <link rel="stylesheet" href="mobile.css">
+</head>
+
+<body class="home-page home-v3-page">
+
+<img id="cursor-shark" src="images/shark-cursor.png" alt="" aria-hidden="true">
+
+<div class="ocean-ambient" aria-hidden="true">
+    <div class="ambient-rays"></div>
+    <div class="ambient-particles"></div>
+    <div class="ambient-bubble b1"></div>
+    <div class="ambient-bubble b2"></div>
+    <div class="ambient-bubble b3"></div>
+    <div class="ambient-bubble b4"></div>
+</div>
+
+<main class="home-v3-shell">
+    <aside class="home-v3-left">
+        <a class="home-v3-logo" href="index.html" aria-label="Sharkdle home">
+            <span class="home-v3-logo-icon">🦈</span>
+            <span>
+                <strong>Sharkdle</strong>
+                <em>Shark Wordle</em>
+            </span>
+        </a>
+
+        <nav class="home-v3-nav" aria-label="Home navigation">
+            <button class="active" type="button" data-home-v3-tab="play"><i class="fa-solid fa-house"></i><span>Play</span></button>
+            <button type="button" data-home-v3-tab="progress"><i class="fa-solid fa-chart-line"></i><span>Progress</span></button>
+            <button type="button" data-home-v3-tab="explore"><i class="fa-solid fa-compass"></i><span>Explore</span></button>
+            <button type="button" onclick="openPearlShopModal()"><i class="fa-solid fa-store"></i><span>Shop</span></button>
+            <a href="Updates/index.html"><i class="fa-solid fa-newspaper"></i><span>Updates</span></a>
+        </nav>
+
+        <div class="home-v3-fact">
+            <span>Fact of the Day</span>
+            <p>Sharks have been around longer than trees.</p>
+        </div>
+
+        <section class="home-v3-about-links" aria-label="Sharkdle links">
+            <p class="home-v3-made-with">Made with <span class="home-v3-heart-link">&hearts;</span> by the Sharkdle Team</p>
+            <button type="button" onclick="openDevModal()">Meet the Dev</button>
+            <div class="home-v3-social-links">
+                <a class="social-link github-link" href="https://github.com/Noobler28/sharkdle" target="_blank" rel="noopener" aria-label="GitHub"><i class="fa-brands fa-github"></i></a>
+                <a class="social-link instagram-link" href="https://instagram.com/sharkdle.dev" target="_blank" rel="noopener" aria-label="Instagram"><i class="fa-brands fa-instagram"></i></a>
+                <a class="social-link discord-link" href="https://discord.gg/V97Y8545Ve" target="_blank" rel="noopener" aria-label="Discord"><i class="fa-brands fa-discord"></i></a>
+            </div>
+        </section>
+    </aside>
+
+    <section class="home-v3-center" aria-label="Sharkdle play hub">
+        <section class="home-v3-hero">
+            <div class="home-v3-bubbles" aria-hidden="true">
+                <span></span><span></span><span></span><span></span><span></span>
+            </div>
+            <img src="images/home-v3/shark-bg.png" class="home-v3-shark-bg" alt="">
+            <img src="images/home-v3/shark-fg.png" class="home-v3-shark-fg" alt="">
+            <div class="home-v3-hero-copy">
+                <p class="home-v3-eyebrow">The ultimate shark guessing game</p>
+                <h1>Welcome to <span>Sharkdle</span></h1>
+                <p class="hero-subtitle">Dive into daily puzzles, streaks, crates, duels, and the full Sharchive.</p>
+                <div class="home-v3-hero-actions">
+                    <a class="home-v3-play-btn" href="Daily/index.html"><i class="fa-solid fa-play"></i><span>Play Daily Challenge</span></a>
+                    <a class="home-v3-ghost-btn" href="Infinite/index.html"><i class="fa-solid fa-infinity"></i><span>Infinite</span></a>
+                    <a class="home-v3-download-btn" href="https://github.com/Noobler28/Sharkdle/tree/main/Mobile%20Release" target="_blank" rel="noopener"><i class="fa-brands fa-android"></i><span>Android App</span></a>
+                </div>
+                <div id="login-warning" class="login-warning hero-alert hidden">
+                    You are not logged in. Your stats and XP won't be saved.
+                    <button onclick="openLoginModal()">Login</button>
+                </div>
+            </div>
+        </section>
+
+        <section class="home-v3-hub-panels" aria-live="polite">
+        <section class="home-v3-modes home-v3-hub-panel active" id="home-v3-panel-play" aria-labelledby="home-v3-modes-heading" data-home-v3-panel="play">
+            <div class="home-v3-panel-heading">
+                <div class="home-v3-section-label" id="home-v3-modes-heading">Game Modes</div>
+                <p>Pick a shark mode and start guessing.</p>
+            </div>
+            <div class="home-v3-card-grid home-v3-mode-grid">
+                <a class="home-v3-mode-card active" href="Daily/index.html" style="--mode-bg:url('images/home-v3/great-white.png')">
+                    <strong>Daily Mode</strong>
+                    <p>One shark. One chance. Every day.</p>
+                </a>
+                <a class="home-v3-mode-card" href="Infinite/index.html" style="--mode-bg:url('images/home-v3/hammerhead.png')">
+                    <strong>Infinite Mode</strong>
+                    <p>Endless sharks, XP, crates, and streaks.</p>
+                </a>
+                <a class="home-v3-mode-card" href="Practice/index.html" style="--mode-bg:url('images/home-v3/tiger.png')">
+                    <strong>Practice Mode</strong>
+                    <p>Learn clues without risking stats.</p>
+                </a>
+                <a class="home-v3-mode-card" href="Minigames/SharkRNG/index.html" style="--mode-bg:url('images/home-v3/whale.png')">
+                    <strong>Shark RNG</strong>
+                    <p>Roll, upgrade, and chase rare finds.</p>
+                </a>
+                <a class="home-v3-mode-card" href="shark-rescue/index.html" style="--mode-bg:url('images/home-v3/mako.png')">
+                    <strong>Rescue Command</strong>
+                    <p>Save sharks and build your base.</p>
+                </a>
+            </div>
+        </section>
+
+        <section class="home-v3-modes home-v3-hub-panel" id="home-v3-panel-progress" aria-labelledby="home-v3-progress-heading" data-home-v3-panel="progress" hidden>
+            <div class="home-v3-panel-heading">
+                <div class="home-v3-section-label" id="home-v3-progress-heading">Progress</div>
+                <p>Track rewards, claim milestones, and compare your rank.</p>
+            </div>
+            <div class="home-v3-card-grid home-v3-progress-grid">
+                <a class="home-v3-mode-card progress-card" href="Sharkpass/index.html" style="--mode-bg:linear-gradient(135deg, rgba(232,168,34,.24), rgba(6,30,48,.96))">
+                    <span>Season Track</span>
+                    <strong>Shark Pass</strong>
+                    <p>Level up, unlock portraits, badges, crates, and profile themes.</p>
+                </a>
+                <a class="home-v3-mode-card progress-card" href="Achievements/index.html" style="--mode-bg:linear-gradient(135deg, rgba(44,196,196,.24), rgba(6,30,48,.96))">
+                    <span>Milestones</span>
+                    <strong>Achievements</strong>
+                    <p>Claim rewards for wins, streaks, discoveries, duels, and secrets.</p>
+                </a>
+                <a class="home-v3-mode-card progress-card" href="Leaderboard/index.html" style="--mode-bg:linear-gradient(135deg, rgba(120,119,255,.22), rgba(6,30,48,.96))">
+                    <span>Rankings</span>
+                    <strong>Leaderboards</strong>
+                    <p>Check daily, monthly, and all-time leaderboard positions.</p>
+                </a>
+            </div>
+        </section>
+
+        <section class="home-v3-modes home-v3-hub-panel" id="home-v3-panel-explore" aria-labelledby="home-v3-explore-heading" data-home-v3-panel="explore" hidden>
+            <div class="home-v3-panel-heading">
+                <div class="home-v3-section-label" id="home-v3-explore-heading">Explore</div>
+                <p>Move through the story map or browse shark species.</p>
+            </div>
+            <div class="home-v3-card-grid home-v3-explore-grid">
+                <a class="home-v3-mode-card explore-card" href="Story/index.html" style="--mode-bg:linear-gradient(135deg, rgba(46,160,120,.24), rgba(6,30,48,.96))">
+                    <span>Story</span>
+                    <strong>World Map</strong>
+                    <p>Travel through story areas and clear shark challenges.</p>
+                </a>
+                <a class="home-v3-mode-card explore-card" href="Library/index.html" style="--mode-bg:linear-gradient(135deg, rgba(110,207,246,.24), rgba(6,30,48,.96))">
+                    <span>Archive</span>
+                    <strong>Sharchive</strong>
+                    <p>Browse shark species, classifications, images, and details.</p>
+                </a>
+            </div>
+        </section>
+        </section>
+    </section>
+
+    <aside class="home-v3-right">
+        <div id="auth-container" class="auth-container home-v3-auth">
+            <button id="home-v3-profile-widget" class="home-v3-profile-widget hidden" type="button" onclick="openProfileModal()" aria-label="Open profile">
+                <span class="home-v3-profile-avatar-shell" aria-hidden="true">
+                    <img id="home-v3-avatar" src="images/pfp/shark1.png" alt="">
+                </span>
+                <span class="home-v3-profile-copy">
+                    <span class="home-v3-profile-name" id="home-v3-username">Username</span>
+                    <span class="home-v3-profile-level" id="home-v3-level-label">Level 1</span>
+                    <span class="home-v3-profile-xp" id="home-v3-xp-label">XP 0/0</span>
+                    <span class="home-v3-xp-bar" aria-hidden="true"><span id="home-v3-xp-fill"></span></span>
+                </span>
+            </button>
+            <button id="login-btn" onclick="openLoginModal()" class="auth-btn">Login / Sign Up</button>
+        </div>
+
+        <div class="home-v3-currencies">
+            <button id="crates-btn" class="hero-crates-btn hidden" onclick="openHomeCratesModal()">
+                <i class="fa-solid fa-box-open"></i>
+                <span>Crates</span>
+                <strong id="crates-btn-count">0</strong>
+            </button>
+            <div class="home-v3-shield-pill home-v3-pearl-pill" data-tooltip="Obtained by winning games" aria-label="Pearls. Obtained by winning games.">
+                <i class="fa-solid fa-gem"></i>
+                <span>Pearls</span>
+                <strong id="home-v3-pearls">0</strong>
+            </div>
+            <div class="home-v3-shield-pill" data-tooltip="Obtained from cosmetic crates" aria-label="Streak Shields. Obtained from cosmetic crates.">
+                <i class="fa-solid fa-shield-halved"></i>
+                <span>Streak Shields</span>
+                <strong id="home-v3-shields">0/3</strong>
+            </div>
+        </div>
+
+        <div id="daily-bonus-msg" class="hero-bonus-banner home-v3-bonus"></div>
+
+        <div id="xp-event-banner" class="xp-event-banner hidden" aria-live="polite">
+            <div class="xp-event-icon">⚡</div>
+            <div class="xp-event-copy">
+                <span class="xp-event-title">2x XP gain active</span>
+                <span class="xp-event-timer" id="xp-event-timer">Ends in 00:00:00</span>
+            </div>
+        </div>
+
+        <section class="home-v3-event" role="button" tabindex="0" onclick="openCommunityBossEventModal()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openCommunityBossEventModal();}">
+            <span>Current Event</span>
+            <strong>Global Cladoselache</strong>
+            <p id="home-v3-event-copy">Team up with every player to defeat the Cladoselache and unlock shared community milestone rewards.</p>
+            <div class="home-v3-click-view"><i class="fa-solid fa-arrow-pointer"></i><span>Click to view</span></div>
+        </section>
+
+        <section class="home-v3-side-section">
+            <div class="home-v3-section-label">Quick Stats</div>
+            <div class="home-v3-stat-row"><span>Games</span><strong id="home-v3-games">0</strong></div>
+            <div class="home-v3-stat-row"><span>Win Rate</span><strong id="home-v3-winrate">0%</strong></div>
+            <div class="home-v3-stat-row"><span>Best Streak</span><strong id="home-v3-best-streak">0</strong></div>
+            <div class="home-v3-stat-row"><span>Total XP</span><strong id="home-v3-total-xp">0</strong></div>
+        </section>
+    </aside>
+</main>
+
+<div id="pearlShopModal" class="modal hidden" onclick="if(event.target===this) closePearlShopModal()">
+    <div class="modal-content pearl-shop-modal-content">
+        <button type="button" class="modal-x-btn" onclick="closePearlShopModal()" aria-label="Close pearl shop modal">×</button>
+        <div class="pearl-shop-hero">
+            <div>
+                <div class="new-modal-kicker">Pearl Shop</div>
+                <h2>Spend Your Pearls</h2>
+                <p id="home-v3-shop-status">Spend pearls on boosts, crates, and streak protection.</p>
+            </div>
+            <div class="pearl-shop-balance">
+                <i class="fa-solid fa-gem" aria-hidden="true"></i>
+                <span>Pearls</span>
+                <strong id="pearl-shop-balance">0</strong>
+            </div>
+        </div>
+        <div class="pearl-shop-grid">
+            <article class="home-v3-shop-item" data-pearl-shop-item="streak-shield">
+                <i class="fa-solid fa-shield-halved" aria-hidden="true"></i>
+                <div>
+                    <strong>Streak Shield</strong>
+                    <span>Protect one active streak after a loss.</span>
+                </div>
+                <button type="button" onclick="buyPearlShopItem('streak-shield')">250p</button>
+            </article>
+            <article class="home-v3-shop-item" data-pearl-shop-item="pearl-boost">
+                <i class="fa-solid fa-gem" aria-hidden="true"></i>
+                <div>
+                    <strong>2x Pearls Boost</strong>
+                    <span>Double pearl drops for 1 hour.</span>
+                </div>
+                <button type="button" onclick="buyPearlShopItem('pearl-boost')">500p</button>
+            </article>
+            <article class="home-v3-shop-item" data-pearl-shop-item="cosmetic-crate">
+                <i class="fa-solid fa-box-open" aria-hidden="true"></i>
+                <div>
+                    <strong>Cosmetic Crate</strong>
+                    <span>One standard cosmetic crate.</span>
+                </div>
+                <button type="button" onclick="buyPearlShopItem('cosmetic-crate')">500p</button>
+            </article>
+            <article class="home-v3-shop-item" data-pearl-shop-item="event-crate">
+                <i class="fa-solid fa-star" aria-hidden="true"></i>
+                <div>
+                    <strong id="home-v3-event-crate-name">Event Crate</strong>
+                    <span>One current event crate.</span>
+                </div>
+                <button type="button" onclick="buyPearlShopItem('event-crate')">750p</button>
+            </article>
+            <article class="home-v3-shop-item featured" data-pearl-shop-item="season-xp">
+                <i class="fa-solid fa-bolt" aria-hidden="true"></i>
+                <div>
+                    <strong>Season 2x XP</strong>
+                    <span>Permanent for the current season.</span>
+                </div>
+                <button type="button" onclick="buyPearlShopItem('season-xp')">3000p</button>
+            </article>
+        </div>
+    </div>
+</div>
+
+<footer class="home-footer">
+
+
+<p class="home-footer-made">Made with <span class="home-footer-heart">&hearts;</span> by the Sharkdle Team - thanks for playing!</p>
+<div class="home-footer-actions">
+    <button class="footer-dev-link" type="button" onclick="openDevModal()">Meet the Dev</button>
+</div>
+<div class="links home-footer-links">
+<a class="footer-social-link github-link" href="https://github.com/Noobler28/sharkdle" target="_blank" rel="noopener">GitHub</a>
+
+<a class="footer-social-link updates-link" href="Updates/index.html">Updates</a>
+
+<a class="footer-social-link instagram-link" href="https://instagram.com/sharkdle.dev" target="_blank" rel="noopener">Instagram</a>
+
+<a class="footer-social-link discord-link" href="https://discord.gg/V97Y8545Ve" target="_blank" rel="noopener">Discord</a>
+</div>
+
+<p style="font-size: 12px; color: #888; margin-top: 15px;">© 2026 Sharkdle. All rights reserved.</p>
+
+</footer>
+
+<!-- Meet the Dev Modal -->
+<div id="devModal" class="modal hidden">
+    <div class="modal-content dev-modal-content">
+        <div class="dev-modal-kicker">Meet the Dev</div>
+        <h2>Connor</h2>
+        <img class="dev-avatar-image" src="images/dev.jpg" alt="Connor, the developer of Sharkdle">
+        <h3>Noobler28</h3>
+        <p class="dev-modal-role">Marine biology student and solo Sharkdle developer</p>
+        <p class="dev-modal-copy">Hi, I'm Connor, the solo developer behind Sharkdle. What started as a project for my own enjoyment has grown into something I never imagined, and that is all down to you. Thank you for playing, sharing feedback, and supporting the game. It really means a lot. I'm so glad people are enjoying something I've spent so much time building. Keep guessing species!</p>
+        <div class="dev-social-links">
+             <a class="dev-social-link github-link" href="https://github.com/Noobler28" target="_blank" rel="noopener"><i class="fa-brands fa-github"></i><span>GitHub</span></a>
+             <a class="dev-social-link instagram-link" href="https://instagram.com/sharkdle.dev" target="_blank" rel="noopener"><i class="fa-brands fa-instagram"></i><span>Instagram</span></a>
+             <a class="dev-social-link discord-link" href="https://discord.gg/V97Y8545Ve" target="_blank" rel="noopener"><i class="fa-brands fa-discord"></i><span>Discord</span></a>
+         </div>
+         <div class="dev-support-box">
+             <p>Support the dev</p>
+             <a class="coffee-link" href="https://buymeacoffee.com/sharkdle" target="_blank" rel="noopener">Donate</a>
+         </div>
+         <button class="dev-close-btn" onclick="closeDevModal()">Close</button>
+    </div>
+</div>
+
+
+<!-- Login Modal -->
+<div id="loginModal" class="modal hidden shark-modal-backdrop">
+<div class="modal-content auth-modal-content new-site-modal">
+<button type="button" class="modal-x-btn" onclick="closeLoginModal()" aria-label="Close login modal">×</button>
+<div class="new-modal-heading">
+<div class="new-modal-kicker">Account</div>
+<h2>Login to Sharkdle</h2>
+<p>Save your streaks, crates, cosmetics, XP, and profile across every visit.</p>
+</div>
+
+<div class="login-form auth-panel active-auth-panel">
+<label class="auth-field"><span>Email</span><input type="email" id="login-email" placeholder="you@example.com"></label>
+<label class="auth-field"><span>Password</span><input type="password" id="login-password" placeholder="Password"></label>
+<button onclick="loginUser()" class="modal-primary-btn">Login</button>
+<p class="auth-switch-copy auth-forgot-copy"><button onclick="forgotPassword()" type="button">Forgot password?</button></p>
+<p class="auth-switch-copy">New here? <button onclick="switchToSignup()">Create an account</button></p>
+</div>
+
+<div class="signup-form auth-panel hidden">
+<label class="auth-field"><span>Email</span><input type="email" id="signup-email" placeholder="you@example.com"></label>
+<label class="auth-field"><span>Password</span><input type="password" id="signup-password" placeholder="Password (min 6 characters)"></label>
+<label class="auth-field"><span>Username</span><input type="text" id="signup-username" placeholder="Shark name"></label>
+<button onclick="signupUser()" class="modal-primary-btn">Sign Up</button>
+<p class="auth-switch-copy">Already have an account? <button onclick="switchToLogin()">Login</button></p>
+</div>
+
+<p id="auth-error" class="auth-error"></p>
+</div>
+</div>
+
+<!-- Profile Modal -->
+<div id="profileModal" class="modal hidden profile-overhaul-backdrop profile-game-backdrop">
+  <div class="modal-content profile-overhaul-modal profile-game-modal">
+    <button type="button" class="modal-x-btn profile-overhaul-close" onclick="closeProfileModal()" aria-label="Close profile modal">×</button>
+
+    <aside class="profile-overhaul-sidebar profile-game-rail">
+      <div class="profile-game-brand">
+        <span>Sharkdle</span>
+        <strong>Profile</strong>
+      </div>
+      <nav class="profile-overhaul-tabs profile-game-tabs" aria-label="Profile sections">
+        <button class="profile-tab-btn active" id="overview-tab-btn" onclick="showProfileTab('overview')">Overview</button>
+        <button class="profile-tab-btn" id="inventory-tab-btn" onclick="showProfileTab('inventory')">Locker</button>
+        <button class="profile-tab-btn" id="stats-tab-btn" onclick="showProfileTab('stats')">Stats</button>
+        <button class="profile-tab-btn" id="recent-tab-btn" onclick="showProfileTab('recent')">History</button>
+        <button class="profile-tab-btn" id="friends-tab-btn" onclick="showProfileTab('friends')">Social</button>
+        <button class="profile-tab-btn" id="settings-tab-btn" onclick="showProfileTab('settings')">Settings</button>
+      </nav>
+    </aside>
+
+    <main class="profile-overhaul-main profile-game-stage">
+      <section class="profile-tab-content profile-overhaul-panel active profile-game-page" id="overview-tab">
+        <header class="profile-game-page-head">
+          <span>Overview</span>
+          <h2>Player Card</h2>
+        </header>
+        <div class="profile-game-overview-grid">
+          <section class="profile-game-card-preview">
+            <div class="profile-game-avatar-shell">
+              <img id="profile-pic-overview-preview" src="images/pfp/shark1.png" alt="">
+            </div>
+            <div>
+              <h3 id="profile-username-overview-preview">Username</h3>
+              <p>Current loadout and latest progress.</p>
+              <button onclick="showProfileTab('inventory')">Open Locker</button>
+            </div>
+          </section>
+          <div class="profile-overhaul-quickstats">
+            <article><span>Total Guesses</span><strong id="profile-xp-overview">0</strong></article>
+            <article><span>Wins</span><strong id="profile-wins-overview">0</strong></article>
+            <article><span>Streak</span><strong id="profile-current-streak-overview">0</strong></article>
+            <article><span>Best</span><strong id="profile-best-game-overview">0</strong></article>
+          </div>
+        </div>
+        <section class="profile-game-panel">
+          <h3>Latest Games</h3>
+          <div class="recent-games-list mini" id="recent-games-list-overview"></div>
+        </section>
+      </section>
+
+      <section class="profile-tab-content profile-overhaul-panel profile-game-page" id="profile-inventory-tab">
+        <header class="profile-game-page-head profile-game-page-head-row">
+          <div>
+            <span>Locker</span>
+            <h2>Collection</h2>
+          </div>
+          <button onclick="openHomeCratesModal()">Open Crates</button>
+        </header>
+
+        <div class="profile-inventory-hero">
+          <div id="profile-hero-card" class="profile-overhaul-card profile-hero-card theme-default">
+            <div class="profile-avatar-orb">
+              <img id="profile-pic" src="images/pfp/shark1.png" alt="Profile">
+            </div>
+            <div class="profile-overhaul-identity">
+              <div class="profile-name-line">
+                <p class="profile-username-text" id="profile-username">Username</p>
+                <button id="edit-profile-btn" onclick="enableUsernameEdit()" class="profile-edit-btn">Edit</button>
+              </div>
+              <div class="profile-name-cluster">
+                <span id="profile-leaderboard-badge" class="profile-leaderboard-badge hidden"></span>
+              </div>
+            </div>
+            <div id="username-edit-container" class="hidden username-edit-container profile-overhaul-name-edit">
+              <input type="text" id="username-input" placeholder="New username" class="username-input">
+              <div class="username-edit-actions">
+                <button onclick="saveUsername()" class="btn-save">Save</button>
+                <button onclick="cancelUsernameEdit()" class="btn-cancel">Cancel</button>
+              </div>
+            </div>
+            <div class="profile-overhaul-equipped">
+              <div>
+                <span>Badge</span>
+                <strong id="profile-badge-label">Starter</strong>
+              </div>
+              <img id="profile-badge-img" class="profile-badge-image" src="" alt="Badge" style="display:none;">
+            </div>
+          </div>
+        </div>
+
+        <nav class="profile-inventory-tabs" aria-label="Inventory categories">
+          <button class="active" type="button" data-profile-inventory-tab="portraits" onclick="showProfileInventoryCategory('portraits')">Portraits</button>
+          <button type="button" data-profile-inventory-tab="badges" onclick="showProfileInventoryCategory('badges')">Badges</button>
+          <button type="button" data-profile-inventory-tab="themes" onclick="showProfileInventoryCategory('themes')">Themes</button>
+          <button type="button" data-profile-inventory-tab="items" onclick="showProfileInventoryCategory('items')">Items</button>
+          <button type="button" data-profile-inventory-tab="codes" onclick="showProfileInventoryCategory('codes')">Codes</button>
+        </nav>
+
+        <div class="profile-inventory-section" data-profile-inventory-section="portraits">
+          <h4>Portraits</h4>
+          <div id="profile-inventory-pfps" class="profile-cosmetic-gallery"></div>
+        </div>
+        <div class="profile-inventory-section" data-profile-inventory-section="badges" hidden>
+          <h4>Badges</h4>
+          <div id="profile-inventory-badges" class="profile-cosmetic-gallery badge-gallery"></div>
+        </div>
+        <div class="profile-inventory-section" data-profile-inventory-section="themes" hidden>
+          <h4>Themes</h4>
+          <div id="theme-select-container" class="profile-cosmetic-gallery theme-gallery"></div>
+        </div>
+        <div class="profile-inventory-section" data-profile-inventory-section="items" hidden>
+          <h4>Items</h4>
+          <div id="profile-inventory-crates" class="profile-cosmetic-gallery utility-gallery"></div>
+        </div>
+        <div class="profile-inventory-section profile-code-section" data-profile-inventory-section="codes" hidden>
+          <h4>Codes</h4>
+          <section class="profile-redeem-card">
+            <div class="profile-redeem-copy">
+              <strong>Redeem Code</strong>
+              <span>Claim event rewards, crates, XP, or cosmetics.</span>
+            </div>
+            <div class="profile-redeem-row">
+              <input type="text" id="redeem-code-input" placeholder="Enter code">
+              <button type="button" onclick="redeemCode()">Redeem</button>
+            </div>
+            <div id="redeem-message"></div>
+          </section>
+        </div>
+      </section>
+
+      <section class="profile-tab-content profile-overhaul-panel profile-game-page" id="stats-tab">
+        <header class="profile-game-page-head">
+          <span>Stats</span>
+          <h2>Records</h2>
+        </header>
+        <div class="stats-detail profile-stats-scroll">
+          <div class="stat-card"><span class="stat-label">Total Guesses</span><span class="stat-value" id="profile-xp">0</span></div>
+          <div class="stat-card"><span class="stat-label">Games Played</span><span class="stat-value" id="profile-games">0</span></div>
+          <div class="stat-card"><span class="stat-label">Wins</span><span class="stat-value" id="profile-wins">0</span></div>
+          <div class="stat-card"><span class="stat-label">Losses</span><span class="stat-value" id="profile-losses">0</span></div>
+          <div class="stat-card"><span class="stat-label">Average Guesses</span><span class="stat-value" id="profile-avg-guesses">0</span></div>
+          <div class="stat-card"><span class="stat-label">Best Game</span><span class="stat-value" id="profile-best-game">0</span></div>
+          <div class="stat-card"><span class="stat-label">Current Streak</span><span class="stat-value" id="profile-current-streak">0</span></div>
+          <div class="stat-card"><span class="stat-label">Highest Streak</span><span class="stat-value" id="profile-highest-streak">0</span></div>
+        </div>
+      </section>
+
+      <section class="profile-tab-content profile-overhaul-panel profile-game-page" id="recent-tab">
+        <header class="profile-game-page-head">
+          <span>History</span>
+          <h2>Recent Games</h2>
+        </header>
+        <div class="recent-games-list" id="recent-games-list"></div>
+      </section>
+
+      <section class="profile-tab-content profile-overhaul-panel profile-game-page" id="friends-tab">
+        <header class="profile-game-page-head">
+          <span>Social</span>
+          <h2>Friends</h2>
+        </header>
+        <div class="friends-container compact-social">
+          <div class="friends-header">
+            <div class="friends-hero-copy">
+              <h3 class="friends-title">Friends & Duels</h3>
+              <div class="friends-stats">
+                <div class="stat-item"><div class="stat-number" id="friends-count">0</div><div class="stat-label">Friends</div></div>
+                <div class="stat-item"><div class="stat-number" id="requests-count">0</div><div class="stat-label">Requests</div></div>
+                <div class="stat-item"><div class="stat-number" id="duels-count">0</div><div class="stat-label">Duels</div></div>
+              </div>
+            </div>
+            <div class="user-info-compact">
+              <div class="friends-code-label">Friend Code</div>
+              <div class="code-display"><span class="code-text" id="user-friend-code">(login required)</span><button onclick="copyFriendCode()" class="copy-btn">Copy</button></div>
+            </div>
+          </div>
+          <div class="add-friend-section"><input type="text" id="add-friend-uid" placeholder="Enter friend code" class="friend-input"><button onclick="addFriend()" class="primary-btn">Add Friend</button><div id="add-friend-status" class="status-message"></div></div>
+          <div class="friends-lists-grid">
+            <div class="friend-card"><div class="card-header"><h3>Friends</h3><div class="card-count" id="friends-card-count">0</div></div><ul id="friends-list" class="friends-list"></ul></div>
+            <div class="friend-card"><div class="card-header"><h3>Duels</h3><div class="card-count" id="duels-card-count">0</div></div><ul id="duels-list" class="friends-list"></ul></div>
+            <div class="friend-card"><div class="card-header"><h3>Requests</h3><div class="card-count" id="requests-card-count">0</div></div><ul id="requests-list" class="friends-list"></ul></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="profile-tab-content profile-overhaul-panel profile-game-page" id="settings-tab">
+        <header class="profile-game-page-head">
+          <span>Settings</span>
+          <h2>Sharkdle Settings</h2>
+        </header>
+        <div class="profile-settings-console">
+          <div class="profile-settings-grid">
+            <section class="profile-settings-row">
+              <div class="profile-settings-copy">
+                <strong>Fun Mode</strong>
+                <span>Custom shark cursor, bubbles, bite effect, and playful UI moments.</span>
+              </div>
+              <label class="toggle-switch" for="fun-mode-toggle">
+                <input id="fun-mode-toggle" type="checkbox">
+                <span class="toggle-slider"></span>
+              </label>
+            </section>
+
+            <section class="profile-settings-row">
+              <div class="profile-settings-copy">
+                <strong>Sound Effects</strong>
+                <span>Subtle clicks, toggles, crate hits, and success chimes.</span>
+              </div>
+              <label class="toggle-switch" for="sfx-toggle">
+                <input id="sfx-toggle" type="checkbox">
+                <span class="toggle-slider"></span>
+              </label>
+            </section>
+
+            <section class="profile-settings-row">
+              <div class="profile-settings-copy">
+                <strong>Reduced Motion</strong>
+                <span>Reduce hover, modal, bubble, and reveal animation.</span>
+              </div>
+              <label class="toggle-switch" for="reduced-motion-toggle">
+                <input id="reduced-motion-toggle" type="checkbox">
+                <span class="toggle-slider"></span>
+              </label>
+            </section>
+
+            <section class="profile-settings-row">
+              <div class="profile-settings-copy">
+                <strong>Compact UI</strong>
+                <span>Tighten spacing for smaller displays and denser menus.</span>
+              </div>
+              <label class="toggle-switch" for="compact-ui-toggle">
+                <input id="compact-ui-toggle" type="checkbox">
+                <span class="toggle-slider"></span>
+              </label>
+            </section>
+
+            <section class="profile-settings-row">
+              <div class="profile-settings-copy">
+                <strong>High Contrast</strong>
+                <span>Boost borders and text readability across darker panels.</span>
+              </div>
+              <label class="toggle-switch" for="high-contrast-toggle">
+                <input id="high-contrast-toggle" type="checkbox">
+                <span class="toggle-slider"></span>
+              </label>
+            </section>
+
+            <section class="profile-settings-row">
+              <div class="profile-settings-copy">
+                <strong>Animated Ocean</strong>
+                <span>Toggle background rays, drifting particles, and ocean ambience visuals.</span>
+              </div>
+              <label class="toggle-switch" for="animated-ocean-toggle">
+                <input id="animated-ocean-toggle" type="checkbox">
+                <span class="toggle-slider"></span>
+              </label>
+            </section>
+
+            <section class="profile-settings-row">
+              <div class="profile-settings-copy">
+                <strong>Ocean Audio</strong>
+                <span>Enable a gentle looping underwater bed when the browser allows it.</span>
+              </div>
+              <label class="toggle-switch" for="ambient-audio-toggle">
+                <input id="ambient-audio-toggle" type="checkbox">
+                <span class="toggle-slider"></span>
+              </label>
+            </section>
+
+          </div>
+
+          <div class="profile-settings-actions">
+            <button type="button" id="settings-test-sound">Test Sound</button>
+            <button type="button" id="settings-reset">Reset Settings</button>
+            <button id="seasonal-theme-toggle-btn" type="button" onclick="toggleSeasonalThemeOverride()">Use Default Theme</button>
+            <button id="sync-data-button" type="button" onclick="syncAllFirestoreData()">Sync Data</button>
+            <button type="button" onclick="logoutUser()">Logout</button>
+          </div>
+          <div id="seasonal-theme-status" class="profile-settings-status"></div>
+        </div>
+      </section>
+    </main>
+  </div>
+</div>
+
+<!-- Friend Profile Modal -->
+<div id="friendProfileModal" class="modal hidden">
+    <div class="modal-content" style="width: 95%; max-width: 500px; max-height: 80vh; overflow-y: auto;">
+        <div id="friend-profile-hero-card" class="profile-hero-card friend-profile-hero theme-default" style="gap: 12px; margin-bottom: 20px;">
+            <img id="friend-profile-pic" src="images/pfp/shark1.png" alt="Profile" style="width: 60px; height: 60px; border-radius: 50%; object-fit: cover;">
+            <div class="profile-identity-block">
+                <div class="profile-name-cluster">
+                    <h2 id="friend-profile-username" style="margin: 0; font-size: 24px;">Username</h2>
+                    <span id="friend-profile-leaderboard-badge" class="profile-leaderboard-badge hidden"></span>
+                </div>
+                <p id="friend-profile-uid" style="margin: 5px 0 0 0; color: #888; font-size: 12px;">UID</p>
+            </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; margin-bottom: 20px;">
+            <div class="stat-card">
+                <div class="stat-label">Total Guesses</div>
+                <div class="stat-value" id="friend-profile-total-guesses">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Games Played</div>
+                <div class="stat-value" id="friend-profile-games">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Wins</div>
+                <div class="stat-value" id="friend-profile-wins">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Losses</div>
+                <div class="stat-value" id="friend-profile-losses">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Avg Guesses</div>
+                <div class="stat-value" id="friend-profile-avg">0.00</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Best Game</div>
+                <div class="stat-value" id="friend-profile-best">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Current Streak</div>
+                <div class="stat-value" id="friend-profile-current">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Highest Streak</div>
+                <div class="stat-value" id="friend-profile-highest">0</div>
+            </div>
+        </div>
+
+        <button onclick="closeFriendProfileModal()" style="width: 100%; padding: 12px; background: #ccc; color: #333; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">Close</button>
+    </div>
+</div>
+
+<div id="friendDuelModal" class="modal hidden">
+    <div class="modal-content duel-modal-content" style="width: 95%; max-width: 900px; max-height: 88vh; overflow-y: auto;">
+        <div class="duel-modal-shell">
+            <div class="duel-modal-topbar">
+                <div>
+                    <div class="duel-kicker">Friend Duel</div>
+                    <h2 id="duel-title" class="duel-title">Shark Showdown</h2>
+                    <p id="duel-subtitle" class="duel-subtitle">Same shark. Fastest solve wins.</p>
+                </div>
+                <button onclick="closeFriendDuelModal()" class="duel-close-btn">Close</button>
+            </div>
+
+            <div class="duel-overview-strip">
+                <div class="duel-overview-card">
+                    <div class="duel-overview-label">Win Condition</div>
+                    <div class="duel-overview-value">Solve in fewer guesses</div>
+                </div>
+                <div class="duel-overview-card">
+                    <div class="duel-overview-label">Tiebreak</div>
+                    <div class="duel-overview-value">Same guesses = draw</div>
+                </div>
+                <div class="duel-overview-card">
+                    <div class="duel-overview-label">Pressure</div>
+                    <div class="duel-overview-value">12 guesses max</div>
+                </div>
+            </div>
+
+            <div class="duel-versus-row">
+                <div id="duel-self-card" class="duel-player-card">
+                    <img id="duel-self-pic" src="images/pfp/shark1.png" alt="You" class="duel-player-avatar">
+                    <div>
+                        <div class="duel-player-label">You</div>
+                        <div id="duel-self-name" class="duel-player-name">Player</div>
+                    </div>
+                </div>
+                <div class="duel-versus-badge">VS</div>
+                <div id="duel-opponent-card" class="duel-player-card">
+                    <img id="duel-opponent-pic" src="images/pfp/shark1.png" alt="Opponent" class="duel-player-avatar">
+                    <div>
+                        <div class="duel-player-label">Opponent</div>
+                        <div id="duel-opponent-name" class="duel-player-name">Rival</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="duel-status-grid">
+                <div class="duel-status-card">
+                    <div class="duel-status-label">Your Status</div>
+                    <div id="duel-self-status" class="duel-status-value">Awaiting move</div>
+                </div>
+                <div class="duel-status-card">
+                    <div class="duel-status-label">Opponent Status</div>
+                    <div id="duel-opponent-status" class="duel-status-value">Awaiting move</div>
+                </div>
+                <div class="duel-status-card">
+                    <div class="duel-status-label">Attempts Left</div>
+                    <div id="duel-attempts-left" class="duel-status-value">12</div>
+                </div>
+                <div class="duel-status-card">
+                    <div class="duel-status-label">Your Guesses</div>
+                    <div id="duel-self-guess-count" class="duel-status-value">0</div>
+                </div>
+                <div class="duel-status-card">
+                    <div class="duel-status-label">Opponent Guesses</div>
+                    <div id="duel-opponent-guess-count" class="duel-status-value">0</div>
+                </div>
+                <div class="duel-status-card">
+                    <div class="duel-status-label">Result</div>
+                    <div id="duel-result" class="duel-status-value">Battle in progress</div>
+                </div>
+            </div>
+
+            <div id="duel-message" class="duel-message">Read the board, make your guess, and keep the guess count low.</div>
+            <div id="duel-live-note" class="duel-live-note">The board refreshes live as the duel moves.</div>
+
+            <div id="duel-input-area" class="duel-input-area">
+                <div class="duel-input-stack">
+                    <input type="text" id="duel-guess-input" class="friend-input duel-guess-input" placeholder="Type a shark name..." autocomplete="off" spellcheck="false">
+                    <div id="duel-suggestions" class="duel-suggestions hidden"></div>
+                </div>
+                <button onclick="submitDuelGuess()" class="primary-btn">Submit Guess</button>
+            </div>
+
+            <div class="duel-board-header">
+                <div>
+                    <div class="duel-board-kicker">Your Board</div>
+                    <div class="duel-board-title">Guess History</div>
+                </div>
+            </div>
+
+            <div id="duel-guesses" class="duel-guesses-board"></div>
+        </div>
+    </div>
+</div>
+
+
+
+<!-- Profile Picture Modal -->
+<div id="profilePicModal" class="modal hidden">
+<div class="modal-content picker-modal-content pfp-picker-modal-content">
+<div class="picker-modal-heading">
+<div class="picker-modal-kicker">Cosmetics</div>
+<h2>Profile Picture</h2>
+<p class="pfp-picker-subtitle">Choose a portrait for your profile, friends list, and leaderboards.</p>
+</div>
+
+<div class="pfp-picker-preview" id="pfp-picker-preview">
+<div class="pfp-picker-preview-frame">
+<img id="pfp-picker-preview-img" src="images/pfp/shark1.png" alt="Selected profile picture">
+<span class="pfp-picker-preview-crown hidden" id="pfp-picker-preview-crown" aria-hidden="true">👑</span>
+</div>
+<div class="pfp-picker-preview-copy">
+<div class="pfp-picker-preview-label">Equipped portrait</div>
+<div class="pfp-picker-preview-name" id="pfp-picker-preview-name">Whale Shark</div>
+<div class="pfp-picker-preview-source" id="pfp-picker-preview-source">Starter shark</div>
+</div>
+</div>
+
+<div class="pfp-picker-toolbar">
+<input type="search" id="pfp-picker-search" class="pfp-picker-search" placeholder="Search sharks..." autocomplete="off" spellcheck="false">
+<div class="pfp-picker-tabs picker-modal-tabs" id="pfp-picker-tabs" role="tablist">
+<button type="button" class="picker-modal-tab active" data-pfp-filter="all" role="tab" aria-selected="true">All</button>
+<button type="button" class="picker-modal-tab" data-pfp-filter="starter" role="tab">Starter</button>
+<button type="button" class="picker-modal-tab" data-pfp-filter="pass" role="tab">Shark Pass</button>
+<button type="button" class="picker-modal-tab" data-pfp-filter="reward" role="tab">Rewards</button>
+<button type="button" class="picker-modal-tab" data-pfp-filter="crate" role="tab">Crates</button>
+</div>
+</div>
+
+<div class="pfp-picker-meta">
+<span id="pfp-picker-count">0 portraits</span>
+<span id="pfp-picker-unlocked-count">0 unlocked</span>
+</div>
+
+<div id="pfp-picker-grid" class="pfp-picker-grid" role="list"></div>
+<p id="pfp-picker-empty" class="pfp-picker-empty hidden">No portraits match your search. Try another filter or clear the search box.</p>
+
+<button type="button" class="pfp-picker-close-btn" onclick="closeProfilePicModal()">Done</button>
+</div>
+</div>
+
+<!-- Badge Modal -->
+<div id="badgeModal" class="modal hidden">
+<div class="modal-content picker-modal-content badge-picker-modal-content" style="width: 95%; max-width: 640px; max-height: 85vh; overflow-y: auto; display: flex; flex-direction: column;">
+<div class="picker-modal-heading">
+<div class="picker-modal-kicker">Cosmetics</div>
+<h2 style="margin-top: 0; margin-bottom: 12px;">Choose Badge</h2>
+</div>
+<p style="color: #888; font-size: 14px; margin-bottom: 18px;">Equip a badge for your profile.</p>
+<div id="badge-select-container" class="profile-cosmetic-row badge-select-grid" style="max-height: 56vh; overflow-y: auto; padding-right: 4px;"></div>
+<button onclick="closeBadgeModal()" style="width: 100%; padding: 10px; margin-top: 16px; background: #ccc; color: #333; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; flex-shrink: 0;">Close</button>
+</div>
+</div>
+
+<!-- Daily Login Rewards Modal -->
+<div id="dailyLoginModal" class="modal hidden shark-modal-backdrop">
+<div class="modal-content daily-login-modal-content new-site-modal">
+<button type="button" class="modal-x-btn" onclick="closeDailyLoginModal()" aria-label="Close daily rewards modal">×</button>
+<div class="new-modal-heading centered">
+<div class="new-modal-kicker">Login Streak</div>
+<h2>Daily Rewards</h2>
+<p>Claim your streak bonus and keep the chain alive.</p>
+</div>
+
+<div id="daily-rewards-grid" class="daily-rewards-grid">
+<!-- Populated by JavaScript -->
+</div>
+
+<div id="day-7-reward" class="day-seven-reward">
+</div>
+
+<button onclick="closeDailyLoginModal()" class="modal-secondary-btn">Close</button>
+</div>
+</div>
+
+<div id="adminAbuseModal" class="modal hidden">
+<div class="modal-content picker-modal-content admin-abuse-modal-content" style="width:95%;max-width:860px;max-height:88vh;overflow-y:auto;display:flex;flex-direction:column;">
+<div class="picker-modal-heading">
+<div class="picker-modal-kicker">Developer Tools</div>
+<h2>Admin Abuse</h2>
+</div>
+
+<section class="picker-section admin-abuse-section">
+<h3>Global 2x XP Event</h3>
+<div class="admin-abuse-row">
+<input id="admin-global-xp-hours" type="number" min="1" max="720" step="1" value="24" class="admin-abuse-input" placeholder="Hours">
+<button class="primary-btn admin-abuse-btn" onclick="adminStartGlobalXpEvent()">Start 2x XP</button>
+<button class="admin-abuse-btn admin-abuse-btn-secondary" onclick="adminStopGlobalXpEvent()">Stop Event</button>
+</div>
+<div id="admin-xp-status" class="admin-abuse-status">No event update yet.</div>
+    </section>
+
+<section class="picker-section admin-abuse-section">
+<h3>Online Users</h3>
+<div class="admin-abuse-row">
+<div id="admin-online-users-display" class="admin-online-users-display" title="Hover to view online users.">Online users: 0</div>
+</div>
+<div class="admin-abuse-status"></div>
+</section>
+
+    <section class="picker-section admin-abuse-section">
+        <h3>Global Item Grants</h3>
+<p style="margin:0 0 10px 0;color:#9fd9ea;font-size:12px;">Grants only apply to players active in the last 5 minutes.</p>
+<div class="admin-abuse-grid">
+
+</div>
+<div class="admin-abuse-card">
+<div class="admin-abuse-card-title">Streak Shields</div>
+<div class="admin-abuse-row">
+<input id="admin-grant-shields-count" type="number" min="1" max="99" step="1" value="1" class="admin-abuse-input" placeholder="Amount">
+<button class="admin-abuse-btn" onclick="adminGrantGlobalStreakShields()">Grant</button>
+</section>
+
+<section class="picker-section admin-abuse-section">
+<h3>Index Theme</h3>
+<div class="admin-abuse-row">
+<select id="admin-index-theme-select" class="admin-abuse-select">
+<option value="default">Default Ocean</option>
+<option value="summer">Summer Splash</option>
+<option value="birthday">Birthday Bash</option>
+<option value="christmas">Christmas Reef</option>
+<option value="halloween">Halloween Depths</option>
+</select>
+<button class="admin-abuse-btn" onclick="adminApplyIndexTheme()">Apply Theme</button>
+</div>
+<div id="admin-theme-status" class="admin-abuse-status">Theme control ready.</div>
+</section>
+
+<section class="picker-section admin-abuse-section">
+<h3>Global Message (All Pages)</h3>
+<textarea id="admin-global-message-input" class="admin-abuse-textarea" maxlength="220" placeholder="Example: Happy Shark Week! 2x XP is live for the next 24 hours."></textarea>
+<div class="admin-abuse-row">
+<select id="admin-global-message-type" class="admin-abuse-select">
+<option value="info">Info</option>
+<option value="event">Event</option>
+<option value="warning">Warning</option>
+</select>
+<button class="admin-abuse-btn" onclick="adminSetGlobalMessage()">Publish</button>
+<button class="admin-abuse-btn admin-abuse-btn-secondary" onclick="adminClearGlobalMessage()">Clear</button>
+</div>
+<div id="admin-message-status" class="admin-abuse-status">No message update yet.</div>
+</section>
+
+<button onclick="closeAdminAbuseModal()" style="width:100%;padding:10px;margin-top:16px;background:#ccc;color:#333;border:none;border-radius:6px;cursor:pointer;font-weight:600;flex-shrink:0;">Close</button>
+</div>
+</div>
+
+<div id="homeCratesModal" class="modal hidden">
+<div class="modal-content home-crates-modal-content">
+<div class="home-crates-heading">
+<div class="picker-modal-kicker">Inventory</div>
+<h2>Crates</h2>
+<p>Open ready crates, inspect drops, or craft limited crates.</p>
+</div>
+
+<div class="home-crates-grid">
+<article class="home-crate-card">
+<div class="home-crate-topline">
+<div>
+<h3>Cosmetic Crate</h3>
+<p>Core cosmetic drops.</p>
+</div>
+<div class="home-crate-count"><span id="home-crate-reef-count">0</span> ready</div>
+</div>
+<div class="home-crate-showcase">
+<div class="home-crate-visual"><i class="fa-solid fa-box-open"></i></div>
+<div class="home-crate-odds">
+<div><span>Common</span><strong>58%</strong></div>
+<div><span>Rare</span><strong>28%</strong></div>
+<div><span>Epic</span><strong>10%</strong></div>
+<div><span>Legendary</span><strong>4%</strong></div>
+</div>
+</div>
+<div class="home-crate-actions">
+<button id="home-open-reef-crate-btn" type="button" onclick="openHomeCrate('reef')">Open Crate</button>
+<button type="button" onclick="openCrateDropsModal('reef')">View Drops</button>
+</div>
+</article>
+
+<article class="home-crate-card summer">
+<div class="home-crate-topline">
+<div>
+<h3>Summer Crate <span>Limited</span></h3>
+<p>Summer Splash rewards.</p>
+</div>
+<div class="home-crate-count summer"><span id="home-crate-summer-count">0</span> ready</div>
+</div>
+<div class="home-crate-showcase">
+<div class="home-crate-visual summer"><i class="fa-solid fa-umbrella-beach"></i></div>
+<div class="home-crate-odds">
+<div><span>Common</span><strong>58%</strong></div>
+<div><span>Rare</span><strong>28%</strong></div>
+<div><span>Epic</span><strong>10%</strong></div>
+<div><span>Legendary</span><strong>4%</strong></div>
+</div>
+</div>
+<div class="home-crate-actions">
+<button id="home-open-summer-crate-btn" type="button" onclick="openHomeCrate('summer')">Open Crate</button>
+<button type="button" onclick="openCrateDropsModal('summer')">View Drops</button>
+</div>
+</article>
+</div>
+
+<div class="home-crates-actions">
+<button type="button" onclick="openCraftingModalFromHome()">Crafting</button>
+<button type="button" onclick="closeHomeCratesModal()">Close</button>
+</div>
+<p id="home-crates-status" class="home-crates-status">Win games for a chance to earn crates.</p>
+</div>
+</div>
+
+
+<div id="craftingModal" class="modal hidden">
+  <div class="modal-content crafting-overhaul-modal">
+    <button type="button" class="modal-x-btn" onclick="closeCraftingModal()" aria-label="Close crafting modal">×</button>
+    <div class="crafting-overhaul-hero">
+      <div>
+        <div class="new-modal-kicker">Workshop</div>
+        <h2>Crafting</h2>
+        <p>Convert spare Cosmetic Crates into limited crates in a dedicated modern workshop.</p>
+      </div>
+      <div class="crafting-v2-badge"><i class="fa-solid fa-wand-magic-sparkles"></i> 2 → 1</div>
+    </div>
+    <div class="crafting-overhaul-grid">
+      <article class="crafting-overhaul-card input"><div class="crate-crafting-icon cosmetic"><i class="fa-solid fa-box-open"></i></div><span>Input</span><h3>2 Cosmetic Crates</h3><p><strong id="craft-reef-owned">0</strong> currently owned</p></article>
+      <div class="crafting-overhaul-arrow"><i class="fa-solid fa-arrow-right"></i></div>
+      <article class="crafting-overhaul-card output"><div class="crate-crafting-icon summer"><i class="fa-solid fa-umbrella-beach"></i></div><span>Output</span><h3>1 Summer Crate</h3><p><strong id="craft-summer-owned">0</strong> currently owned</p></article>
+    </div>
+    <div class="crafting-overhaul-actions">
+      <button id="craft-summer-crate-btn" type="button" class="primary-btn crate-craft-btn" onclick="craftSummerCrate()">Craft Crate</button>
+      <button type="button" class="secondary-btn" onclick="openCrateDropsModal('summer')">View Summer Drops</button>
+      <button type="button" class="secondary-btn" onclick="closeCraftingModal()">Close</button>
+    </div>
+  </div>
+</div>
+
+<div id="cratesModal" class="modal hidden">
+<div class="modal-content picker-modal-content crates-modal-content" style="width: 95%; max-width: 860px; max-height: 88vh; overflow-y: auto; display: flex; flex-direction: column;">
+<div class="picker-modal-heading">
+<div class="picker-modal-kicker">Inventory</div>
+<h2>Crates</h2>
+<p>Win games and claim pass rewards to earn crates.</p>
+</div>
+<div class="picker-modal-tabs">
+  <button id="inventory-tab" class="picker-modal-tab active">Inventory</button>
+</div>
+<div id="inventory-panel" class="picker-modal-tab-panel active">
+<div class="crates-layout">
+   <section class="picker-section crate-inventory-panel">
+     <!-- Cosmetic Crate Panel -->
+     <div class="crate-panel-topline">
+       <div>
+         <h3>Cosmetic Crate</h3>
+       </div>
+       <button class="crate-inspect-btn" onclick="openCrateDropsModal()" aria-label="View possible drops">
+         <i class="fa-solid fa-eye"></i>
+       </button>
+       <div class="crate-count-badge"><span id="crate-count-value">0</span> ready</div>
+     </div>
+     <div class="crate-showcase">
+       <div class="crate-visual">
+         <i class="fa-solid fa-box-open"></i>
+       </div>
+       <div class="crate-odds">
+         <div class="crate-odds-row"><span>Common</span><strong>58%</strong></div>
+         <div class="crate-odds-row"><span>Rare</span><strong>28%</strong></div>
+         <div class="crate-odds-row"><span>Epic</span><strong>10%</strong></div>
+         <div class="crate-odds-row"><span>Legendary</span><strong>4%</strong></div>
+       </div>
+     </div>
+     <div class="crate-action-row">
+       <button id="open-crate-btn" class="primary-btn crate-open-btn" onclick="openCrate('reef')">Open Cosmetic Crate</button>
+     </div>
+   </section>
+   <!-- Summer Crate Panel: Only show if summer theme is active, displayed beside reef crate -->
+   <section id="summer-crate-panel" class="picker-section crate-inventory-panel" style="display:none;">
+     <div class="crate-panel-topline">
+       <div>
+         <h3>Summer Crate <span style="font-size:14px;color:#ffeb3b;">(Limited!)</span></h3>
+       </div>
+       <button class="crate-inspect-btn" onclick="openCrateDropsModal('summer')" aria-label="View possible drops">
+         <i class="fa-solid fa-umbrella-beach"></i>
+       </button>
+       <div class="crate-count-badge"><span id="summer-crate-count-value">0</span> ready</div>
+     </div>
+     <div class="crate-showcase">
+       <div class="crate-visual">
+         <i class="fa-solid fa-umbrella-beach"></i>
+       </div>
+       <div class="crate-odds">
+        <div class="crate-odds-row"><span>Common</span><strong>58%</strong></div>
+         <div class="crate-odds-row"><span>Rare</span><strong>28%</strong></div>
+         <div class="crate-odds-row"><span>Epic</span><strong>10%</strong></div>
+         <div class="crate-odds-row"><span>Legendary</span><strong>4%</strong></div>
+       </div>
+     </div>
+      <div class="crate-action-row">
+        <button id="open-summer-crate-btn" class="primary-btn crate-open-btn" onclick="openCrate('summer')">Open Summer Crate</button>
+      </div>
+</section>
+    <!-- Christmas Crate Panel: Only show if christmas theme is active -->
+    <section id="christmas-crate-panel" class="picker-section crate-inventory-panel" style="display:none;">
+      <div class="crate-panel-topline">
+        <div>
+          <h3>Christmas Crate <span style="font-size:14px;color:#ff6b6b;">(Limited!)</span></h3>
+        </div>
+        <button class="crate-inspect-btn" onclick="openCrateDropsModal('christmas')" aria-label="View possible drops">
+          <i class="fa-solid fa-gift"></i>
+        </button>
+        <div class="crate-count-badge"><span id="christmas-crate-count-value">0</span> ready</div>
+      </div>
+      <div class="crate-showcase">
+        <div class="crate-visual">
+          <i class="fa-solid fa-gift"></i>
+        </div>
+        <div class="crate-odds">
+         <div class="crate-odds-row"><span>Common</span><strong>58%</strong></div>
+          <div class="crate-odds-row"><span>Rare</span><strong>28%</strong></div>
+          <div class="crate-odds-row"><span>Epic</span><strong>10%</strong></div>
+          <div class="crate-odds-row"><span>Legendary</span><strong>4%</strong></div>
+        </div>
+      </div>
+      <div class="crate-action-row">
+        <button id="open-christmas-crate-btn" class="primary-btn crate-open-btn" onclick="openCrate('christmas')">Open Christmas Crate</button>
+      </div>
+     </section>
+    <!-- Halloween Crate Panel: Only show if halloween theme is active -->
+    <section id="halloween-crate-panel" class="picker-section crate-inventory-panel" style="display:none;">
+      <div class="crate-panel-topline">
+        <div>
+          <h3>Halloween Crate <span style="font-size:14px;color:#ff6b6b;">(Limited!)</span></h3>
+        </div>
+        <button class="crate-inspect-btn" onclick="openCrateDropsModal('halloween')" aria-label="View possible drops">
+          <i class="fa-solid fa-ghost"></i>
+        </button>
+        <div class="crate-count-badge"><span id="halloween-crate-count-value">0</span> ready</div>
+      </div>
+      <div class="crate-showcase">
+        <div class="crate-visual">
+          <i class="fa-solid fa-ghost"></i>
+        </div>
+        <div class="crate-odds">
+         <div class="crate-odds-row"><span>Common</span><strong>58%</strong></div>
+          <div class="crate-odds-row"><span>Rare</span><strong>28%</strong></div>
+          <div class="crate-odds-row"><span>Epic</span><strong>10%</strong></div>
+          <div class="crate-odds-row"><span>Legendary</span><strong>4%</strong></div>
+        </div>
+      </div>
+      <div class="crate-action-row">
+        <button id="open-halloween-crate-btn" class="primary-btn crate-open-btn" onclick="openCrate('halloween')">Open Halloween Crate</button>
+      </div>
+     </section>
+   </div>
+  <div class="crate-settings-row">
+    <label class="crate-toggle" for="crate-instant-toggle">
+      <input id="crate-instant-toggle" type="checkbox" onchange="toggleCrateInstantOpen(this.checked)">
+      <span class="crate-toggle-slider" aria-hidden="true"></span>
+      <span class="crate-toggle-copy">
+        <strong>Instant Open</strong>
+        <small>Skip crate animations and reveal rewards instantly.</small>
+      </span>
+    </label>
+    <div id="crate-pity-copy" class="crate-pity-copy"></div>
+    <div id="streak-shield-copy" class="crate-pity-copy"></div>
+  </div>
+  <div id="crate-status-copy" class="crate-status-copy"></div>
+</div>
+<button onclick="closeCratesModal()" style="width: 100%; padding: 10px; margin-top: 16px; background: #ccc; color: #333; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; flex-shrink: 0;">Close</button>
+</div>
+</div>
+
+<div id="crateDropsModal" class="modal hidden">
+<div class="modal-content picker-modal-content crate-drops-modal-content" style="width: 95%; max-width: 860px; max-height: 88vh; overflow-y: auto; display: flex; flex-direction: column;">
+<div class="picker-modal-heading">
+<div class="picker-modal-kicker">Crate Intel</div>
+<h2>Possible Drops</h2>
+<p>If you pull something you already own, it converts into XP based on rarity.</p>
+</div>
+<section class="picker-section crate-rewards-panel">
+<div id="crate-drops-grid" class="crate-reward-grid"></div>
+</section>
+<button onclick="closeCrateDropsModal()" style="width: 100%; padding: 10px; margin-top: 16px; background: #ccc; color: #333; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; flex-shrink: 0;">Close</button>
+</div>
+</div>
+
+<div id="crateUnboxOverlay" class="crate-unbox-overlay hidden crate-theme-reef">
+<div class="crate-unbox-backdrop"></div>
+<div id="crate-unbox-stage" class="crate-unbox-stage">
+<div id="crate-unbox-fx" class="crate-unbox-fx" aria-hidden="true">
+  <div class="crate-unbox-sun"></div>
+  <div class="crate-unbox-rays"></div>
+  <div class="crate-unbox-waves"></div>
+  <div class="crate-unbox-sparkles">
+    <span></span><span></span><span></span><span></span><span></span><span></span>
+  </div>
+</div>
+<div id="crate-unbox-burst" class="crate-unbox-burst"></div>
+<div id="crate-unbox-splash" class="crate-unbox-splash" aria-hidden="true"></div>
+<div id="crate-unbox-crate" class="crate-unbox-crate">
+<div class="crate-unbox-crate-lid"><span class="crate-unbox-lid-accent" aria-hidden="true"></span></div>
+<div class="crate-unbox-crate-body"><i id="crate-unbox-icon" class="fa-solid fa-box-open" aria-hidden="true"></i></div>
+</div>
+<div id="crate-unbox-copy" class="crate-unbox-copy">The cosmetic crate is opening...</div>
+<div id="crate-overlay-reveal" class="crate-overlay-reveal hidden"></div>
+</div>
+</div>
+
+<script src="cordova.js"></script>
+<script src="script.js"></script>
+<script src="global-broadcast.js"></script>
+<script>
+function openDevModal() {
+    document.getElementById('devModal').classList.remove('hidden');
+}
+function closeDevModal() {
+    document.getElementById('devModal').classList.add('hidden');
+}
+
+(function initHomeTabs() {
+    const tabs = Array.from(document.querySelectorAll('[data-home-tab]'));
+    const panels = Array.from(document.querySelectorAll('[data-home-panel]'));
+
+    if (!tabs.length || !panels.length) return;
+
+    function setActiveHomeTab(tabName) {
+        tabs.forEach(tab => {
+            const isActive = tab.dataset.homeTab === tabName;
+            tab.classList.toggle('active', isActive);
+            tab.setAttribute('aria-selected', String(isActive));
+            tab.tabIndex = isActive ? 0 : -1;
+        });
+
+        panels.forEach(panel => {
+            const isActive = panel.dataset.homePanel === tabName;
+            panel.classList.toggle('active', isActive);
+            panel.hidden = !isActive;
+        });
+    }
+
+    tabs.forEach((tab, index) => {
+        tab.addEventListener('click', () => setActiveHomeTab(tab.dataset.homeTab));
+        tab.addEventListener('keydown', event => {
+            if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
+            event.preventDefault();
+
+            const direction = event.key === 'ArrowRight' ? 1 : -1;
+            const nextIndex = (index + direction + tabs.length) % tabs.length;
+            tabs[nextIndex].focus();
+            setActiveHomeTab(tabs[nextIndex].dataset.homeTab);
+        });
+    });
+
+    setActiveHomeTab('play');
+})();
+</script>
+
+<script>
+if (window.location.search.includes('openModal=true')) {
+    openLoginModal();
+}
+</script>
+
+</body>
+</html>
