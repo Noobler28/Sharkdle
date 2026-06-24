@@ -9728,6 +9728,171 @@ function formatAdminDateTime(timestamp) {
     return new Date(parsed).toLocaleString();
 }
 
+function getAdminTimestampMillis(timestamp) {
+    if (typeof timestamp?.toMillis === "function") return timestamp.toMillis();
+    const parsed = Number(timestamp);
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
+}
+
+function formatAdminRelativeTime(timestamp, nowMs = Date.now()) {
+    const elapsedMs = Math.max(0, nowMs - getAdminTimestampMillis(timestamp));
+    const minutes = Math.floor(elapsedMs / (60 * 1000));
+    if (minutes < 1) return "Just now";
+    if (minutes < 60) return `${minutes}m ago`;
+
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours}h ago`;
+
+    const days = Math.floor(hours / 24);
+    if (days < 7) return `${days}d ago`;
+    return formatAdminDateTime(getAdminTimestampMillis(timestamp));
+}
+
+function getAdminUtcDayKeys(dayCount = 30) {
+    const count = Math.max(1, Math.floor(Number(dayCount) || 30));
+    const now = new Date();
+    const todayUtcMs = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+    return Array.from({ length: count }, (_, index) => {
+        const daysAgo = count - index - 1;
+        return new Date(todayUtcMs - daysAgo * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    });
+}
+
+function calculateAdminVisitorAverage(dailyCounts) {
+    const firstRecordedIndex = dailyCounts.findIndex(count => count > 0);
+    if (firstRecordedIndex < 0) {
+        return { average: null, recordedDays: 0 };
+    }
+
+    const recordedCounts = dailyCounts.slice(firstRecordedIndex);
+    const total = recordedCounts.reduce((sum, count) => sum + count, 0);
+    return {
+        average: total / recordedCounts.length,
+        recordedDays: recordedCounts.length
+    };
+}
+
+function setAdminVisitorMetric(elementId, value) {
+    const element = document.getElementById(elementId);
+    if (element) element.textContent = String(value);
+}
+
+function renderAdminRecentVisitors(visitors, nowMs = Date.now()) {
+    const list = document.getElementById("admin-recent-visitors-list");
+    if (!list) return;
+    list.replaceChildren();
+
+    if (!visitors.length) {
+        const empty = document.createElement("div");
+        empty.className = "admin-visitor-empty";
+        empty.textContent = "No signed-in visitors recorded in the last 7 days.";
+        list.appendChild(empty);
+        return;
+    }
+
+    visitors.slice(0, 20).forEach(visitor => {
+        const row = document.createElement("div");
+        row.className = "admin-recent-visitor";
+
+        const name = document.createElement("strong");
+        name.textContent = visitor.username;
+
+        const seen = document.createElement("span");
+        const online = nowMs - visitor.lastActiveMs < ACTIVE_PLAYER_WINDOW_MS;
+        seen.textContent = online ? "Online now" : formatAdminRelativeTime(visitor.lastActiveMs, nowMs);
+        seen.title = formatAdminDateTime(visitor.lastActiveMs);
+
+        row.append(name, seen);
+        list.appendChild(row);
+    });
+}
+
+async function refreshAdminVisitorInsights() {
+    if (!isDeveloperSessionActive() || !db) return false;
+
+    setAdminAbuseStatus("admin-visitor-status", "Refreshing visitor insights...");
+    const nowMs = Date.now();
+    const sevenDayCutoffMs = nowMs - 7 * 24 * 60 * 60 * 1000;
+    const oneDayCutoffMs = nowMs - 24 * 60 * 60 * 1000;
+    const dayKeys = getAdminUtcDayKeys(30);
+
+    const [recentSnapshot, dailySnapshots] = await Promise.all([
+        db.collection("userStats").where("lastActive", ">=", sevenDayCutoffMs).get(),
+        Promise.all(dayKeys.map(dayKey => (
+            db.collection("visitorDaily").doc(dayKey).collection("users").get()
+        )))
+    ]);
+
+    const recentVisitors = recentSnapshot.docs
+        .map(doc => {
+            const data = doc.data() || {};
+            return {
+                username: String(data.username || `Player ${doc.id.slice(0, 6)}`),
+                lastActiveMs: getAdminTimestampMillis(data.lastActive)
+            };
+        })
+        .filter(visitor => visitor.lastActiveMs >= sevenDayCutoffMs)
+        .sort((a, b) => b.lastActiveMs - a.lastActiveMs);
+
+    const dailyCounts = dailySnapshots.map(snapshot => snapshot.size);
+    const lastSevenDailyCounts = dailyCounts.slice(-7);
+    const sevenDayAverage = calculateAdminVisitorAverage(lastSevenDailyCounts);
+    const thirtyDayAverage = calculateAdminVisitorAverage(dailyCounts);
+    const onlineVisitors = recentVisitors.filter(visitor => nowMs - visitor.lastActiveMs < ACTIVE_PLAYER_WINDOW_MS);
+    const lastDayVisitors = recentVisitors.filter(visitor => visitor.lastActiveMs >= oneDayCutoffMs);
+
+    setAdminVisitorMetric("admin-visitors-online", onlineVisitors.length);
+    setAdminVisitorMetric("admin-visitors-24h", lastDayVisitors.length);
+    setAdminVisitorMetric("admin-visitors-7d", recentVisitors.length);
+    setAdminVisitorMetric("admin-visitors-today", dailyCounts.at(-1) || 0);
+    setAdminVisitorMetric(
+        "admin-visitors-average-7d",
+        sevenDayAverage.average === null ? "—" : sevenDayAverage.average.toFixed(1)
+    );
+    setAdminVisitorMetric(
+        "admin-visitors-average-30d",
+        thirtyDayAverage.average === null ? "—" : thirtyDayAverage.average.toFixed(1)
+    );
+
+    const onlineMetric = document.getElementById("admin-visitors-online");
+    if (onlineMetric) {
+        onlineMetric.title = onlineVisitors.length
+            ? onlineVisitors.map(visitor => visitor.username).join("\n")
+            : "No signed-in players are currently online.";
+    }
+
+    renderAdminRecentVisitors(recentVisitors, nowMs);
+
+    if (thirtyDayAverage.recordedDays > 0) {
+        const firstRecordedDay = dayKeys[dayKeys.length - thirtyDayAverage.recordedDays];
+        setAdminAbuseStatus(
+            "admin-visitor-status",
+            `Daily averages currently cover ${thirtyDayAverage.recordedDays} day${thirtyDayAverage.recordedDays === 1 ? "" : "s"}, beginning ${firstRecordedDay}.`
+        );
+    } else {
+        setAdminAbuseStatus(
+            "admin-visitor-status",
+            "Daily averages will begin filling as signed-in players visit after this update."
+        );
+    }
+
+    return true;
+}
+
+async function adminRefreshVisitorInsights() {
+    try {
+        return await refreshAdminVisitorInsights();
+    } catch (error) {
+        console.warn("Unable to refresh visitor insights:", error);
+        setAdminAbuseStatus(
+            "admin-visitor-status",
+            `Visitor insights failed to load: ${error.message || error}`,
+            { error: true }
+        );
+        return false;
+    }
+}
+
 function normalizeGlobalMessageType(type = "info") {
     const normalized = String(type || "").trim().toLowerCase();
     if (normalized === "event" || normalized === "warning") return normalized;
@@ -9857,12 +10022,11 @@ async function grantGlobalStreakShields(amount = 1) {
 async function refreshAdminAbusePanel() {
     if (!isDeveloperSessionActive() || !db) return false;
 
-    const activeCutoffMs = Date.now() - ACTIVE_PLAYER_WINDOW_MS;
-    const [xpDoc, themeDoc, messageDoc, onlineUsersSnapshot] = await Promise.all([
+    const visitorInsightsPromise = adminRefreshVisitorInsights();
+    const [xpDoc, themeDoc, messageDoc] = await Promise.all([
         db.collection(GLOBAL_XP_EVENT_CONFIG_PATH.collection).doc(GLOBAL_XP_EVENT_CONFIG_PATH.doc).get(),
         db.collection(GLOBAL_INDEX_THEME_CONFIG_PATH.collection).doc(GLOBAL_INDEX_THEME_CONFIG_PATH.doc).get(),
-        db.collection(GLOBAL_MESSAGE_CONFIG_PATH.collection).doc(GLOBAL_MESSAGE_CONFIG_PATH.doc).get(),
-        db.collection("userStats").where("lastActive", ">=", activeCutoffMs).get()
+        db.collection(GLOBAL_MESSAGE_CONFIG_PATH.collection).doc(GLOBAL_MESSAGE_CONFIG_PATH.doc).get()
     ]);
 
     const xpData = xpDoc.exists ? (xpDoc.data() || {}) : {};
@@ -9908,20 +10072,7 @@ async function refreshAdminAbusePanel() {
         setAdminAbuseStatus("admin-message-status", "No global message is active.");
     }
 
-    const onlineUsersDisplay = document.getElementById("admin-online-users-display");
-    if (onlineUsersDisplay) {
-        const onlineNames = onlineUsersSnapshot.docs
-            .map(doc => {
-                const data = doc.data() || {};
-                return String(data.username || doc.id);
-            })
-            .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }));
-
-        onlineUsersDisplay.textContent = `Online users: ${onlineNames.length}`;
-        onlineUsersDisplay.title = onlineNames.length
-            ? `Online users (${onlineNames.length}):\n${onlineNames.join("\n")}`
-            : "No users are currently online.";
-    }
+    await visitorInsightsPromise;
 
     return true;
 }

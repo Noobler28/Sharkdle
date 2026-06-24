@@ -20,6 +20,9 @@
     const STYLE_ID = "global-broadcast-style";
     const BANNER_ID = "global-broadcast-banner";
     const STARTED_KEY = "__globalBroadcastStarted";
+    const VISITOR_TRACKING_STARTED_KEY = "__sharkdleVisitorTrackingStarted";
+    const VISITOR_DAILY_COLLECTION = "visitorDaily";
+    const VISITOR_HEARTBEAT_MS = 45 * 1000;
 
     function loadScript(src) {
         return new Promise((resolve, reject) => {
@@ -447,6 +450,87 @@
         return normalizeThemeId(localStorage.getItem(THEME_CACHE_KEY) || "default");
     }
 
+    function getUtcVisitorDayKey(timestamp = Date.now()) {
+        return new Date(timestamp).toISOString().slice(0, 10);
+    }
+
+    function getVisitorStorageKey(userId, dayKey) {
+        return `sharkdle-visitor-recorded-${userId}-${dayKey}`;
+    }
+
+    function getVisitorDisplayName(user) {
+        const displayName = String(user?.displayName || "").trim();
+        if (displayName) return displayName.slice(0, 80);
+
+        const emailName = String(user?.email || "").split("@")[0].trim();
+        if (emailName) return emailName.slice(0, 80);
+
+        return "Signed-in player";
+    }
+
+    async function recordSignedInVisitor(db, user) {
+        if (!db || !user?.uid) return;
+
+        const nowMs = Date.now();
+        const dayKey = getUtcVisitorDayKey(nowMs);
+        const storageKey = getVisitorStorageKey(user.uid, dayKey);
+        const hasPagePresenceHeartbeat = typeof window.updatePresenceHeartbeat === "function";
+        const writes = [];
+
+        if (!hasPagePresenceHeartbeat) {
+            writes.push(
+                db.collection("userStats").doc(user.uid).set({
+                    lastActive: nowMs
+                }, { merge: true })
+            );
+        }
+
+        if (localStorage.getItem(storageKey) !== "true") {
+            const visitorRef = db
+                .collection(VISITOR_DAILY_COLLECTION)
+                .doc(dayKey)
+                .collection("users")
+                .doc(user.uid);
+
+            writes.push(
+                visitorRef.set({
+                    uid: user.uid,
+                    username: getVisitorDisplayName(user),
+                    visitedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    path: String(window.location.pathname || "/").slice(0, 120)
+                }, { merge: true }).then(() => {
+                    localStorage.setItem(storageKey, "true");
+                })
+            );
+        }
+
+        if (!writes.length) return;
+        await Promise.all(writes);
+    }
+
+    function startVisitorTracking(db) {
+        if (window[VISITOR_TRACKING_STARTED_KEY]) return;
+        if (typeof firebase === "undefined" || typeof firebase.auth !== "function") return;
+        window[VISITOR_TRACKING_STARTED_KEY] = true;
+
+        let signedInUser = null;
+        const recordCurrentVisitor = () => {
+            if (!signedInUser || document.visibilityState === "hidden") return;
+            recordSignedInVisitor(db, signedInUser).catch(error => {
+                console.warn("Visitor tracking update failed:", error);
+            });
+        };
+
+        firebase.auth().onAuthStateChanged(user => {
+            signedInUser = user || null;
+            recordCurrentVisitor();
+        });
+
+        window.setInterval(recordCurrentVisitor, VISITOR_HEARTBEAT_MS);
+        document.addEventListener("visibilitychange", recordCurrentVisitor);
+        window.addEventListener("focus", recordCurrentVisitor);
+    }
+
     function renderBanner(payload) {
         const banner = ensureBannerElement();
         const messageEl = banner.querySelector(".global-broadcast-message");
@@ -467,12 +551,17 @@
     }
 
     async function ensureFirebaseLoaded() {
-        if (typeof firebase !== "undefined" && typeof firebase.firestore === "function") {
-            return;
+        if (typeof firebase === "undefined") {
+            await loadScript("https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js");
         }
 
-        await loadScript("https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js");
-        await loadScript("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js");
+        if (typeof firebase.auth !== "function") {
+            await loadScript("https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js");
+        }
+
+        if (typeof firebase.firestore !== "function") {
+            await loadScript("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js");
+        }
     }
 
     async function startFirestoreListener() {
@@ -490,6 +579,7 @@
             }
 
             const db = firebase.firestore();
+            startVisitorTracking(db);
             db.collection(MESSAGE_CONFIG_PATH.collection)
                 .doc(MESSAGE_CONFIG_PATH.doc)
                 .onSnapshot(snapshot => {

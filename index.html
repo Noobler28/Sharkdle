@@ -1025,11 +1025,29 @@ content="Play Sharkdle, the daily shark guessing game. Guess shark species from 
     </section>
 
 <section class="picker-section admin-abuse-section">
-<h3>Online Users</h3>
-<div class="admin-abuse-row">
-<div id="admin-online-users-display" class="admin-online-users-display" title="Hover to view online users.">Online users: 0</div>
+<div class="admin-visitor-heading">
+<div>
+<h3>Visitor Insights</h3>
+<p>Signed-in players across Sharkdle. Daily totals use UTC.</p>
 </div>
-<div class="admin-abuse-status"></div>
+<button class="admin-abuse-btn admin-abuse-btn-secondary admin-visitor-refresh-btn" type="button" onclick="adminRefreshVisitorInsights()">Refresh</button>
+</div>
+<div class="admin-visitor-stats">
+<div class="admin-visitor-stat"><span>Online now</span><strong id="admin-visitors-online">0</strong></div>
+<div class="admin-visitor-stat"><span>Last 24 hours</span><strong id="admin-visitors-24h">0</strong></div>
+<div class="admin-visitor-stat"><span>Last 7 days</span><strong id="admin-visitors-7d">0</strong></div>
+<div class="admin-visitor-stat"><span>Today</span><strong id="admin-visitors-today">0</strong></div>
+<div class="admin-visitor-stat"><span>7-day average</span><strong id="admin-visitors-average-7d">—</strong></div>
+<div class="admin-visitor-stat"><span>30-day average</span><strong id="admin-visitors-average-30d">—</strong></div>
+</div>
+<div class="admin-visitor-list-heading">
+<strong>Recent visitors</strong>
+<span>Latest 20 from the last 7 days</span>
+</div>
+<div id="admin-recent-visitors-list" class="admin-recent-visitors-list">
+<div class="admin-visitor-empty">Loading recent visitors...</div>
+</div>
+<div id="admin-visitor-status" class="admin-abuse-status">Visitor insights are loading.</div>
 </section>
 
     <section class="picker-section admin-abuse-section">
