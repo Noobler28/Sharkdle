@@ -437,6 +437,33 @@ button:hover {
     color: rgba(223, 249, 255, 0.78) !important;
 }
 
+.sharchive-help-link {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 38px;
+    padding: 8px 12px;
+    border: 1px solid rgba(44, 196, 196, 0.2);
+    border-radius: 11px;
+    background: rgba(44, 196, 196, 0.07);
+    color: #a8f5f2;
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    text-align: center;
+    text-decoration: none;
+    transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease, transform 0.2s ease;
+}
+
+.sharchive-help-link:hover,
+.sharchive-help-link:focus-visible {
+    border-color: rgba(44, 196, 196, 0.48);
+    background: rgba(44, 196, 196, 0.14);
+    color: #e9ffff;
+    transform: translateY(-1px);
+    outline: none;
+}
+
 #message {
     color: rgba(142, 245, 239, 0.92);
     text-align: center;
