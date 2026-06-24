@@ -595,6 +595,25 @@
             letter-spacing: 0.04em;
             text-transform: uppercase;
         }
+        .species-history-indicator {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 24px;
+            height: 24px;
+            border: 1px solid rgba(70, 229, 139, 0.62);
+            border-radius: 50%;
+            background: rgba(70, 229, 139, 0.16);
+            color: #70f0a6;
+            box-shadow: 0 0 10px rgba(70, 229, 139, 0.2);
+            font-size: 10px;
+        }
+        .species-history-indicator.mastered {
+            border-color: rgba(255, 211, 94, 0.72);
+            background: rgba(255, 211, 94, 0.16);
+            color: #ffe28a;
+            box-shadow: 0 0 10px rgba(255, 211, 94, 0.2);
+        }
         .card-front .shark-name {
             font-size: 1.8em;
             font-weight: 700;
@@ -664,6 +683,99 @@
             border-left: 2px solid rgba(77, 208, 225, 0.5);
             display: block;
             opacity: 0.9;
+        }
+        .species-history-details {
+            width: 100%;
+            margin-top: 8px;
+            flex: 0 0 auto;
+        }
+        .species-history-summary {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            padding: 8px 10px;
+            border: 1px solid rgba(70, 229, 139, 0.38);
+            border-radius: 8px;
+            background: rgba(70, 229, 139, 0.09);
+            color: #9af7bd;
+            cursor: pointer;
+            font-size: 11px;
+            font-weight: 800;
+            letter-spacing: 0.7px;
+            list-style: none;
+            text-transform: uppercase;
+        }
+        .species-history-summary::-webkit-details-marker {
+            display: none;
+        }
+        .species-history-summary::after {
+            content: "+";
+            font-size: 15px;
+            line-height: 1;
+        }
+        .species-history-details[open] .species-history-summary::after {
+            content: "−";
+        }
+        .species-history-panel {
+            margin-top: 6px;
+            padding: 10px;
+            border: 1px solid rgba(70, 229, 139, 0.28);
+            border-radius: 8px;
+            background: rgba(70, 229, 139, 0.07);
+        }
+        .mastery-progress {
+            margin-bottom: 8px;
+            padding: 8px;
+            border-radius: 7px;
+            background: rgba(0, 0, 0, 0.17);
+        }
+        .mastery-progress-copy {
+            display: flex;
+            justify-content: space-between;
+            gap: 8px;
+            margin-bottom: 6px;
+            color: #dffcf0;
+            font-size: 10px;
+            font-weight: 700;
+        }
+        .mastery-progress-track {
+            height: 6px;
+            overflow: hidden;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.1);
+        }
+        .mastery-progress-fill {
+            height: 100%;
+            border-radius: inherit;
+            background: linear-gradient(90deg, #46e58b, #70f0a6);
+        }
+        .mastery-progress.complete .mastery-progress-fill {
+            background: linear-gradient(90deg, #f3bd4b, #ffe28a);
+        }
+        .species-history-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 6px;
+        }
+        .species-history-metric {
+            padding: 6px;
+            border-radius: 6px;
+            background: rgba(0, 0, 0, 0.18);
+            font-size: 10px;
+            line-height: 1.25;
+        }
+        .species-history-metric strong {
+            display: block;
+            color: #fff;
+            font-size: 14px;
+        }
+        .species-history-confusion,
+        .species-history-empty {
+            margin-top: 8px;
+            color: rgba(225, 246, 250, 0.82);
+            font-size: 10px;
+            line-height: 1.4;
         }
         /* Scrollbar styling for card-back */
         .card-back::-webkit-scrollbar {
@@ -1446,6 +1558,7 @@
         body.library-page .card-front,
         body.library-page .card-back {
             border-radius: 12px;
+            height: 100%;
         }
 
         body.library-page .card-front,
@@ -1567,6 +1680,7 @@
             >
             </div>
             <button id="heart-filter" class="filter-btn" title="Show only hearted sharks">Show Favorites</button>
+            <button id="needs-practice-filter" class="filter-btn" title="Show tracked sharks that have not reached five wins">Needs Practice</button>
         </div>
     </div>
 
@@ -1610,6 +1724,7 @@
     <!-- Shark list -->
     <script src="sharks.js"></script>
     <script src="Library/library.js"></script>
+    <script src="species-tracker.js"></script>
     <script>
         function navigate(page) {
             const routes = {
@@ -1627,8 +1742,13 @@
         let sharkLikeCounts = new Map();
         let collapsedSections = new Set();
         let showOnlyHearted = false;
+        let showNeedsPractice = false;
         let libraryAuth = null;
         let libraryDb = null;
+        let speciesHistoryById = new Map();
+        let speciesHistoryUser = null;
+        const reviewSpeciesName = new URLSearchParams(window.location.search).get('species')?.trim() || '';
+        let reviewSpeciesScrolled = false;
         let activeFilters = {
             size: null,
             habitat: null
@@ -1750,6 +1870,120 @@
                 .replace(/^-+|-+$/g, '');
         }
 
+        function escapeLibraryHtml(value) {
+            return String(value ?? '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        function getSpeciesHistory(sharkName) {
+            const speciesId = window.SharkdleSpeciesTracker
+                ? window.SharkdleSpeciesTracker.getSpeciesId(sharkName)
+                : getSharkLikeKey(sharkName);
+            return speciesHistoryById.get(speciesId) || null;
+        }
+
+        function getSpeciesHistoryIndicatorHtml(sharkName) {
+            const stats = getSpeciesHistory(sharkName);
+            const attempts = Math.max(0, Number(stats?.gamesPlayed) || 0);
+            if (!attempts) return '';
+            const masteryTarget = Math.max(1, Number(stats?.masteryTarget) || Number(window.SharkdleSpeciesTracker?.masteryTarget) || 5);
+            const masteryProgress = Math.min(masteryTarget, Math.max(0, Number(stats?.masteryProgress) || Number(stats?.wins) || 0));
+            const mastered = masteryProgress >= masteryTarget;
+            const label = mastered ? 'Species mastery complete' : `Mistake Tracker available, mastery ${masteryProgress} of ${masteryTarget}`;
+            return `<span class="species-history-indicator ${mastered ? 'mastered' : ''}" title="${label}" aria-label="${label}"><i class="fas ${mastered ? 'fa-star' : 'fa-chart-line'}" aria-hidden="true"></i></span>`;
+        }
+
+        function getSpeciesHistoryDetailsHtml(sharkName) {
+            const stats = getSpeciesHistory(sharkName);
+            const attempts = Math.max(0, Number(stats?.gamesPlayed) || 0);
+            if (!attempts) {
+                const message = speciesHistoryUser
+                    ? 'No tracked Daily or Infinite rounds for this species yet.'
+                    : 'Sign in to track and sync your Daily and Infinite history.';
+                return `
+                    <details class="species-history-details">
+                        <summary class="species-history-summary">Mistake Tracker</summary>
+                        <div class="species-history-panel">
+                            <div class="species-history-empty">${message}</div>
+                        </div>
+                    </details>
+                `;
+            }
+
+            const wins = Math.max(0, Number(stats.wins) || 0);
+            const totalGuesses = Math.max(0, Number(stats.totalGuesses) || 0);
+            const winRate = Math.max(0, Math.min(100, Number(stats.winRate) || Math.round((wins / attempts) * 100)));
+            const bestWin = Number(stats.bestWin) > 0 ? Number(stats.bestWin) : '—';
+            const masteryTarget = Math.max(1, Number(stats.masteryTarget) || Number(window.SharkdleSpeciesTracker?.masteryTarget) || 5);
+            const masteryProgress = Math.min(masteryTarget, Math.max(0, Number(stats.masteryProgress) || wins));
+            const masteryPercent = Math.round((masteryProgress / masteryTarget) * 100);
+            const topConfusion = Array.isArray(stats.topConfusions) ? stats.topConfusions[0] : null;
+            const confusionText = topConfusion?.name
+                ? `${escapeLibraryHtml(topConfusion.name)} (${Math.max(1, Number(topConfusion.count) || 1)}×)`
+                : 'No repeated mix-up yet';
+            const weakCategory = stats.weakestCategory?.label
+                ? `${escapeLibraryHtml(stats.weakestCategory.label)} (${Math.max(1, Number(stats.weakestCategory.mistakes) || 1)} misses)`
+                : 'Not enough category data yet';
+
+            return `
+                <details class="species-history-details">
+                    <summary class="species-history-summary">Mistake Tracker · Mastery ${masteryProgress}/${masteryTarget}</summary>
+                    <div class="species-history-panel">
+                        <div class="mastery-progress ${masteryProgress >= masteryTarget ? 'complete' : ''}">
+                            <div class="mastery-progress-copy"><span>${masteryProgress >= masteryTarget ? 'Mastery Complete' : 'Species Mastery'}</span><span>${masteryProgress}/${masteryTarget} correct wins</span></div>
+                            <div class="mastery-progress-track"><div class="mastery-progress-fill" style="width:${masteryPercent}%"></div></div>
+                        </div>
+                        <div class="species-history-grid">
+                            <div class="species-history-metric"><strong>${attempts}</strong>Attempts</div>
+                            <div class="species-history-metric"><strong>${wins}</strong>Wins</div>
+                            <div class="species-history-metric"><strong>${winRate}%</strong>Win rate</div>
+                            <div class="species-history-metric"><strong>${bestWin}</strong>Best guesses</div>
+                        </div>
+                        <div class="species-history-confusion"><strong>Total guesses:</strong> ${totalGuesses}<br><strong>Common mix-up:</strong> ${confusionText}<br><strong>Weak category:</strong> ${weakCategory}</div>
+                    </div>
+                </details>
+            `;
+        }
+
+        function speciesNeedsPractice(sharkName) {
+            const stats = getSpeciesHistory(sharkName);
+            const attempts = Math.max(0, Number(stats?.gamesPlayed) || 0);
+            if (!attempts) return false;
+            const masteryTarget = Math.max(1, Number(stats?.masteryTarget) || Number(window.SharkdleSpeciesTracker?.masteryTarget) || 5);
+            const masteryProgress = Math.max(0, Number(stats?.masteryProgress) || Number(stats?.wins) || 0);
+            return masteryProgress < masteryTarget;
+        }
+
+        function focusReviewedSpeciesCard() {
+            if (!reviewSpeciesName) return;
+            const speciesId = window.SharkdleSpeciesTracker
+                ? window.SharkdleSpeciesTracker.getSpeciesId(reviewSpeciesName)
+                : getSharkLikeKey(reviewSpeciesName);
+            const card = document.querySelector(`.shark-card[data-species-id="${speciesId}"]`);
+            if (!card) return;
+            card.classList.add('flipped');
+            if (!reviewSpeciesScrolled) {
+                reviewSpeciesScrolled = true;
+                setTimeout(() => card.scrollIntoView({ behavior: 'smooth', block: 'center' }), 0);
+            }
+        }
+
+        async function loadSpeciesHistory(user) {
+            speciesHistoryUser = user || null;
+            speciesHistoryById = new Map();
+            if (!user || !window.SharkdleSpeciesTracker) return;
+            try {
+                await window.SharkdleSpeciesTracker.flushPendingRounds();
+                speciesHistoryById = await window.SharkdleSpeciesTracker.loadSpeciesStats();
+            } catch (error) {
+                console.warn('Unable to load species mistake history.', error);
+            }
+        }
+
         function initializeLibraryFirebase() {
             if (typeof firebase === 'undefined') return;
             if (!firebase.apps.length) {
@@ -1852,6 +2086,7 @@
         function getActiveFilterCount() {
             let count = 0;
             if (showOnlyHearted) count += 1;
+            if (showNeedsPractice) count += 1;
             if (activeFilters.size) count += 1;
             if (activeFilters.habitat) count += 1;
             if (document.getElementById('year-earliest')?.value) count += 1;
@@ -1877,6 +2112,7 @@
 
         function resetAllFilters() {
             showOnlyHearted = false;
+            showNeedsPractice = false;
             activeFilters.size = null;
             activeFilters.habitat = null;
 
@@ -1884,6 +2120,7 @@
             const yearEarliest = document.getElementById('year-earliest');
             const yearLatest = document.getElementById('year-latest');
             const filterBtn = document.getElementById('heart-filter');
+            const needsPracticeBtn = document.getElementById('needs-practice-filter');
 
             if (searchInput) searchInput.value = '';
             if (yearEarliest) yearEarliest.value = '';
@@ -1892,6 +2129,7 @@
                 filterBtn.classList.remove('active');
                 filterBtn.textContent = 'Show Favorites';
             }
+            if (needsPracticeBtn) needsPracticeBtn.classList.remove('active');
 
             document.querySelectorAll('.filter-option').forEach(btn => btn.classList.remove('active'));
             filteredSharks = [...allSharks];
@@ -1925,6 +2163,15 @@
             filterSharks(searchTerm);
         }
 
+        function toggleNeedsPracticeFilter() {
+            showNeedsPractice = !showNeedsPractice;
+            const filterBtn = document.getElementById('needs-practice-filter');
+            filterBtn.classList.toggle('active', showNeedsPractice);
+            const searchTerm = document.getElementById('shark-search').value;
+            filterSharks(searchTerm);
+            updateSpeciesCount();
+        }
+
         function filterSharks(searchTerm) {
             const yearEarliest = document.getElementById('year-earliest')?.value;
             const yearLatest = document.getElementById('year-latest')?.value;
@@ -1932,6 +2179,9 @@
             let baseSharks = [...allSharks];
             if (showOnlyHearted) {
                 baseSharks = baseSharks.filter(shark => heartedSharks.has(shark.name));
+            }
+            if (showNeedsPractice) {
+                baseSharks = baseSharks.filter(shark => speciesNeedsPractice(shark.name));
             }
             // Apply size filter
             if (activeFilters.size) {
@@ -2049,6 +2299,7 @@
                     card.tabIndex = 0;
                     card.setAttribute('aria-label', `Shark card for ${shark.name}`);
                     const sharkKey = getSharkLikeKey(shark.name);
+                    card.dataset.speciesId = sharkKey;
                     const globalLikes = sharkLikeCounts.get(sharkKey) || 0;
                     card.innerHTML = `
                         <div class="card-inner">
@@ -2058,6 +2309,7 @@
                                     <div class="card-front-meta">
                                         <span class="shark-chip">${shark.size}</span>
                                         <span class="shark-chip">${shark.habitat}</span>
+                                        ${getSpeciesHistoryIndicatorHtml(shark.name)}
                                     </div>
                                     <div>
                                         <div class="shark-name">${shark.name}</div>
@@ -2074,6 +2326,7 @@
                                 <div class="stat"><strong>Size:</strong> ${getSizeThreshold(shark.size)}</div>
                                 <div class="stat"><strong>Habitat:</strong> ${getHabitatDisplay(shark.habitat)}</div>
                                 <div class="stat"><strong>Year of Discovery:</strong> ${shark.yod}</div>
+                                ${getSpeciesHistoryDetailsHtml(shark.name)}
                             </div>
                         </div>
                     `;
@@ -2091,6 +2344,11 @@
                         e.stopPropagation();
                         toggleHeart(shark.name);
                     });
+                    const speciesHistoryDetails = card.querySelector('.species-history-details');
+                    if (speciesHistoryDetails) {
+                        speciesHistoryDetails.addEventListener('click', (e) => e.stopPropagation());
+                        speciesHistoryDetails.addEventListener('keypress', (e) => e.stopPropagation());
+                    }
                     card.addEventListener('click', () => {
                         card.classList.toggle('flipped');
                     });
@@ -2106,6 +2364,7 @@
                 ordersContainer.appendChild(section);
             });
             updateLibrarySummary();
+            focusReviewedSpeciesCard();
         }
 
         function updateSpeciesCount() {
@@ -2118,8 +2377,14 @@
             loadHeartedSharks();
             loadCollapsedSections();
             allSharks = Array.isArray(sharks) ? [...sharks] : [];
-            filteredSharks = [...allSharks];
-            renderSharkGalleryByOrder();
+            const searchInput = document.getElementById('shark-search');
+            if (reviewSpeciesName && searchInput) {
+                searchInput.value = reviewSpeciesName;
+                filterSharks(reviewSpeciesName);
+            } else {
+                filteredSharks = [...allSharks];
+                renderSharkGalleryByOrder();
+            }
             updateSpeciesCount();
 
             if (libraryAuth) {
@@ -2128,7 +2393,8 @@
                     if (user) {
                         await syncRemoteHeartedSharks(user);
                     }
-                    renderSharkGalleryByOrder();
+                    await loadSpeciesHistory(user);
+                    filterSharks(document.getElementById('shark-search')?.value || '');
                     updateSpeciesCount();
                 });
             } else {
@@ -2139,7 +2405,6 @@
             }
 
             // Setup search listener
-            const searchInput = document.getElementById('shark-search');
             if (searchInput) {
                 searchInput.addEventListener('input', function() {
                     filterSharks(this.value);
@@ -2168,6 +2433,8 @@
             // Setup heart filter listener
             const filterBtn = document.getElementById('heart-filter');
             filterBtn.addEventListener('click', toggleHeartFilter);
+            const needsPracticeBtn = document.getElementById('needs-practice-filter');
+            needsPracticeBtn.addEventListener('click', toggleNeedsPracticeFilter);
 
             const clearFiltersBtn = document.getElementById('clear-filters');
             if (clearFiltersBtn) {

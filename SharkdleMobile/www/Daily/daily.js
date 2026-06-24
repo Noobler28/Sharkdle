@@ -65,6 +65,42 @@ let guesses = []
 let gameCompleted = false
 let gameWon = false
 let lastLoadedDate = today
+const dailySpeciesTrackerRoundId = window.SharkdleSpeciesTracker
+    ? window.SharkdleSpeciesTracker.createRoundId("daily", `${today}-sharks`)
+    : `daily-${today}-sharks`
+
+function recordDailySpeciesHistory(won) {
+    if (!window.SharkdleSpeciesTracker) return;
+    void window.SharkdleSpeciesTracker.recordRound({
+        mode: "daily-sharks",
+        roundId: dailySpeciesTrackerRoundId,
+        targetSpecies: targetShark,
+        guesses: guesses.map(entry => entry.shark),
+        categoryResults: guesses.map(entry => entry.feedback),
+        guessesTaken: guesses.length,
+        won
+    });
+}
+
+function getSharchiveReviewHref() {
+    const path = typeof resolveAppPath === "function" ? resolveAppPath("Library/index.html") : "Library/index.html";
+    return `${path}?species=${encodeURIComponent(targetShark.name)}`;
+}
+
+function appendSharchiveReviewButton(container) {
+    const actionRows = container.querySelectorAll('div');
+    const actions = actionRows[actionRows.length - 1];
+    if (!actions) return;
+    actions.style.flexWrap = 'wrap';
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.textContent = 'Review in Sharchive';
+    button.style.cssText = 'padding:12px 18px;font-size:15px;cursor:pointer;background:rgba(70,229,139,0.18);border:1px solid rgba(70,229,139,0.5);border-radius:6px;color:#b8ffd2;font-weight:bold;';
+    button.addEventListener('click', () => {
+        window.location.href = getSharchiveReviewHref();
+    });
+    actions.appendChild(button);
+}
 
 const messageDiv = document.getElementById("message");
 
@@ -483,6 +519,7 @@ if(shark.name === targetShark.name){
     gameCompleted = true
     gameWon = true
     saveGameState()
+    recordDailySpeciesHistory(true)
 
     // Update display
     if (typeof window.updateIndexStats !== 'undefined') {
@@ -501,7 +538,7 @@ if(shark.name === targetShark.name){
 
 }
 
-if(attempts===0){
+if(attempts===0 && !gameWon){
 
     if (window.currentUser) {
         let profileData = typeof getBestLocalProfile === 'function'
@@ -559,6 +596,7 @@ if(attempts===0){
     gameCompleted = true
     gameWon = false
     saveGameState()
+    recordDailySpeciesHistory(false)
 
     // Update display
     if (typeof window.updateIndexStats !== 'undefined') {
@@ -723,6 +761,7 @@ win.innerHTML = `
 `
 
 win.style.display="block"
+appendSharchiveReviewButton(win)
 win.classList.add("lose")
 win.classList.remove("win")
 }

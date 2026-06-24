@@ -152,6 +152,28 @@ localStorage.setItem(infiniteLastFamilyKey, targetShark.family);
 let attempts = 12;
 let categoryReveal = null;
 let categoryRevealGameCompleted = false;
+let speciesTrackerGuesses = [];
+const infiniteSpeciesTrackerRoundId = window.SharkdleSpeciesTracker
+    ? window.SharkdleSpeciesTracker.createRoundId(`infinite-${speciesMode.key}`)
+    : `infinite-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+
+function recordInfiniteSpeciesHistory(won) {
+    if (!window.SharkdleSpeciesTracker) return;
+    void window.SharkdleSpeciesTracker.recordRound({
+        mode: `infinite-${speciesMode.key}`,
+        roundId: infiniteSpeciesTrackerRoundId,
+        targetSpecies: targetShark,
+        guesses: speciesTrackerGuesses.map(entry => entry.species),
+        categoryResults: speciesTrackerGuesses.map(entry => entry.feedback),
+        guessesTaken: 12 - attempts,
+        won
+    });
+}
+
+function getSharchiveReviewHref() {
+    const path = typeof resolveAppPath === "function" ? resolveAppPath("Library/index.html") : "Library/index.html";
+    return `${path}?species=${encodeURIComponent(targetShark.name)}`;
+}
 // practice mode removed; always count down and store stats
 
 const sizeThresholds = {
@@ -550,6 +572,7 @@ function makeGuess() {
         { category: "Habitat", value: guessedShark.habitat, correct: guessedShark.habitat === targetShark.habitat },
         { category: "Year of Discovery", value: guessedShark.yod, correct: guessedShark.yod === targetShark.yod }
     ];
+    speciesTrackerGuesses.push({ species: guessedShark, feedback });
     
     renderGuess(guessedShark, feedback);
     
@@ -599,6 +622,7 @@ function makeGuess() {
         }
 
         updateStats(true, guessesTaken);
+        recordInfiniteSpeciesHistory(true);
 
         if (typeof window.maybeAwardCrateDrop === 'function') {
             window.maybeAwardCrateDrop(`${speciesMode.recentMode.toLowerCase()} win`);
@@ -630,7 +654,7 @@ function makeGuess() {
                 <p style="font-size: 28px; font-weight: bold; margin: 0; color: inherit;">+${xpGain} XP</p>
                 ${pearlsEarned ? `<p style="font-size: 20px; font-weight: bold; margin: 8px 0 0; color: #8ff5ef;">+${pearlsEarned} Pearls</p>` : ''}
             </div>
-            <div style="display: flex; gap: 10px; margin-top: 25px; justify-content: center;">
+            <div style="display: flex; flex-wrap: wrap; gap: 10px; margin-top: 25px; justify-content: center;">
                 <button onclick="shareInfiniteResults()" style="padding: 12px 18px; font-size: 15px; cursor: pointer; background: #0097a7; border: none; border-radius: 6px; color: white; font-weight: bold; transition: filter 0.2s;">🦈 Share Results</button>
                 <button onclick="location.reload()" style="padding: 12px 25px; font-size: 15px; cursor: pointer; background: rgba(255,255,255,0.3); border: none; border-radius: 6px; color: inherit; font-weight: bold; transition: background 0.3s;">Play Again</button>
                 <button onclick="window.location.href=resolveAppPath('index.html')" style="padding: 12px 25px; font-size: 15px; cursor: pointer; background: rgba(0,0,0,0.3); border: none; border-radius: 6px; color: inherit; font-weight: bold; transition: background 0.3s;">Back to Home</button>
@@ -644,6 +668,7 @@ function makeGuess() {
         
     } else if (attempts === 0) {
         updateStats(false);
+        recordInfiniteSpeciesHistory(false);
         
         // Check achievements for loss conditions
         if (window.checkAchievements) {
@@ -662,8 +687,9 @@ function makeGuess() {
             <h2 style="margin-top: 0; font-size: 32px; margin-bottom: 20px;">😢 You Lost</h2>
             <p style="font-size: 18px; margin: 10px 0; color: inherit;">The ${speciesMode.animal} was <b>${targetShark.name}</b></p>
             <p style="font-size: 16px; margin: 10px 0; opacity: 0.9;">Discovered in ${targetShark.yod}</p>
-            <div style="display: flex; gap: 10px; margin-top: 25px; justify-content: center;">
+            <div style="display: flex; flex-wrap: wrap; gap: 10px; margin-top: 25px; justify-content: center;">
                 <button onclick="shareInfiniteResults()" style="padding: 12px 18px; font-size: 15px; cursor: pointer; background: #0097a7; border: none; border-radius: 6px; color: white; font-weight: bold; transition: filter 0.2s;">🦈 Share Results</button>
+                <button onclick="window.location.href='${getSharchiveReviewHref()}'" style="padding: 12px 18px; font-size: 15px; cursor: pointer; background: rgba(70,229,139,0.18); border: 1px solid rgba(70,229,139,0.5); border-radius: 6px; color: #b8ffd2; font-weight: bold;">Review in Sharchive</button>
                 <button onclick="location.reload()" style="padding: 12px 25px; font-size: 15px; cursor: pointer; background: rgba(255,255,255,0.3); border: none; border-radius: 6px; color: inherit; font-weight: bold; transition: background 0.3s;">Try Again</button>
                 <button onclick="window.location.href=resolveAppPath('index.html')" style="padding: 12px 25px; font-size: 15px; cursor: pointer; background: rgba(0,0,0,0.3); border: none; border-radius: 6px; color: inherit; font-weight: bold; transition: background 0.3s;">Back to Home</button>
             </div>

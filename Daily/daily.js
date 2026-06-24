@@ -150,6 +150,26 @@ function getDailyModeHref(modeKey) {
     return typeof resolveAppPath === "function" ? resolveAppPath(path) : path;
 }
 
+function getSharchiveReviewHref() {
+    const path = typeof resolveAppPath === "function" ? resolveAppPath("Library/index.html") : "Library/index.html";
+    return `${path}?species=${encodeURIComponent(targetShark.name)}`;
+}
+
+function appendSharchiveReviewButton(container) {
+    const actionRows = container.querySelectorAll('div');
+    const actions = actionRows[actionRows.length - 1];
+    if (!actions) return;
+    actions.style.flexWrap = 'wrap';
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.textContent = 'Review in Sharchive';
+    button.style.cssText = 'padding:12px 18px;font-size:15px;cursor:pointer;background:rgba(70,229,139,0.18);border:1px solid rgba(70,229,139,0.5);border-radius:6px;color:#b8ffd2;font-weight:bold;';
+    button.addEventListener('click', () => {
+        window.location.href = getSharchiveReviewHref();
+    });
+    actions.appendChild(button);
+}
+
 function getDailyVariantSwitcherHtml() {
     const variants = [
         { key: "sharks", label: "Sharks" },
@@ -232,6 +252,22 @@ let gameCompleted = false
 let gameWon = false
 let lastLoadedDate = today
 let categoryReveal = null
+const dailySpeciesTrackerRoundId = window.SharkdleSpeciesTracker
+    ? window.SharkdleSpeciesTracker.createRoundId("daily", `${today}-${speciesMode.key}`)
+    : `daily-${today}-${speciesMode.key}`
+
+function recordDailySpeciesHistory(won) {
+    if (!window.SharkdleSpeciesTracker) return;
+    void window.SharkdleSpeciesTracker.recordRound({
+        mode: `daily-${speciesMode.key}`,
+        roundId: dailySpeciesTrackerRoundId,
+        targetSpecies: targetShark,
+        guesses: guesses.map(entry => entry.shark),
+        categoryResults: guesses.map(entry => entry.feedback),
+        guessesTaken: guesses.length,
+        won
+    });
+}
 
 const messageDiv = document.getElementById("message");
 
@@ -947,6 +983,7 @@ if(shark.name === targetShark.name){
     gameCompleted = true
     gameWon = true
     saveGameState()
+    recordDailySpeciesHistory(true)
     updateCategoryRevealPanel()
 
     // Update display
@@ -967,7 +1004,7 @@ if(shark.name === targetShark.name){
 
 }
 
-if(attempts===0){
+if(attempts===0 && !gameWon){
 
     if (window.currentUser) {
         let profileData = typeof getBestLocalProfile === 'function'
@@ -1025,6 +1062,7 @@ if(attempts===0){
     gameCompleted = true
     gameWon = false
     saveGameState()
+    recordDailySpeciesHistory(false)
     updateCategoryRevealPanel()
 
     // Update display
@@ -1192,6 +1230,7 @@ ${getDailyVariantSwitcherHtml()}
 `
 
 win.style.display="block"
+appendSharchiveReviewButton(win)
 win.classList.add("lose")
 win.classList.remove("win")
 }
