@@ -3351,6 +3351,18 @@ body.home-v3-page > .home-shell {
     border-color: rgba(44,196,196,.38);
 }
 
+.home-v3-about-links .home-v3-admin-abuse-btn {
+    border-color: rgba(164, 171, 255, .34);
+    background: linear-gradient(135deg, rgba(95, 109, 255, .28), rgba(0, 124, 221, .22));
+    color: #cdd7ff;
+}
+
+.home-v3-about-links .home-v3-admin-abuse-btn:hover {
+    border-color: rgba(164, 171, 255, .62);
+    background: linear-gradient(135deg, rgba(95, 109, 255, .42), rgba(0, 124, 221, .34));
+    color: #ffffff;
+}
+
 .home-v3-quick-access {
     position: relative;
     flex: 0 0 auto;
