@@ -107,6 +107,8 @@
         "images/codePfp/Shark18.png": "Redeem Code Reward",
         "images/codePfp/Shark19.png": "Redeem Code Reward",
         "images/codePfp/Shark26.png": "Anniversary Code Reward — Hammerhead Shark",
+        "images/codePfp/MantaRay.png": "TikTok 2026 Code Reward — Manta Ray",
+        "images/codePfp/WhitespottedEagleRay.png": "Instagram 2026 Code Reward — Whitespotted Eagle Ray",
         "images/loginPfp/Shark20.png": "Day 7 Login Streak Reward",
         "images/cratePfp/Shark22.png": "Cosmetic Crate Reward",
         "images/cratePfp/Shark23.png": "Cosmetic Crate Reward",

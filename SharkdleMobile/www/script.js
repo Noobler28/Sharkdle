@@ -6055,6 +6055,8 @@ const redeemCodes = {
     'SHARKDLE': { xp: 2500, cosmetics: [{ imagePath: 'images/codePfp/Shark17.png', name: 'Wobbegong Shark' }], description: '2.5k XP + Wobbegong Shark Profile Icon' },
     'UPDATE1': { xp: 1000, cosmetics: [{ imagePath: 'images/codePfp/Shark18.png', name: 'Greenland Shark' }], description: '1k XP + Greenland Shark Profile Icon' },
     'UPDATE2': { xp: 1500, cosmetics: [{ imagePath: 'images/codePfp/Shark19.png', name: 'Goblin Shark' }], description: '1.5k XP + Goblin Shark Profile Icon' },
+    'TIKTOK2026': { xp: 2000, cosmetics: [{ imagePath: 'images/codePfp/MantaRay.png', name: 'Manta Ray' }], description: '2k XP + Manta Ray Profile Icon' },
+    'INSTAGRAM2026': { xp: 2000, cosmetics: [{ imagePath: 'images/codePfp/WhitespottedEagleRay.png', name: 'Whitespotted Eagle Ray' }], description: '2k XP + Whitespotted Eagle Ray Profile Icon' },
     'SUMMER2026': { xp: 3000, crates: { summer: 1 }, description: '3k XP + 1 Summer Crate' },
     'SORRY': { xp: 5000, description: '5k XP apology reward' },
     'TESTER': { badge: 'tester', description: 'Unlocks the Tester badge (🎮)' }
@@ -8502,6 +8504,8 @@ function buildProfilePicPickerCatalog() {
         { imagePath: "images/codePfp/Shark18.png", name: "Greenland Shark", source: "Redeem code reward" },
         { imagePath: "images/codePfp/Shark19.png", name: "Goblin Shark", source: "Redeem code reward" },
         { imagePath: "images/codePfp/Shark26.png", name: "Hammerhead Shark", source: "Anniversary code reward" },
+        { imagePath: "images/codePfp/MantaRay.png", name: "Manta Ray", source: "TikTok 2026 code reward" },
+        { imagePath: "images/codePfp/WhitespottedEagleRay.png", name: "Whitespotted Eagle Ray", source: "Instagram 2026 code reward" },
         { imagePath: "images/leaderPfp/Daily/Shark1.png", name: "Catshark", source: "Daily leaderboard #1" },
         { imagePath: "images/leaderPfp/Monthly/Shark1.png", name: "Whitetip Reef Shark", source: "Monthly leaderboard #1" },
         { imagePath: "images/leaderPfp/Shark19.png", name: "Port Jackson Shark", source: "All-time leaderboard top 3", isLeader: true },
