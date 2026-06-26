@@ -417,9 +417,39 @@
             rewards.push({ id, goal, title, rewardText, effects });
         }
 
+        for (let goal = 3600; goal <= 14800; goal += 400) {
+            let title = "Deep Index Grant";
+            let rewardText = "";
+            let effects = [];
+
+            if (goal % 2000 === 0) {
+                title = "Deep Survey Bonus";
+                rewardText = "+5% permanent luck";
+                effects = [{ type: "luckBonus", amount: 0.05 }];
+            } else if (goal % 1200 === 0) {
+                const amount = Math.max(2, Math.floor(goal / 3600));
+                title = "Omega Reserve";
+                rewardText = `${amount} Omega Potion${amount === 1 ? "" : "s"}`;
+                effects = [{ type: "potion", key: "omega", amount }];
+            } else if (goal % 800 === 0) {
+                const amount = Math.max(2, Math.floor(goal / 2800));
+                title = "Mutagen Reserve";
+                rewardText = `${amount} Mutagen Storm Potion${amount === 1 ? "" : "s"}`;
+                effects = [{ type: "potion", key: "randomMutation", amount }];
+            } else {
+                const lateStep = Math.max(1, (goal - 3200) / 400);
+                const amount = Math.floor(30000000 * Math.pow(1.18, lateStep));
+                title = "Deep Coin Cache";
+                rewardText = `${formatCompactCoins(amount)} coins`;
+                effects = [{ type: "coins", amount }];
+            }
+
+            rewards.push({ id: `index_${goal}`, goal, title, rewardText, effects });
+        }
+
         rewards.push({
             id: "index_complete",
-            goal: 3234,
+            goal: 15108,
             title: "Complete Index",
             rewardText: "+25% permanent luck + 5 Omega",
             effects: [
