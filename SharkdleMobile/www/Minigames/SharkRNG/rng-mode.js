@@ -3048,10 +3048,9 @@ function updateActiveEffectsUi() {
          const parts = [];
          const luckStacks = getLuckPotionStacks();
          if (luckStacks.length) {
-             const stackText = luckStacks
-                 .map((stack) => `\u00d7${stack.mult} (${stack.remaining})`)
-                 .join(", ");
-             parts.push(`\u{1F340} Luck ${stackText}`);
+             luckStacks.forEach((stack) => {
+                 parts.push(`\u{1F340} Luck \u00d7${stack.mult} (${stack.remaining})`);
+             });
          }
          if (player.activeEffects.coin.remaining > 0) {
              parts.push(`\u{1F4B0} Coin \u00d7${player.activeEffects.coin.mult} (${player.activeEffects.coin.remaining})`);
@@ -3081,12 +3080,17 @@ function updateActiveEffectsUi() {
          if (apexChance !== null) {
              parts.push(`\u{1F988} Apex: 1 in ${apexChance.toLocaleString()}`);
          }
- 
+
          if (parts.length) {
-             el.textContent = parts.join(" \u00b7 ");
+             el.replaceChildren(...parts.map((part) => {
+                 const item = document.createElement("span");
+                 item.className = "rng-buff-item";
+                 item.textContent = part;
+                 return item;
+             }));
              el.removeAttribute("data-empty");
          } else {
-             el.textContent = "";
+             el.replaceChildren();
              el.setAttribute("data-empty", "true");
          }
      }

@@ -384,6 +384,11 @@ body.rng-page {
 .rng-mutation-tag.apex { color: #fb923c; }
 
 .rng-buff-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
     padding: 4px 8px;
     border-radius: 8px;
     background: var(--rng-accent-soft);
@@ -393,16 +398,25 @@ body.rng-page {
     text-align: center;
     flex-shrink: 0;
     min-height: 26px;
-    max-height: 26px;
+    max-height: 58px;
     line-height: 1.2;
-    overflow: hidden;
-    white-space: nowrap;
-    text-overflow: ellipsis;
+    overflow-y: auto;
 }
 
 .rng-buff-row[data-empty="true"]::before {
     content: "No active potions";
     color: var(--rng-muted);
+}
+
+.rng-buff-item {
+    display: inline-flex;
+    align-items: center;
+    min-height: 18px;
+    padding: 2px 5px;
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    white-space: nowrap;
 }
 
 .rng-action-row {
