@@ -468,6 +468,37 @@
         return "Signed-in player";
     }
 
+    function getCurrentActivityLabel() {
+        const path = decodeURIComponent(window.location.pathname || "/").toLowerCase();
+        const profileModal = document.getElementById("profileModal");
+        if (profileModal && !profileModal.classList.contains("hidden")) return "Profile";
+        if (path.includes("/minigames/sharkrng/") || path.includes("/rng.html")) return "Shark RNG";
+        if (path.includes("/library/") || path.includes("/library.html")) return "Sharchive";
+        if (path.includes("/daily/") || path.includes("/daily.html")) return "Daily";
+        if (path.includes("/infinite/") || path.includes("/infinite.html")) return "Infinite";
+        if (path.includes("/practice/") || path.includes("/practice.html")) return "Practice";
+        if (path.includes("/story/") || path.includes("/story.html")) return "Story";
+        if (path.includes("/sharkpass/") || path.includes("/sharkpass.html")) return "Sharkpass";
+        if (path.includes("/achievements/") || path.includes("/achievements.html")) return "Achievements";
+        if (path.includes("/leaderboard/") || path.includes("/leaderboards.html")) return "Leaderboards";
+        if (path.includes("/updates/") || path.includes("/updates.html")) return "Updates";
+        if (path.includes("/shark-rescue/") || path.includes("/secret.html")) return "Shark Rescue";
+        if (path.includes("/minigames/sharkslots/") || path.includes("/slots.html")) return "Shark Slots";
+        if (document.body?.classList.contains("home-page")) return "Home";
+        return "Sharkdle";
+    }
+
+    function getCurrentActivityPayload(nowMs = Date.now()) {
+        if (typeof window.getCurrentSharkdleActivityPayload === "function") {
+            return window.getCurrentSharkdleActivityPayload(nowMs);
+        }
+        return {
+            label: getCurrentActivityLabel(),
+            path: String(window.location.pathname || "/").slice(0, 120),
+            updatedAt: nowMs
+        };
+    }
+
     async function recordSignedInVisitor(db, user) {
         if (!db || !user?.uid) return;
 
@@ -480,7 +511,8 @@
         if (!hasPagePresenceHeartbeat) {
             writes.push(
                 db.collection("userStats").doc(user.uid).set({
-                    lastActive: nowMs
+                    lastActive: nowMs,
+                    lastActivity: getCurrentActivityPayload(nowMs)
                 }, { merge: true })
             );
         }

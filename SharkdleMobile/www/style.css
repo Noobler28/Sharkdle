@@ -5654,6 +5654,7 @@ overflow-y:auto;
 }
 
 .admin-recent-visitor strong {
+    flex: 1 1 auto;
     min-width: 0;
     overflow: hidden;
     color: #eafaff;
@@ -5666,6 +5667,12 @@ overflow-y:auto;
 .admin-visitor-empty {
     color: #9fd9ea;
     font-size: 11px;
+}
+
+.admin-recent-visitor span {
+    flex: 0 1 auto;
+    max-width: 58%;
+    text-align: right;
 }
 
 .admin-visitor-empty {

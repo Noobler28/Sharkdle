@@ -217,16 +217,65 @@ function getFriendPresence(profile) {
     };
 }
 
+const SHARKDLE_ACTIVITY_ROUTES = Object.freeze([
+    { match: "/minigames/sharkrng/", label: "Shark RNG" },
+    { match: "/rng.html", label: "Shark RNG" },
+    { match: "/library/", label: "Sharchive" },
+    { match: "/library.html", label: "Sharchive" },
+    { match: "/daily/", label: "Daily" },
+    { match: "/daily.html", label: "Daily" },
+    { match: "/infinite/", label: "Infinite" },
+    { match: "/infinite.html", label: "Infinite" },
+    { match: "/practice/", label: "Practice" },
+    { match: "/practice.html", label: "Practice" },
+    { match: "/story/", label: "Story" },
+    { match: "/story.html", label: "Story" },
+    { match: "/sharkpass/", label: "Sharkpass" },
+    { match: "/sharkpass.html", label: "Sharkpass" },
+    { match: "/achievements/", label: "Achievements" },
+    { match: "/achievements.html", label: "Achievements" },
+    { match: "/leaderboard/", label: "Leaderboards" },
+    { match: "/leaderboards.html", label: "Leaderboards" },
+    { match: "/updates/", label: "Updates" },
+    { match: "/updates.html", label: "Updates" },
+    { match: "/shark-rescue/", label: "Shark Rescue" },
+    { match: "/secret.html", label: "Shark Rescue" },
+    { match: "/minigames/sharkslots/", label: "Shark Slots" },
+    { match: "/slots.html", label: "Shark Slots" }
+]);
+
+function getCurrentSharkdleActivityLabel() {
+    const path = decodeURIComponent(window.location.pathname || "/").toLowerCase();
+    const profileModal = document.getElementById("profileModal");
+    if (profileModal && !profileModal.classList.contains("hidden")) return "Profile";
+    const matchedRoute = SHARKDLE_ACTIVITY_ROUTES.find(route => path.includes(route.match));
+    if (matchedRoute) return matchedRoute.label;
+    if (document.body?.classList.contains("home-page")) return "Home";
+    return "Sharkdle";
+}
+
+function getCurrentSharkdleActivityPayload(nowMs = Date.now()) {
+    return {
+        label: getCurrentSharkdleActivityLabel(),
+        path: String(window.location.pathname || "/").slice(0, 120),
+        updatedAt: nowMs
+    };
+}
+
 async function updatePresenceHeartbeat() {
     if (!db || !currentUser) return;
+    const nowMs = Date.now();
     try {
         await db.collection('userStats').doc(currentUser.uid).set({
-            lastActive: Date.now()
+            lastActive: nowMs,
+            lastActivity: getCurrentSharkdleActivityPayload(nowMs)
         }, { merge: true });
     } catch (error) {
         console.warn('Presence heartbeat failed:', error);
     }
 }
+
+window.getCurrentSharkdleActivityPayload = getCurrentSharkdleActivityPayload;
 
 function getProcessedDuels() {
     try {
@@ -9781,6 +9830,33 @@ function setAdminVisitorMetric(elementId, value) {
     if (element) element.textContent = String(value);
 }
 
+function normalizeAdminVisitorActivity(value) {
+    if (typeof value === "string") {
+        return value.trim().slice(0, 80);
+    }
+    if (!value || typeof value !== "object") return "";
+    return String(value.label || value.name || value.page || "").trim().slice(0, 80);
+}
+
+function formatAdminVisitorActivity(visitor) {
+    const activity = normalizeAdminVisitorActivity(visitor?.lastActivity);
+    if (!activity) return "";
+    const activityUpdatedMs = getAdminTimestampMillis(visitor?.lastActivity?.updatedAt);
+    if (
+        activityUpdatedMs
+        && visitor?.lastActiveMs
+        && Math.abs(visitor.lastActiveMs - activityUpdatedMs) > ACTIVE_PLAYER_WINDOW_MS
+    ) {
+        return "";
+    }
+    return activity;
+}
+
+function formatAdminOnlineVisitorLabel(visitor) {
+    const activity = formatAdminVisitorActivity(visitor);
+    return activity ? `${visitor.username} - ${activity}` : visitor.username;
+}
+
 function renderAdminRecentVisitors(visitors, nowMs = Date.now()) {
     const list = document.getElementById("admin-recent-visitors-list");
     if (!list) return;
@@ -9803,8 +9879,15 @@ function renderAdminRecentVisitors(visitors, nowMs = Date.now()) {
 
         const seen = document.createElement("span");
         const online = nowMs - visitor.lastActiveMs < ACTIVE_PLAYER_WINDOW_MS;
-        seen.textContent = online ? "Online now" : formatAdminRelativeTime(visitor.lastActiveMs, nowMs);
-        seen.title = formatAdminDateTime(visitor.lastActiveMs);
+        const activity = formatAdminVisitorActivity(visitor);
+        seen.textContent = online && activity
+            ? `Online now - ${activity}`
+            : online
+                ? "Online now"
+                : formatAdminRelativeTime(visitor.lastActiveMs, nowMs);
+        seen.title = activity
+            ? `${formatAdminDateTime(visitor.lastActiveMs)} - ${activity}`
+            : formatAdminDateTime(visitor.lastActiveMs);
 
         row.append(name, seen);
         list.appendChild(row);
@@ -9832,7 +9915,8 @@ async function refreshAdminVisitorInsights() {
             const data = doc.data() || {};
             return {
                 username: String(data.username || `Player ${doc.id.slice(0, 6)}`),
-                lastActiveMs: getAdminTimestampMillis(data.lastActive)
+                lastActiveMs: getAdminTimestampMillis(data.lastActive),
+                lastActivity: data.lastActivity
             };
         })
         .filter(visitor => visitor.lastActiveMs >= sevenDayCutoffMs)
@@ -9861,7 +9945,7 @@ async function refreshAdminVisitorInsights() {
     const onlineMetric = document.getElementById("admin-visitors-online");
     if (onlineMetric) {
         onlineMetric.title = onlineVisitors.length
-            ? onlineVisitors.map(visitor => visitor.username).join("\n")
+            ? onlineVisitors.map(formatAdminOnlineVisitorLabel).join("\n")
             : "No signed-in players are currently online.";
     }
 
