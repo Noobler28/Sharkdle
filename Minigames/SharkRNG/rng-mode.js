@@ -926,6 +926,7 @@ let rollPool = [];
     let rngLeaderboardLoading = false;
     let rngDevForcedMutationType = null;
     let collectionSortRarestFirst = true;
+    let collectionGridDirty = false;
     let localSaveTimer = null;
     let localSaveDirty = false;
     let localSaveFlushBound = false;
@@ -2896,10 +2897,10 @@ function rollForShark() {
         return loadRngLeaderboard();
     }
 
-    function persistPlayerState() {
+    function persistPlayerState(options = {}) {
         scheduleLocalProfileSave();
         scheduleCloudSync();
-        updateAllUi();
+        updateAllUi(options);
     }
 
     function getCollectionCount() {
@@ -3471,14 +3472,17 @@ function updateActiveEffectsUi() {
         }
     }
 
-function updateAllUi() {
+function updateAllUi(options = {}) {
          updateStatsUi();
          updateRankUi();
          updateEquippedUi();
          renderPrestigePanel();
          renderUpgradeShop();
          renderPotionShop();
-         renderCollectionGrid();
+         renderCollectionGrid({
+             deferDuringActiveRoll: options.deferCollectionGridDuringRoll !== false,
+             force: Boolean(options.forceCollectionGrid)
+         });
          renderTierLegend();
          renderRngLeaderboardSelf();
          updateAutoButtonUi();
@@ -3583,14 +3587,23 @@ function updateAllUi() {
         });
     }
 
-    function renderCollectionGrid() {
+    function isCollectionModalOpen() {
+        return !document.getElementById("rng-collection-modal")?.classList.contains("hidden");
+    }
+
+    function flushDeferredCollectionGridRender() {
+        if (!collectionGridDirty || isRolling || autoEnabled || !isCollectionModalOpen()) return;
+        renderCollectionGrid({ force: true });
+    }
+
+    function renderCollectionGrid(options = {}) {
         const grid = document.getElementById("rng-collection-grid");
         const filter = document.getElementById("rng-collection-filter");
         const searchInput = document.getElementById("rng-collection-search");
         const sortButton = document.getElementById("rng-collection-sort-rarity");
         if (!grid) return;
 
-        if (document.getElementById("rng-collection-modal")?.classList.contains("hidden")) {
+        if (!isCollectionModalOpen()) {
             return;
         }
 
@@ -3608,7 +3621,12 @@ function updateAllUi() {
             sortButton.title = collectionSortRarestFirst ? "Click to sort common first" : "Click to sort rarest first";
         }
 
-        grid.innerHTML = "";
+        if (options.deferDuringActiveRoll && !options.force && (isRolling || autoEnabled)) {
+            collectionGridDirty = true;
+            return;
+        }
+
+        const fragment = document.createDocumentFragment();
 
         const sectionDefs = [
             { key: "base", title: "Base Species", mutation: null },
@@ -3676,7 +3694,7 @@ function updateAllUi() {
                 <strong>${section.title}</strong>
                 <span>${ownedInSection}/${candidates.length}</span>
             `;
-            grid.appendChild(header);
+            fragment.appendChild(header);
 
             for (const candidate of candidates) {
                 const { key, entry, canonical, displayName, baseTier, oddsTier, obtained } = candidate;
@@ -3696,17 +3714,22 @@ function updateAllUi() {
                 if (obtained) {
                     card.addEventListener("click", () => {
                         player.equipped = key;
-                        persistPlayerState();
+                        persistPlayerState({ forceCollectionGrid: true });
                     });
                 }
-                grid.appendChild(card);
+                fragment.appendChild(card);
                 rendered++;
             }
         }
 
         if (!rendered) {
             grid.innerHTML = `<p class="rng-empty-note">No matching index entries.</p>`;
+            collectionGridDirty = false;
+            return;
         }
+
+        grid.replaceChildren(fragment);
+        collectionGridDirty = false;
     }
 
     async function animateRoll(finalShark) {
@@ -3964,16 +3987,17 @@ async function performRoll() {
          GameFx.resumeAudio();
          GameFx.pulseRollButton();
          updateRollButtonState();
- 
+
          const finalShark = rollForShark();
          await animateRoll(finalShark);
          applyRollJuice(finalShark);
          await showRollReveal(finalShark);
-         persistPlayerState();
- 
+         persistPlayerState({ deferCollectionGridDuringRoll: true });
+
          rollLockedUntil = Date.now() + getRollCooldownMs();
          startCooldownTimer();
          isRolling = false;
+         flushDeferredCollectionGridRender();
      }
  
      function restartAutoRoll() {
@@ -4018,6 +4042,10 @@ async function performRoll() {
             autoInterval = null;
         }
 
+        if (!autoEnabled) {
+            flushDeferredCollectionGridRender();
+        }
+
         if (autoEnabled) {
             autoInterval = setInterval(() => {
                 if (!isRolling && Date.now() >= rollLockedUntil) performRoll();
@@ -4038,11 +4066,12 @@ async function performRoll() {
 
     function openCollectionModal() {
         document.getElementById("rng-collection-modal")?.classList.remove("hidden");
-        renderCollectionGrid();
+        renderCollectionGrid({ force: true });
     }
 
     function closeCollectionModal() {
         document.getElementById("rng-collection-modal")?.classList.add("hidden");
+        collectionGridDirty = false;
     }
 
     function buyUpgrade(list, levelKey) {
