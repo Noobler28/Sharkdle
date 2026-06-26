@@ -3328,7 +3328,7 @@ body.home-v3-page > .home-shell {
 
 .home-v3-social-links {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 8px;
 }
 
