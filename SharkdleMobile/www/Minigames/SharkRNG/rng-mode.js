@@ -1996,6 +1996,15 @@ let rollPool = [];
         return getLuckPotionStacks()[0]?.mult || 1;
     }
 
+    function getLuckPotionDisplayStacks() {
+        const grouped = new Map();
+        getLuckPotionStacks().forEach((stack) => {
+            grouped.set(stack.mult, (grouped.get(stack.mult) || 0) + stack.remaining);
+        });
+        return Array.from(grouped, ([mult, remaining]) => ({ mult, remaining }))
+            .sort((a, b) => b.mult - a.mult);
+    }
+
     function addLuckPotionStack(mult, remaining) {
         const stacks = getLuckPotionStacks();
         stacks.push({
@@ -3044,12 +3053,12 @@ function rollForShark() {
 function updateActiveEffectsUi() {
          const el = document.getElementById("rng-active-effects");
          if (!el) return;
- 
+
          const parts = [];
-         const luckStacks = getLuckPotionStacks();
+         const luckStacks = getLuckPotionDisplayStacks();
          if (luckStacks.length) {
              luckStacks.forEach((stack) => {
-                 parts.push(`\u{1F340} Luck \u00d7${stack.mult} (${stack.remaining})`);
+                 parts.push(`\u{1F340} Luck x${stack.mult} (${stack.remaining})`);
              });
          }
          if (player.activeEffects.coin.remaining > 0) {
@@ -3590,6 +3599,7 @@ function updateAllUi(options = {}) {
         const filter = document.getElementById("rng-collection-filter");
         const searchInput = document.getElementById("rng-collection-search");
         const sortButton = document.getElementById("rng-collection-sort-rarity");
+        const ownedOnlyToggle = document.getElementById("rng-collection-owned-only");
         if (!grid) return;
 
         if (!isCollectionModalOpen()) {
@@ -3602,6 +3612,7 @@ function updateAllUi(options = {}) {
         const tierFilter = filter ? filter.value : "all";
         const baseOnlyFilter = tierFilter === "base";
         const mutationFilter = MUTATION_TYPES[tierFilter] ? tierFilter : null;
+        const ownedOnly = Boolean(ownedOnlyToggle?.checked);
         const searchTerm = (searchInput?.value || "").toLowerCase().trim();
         const searchTokens = searchTerm ? searchTerm.split(/\s+/).filter(Boolean) : [];
         if (sortButton) {
@@ -3645,6 +3656,9 @@ function updateAllUi(options = {}) {
                     const searchHaystack = `${displayName} ${section.title} ${baseTier} ${oddsTier}`.toLowerCase();
 
                     if (!baseOnlyFilter && !mutationFilter && tierFilter !== "all" && baseTier !== tierFilter) {
+                        return null;
+                    }
+                    if (ownedOnly && !entry) {
                         return null;
                     }
                     if (searchTokens.length && !searchTokens.every(token => searchHaystack.includes(token))) {
@@ -4464,6 +4478,7 @@ async function performRoll() {
         document.getElementById("rng-collection-close-btn")?.addEventListener("click", closeCollectionModal);
         document.getElementById("rng-collection-filter")?.addEventListener("change", renderCollectionGrid);
         document.getElementById("rng-collection-search")?.addEventListener("input", renderCollectionGrid);
+        document.getElementById("rng-collection-owned-only")?.addEventListener("change", renderCollectionGrid);
         document.getElementById("rng-collection-sort-rarity")?.addEventListener("click", () => {
             collectionSortRarestFirst = !collectionSortRarestFirst;
             renderCollectionGrid();
