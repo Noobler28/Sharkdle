@@ -1118,6 +1118,7 @@ body.rng-page {
 .rng-potion-summary {
     grid-column: 1 / -1;
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     justify-content: space-between;
     gap: 8px;
@@ -1130,6 +1131,7 @@ body.rng-page {
 .rng-potion-summary-copy {
     display: flex;
     flex-direction: column;
+    flex: 1 1 120px;
     gap: 2px;
     min-width: 0;
 }
@@ -1141,6 +1143,49 @@ body.rng-page {
 .rng-potion-summary span {
     color: var(--rng-muted);
     font-size: 0.62rem;
+}
+
+.rng-potion-summary-controls {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 6px;
+    flex: 0 1 auto;
+}
+
+.rng-potion-buy-toggle {
+    display: inline-flex;
+    gap: 2px;
+    padding: 2px;
+    border-radius: 8px;
+    background: rgba(0, 0, 0, 0.16);
+    border: 1px solid var(--rng-border);
+}
+
+.rng-potion-buy-toggle-btn {
+    min-width: 31px;
+    border: 0;
+    border-radius: 6px;
+    padding: 3px 6px;
+    background: transparent;
+    color: var(--rng-muted);
+    font: inherit;
+    font-size: 0.58rem;
+    font-weight: 800;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.rng-potion-buy-toggle-btn:hover,
+.rng-potion-buy-toggle-btn:focus-visible {
+    color: var(--rng-text);
+    background: rgba(255, 255, 255, 0.07);
+}
+
+.rng-potion-buy-toggle-btn.active {
+    color: #102018;
+    background: linear-gradient(90deg, #5eead4, #fde047);
 }
 
 .rng-potion-consume-all {
@@ -1878,7 +1923,21 @@ body.rng-page {
         gap: 6px;
     }
 
-    .rng-potion-consume-all {
+    .rng-potion-summary-controls {
+        width: 100%;
+        flex-wrap: wrap;
+    }
+
+    .rng-potion-buy-toggle {
+        flex: 1 1 auto;
+    }
+
+    .rng-potion-buy-toggle-btn {
+        flex: 1;
+    }
+
+    .rng-potion-summary-controls .rng-potion-consume-all {
+        flex: 1 1 110px;
         width: 100%;
     }
 }

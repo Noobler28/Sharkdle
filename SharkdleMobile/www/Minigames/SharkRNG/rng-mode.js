@@ -157,6 +157,7 @@
     const PRESTIGE_COIN_PER_POINT = 0.025;
     const PRESTIGE_XP_PER_POINT = 0.015;
     const PRESTIGE_MULTI_ROLL_COUNTS = [1, 2, 3, 5, 8];
+    const POTION_BUY_AMOUNTS = [1, 10, 50, 100];
     const PRESTIGE_UPGRADE_DEFS = [
         {
             id: "pearlLuck",
@@ -969,6 +970,7 @@ let rollPool = [];
     let localSaveTimer = null;
     let localSaveDirty = false;
     let localSaveFlushBound = false;
+    let selectedPotionBuyAmount = POTION_BUY_AMOUNTS[0];
 
     const GameFx = {
         initAudio() {
@@ -3036,11 +3038,33 @@ function rollForShark() {
         return Math.max(1, Math.round(def.cost * (1 - getPrestigePotionDiscount())));
     }
 
-    function getPotionPurchaseBlockReason(key) {
+    function getSelectedPotionBuyAmount() {
+        return POTION_BUY_AMOUNTS.includes(selectedPotionBuyAmount) ? selectedPotionBuyAmount : POTION_BUY_AMOUNTS[0];
+    }
+
+    function getPotionBuyQuantity(key, requestedAmount = getSelectedPotionBuyAmount()) {
+        const def = POTION_DEFS[key];
+        if (!def) return 0;
+
+        const amount = Math.max(1, Math.floor(Number(requestedAmount) || 1));
+        if (!def.maxOwned) return amount;
+
+        return Math.max(0, Math.min(amount, def.maxOwned - getPotionHeldCount(key)));
+    }
+
+    function getPotionBatchCost(key, quantity = getPotionBuyQuantity(key)) {
+        return getPotionCost(key) * Math.max(0, quantity);
+    }
+
+    function getPotionPurchaseBlockReason(key, quantity = getPotionBuyQuantity(key)) {
         const def = POTION_DEFS[key];
         if (!def) return "Unknown potion";
 
         if (def.maxOwned && getPotionHeldCount(key) >= def.maxOwned) {
+            return "Already stocked";
+        }
+
+        if (quantity <= 0) {
             return "Already stocked";
         }
 
@@ -3049,7 +3073,7 @@ function rollForShark() {
             return `Restocks after ${restock} normal roll${restock === 1 ? "" : "s"}`;
         }
 
-        const cost = getPotionCost(key);
+        const cost = getPotionBatchCost(key, quantity);
         if (player.coins < cost) {
             return `Need ${formatCompactCoins(cost)} coins`;
         }
@@ -3529,7 +3553,32 @@ function updateActiveEffectsUi() {
         consumeAllBtn.title = "Consume all stored potions";
         consumeAllBtn.disabled = getStoredPotionCount() <= 0;
         consumeAllBtn.addEventListener("click", consumeAllPotions);
-        summary.appendChild(consumeAllBtn);
+
+        const controls = document.createElement("div");
+        controls.className = "rng-potion-summary-controls";
+
+        const buyToggle = document.createElement("div");
+        buyToggle.className = "rng-potion-buy-toggle";
+        buyToggle.setAttribute("aria-label", "Potion buy amount");
+
+        const selectedAmount = getSelectedPotionBuyAmount();
+        for (const amount of POTION_BUY_AMOUNTS) {
+            const amountBtn = document.createElement("button");
+            amountBtn.className = `rng-potion-buy-toggle-btn${amount === selectedAmount ? " active" : ""}`;
+            amountBtn.type = "button";
+            amountBtn.textContent = `x${amount}`;
+            amountBtn.title = `Buy ${amount.toLocaleString()} potion${amount === 1 ? "" : "s"} at a time`;
+            amountBtn.setAttribute("aria-pressed", amount === selectedAmount ? "true" : "false");
+            amountBtn.addEventListener("click", () => {
+                selectedPotionBuyAmount = amount;
+                renderPotionShop();
+            });
+            buyToggle.appendChild(amountBtn);
+        }
+
+        controls.appendChild(buyToggle);
+        controls.appendChild(consumeAllBtn);
+        summary.appendChild(controls);
         shop.appendChild(summary);
 
         for (const [key, def] of Object.entries(POTION_DEFS)) {
@@ -3551,12 +3600,16 @@ function updateActiveEffectsUi() {
             const buyBtn = document.createElement("button");
             buyBtn.className = "rng-btn rng-btn-buy";
             buyBtn.type = "button";
-            const blockReason = getPotionPurchaseBlockReason(key);
+            const buyQuantity = getPotionBuyQuantity(key);
+            const batchCost = getPotionBatchCost(key, buyQuantity);
+            const blockReason = getPotionPurchaseBlockReason(key, buyQuantity);
             const restock = getPotionRestock(key);
             buyBtn.textContent = restock > 0
                 ? `${restock} rolls`
-                : formatCompactCoins(getPotionCost(key));
-            buyBtn.title = blockReason || `Buy for ${getPotionCost(key).toLocaleString()} coins`;
+                : buyQuantity > 1
+                    ? `x${buyQuantity} ${formatCompactCoins(batchCost)}`
+                    : formatCompactCoins(batchCost || getPotionCost(key));
+            buyBtn.title = blockReason || `Buy ${buyQuantity.toLocaleString()} for ${batchCost.toLocaleString()} coins`;
             buyBtn.disabled = Boolean(blockReason);
             buyBtn.addEventListener("click", () => buyPotion(key));
 
@@ -4225,13 +4278,17 @@ async function performRoll() {
 
     function buyPotion(key) {
         const def = POTION_DEFS[key];
-        const blockReason = getPotionPurchaseBlockReason(key);
-        if (!def || blockReason) {
+        const quantity = getPotionBuyQuantity(key);
+        const blockReason = getPotionPurchaseBlockReason(key, quantity);
+        if (!def || blockReason || quantity <= 0) {
             if (blockReason) showToast(blockReason, "error");
             return;
         }
-        player.coins -= getPotionCost(key);
-        player.potions[key] = (player.potions[key] || 0) + 1;
+
+        const cost = getPotionBatchCost(key, quantity);
+        player.coins -= cost;
+        player.potions[key] = (player.potions[key] || 0) + quantity;
+        showToast(`Bought ${quantity.toLocaleString()} ${def.name}${quantity === 1 ? "" : "s"}.`);
         persistPlayerState();
     }
 
