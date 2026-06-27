@@ -2296,13 +2296,40 @@ let rollPool = [];
         return baseChance ? Math.max(1, Math.round(baseChance / getPrestigeApexOddsMultiplier())) : null;
     }
 
-    function getQueuedForcedMutation() {
+    function getActiveGuaranteedPotionKey() {
+        if (player.activeEffects.omega?.remaining > 0) return "omega";
+        if (player.activeEffects.ultra?.remaining > 0) return "ultra";
+        return null;
+    }
+
+    function getActiveForcedMutationEffectKey() {
         const specificType = STANDARD_MUTATION_KEYS.find((key) => player.activeEffects[key]?.remaining > 0);
-        if (specificType) {
-            return { type: specificType, effectKey: specificType };
+        if (specificType) return specificType;
+        return player.activeEffects.randomMutation?.remaining > 0 ? "randomMutation" : null;
+    }
+
+    function createRollActionContext(rollCount = 1) {
+        return {
+            rollCount: Math.max(1, Math.floor(Number(rollCount) || 1)),
+            guaranteedPotionKey: getActiveGuaranteedPotionKey(),
+            forcedMutationEffectKey: getActiveForcedMutationEffectKey(),
+            usedMutationEffectKey: null,
+            devForcedMutationType: consumeQueuedDevForcedMutationType(),
+            devForcedMutationConsumed: false
+        };
+    }
+
+    function getQueuedForcedMutation(actionContext = null) {
+        const effectKey = actionContext
+            ? actionContext.forcedMutationEffectKey
+            : getActiveForcedMutationEffectKey();
+
+        if (!effectKey) return null;
+        if (effectKey !== "randomMutation") {
+            return { type: effectKey, effectKey };
         }
 
-        if (player.activeEffects.randomMutation?.remaining > 0) {
+        if (player.activeEffects.randomMutation?.remaining > 0 || actionContext?.forcedMutationEffectKey === "randomMutation") {
             const randomType = pickWeightedMutationKey(STANDARD_MUTATION_KEYS);
             if (!randomType) return null;
             return {
@@ -2314,10 +2341,41 @@ let rollPool = [];
         return null;
     }
 
+    function consumeActionDevForcedMutationType(actionContext = null) {
+        if (!actionContext) return consumeQueuedDevForcedMutationType();
+        if (actionContext.devForcedMutationConsumed) return null;
+        actionContext.devForcedMutationConsumed = true;
+        return MUTATION_TYPES[actionContext.devForcedMutationType] ? actionContext.devForcedMutationType : null;
+    }
+
     function consumeQueuedDevForcedMutationType() {
         const type = rngDevForcedMutationType;
         rngDevForcedMutationType = null;
         return MUTATION_TYPES[type] ? type : null;
+    }
+
+    function consumeRollActionEffects(actionContext = {}) {
+        const guaranteedPotionKey = actionContext.guaranteedPotionKey || null;
+
+        if (guaranteedPotionKey === "omega" && player.activeEffects.omega?.remaining > 0) {
+            player.activeEffects.omega.remaining = Math.max(0, player.activeEffects.omega.remaining - 1);
+            startPotionRestock("omega");
+        } else if (guaranteedPotionKey === "ultra" && player.activeEffects.ultra?.remaining > 0) {
+            player.activeEffects.ultra.remaining = Math.max(0, player.activeEffects.ultra.remaining - 1);
+            startPotionRestock("ultra");
+        } else {
+            tickPotionRestocks();
+        }
+
+        const mutationEffectKey = actionContext.usedMutationEffectKey;
+        if (mutationEffectKey && player.activeEffects[mutationEffectKey]?.remaining > 0) {
+            player.activeEffects[mutationEffectKey].remaining = Math.max(
+                0,
+                player.activeEffects[mutationEffectKey].remaining - 1
+            );
+        }
+
+        consumeEffectRolls();
     }
 
     function getMutationRollWeightTotal(keys = STANDARD_MUTATION_KEYS) {
@@ -2719,38 +2777,27 @@ let rollPool = [];
         }
     }
 
-function rollForShark() {
+function rollForShark(actionContext = createRollActionContext(1)) {
     player.rolls += 1;
     const streakLuckActive = isStreakLuckRoll();
 
     let rolled = null;
-    const forcedMutation = getQueuedForcedMutation();
-    const devForcedMutationType = consumeQueuedDevForcedMutationType();
+    const forcedMutation = getQueuedForcedMutation(actionContext);
+    const devForcedMutationType = consumeActionDevForcedMutationType(actionContext);
     const hasForcedMutation = forcedMutation || devForcedMutationType;
+    const guaranteedPotionKey = actionContext.guaranteedPotionKey || null;
 
     // =========================================
     // OMEGA / ULTRA GUARANTEED POTIONS
     // =========================================
 
-    if (player.activeEffects.omega?.remaining > 0) {
+    if (guaranteedPotionKey === "omega") {
 
         rolled = markGuaranteedPotionRoll(pickGuaranteedOmegaOrBetter(), "omegaPotion");
 
-        player.activeEffects.omega.remaining = Math.max(
-            0,
-            player.activeEffects.omega.remaining - 1
-        );
-        startPotionRestock("omega");
-
-    } else if (player.activeEffects.ultra?.remaining > 0) {
+    } else if (guaranteedPotionKey === "ultra") {
 
         rolled = markGuaranteedPotionRoll(pickGuaranteedUltraRare(), "ultraPotion");
-
-        player.activeEffects.ultra.remaining = Math.max(
-            0,
-            player.activeEffects.ultra.remaining - 1
-        );
-        startPotionRestock("ultra");
     }
 
     // =========================================
@@ -2821,11 +2868,7 @@ function rollForShark() {
         rolled = applyStableMutation(rolled, type);
 
         rolled = markGuaranteedPotionRoll(rolled, "mutationPotion");
-
-        player.activeEffects[effectKey].remaining = Math.max(
-            0,
-            player.activeEffects[effectKey].remaining - 1
-        );
+        actionContext.usedMutationEffectKey = effectKey;
     }
 
     if (devForcedMutationType) {
@@ -2833,16 +2876,6 @@ function rollForShark() {
     } else if (forcedMutation) {
         applyForcedMutation(forcedMutation.type, forcedMutation.effectKey);
     }
-
-    // =========================================
-    // CLEANUP
-    // =========================================
-
-    if (rolled.potionSource !== "omegaPotion" && rolled.potionSource !== "ultraPotion") {
-        tickPotionRestocks();
-    }
-
-    consumeEffectRolls();
 
     return finalizeRoll({
         ...rolled,
@@ -3990,6 +4023,58 @@ function updateAllUi(options = {}) {
         }).join(" \u00b7 ");
     }
 
+    function clearMultiRollGrid(stage = document.querySelector(".rng-roll-stage")) {
+        stage?.classList.remove("rng-roll-stage-multi");
+        stage?.querySelector(".rng-multi-roll-grid")?.remove();
+    }
+
+    function ensureMultiRollGrid(stage, rollCount) {
+        if (!stage || rollCount <= 1 || hideEnabled) {
+            clearMultiRollGrid(stage);
+            return null;
+        }
+
+        let grid = stage.querySelector(".rng-multi-roll-grid");
+        if (!grid) {
+            grid = document.createElement("div");
+            grid.className = "rng-multi-roll-grid";
+            const result = document.getElementById("rng-result");
+            stage.insertBefore(grid, result || null);
+        }
+
+        stage.classList.add("rng-roll-stage-multi");
+        grid.replaceChildren(...Array.from({ length: rollCount }, (_, index) => {
+            const slot = document.createElement("div");
+            slot.className = "rng-multi-roll-slot common spinning";
+            slot.innerHTML = `
+                <span>Roll ${index + 1}</span>
+                <strong>...</strong>
+                <em>Rolling</em>
+            `;
+            return slot;
+        }));
+        return grid;
+    }
+
+    function updateMultiRollSlot(slot, shark, index, options = {}) {
+        if (!slot || !shark) return;
+
+        const isFinal = Boolean(options.final);
+        const isBest = Boolean(options.best);
+        slot.className = [
+            "rng-multi-roll-slot",
+            getRarityClass(getOddsTierName(shark)),
+            shark.mutation || "",
+            isFinal ? "revealed" : "spinning",
+            isBest ? "best" : ""
+        ].filter(Boolean).join(" ");
+        slot.innerHTML = `
+            <span>${isBest ? "Best" : `Roll ${index + 1}`}</span>
+            <strong>${escapeHtml(shark.name)}</strong>
+            <em>${isFinal ? `1/${formatOneIn(shark.oneIn)}` : "Rolling"}</em>
+        `;
+    }
+
     async function animateRoll(finalShark, rollContext = {}) {
         const display = document.getElementById("rng-roll-display");
         const result = document.getElementById("rng-result");
@@ -3999,22 +4084,31 @@ function updateAllUi(options = {}) {
         const totalCoinGain = Math.max(0, Math.round(Number(rollContext.totalCoinGain) || finalShark.coinReward || 0));
         const newFinds = Math.max(0, Math.floor(Number(rollContext.newFinds) || 0));
         const burstRolls = Array.isArray(rollContext.rolls) ? rollContext.rolls : [];
+        const multiGrid = ensureMultiRollGrid(stage, rollCount);
+        const multiSlots = multiGrid ? Array.from(multiGrid.querySelectorAll(".rng-multi-roll-slot")) : [];
 
         GameFx.play("roll");
         stage?.classList.add("rng-rolling");
         if (!hideEnabled) display.style.display = "block";
         if (rollCount > 1) {
             display.dataset.multiRoll = `x${rollCount} rolls`;
+            display.textContent = `Rolling x${rollCount}`;
         } else {
             delete display.dataset.multiRoll;
+            clearMultiRollGrid(stage);
         }
 
         const flashPool = rollPool.length ? rollPool : [finalShark];
         const frameDelay = Math.max(35, Math.round(getRollCooldownMs() / 16));
 
         for (let i = 0; i < 14; i++) {
-            const randomShark = flashPool[Math.floor(Math.random() * flashPool.length)];
-            if (!hideEnabled) {
+            if (!hideEnabled && multiSlots.length) {
+                multiSlots.forEach((slot, index) => {
+                    const randomShark = flashPool[Math.floor(Math.random() * flashPool.length)];
+                    updateMultiRollSlot(slot, randomShark, index);
+                });
+            } else if (!hideEnabled) {
+                const randomShark = flashPool[Math.floor(Math.random() * flashPool.length)];
                 display.textContent = randomShark.name;
                 display.className = `rng-roll-display ${randomShark.className}`;
             }
@@ -4022,8 +4116,15 @@ function updateAllUi(options = {}) {
         }
 
         if (!hideEnabled) {
-            display.textContent = finalShark.name;
+            display.textContent = rollCount > 1 ? `Best: ${finalShark.name}` : finalShark.name;
             display.className = `rng-roll-display ${finalShark.className}${finalShark.mutation ? ' ' + finalShark.mutation : ''}`;
+            multiSlots.forEach((slot, index) => {
+                const shark = burstRolls[index];
+                updateMultiRollSlot(slot, shark, index, {
+                    final: true,
+                    best: shark === finalShark
+                });
+            });
         }
 
         stage?.classList.remove("rng-rolling");
@@ -4271,7 +4372,9 @@ async function performRoll() {
          updateRollButtonState();
 
          const rollCount = getPrestigeMultiRollCount();
-         const burstRolls = Array.from({ length: rollCount }, () => rollForShark());
+         const rollActionContext = createRollActionContext(rollCount);
+         const burstRolls = Array.from({ length: rollCount }, () => rollForShark(rollActionContext));
+         consumeRollActionEffects(rollActionContext);
          const finalShark = getBestBurstRoll(burstRolls);
          const rollContext = {
              rollCount: burstRolls.length,
@@ -4347,10 +4450,15 @@ async function performRoll() {
         hideEnabled = enabled;
         const hideButton = document.getElementById("rng-hide-btn");
         const display = document.getElementById("rng-roll-display");
+        const multiGrid = document.querySelector(".rng-multi-roll-grid");
         if (hideButton) hideButton.classList.toggle("active", hideEnabled);
         if (display) {
             display.style.opacity = hideEnabled ? "0" : "1";
             display.style.visibility = hideEnabled ? "hidden" : "visible";
+        }
+        if (multiGrid) {
+            multiGrid.style.opacity = hideEnabled ? "0" : "1";
+            multiGrid.style.visibility = hideEnabled ? "hidden" : "visible";
         }
     }
 

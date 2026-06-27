@@ -333,6 +333,75 @@ body.rng-page {
     text-shadow: none;
 }
 
+.rng-roll-stage-multi .rng-roll-display {
+    font-size: clamp(0.95rem, 2vh, 1.35rem);
+}
+
+.rng-multi-roll-grid {
+    width: min(100%, 620px);
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 6px;
+    margin-top: 8px;
+    position: relative;
+    z-index: 1;
+}
+
+.rng-multi-roll-slot {
+    min-width: 0;
+    min-height: 54px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 2px;
+    padding: 6px;
+    border-radius: 8px;
+    border: 1px solid var(--rng-border);
+    background: rgba(3, 12, 22, 0.36);
+    color: var(--rng-text);
+    overflow: hidden;
+}
+
+.rng-multi-roll-slot.spinning {
+    animation: rng-multi-roll-pulse 0.28s ease-out;
+}
+
+.rng-multi-roll-slot.revealed {
+    background: rgba(7, 20, 34, 0.78);
+}
+
+.rng-multi-roll-slot.best {
+    border-color: rgba(253, 224, 71, 0.75);
+    box-shadow: 0 0 0 1px rgba(253, 224, 71, 0.16), 0 0 18px rgba(253, 224, 71, 0.16);
+}
+
+.rng-multi-roll-slot span,
+.rng-multi-roll-slot em {
+    color: var(--rng-muted);
+    font-size: 0.54rem;
+    font-style: normal;
+    font-weight: 800;
+    text-transform: uppercase;
+}
+
+.rng-multi-roll-slot.best span {
+    color: #fde047;
+}
+
+.rng-multi-roll-slot strong {
+    width: 100%;
+    font-size: 0.62rem;
+    line-height: 1.15;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+@keyframes rng-multi-roll-pulse {
+    0% { transform: scale(0.96); opacity: 0.72; }
+    100% { transform: scale(1); opacity: 1; }
+}
+
 .rng-roll-display.melanistic { color: #94a3b8; text-shadow: 0 0 18px rgba(148,163,184,0.55); }
 .rng-roll-display.albino    { color: #f1f5f9; text-shadow: 0 0 18px rgba(241,245,249,0.6); }
 .rng-roll-display.shiny     { color: #fde047; text-shadow: 0 0 18px rgba(253,224,71,0.6); }
@@ -2663,6 +2732,14 @@ body.rng-page {
 @media (max-height: 700px) {
     .rng-equipped-name { font-size: 0.82rem; }
     .rng-roll-display { font-size: 1rem; }
+    .rng-multi-roll-grid { gap: 4px; margin-top: 5px; }
+    .rng-multi-roll-slot {
+        min-height: 44px;
+        padding: 4px;
+    }
+    .rng-multi-roll-slot strong { font-size: 0.56rem; }
+    .rng-multi-roll-slot span,
+    .rng-multi-roll-slot em { font-size: 0.48rem; }
     .rng-result {
         min-height: 38px;
         padding: 4px 8px;
@@ -2711,4 +2788,5 @@ body.rng-page {
     .rng-prestige-progress-row em { white-space: normal; }
     .rng-upgrade-list,
     .rng-potion-grid { grid-template-columns: 1fr; }
+    .rng-multi-roll-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
