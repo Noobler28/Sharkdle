@@ -640,14 +640,18 @@
         return list;
     }
 
+    const APEX_UPGRADE_BASE_ONE_IN = 4_000_000;
+    const APEX_UPGRADE_MIN_ONE_IN = 60_000;
+    const APEX_PRESTIGE_UNLOCK_ONE_IN = 2_500_000;
+
     function buildApexUpgrades() {
         const list = [];
         for (let i = 1; i <= 30; i++) {
             // Apex is natural-only, so even max level keeps it rarer than normal mutations.
-            const chanceOneIn = Math.round(5_000_000 / Math.pow(1.15, i - 1));
+            const chanceOneIn = Math.round(APEX_UPGRADE_BASE_ONE_IN / Math.pow(1.15, i - 1));
             list.push({
                 level: i,
-                chance: Math.max(75_000, chanceOneIn),
+                chance: Math.max(APEX_UPGRADE_MIN_ONE_IN, chanceOneIn),
                 cost: Math.floor(250_000 * Math.pow(1.26, i - 1)),
                 shopTier: getShopTierName(i + 20),
                 tierClass: getShopTierClass(i + 20)
@@ -1145,19 +1149,47 @@ let rollPool = [];
         return toSafeNumber(value);
     }
 
-    function getBestCollectionEntry() {
+    function getBestEquippableCollectionEntry() {
         let best = null;
 
-        for (const [name, entry] of Object.entries(player.collection || {})) {
+        for (const [key, entry] of Object.entries(player.collection || {})) {
+            if (!entry || typeof entry !== "object") continue;
             const oneIn = toSafeNumber(entry?.oneIn);
-            if (!best || oneIn > best.oneIn) {
+            if (oneIn <= 0) continue;
+
+            const count = Math.max(0, Math.floor(Number(entry.count) || 0));
+            const firstRoll = Math.max(1, toSafeNumber(entry.firstRoll) || Number.MAX_SAFE_INTEGER);
+            const isBetter = !best
+                || oneIn > best.oneIn
+                || (oneIn === best.oneIn && count > best.count)
+                || (oneIn === best.oneIn && count === best.count && firstRoll < best.firstRoll);
+
+            if (isBetter) {
                 best = {
-                    name,
+                    key,
+                    entry,
                     tier: getOddsTierName(entry),
-                    oneIn
+                    oneIn,
+                    count,
+                    firstRoll
                 };
             }
         }
+
+        return best;
+    }
+
+    function getBestCollectionEntry() {
+        const bestEquippable = getBestEquippableCollectionEntry();
+        if (bestEquippable) {
+            return {
+                name: bestEquippable.key,
+                tier: bestEquippable.tier,
+                oneIn: bestEquippable.oneIn
+            };
+        }
+
+        let best = null;
 
         if (!best && player.bestOneIn > 0) {
             best = {
@@ -2260,7 +2292,7 @@ let rollPool = [];
         const upgrade = player.apexLevel > 0
             ? APEX_LUCK_UPGRADES.find((entry) => entry.level === player.apexLevel)
             : null;
-        const baseChance = upgrade?.chance || (prestigeLevel > 0 ? 3_000_000 : null);
+        const baseChance = upgrade?.chance || (prestigeLevel > 0 ? APEX_PRESTIGE_UNLOCK_ONE_IN : null);
         return baseChance ? Math.max(1, Math.round(baseChance / getPrestigeApexOddsMultiplier())) : null;
     }
 
@@ -3746,6 +3778,38 @@ function updateAllUi(options = {}) {
         });
     }
 
+    function updateIndexEquipBestButton() {
+        const button = document.getElementById("rng-collection-equip-best");
+        if (!button) return;
+
+        const best = getBestEquippableCollectionEntry();
+        const bestEquipped = Boolean(best && player.equipped === best.key);
+        button.disabled = !best || bestEquipped;
+        button.innerHTML = `<i class="fa-solid fa-crown" aria-hidden="true"></i>${bestEquipped ? "Best Equipped" : "Equip Best"}`;
+        button.title = best
+            ? `${bestEquipped ? "Equipped" : "Equip"} ${best.key} · 1 in ${formatOneIn(best.oneIn)}`
+            : "Roll a species before equipping your best index entry";
+    }
+
+    function equipBestCollectionEntry() {
+        const best = getBestEquippableCollectionEntry();
+        if (!best) {
+            showToast("No species in your index yet.", "error");
+            updateIndexEquipBestButton();
+            return;
+        }
+
+        if (player.equipped === best.key) {
+            showToast(`${best.key} is already your best equipped species.`);
+            updateIndexEquipBestButton();
+            return;
+        }
+
+        player.equipped = best.key;
+        showToast(`Equipped best species: ${best.key}.`);
+        persistPlayerState({ forceCollectionGrid: true });
+    }
+
     function isCollectionModalOpen() {
         return !document.getElementById("rng-collection-modal")?.classList.contains("hidden");
     }
@@ -3769,6 +3833,7 @@ function updateAllUi(options = {}) {
 
         renderIndexSummary();
         renderIndexRewards();
+        updateIndexEquipBestButton();
 
         const tierFilter = filter ? filter.value : "all";
         const baseOnlyFilter = tierFilter === "base";
@@ -3906,6 +3971,25 @@ function updateAllUi(options = {}) {
         }, null);
     }
 
+    function getMultiRollResultSummary(rolls) {
+        const topRolls = [...(Array.isArray(rolls) ? rolls : [])]
+            .filter(Boolean)
+            .sort((a, b) => {
+                const oddsDiff = (b.oneIn || 0) - (a.oneIn || 0);
+                if (oddsDiff !== 0) return oddsDiff;
+                return (b.coinReward || 0) - (a.coinReward || 0);
+            })
+            .slice(0, 3);
+
+        return topRolls.map((shark, index) => {
+            const label = index === 0 ? "Best" : `#${index + 1}`;
+            const mutationIcon = shark.mutation && MUTATION_TYPES[shark.mutation]
+                ? ` ${MUTATION_TYPES[shark.mutation].icon}`
+                : "";
+            return `${label}: ${escapeHtml(shark.name)}${mutationIcon} 1/${formatOneIn(shark.oneIn)}`;
+        }).join(" \u00b7 ");
+    }
+
     async function animateRoll(finalShark, rollContext = {}) {
         const display = document.getElementById("rng-roll-display");
         const result = document.getElementById("rng-result");
@@ -3914,10 +3998,16 @@ function updateAllUi(options = {}) {
         const rollCount = Math.max(1, Math.floor(Number(rollContext.rollCount) || 1));
         const totalCoinGain = Math.max(0, Math.round(Number(rollContext.totalCoinGain) || finalShark.coinReward || 0));
         const newFinds = Math.max(0, Math.floor(Number(rollContext.newFinds) || 0));
+        const burstRolls = Array.isArray(rollContext.rolls) ? rollContext.rolls : [];
 
         GameFx.play("roll");
         stage?.classList.add("rng-rolling");
         if (!hideEnabled) display.style.display = "block";
+        if (rollCount > 1) {
+            display.dataset.multiRoll = `x${rollCount} rolls`;
+        } else {
+            delete display.dataset.multiRoll;
+        }
 
         const flashPool = rollPool.length ? rollPool : [finalShark];
         const frameDelay = Math.max(35, Math.round(getRollCooldownMs() / 16));
@@ -3959,9 +4049,15 @@ function updateAllUi(options = {}) {
             const newFindNote = newFinds > 0
                 ? ` \u00b7 ${newFinds === 1 ? "NEW!" : `${newFinds} NEW!`}`
                 : "";
+            const multiRollSummary = rollCount > 1 ? getMultiRollResultSummary(burstRolls) : "";
+            const multiRollLine = multiRollSummary
+                ? `<span class="rng-result-burst">Top rolls: ${multiRollSummary}</span>`
+                : "";
+            result.classList.toggle("rng-result-multi", rollCount > 1);
             result.innerHTML = `
                 <span class="${finalShark.className}${finalShark.mutation ? ' ' + finalShark.mutation : ''}">You rolled: ${finalShark.name}</span>
                 <span class="rng-result-meta">${burstNote}${baseTier}${oddsNote} \u00b7 1 in ${formatOneIn(finalShark.oneIn)} \u00b7 ${coinNote}${newFindNote}${streakNote}${mutationNote}${payoutNote}</span>
+                ${multiRollLine}
             `;
             if (isNew || newFinds > 0) result.classList.add("rng-result-pop");
             setTimeout(() => result.classList.remove("rng-result-pop"), 400);
@@ -4180,7 +4276,8 @@ async function performRoll() {
          const rollContext = {
              rollCount: burstRolls.length,
              totalCoinGain: burstRolls.reduce((sum, shark) => sum + Math.max(0, shark.coinReward || 0), 0),
-             newFinds: burstRolls.filter((shark) => Boolean(shark.isNewFind)).length
+             newFinds: burstRolls.filter((shark) => Boolean(shark.isNewFind)).length,
+             rolls: burstRolls
          };
          await animateRoll(finalShark, rollContext);
          applyRollJuice(finalShark, rollContext);
@@ -4702,6 +4799,7 @@ async function performRoll() {
         document.getElementById("rng-collection-filter")?.addEventListener("change", renderCollectionGrid);
         document.getElementById("rng-collection-search")?.addEventListener("input", renderCollectionGrid);
         document.getElementById("rng-collection-owned-only")?.addEventListener("change", renderCollectionGrid);
+        document.getElementById("rng-collection-equip-best")?.addEventListener("click", equipBestCollectionEntry);
         document.getElementById("rng-collection-sort-rarity")?.addEventListener("click", () => {
             collectionSortRarestFirst = !collectionSortRarestFirst;
             renderCollectionGrid();

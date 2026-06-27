@@ -317,6 +317,22 @@ body.rng-page {
     position: relative;
     z-index: 1;
 }
+
+.rng-roll-display[data-multi-roll]::after {
+    content: attr(data-multi-roll);
+    display: block;
+    width: fit-content;
+    margin: 5px auto 0;
+    padding: 2px 7px;
+    border-radius: 999px;
+    background: linear-gradient(90deg, #5eead4, #fde047);
+    color: #102018;
+    font-size: 0.58rem;
+    font-weight: 900;
+    line-height: 1;
+    text-shadow: none;
+}
+
 .rng-roll-display.melanistic { color: #94a3b8; text-shadow: 0 0 18px rgba(148,163,184,0.55); }
 .rng-roll-display.albino    { color: #f1f5f9; text-shadow: 0 0 18px rgba(241,245,249,0.6); }
 .rng-roll-display.shiny     { color: #fde047; text-shadow: 0 0 18px rgba(253,224,71,0.6); }
@@ -348,6 +364,10 @@ body.rng-page {
     z-index: 1;
 }
 
+.rng-result.rng-result-multi {
+    min-height: 60px;
+}
+
 .rng-result > span:first-child {
     max-width: 100%;
     line-height: 1.25;
@@ -361,6 +381,17 @@ body.rng-page {
     color: var(--rng-muted);
     font-size: 0.68rem;
     line-height: 1.25;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.rng-result-burst {
+    display: block;
+    max-width: 100%;
+    color: #c5e8f4;
+    font-size: 0.62rem;
+    line-height: 1.2;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -1691,7 +1722,7 @@ body.rng-page {
 
 .rng-index-controls {
     display: grid;
-    grid-template-columns: minmax(180px, 230px) minmax(220px, 1fr) auto auto;
+    grid-template-columns: minmax(180px, 230px) minmax(220px, 1fr) auto auto auto;
     align-items: stretch;
     gap: 8px;
     position: relative;
@@ -1700,6 +1731,17 @@ body.rng-page {
     flex: 0 0 auto;
     margin-bottom: 10px;
     background: var(--rng-surface);
+}
+
+.rng-index-equip-best-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-height: 38px;
+    padding: 8px 10px;
+    font-size: 0.72rem;
+    white-space: nowrap;
 }
 
 .rng-select {
