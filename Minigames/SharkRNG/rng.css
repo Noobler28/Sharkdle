@@ -1127,12 +1127,25 @@ body.rng-page {
     border: 1px solid var(--rng-border);
 }
 
+.rng-potion-summary-copy {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
 .rng-potion-summary strong {
     font-size: 0.72rem;
 }
 
 .rng-potion-summary span {
     color: var(--rng-muted);
+    font-size: 0.62rem;
+}
+
+.rng-potion-consume-all {
+    flex: 0 0 auto;
+    padding: 4px 8px;
     font-size: 0.62rem;
 }
 
@@ -1525,6 +1538,25 @@ body.rng-page {
     letter-spacing: 0.06em;
 }
 
+.rng-index-summary-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+    min-width: 0;
+}
+
+.rng-index-summary-actions .rng-index-summary-meta {
+    text-align: right;
+}
+
+.rng-index-claim-all-btn {
+    flex: 0 0 auto;
+    padding: 6px 9px;
+    font-size: 0.66rem;
+    white-space: nowrap;
+}
+
 .rng-index-summary-track {
     height: 6px;
     border-radius: 999px;
@@ -1816,6 +1848,16 @@ body.rng-page {
         gap: 6px;
     }
 
+    .rng-index-summary-actions {
+        align-items: stretch;
+        flex-direction: column;
+        gap: 6px;
+    }
+
+    .rng-index-summary-actions .rng-index-summary-meta {
+        text-align: left;
+    }
+
     .rng-index-rewards {
         grid-auto-flow: row;
         grid-auto-columns: auto;
@@ -1833,7 +1875,11 @@ body.rng-page {
     .rng-potion-summary {
         align-items: flex-start;
         flex-direction: column;
-        gap: 2px;
+        gap: 6px;
+    }
+
+    .rng-potion-consume-all {
+        width: 100%;
     }
 }
 

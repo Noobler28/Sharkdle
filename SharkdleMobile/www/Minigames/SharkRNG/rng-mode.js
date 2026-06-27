@@ -156,6 +156,7 @@
     const PRESTIGE_LUCK_PER_POINT = 0.035;
     const PRESTIGE_COIN_PER_POINT = 0.025;
     const PRESTIGE_XP_PER_POINT = 0.015;
+    const PRESTIGE_MULTI_ROLL_COUNTS = [1, 2, 3, 5, 8];
     const PRESTIGE_UPGRADE_DEFS = [
         {
             id: "pearlLuck",
@@ -236,6 +237,14 @@
             desc: "Begin each prestige run with Auto Roll levels.",
             costs: [4, 8, 14],
             format: (level) => level ? `Start with Auto Lv.${level}` : "Auto locked"
+        },
+        {
+            id: "multiRoll",
+            name: "Multi Roll",
+            icon: "fa-layer-group",
+            desc: "Roll several species per click or Auto Roll burst.",
+            costs: [4, 9, 18, 32],
+            format: (level) => `${getPrestigeMultiRollCount(level)} roll${getPrestigeMultiRollCount(level) === 1 ? "" : "s"} per action`
         },
         {
             id: "legacyTide",
@@ -1938,6 +1947,14 @@ let rollPool = [];
         return Math.min(getPrestigeUpgradeLevel("autoSpark"), AUTO_ROLL_UPGRADES.length);
     }
 
+    function getPrestigeMultiRollCount(level = getPrestigeUpgradeLevel("multiRoll")) {
+        const index = Math.min(
+            PRESTIGE_MULTI_ROLL_COUNTS.length - 1,
+            Math.max(0, Math.floor(Number(level) || 0))
+        );
+        return PRESTIGE_MULTI_ROLL_COUNTS[index] || 1;
+    }
+
     function getPrestigeUpgradeBonus(id, perLevel) {
         return getPrestigeUpgradeLevel(id) * perLevel;
     }
@@ -2440,7 +2457,7 @@ let rollPool = [];
     }
 
     function isNewCollectionRoll(shark) {
-        return getCollectionEntryForShark(shark)?.count === 1;
+        return Boolean(shark?.isNewFind) || getCollectionEntryForShark(shark)?.count === 1;
     }
 
     function finalizeRoll(rolled) {
@@ -2458,6 +2475,7 @@ let rollPool = [];
         const key = getCollectionKey(rolled);
         const baseTier = getBaseTierName(rolled);
         const oddsTier = getOddsTierName(rolled);
+        const isNewFind = !player.collection[key];
         if (!player.collection[key]) {
             player.runCollectionFinds = (player.runCollectionFinds || 0) + 1;
             player.collection[key] = {
@@ -2498,7 +2516,10 @@ let rollPool = [];
         }
 
         grantRollXp(rolled);
-        return rolled;
+        return {
+            ...rolled,
+            isNewFind
+        };
     }
 
     function mergeCollectionEntry(target, key, entry) {
@@ -2666,6 +2687,7 @@ let rollPool = [];
 
 function rollForShark() {
     player.rolls += 1;
+    const streakLuckActive = isStreakLuckRoll();
 
     let rolled = null;
     const forcedMutation = getQueuedForcedMutation();
@@ -2788,7 +2810,10 @@ function rollForShark() {
 
     consumeEffectRolls();
 
-    return finalizeRoll(rolled);
+    return finalizeRoll({
+        ...rolled,
+        streakLuckActive
+    });
 }
 
     function saveLocalProfile() {
@@ -3061,6 +3086,19 @@ function rollForShark() {
         }
     }
 
+    function getReadyIndexRewards(claimed = getClaimedIndexRewardSet()) {
+        const collected = getCollectionCount();
+        return INDEX_REWARD_DEFS.filter((reward) => (
+            !claimed.has(reward.id) &&
+            collected >= getIndexRewardGoal(reward)
+        ));
+    }
+
+    function applyIndexRewardClaim(reward, claimed) {
+        reward.effects.forEach(applyIndexRewardEffect);
+        claimed.add(reward.id);
+    }
+
     function claimIndexReward(rewardId) {
         const reward = INDEX_REWARD_DEFS.find((entry) => entry.id === rewardId);
         if (!reward) return;
@@ -3073,10 +3111,25 @@ function rollForShark() {
             return;
         }
 
-        reward.effects.forEach(applyIndexRewardEffect);
-        player.claimedIndexRewards = [...claimed, reward.id];
+        applyIndexRewardClaim(reward, claimed);
+        player.claimedIndexRewards = [...claimed];
         persistPlayerState();
         showToast(`${reward.title} claimed: ${reward.rewardText}`);
+        GameFx.play("upgrade");
+    }
+
+    function claimAllIndexRewards() {
+        const claimed = getClaimedIndexRewardSet();
+        const readyRewards = getReadyIndexRewards(claimed);
+        if (!readyRewards.length) {
+            showToast("No index rewards ready.", "error");
+            return;
+        }
+
+        readyRewards.forEach((reward) => applyIndexRewardClaim(reward, claimed));
+        player.claimedIndexRewards = [...claimed];
+        persistPlayerState();
+        showToast(`Claimed ${readyRewards.length.toLocaleString()} index reward${readyRewards.length === 1 ? "" : "s"}.`);
         GameFx.play("upgrade");
     }
 
@@ -3152,7 +3205,16 @@ function updateActiveEffectsUi() {
          const now = Date.now();
          const remaining = Math.max(0, rollLockedUntil - now);
          const isOnCooldown = remaining > 0;
- 
+         const multiRollCount = getPrestigeMultiRollCount();
+         const rollText = multiRollCount > 1 ? `Roll x${multiRollCount}` : "Roll";
+         if (rollBtn.dataset.rollText !== rollText) {
+             rollBtn.dataset.rollText = rollText;
+             rollBtn.innerHTML = `<i class="fa-solid fa-dice"></i> ${rollText}`;
+         }
+         rollBtn.title = multiRollCount > 1
+             ? `Roll ${multiRollCount} times at once`
+             : "Roll";
+
          rollBtn.disabled = isOnCooldown || isRolling;
          if (isOnCooldown) {
              rollBtn.classList.add("rng-btn-cooldown");
@@ -3337,6 +3399,7 @@ function updateActiveEffectsUi() {
                 <div><span>Duration</span><strong>+${Math.round((getPrestigePotionDurationMultiplier() - 1) * 100)}%</strong></div>
                 <div><span>Restock</span><strong>${Math.round(getPrestigeRestockReduction() * 100)}% faster</strong></div>
                 <div><span>Momentum</span><strong>x${getPrestigeRunMomentumMultiplier().toFixed(2)}</strong></div>
+                <div><span>Multi</span><strong>x${getPrestigeMultiRollCount()}</strong></div>
             </div>
             <div class="rng-prestige-upgrades">
                 <div class="rng-prestige-section-head">
@@ -3454,9 +3517,19 @@ function updateActiveEffectsUi() {
         const summary = document.createElement("div");
         summary.className = "rng-potion-summary";
         summary.innerHTML = `
-            <strong>${getPotionTotalCount().toLocaleString()} total potions</strong>
-            <span>${getStoredPotionCount().toLocaleString()} stored \u00b7 ${getActivePotionChargeCount().toLocaleString()} active charges</span>
+            <div class="rng-potion-summary-copy">
+                <strong>${getPotionTotalCount().toLocaleString()} total potions</strong>
+                <span>${getStoredPotionCount().toLocaleString()} stored \u00b7 ${getActivePotionChargeCount().toLocaleString()} active charges</span>
+            </div>
         `;
+        const consumeAllBtn = document.createElement("button");
+        consumeAllBtn.className = "rng-btn rng-btn-ghost rng-potion-consume-all";
+        consumeAllBtn.type = "button";
+        consumeAllBtn.textContent = "Consume All";
+        consumeAllBtn.title = "Consume all stored potions";
+        consumeAllBtn.disabled = getStoredPotionCount() <= 0;
+        consumeAllBtn.addEventListener("click", consumeAllPotions);
+        summary.appendChild(consumeAllBtn);
         shop.appendChild(summary);
 
         for (const [key, def] of Object.entries(POTION_DEFS)) {
@@ -3577,14 +3650,19 @@ function updateAllUi(options = {}) {
         const target = getCollectionTargetCount();
         const progress = target > 0 ? Math.round((collected / target) * 100) : 0;
         const luckBonus = Math.round(getIndexLuckBonus() * 100);
+        const readyRewards = getReadyIndexRewards();
         summary.innerHTML = `
             <div>
                 <span class="rng-index-kicker">Index Progress</span>
                 <strong>${collected.toLocaleString()} / ${target.toLocaleString()}</strong>
             </div>
             <div class="rng-index-summary-track"><span style="width:${Math.min(100, progress)}%"></span></div>
-            <span class="rng-index-summary-meta">${progress}% complete \u00b7 +${luckBonus}% milestone luck</span>
+            <div class="rng-index-summary-actions">
+                <span class="rng-index-summary-meta">${progress}% complete \u00b7 +${luckBonus}% milestone luck</span>
+                <button id="rng-index-claim-all-btn" class="rng-btn rng-index-claim-all-btn" type="button" ${readyRewards.length ? "" : "disabled"}>Claim All${readyRewards.length ? ` (${readyRewards.length})` : ""}</button>
+            </div>
         `;
+        summary.querySelector("#rng-index-claim-all-btn")?.addEventListener("click", claimAllIndexRewards);
     }
 
     function renderIndexRewards() {
@@ -3765,11 +3843,24 @@ function updateAllUi(options = {}) {
         collectionGridDirty = false;
     }
 
-    async function animateRoll(finalShark) {
+    function getBestBurstRoll(rolls) {
+        return rolls.reduce((best, current) => {
+            if (!best) return current;
+            if ((current.oneIn || 0) !== (best.oneIn || 0)) {
+                return (current.oneIn || 0) > (best.oneIn || 0) ? current : best;
+            }
+            return (current.coinReward || 0) > (best.coinReward || 0) ? current : best;
+        }, null);
+    }
+
+    async function animateRoll(finalShark, rollContext = {}) {
         const display = document.getElementById("rng-roll-display");
         const result = document.getElementById("rng-result");
         const stage = document.querySelector(".rng-roll-stage");
         if (!display) return;
+        const rollCount = Math.max(1, Math.floor(Number(rollContext.rollCount) || 1));
+        const totalCoinGain = Math.max(0, Math.round(Number(rollContext.totalCoinGain) || finalShark.coinReward || 0));
+        const newFinds = Math.max(0, Math.floor(Number(rollContext.newFinds) || 0));
 
         GameFx.play("roll");
         stage?.classList.add("rng-rolling");
@@ -3799,7 +3890,7 @@ function updateAllUi(options = {}) {
             const baseTier = getBaseTierName(finalShark);
             const oddsTier = getOddsTierName(finalShark);
             const oddsNote = oddsTier !== baseTier ? ` \u00b7 ${oddsTier} odds` : "";
-            const streakNote = isStreakLuckRoll()
+            const streakNote = finalShark.streakLuckActive
                 ? ` \u00b7 <span class="rng-streak-tag">Streak \u00d7${getStreakLuckMultiplier()}</span>`
                 : "";
             const mutationNote = finalShark.mutation && MUTATION_TYPES[finalShark.mutation]
@@ -3808,17 +3899,26 @@ function updateAllUi(options = {}) {
             const payoutNote = finalShark.potionSource
                 ? ` \u00b7 Potion payout ${Math.round(finalShark.rewardRate * 100)}%`
                 : "";
+            const burstNote = rollCount > 1 ? `Best of ${rollCount} \u00b7 ` : "";
+            const coinNote = rollCount > 1
+                ? `+${formatCompactCoins(totalCoinGain)} coins total`
+                : `+${formatCompactCoins(finalShark.coinReward)} coins`;
+            const newFindNote = newFinds > 0
+                ? ` \u00b7 ${newFinds === 1 ? "NEW!" : `${newFinds} NEW!`}`
+                : "";
             result.innerHTML = `
                 <span class="${finalShark.className}${finalShark.mutation ? ' ' + finalShark.mutation : ''}">You rolled: ${finalShark.name}</span>
-                <span class="rng-result-meta">${baseTier}${oddsNote} \u00b7 1 in ${formatOneIn(finalShark.oneIn)} \u00b7 +${formatCompactCoins(finalShark.coinReward)} coins${isNew ? " \u00b7 NEW!" : ""}${streakNote}${mutationNote}${payoutNote}</span>
+                <span class="rng-result-meta">${burstNote}${baseTier}${oddsNote} \u00b7 1 in ${formatOneIn(finalShark.oneIn)} \u00b7 ${coinNote}${newFindNote}${streakNote}${mutationNote}${payoutNote}</span>
             `;
-            if (isNew) result.classList.add("rng-result-pop");
+            if (isNew || newFinds > 0) result.classList.add("rng-result-pop");
             setTimeout(() => result.classList.remove("rng-result-pop"), 400);
         }
     }
 
-    function applyRollJuice(shark) {
-        GameFx.floatText(`+${formatCompactCoins(shark.coinReward)}`, "coin");
+    function applyRollJuice(shark, rollContext = {}) {
+        const totalCoinGain = Math.max(0, Math.round(Number(rollContext.totalCoinGain) || shark.coinReward || 0));
+        const newFinds = Math.max(0, Math.floor(Number(rollContext.newFinds) || 0));
+        GameFx.floatText(`+${formatCompactCoins(totalCoinGain)}`, "coin");
         GameFx.play("coin");
 
         if (isUltraRarePull(shark)) {
@@ -3834,7 +3934,7 @@ function updateAllUi(options = {}) {
         }
 
         const isNew = isNewCollectionRoll(shark);
-        if (isNew) GameFx.play("new");
+        if (isNew || newFinds > 0) GameFx.play("new");
     }
 
     function isUltraRarePull(shark) {
@@ -4021,9 +4121,16 @@ async function performRoll() {
          GameFx.pulseRollButton();
          updateRollButtonState();
 
-         const finalShark = rollForShark();
-         await animateRoll(finalShark);
-         applyRollJuice(finalShark);
+         const rollCount = getPrestigeMultiRollCount();
+         const burstRolls = Array.from({ length: rollCount }, () => rollForShark());
+         const finalShark = getBestBurstRoll(burstRolls);
+         const rollContext = {
+             rollCount: burstRolls.length,
+             totalCoinGain: burstRolls.reduce((sum, shark) => sum + Math.max(0, shark.coinReward || 0), 0),
+             newFinds: burstRolls.filter((shark) => Boolean(shark.isNewFind)).length
+         };
+         await animateRoll(finalShark, rollContext);
+         applyRollJuice(finalShark, rollContext);
          await showRollReveal(finalShark);
          persistPlayerState({ deferCollectionGridDuringRoll: true });
 
@@ -4133,7 +4240,16 @@ async function performRoll() {
         if (!def || !(player.potions[key] > 0)) return;
 
         player.potions[key] -= 1;
-        const effectRolls = getPotionEffectRolls(def);
+        applyPotionEffect(key);
+        persistPlayerState();
+    }
+
+    function applyPotionEffect(key, quantity = 1) {
+        const def = POTION_DEFS[key];
+        const uses = Math.max(0, Math.floor(Number(quantity) || 0));
+        if (!def || uses <= 0) return 0;
+
+        const effectRolls = getPotionEffectRolls(def) * uses;
 
         if (def.category === "luck" || def.luckMult) {
             addLuckPotionStack(def.luckMult, effectRolls);
@@ -4153,7 +4269,27 @@ async function performRoll() {
             player.activeEffects[key].remaining += effectRolls;
         }
 
+        return uses;
+    }
+
+    function consumeAllPotions() {
+        const storedCount = getStoredPotionCount();
+        if (storedCount <= 0) {
+            showToast("No stored potions.", "error");
+            return;
+        }
+
+        let consumed = 0;
+        for (const key of Object.keys(POTION_DEFS)) {
+            const owned = Math.max(0, Math.floor(Number(player.potions[key]) || 0));
+            if (owned <= 0) continue;
+
+            player.potions[key] = 0;
+            consumed += applyPotionEffect(key, owned);
+        }
+
         persistPlayerState();
+        showToast(`Consumed ${consumed.toLocaleString()} potion${consumed === 1 ? "" : "s"}.`);
     }
 
     function switchTab(tabId) {
