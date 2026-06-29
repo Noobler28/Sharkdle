@@ -5021,9 +5021,21 @@ function getProfileTimestampMs(value) {
     return Number.isFinite(parsed) ? parsed : 0;
 }
 
+function isLegacyWheelSharkCosmetic(cosmetic = {}) {
+    const name = String(cosmetic.name || "").trim().toLowerCase();
+    const imagePath = String(cosmetic.imagePath || "").replace(/\\/g, "/").toLowerCase();
+    return name === "wheel shark" || (cosmetic.spinReward === true && imagePath === "images/pfp/shark5.png");
+}
+
+function removeLegacyWheelSharkCosmetics(cosmetics) {
+    return Array.isArray(cosmetics)
+        ? cosmetics.filter(cosmetic => !isLegacyWheelSharkCosmetic(cosmetic))
+        : [];
+}
+
 function getUnifiedCosmeticList(localItems, remoteItems, key) {
     const merged = [];
-    [...(Array.isArray(localItems) ? localItems : []), ...(Array.isArray(remoteItems) ? remoteItems : [])].forEach(item => {
+    [...removeLegacyWheelSharkCosmetics(localItems), ...removeLegacyWheelSharkCosmetics(remoteItems)].forEach(item => {
         if (!item) return;
         const identifier = item?.[key];
         if (!identifier || merged.some(existing => existing?.[key] === identifier)) return;
@@ -7063,7 +7075,7 @@ function saveUserProfileLocally(profileData, options = {}) {
     profileData.pearlBoostExpiresAt = getPearlBoostExpiresAt(profileData);
     profileData.seasonXpBoosts = getSeasonXpBoosts(profileData);
     setPearlCount(profileData, getPearlCount(profileData));
-    if (!Array.isArray(profileData.earnedCosmetics)) profileData.earnedCosmetics = [];
+    profileData.earnedCosmetics = removeLegacyWheelSharkCosmetics(profileData.earnedCosmetics);
     if (!Array.isArray(profileData.unlockedBadges)) profileData.unlockedBadges = ["starter"];
     if (!Array.isArray(profileData.unlockedCardThemes)) profileData.unlockedCardThemes = ["default"];
     if (!Array.isArray(profileData.unlockedTitles)) profileData.unlockedTitles = [];
@@ -9096,7 +9108,7 @@ async function syncStatsToFirebase() {
             username: mergedProfile.username || getStoredPreferredUsername() || authUser.email.split("@")[0],
             profilePic: mergedProfile.profilePicture || "images/pfp/shark1.png",
             profilePicture: mergedProfile.profilePicture || "images/pfp/shark1.png",
-            earnedCosmetics: Array.isArray(mergedProfile.earnedCosmetics) ? mergedProfile.earnedCosmetics : [],
+            earnedCosmetics: removeLegacyWheelSharkCosmetics(mergedProfile.earnedCosmetics),
             testerBadgeUnlocked: Boolean(mergedProfile.testerBadgeUnlocked),
             unlockedTitles: getUnlockedProfileTitleIds(mergedProfile),
             equippedTitle: getEquippedProfileTitle(mergedProfile),
