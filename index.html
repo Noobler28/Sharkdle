@@ -231,6 +231,11 @@ content="Play Sharkdle, the daily shark guessing game. Guess shark species from 
                 <span>Crates</span>
                 <strong id="crates-btn-count">0</strong>
             </button>
+            <button id="spin-wheel-btn" class="hero-spin-btn hidden" type="button" onclick="openSpinWheelModal()">
+                <i class="fa-solid fa-rotate" aria-hidden="true"></i>
+                <span>Daily Spin</span>
+                <strong id="spin-wheel-status">Win</strong>
+            </button>
             <div class="home-v3-shield-pill home-v3-pearl-pill" data-tooltip="Obtained by winning games" aria-label="Pearls. Obtained by winning games.">
                 <i class="fa-solid fa-gem"></i>
                 <span>Pearls</span>
@@ -303,6 +308,36 @@ content="Play Sharkdle, the daily shark guessing game. Guess shark species from 
         </section>
     </aside>
 </main>
+
+<div id="spinWheelModal" class="modal hidden spin-wheel-modal" onclick="if(event.target===this) closeSpinWheelModal()">
+    <div class="modal-content spin-wheel-modal-content">
+        <button type="button" class="modal-x-btn" onclick="closeSpinWheelModal()" aria-label="Close daily spin wheel">&times;</button>
+        <div class="spin-wheel-heading">
+            <div class="new-modal-kicker">Daily Win Wheel</div>
+            <h2>Daily Spin</h2>
+            <p id="spin-wheel-subtitle">Win a Daily or Infinite game today to unlock 1 spin.</p>
+        </div>
+        <div class="spin-wheel-body">
+            <aside class="spin-wheel-prize-menu" aria-labelledby="spin-wheel-prize-heading">
+                <div class="spin-wheel-menu-kicker">Rewards</div>
+                <h3 id="spin-wheel-prize-heading">Wheel Chances</h3>
+                <ul id="spin-wheel-legend" class="spin-wheel-legend" aria-label="Possible daily spin rewards"></ul>
+            </aside>
+            <div class="spin-wheel-play-area">
+                <div class="spin-wheel-stage" aria-label="Daily spin reward wheel">
+                    <div class="spin-wheel-pointer" aria-hidden="true"></div>
+                    <div id="spin-wheel-disk" class="spin-wheel-disk"></div>
+                    <div class="spin-wheel-center" aria-hidden="true"><i class="fa-solid fa-rotate"></i></div>
+                </div>
+                <div id="spin-wheel-result" class="spin-wheel-result hidden"></div>
+                <div class="spin-wheel-actions">
+                    <button id="spin-wheel-action-btn" class="primary-btn" type="button" onclick="spinDailyWheel()">Win Today to Unlock</button>
+                    <button class="secondary-btn" type="button" onclick="closeSpinWheelModal()">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 
 <div id="pearlShopModal" class="modal hidden" onclick="if(event.target===this) closePearlShopModal()">
     <div class="modal-content pearl-shop-modal-content">

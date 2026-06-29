@@ -1522,6 +1522,7 @@ const sharkPassCardThemes = [
     { id: "storm-current", name: "Storm Current", unlockAchievement: "duel_won", preview: "linear-gradient(135deg, rgba(117, 202, 255, 0.26), rgba(67, 126, 255, 0.2) 34%, rgba(9, 20, 47, 0.98))" },
     { id: "pearl-reef", name: "Pearl Reef", unlockAchievement: "secret_command_found", preview: "linear-gradient(135deg, rgba(250, 240, 214, 0.3), rgba(164, 244, 231, 0.18) 42%, rgba(24, 72, 92, 0.96))" },
     { id: "volcanic-ember", name: "Volcanic Ember", preview: "linear-gradient(135deg, rgba(255, 120, 70, 0.3), rgba(255, 66, 66, 0.18) 34%, rgba(44, 10, 24, 0.98) 72%, rgba(16, 5, 14, 1))" },
+    { id: "lucky-current", name: "Lucky Current", preview: "linear-gradient(135deg, rgba(103, 255, 174, 0.3), rgba(255, 220, 92, 0.2) 34%, rgba(13, 83, 75, 0.96) 70%, rgba(6, 27, 38, 1))" },
     { id: "kelp-canopy", name: "Kelp Canopy", preview: "linear-gradient(135deg, rgba(166, 223, 110, 0.18), rgba(65, 121, 70, 0.22) 34%, rgba(12, 49, 43, 0.98) 70%, rgba(6, 24, 21, 1))" },
     { id: "glacier-shine", name: "Glacier Shine", preview: "linear-gradient(135deg, rgba(232, 247, 255, 0.34), rgba(132, 214, 255, 0.18) 36%, rgba(35, 80, 118, 0.92) 72%, rgba(10, 31, 52, 1))" },
     { id: "ocean-breeze", name: "Ocean Breeze", preview: "linear-gradient(135deg, rgba(100, 200, 255, 0.3), rgba(50, 150, 200, 0.2) 42%, rgba(10, 50, 80, 0.96))" },
@@ -2475,30 +2476,49 @@ function getCratePoolById(crateId) {
 }
 
 const SPIN_WHEEL_LEGENDARY_PFP = {
-    name: "Wheel Shark",
-    imagePath: "images/pfp/shark5.png",
+    name: "Blue-spotted Ribbontail Ray",
+    imagePath: "images/WheelPfp/img1.png",
     spinReward: true,
     rarity: "legendary"
 };
 
 const spinWheelRewards = [
-    { id: "spin_xp_250", type: "xp", amount: 250, weight: 14, label: "250 XP", wheelLabel: "250 XP", rarity: "common", color: "#5adca5", icon: "✨" },
-    { id: "spin_xp_500", type: "xp", amount: 500, weight: 13, label: "500 XP", wheelLabel: "500 XP", rarity: "common", color: "#78f0c5", icon: "✨" },
-    { id: "spin_xp_1000", type: "xp", amount: 1000, weight: 12, label: "1000 XP", wheelLabel: "1000 XP", rarity: "uncommon", color: "#6ee7ff", icon: "💫" },
-    { id: "spin_reef_crate", type: "crate", crateId: "reef", amount: 1, weight: 14, label: "Cosmetic Crate", wheelLabel: "Crate", rarity: "uncommon", color: "#ffb74d", icon: "📦" },
-    { id: "spin_summer_crate", type: "crate", crateId: "summer", amount: 1, weight: 10, label: "Summer Crate", wheelLabel: "Summer", rarity: "rare", color: "#ff8a65", icon: "☀️" },
-    { id: "spin_shield", type: "item", itemId: STREAK_SHIELD_ITEM_ID, quantity: 1, weight: 10, label: "Streak Shield", wheelLabel: "Shield", rarity: "rare", color: "#a99bff", icon: "🛡️" },
-    { id: "spin_pass_level", type: "pass_level", amount: 1, weight: 8, label: "Free Shark Pass Level", wheelLabel: "Pass +1", rarity: "epic", color: "#ffd47f", icon: "⬆️" },
-    { id: "spin_badge", type: "badge", badgeId: "lucky-fin", name: "Lucky Fin", weight: 7, label: "Lucky Fin Badge", wheelLabel: "Badge", rarity: "epic", color: "#c9a7ff", icon: "🍀" },
-    { id: "spin_theme", type: "theme", themeId: "volcanic-ember", weight: 7, label: "Volcanic Ember Theme", wheelLabel: "Theme", rarity: "epic", color: "#ff7b54", icon: "🎨" },
-    { id: "spin_pfp", type: "pfp", name: SPIN_WHEEL_LEGENDARY_PFP.name, imagePath: SPIN_WHEEL_LEGENDARY_PFP.imagePath, weight: 5, label: "Wheel Shark PFP", wheelLabel: "PFP", rarity: "legendary", color: "#ffe28a", icon: "🦈" }
+    { id: "spin_xp_250", type: "xp", amount: 250, weight: 14, label: "250 XP", wheelLabel: "250", rarity: "common", color: "#35d07f", icon: "✨" },
+    { id: "spin_xp_500", type: "xp", amount: 500, weight: 13, label: "500 XP", wheelLabel: "500", rarity: "common", color: "#2f9cff", icon: "⚡" },
+    { id: "spin_xp_1000", type: "xp", amount: 1000, weight: 12, label: "1000 XP", wheelLabel: "1K", rarity: "uncommon", color: "#9b7cff", icon: "💫" },
+    { id: "spin_reef_crate", type: "crate", crateId: "reef", amount: 1, weight: 14, label: "Cosmetic Crate", wheelLabel: "Crate", rarity: "uncommon", color: "#f6a04d", icon: "📦" },
+    { id: "spin_summer_crate", type: "crate", crateId: "summer", amount: 1, weight: 10, label: "Summer Crate", wheelLabel: "Summer", rarity: "rare", color: "#ff5f57", icon: "☀️" },
+    { id: "spin_shield", type: "item", itemId: STREAK_SHIELD_ITEM_ID, quantity: 1, weight: 10, label: "Streak Shield", wheelLabel: "Shield", rarity: "rare", color: "#4e7cff", icon: "🛡️" },
+    { id: "spin_pass_level", type: "pass_level", amount: 1, weight: 8, label: "Free Shark Pass Level", wheelLabel: "Pass", rarity: "epic", color: "#f4d35e", icon: "⬆️" },
+    { id: "spin_badge", type: "badge", badgeId: "lucky-fin", name: "Lucky Fin", weight: 7, label: "Lucky Fin Badge", wheelLabel: "Badge", rarity: "epic", color: "#2ec4b6", icon: "🍀" },
+    { id: "spin_theme", type: "theme", themeId: "lucky-current", weight: 7, label: "Lucky Current Theme", wheelLabel: "Luck", rarity: "epic", color: "#5be7a9", icon: "🍀" },
+    { id: "spin_pfp", type: "pfp", name: SPIN_WHEEL_LEGENDARY_PFP.name, imagePath: SPIN_WHEEL_LEGENDARY_PFP.imagePath, weight: 5, label: "Blue-spotted Ribbontail Ray PFP", wheelLabel: "Jackpot", rarity: "legendary", color: "#f7e967", icon: "🖼️" }
 ];
 
 let spinWheelRotation = 0;
 let spinWheelSpinning = false;
+const SPIN_WHEEL_GRADIENT_START_DEGREES = -90;
+const SPIN_WHEEL_POINTER_DEGREES = 0;
 
 function getLastSpinWheelDateStorageKey(uid = currentUser?.uid) {
     return uid ? `lastSpinWheelDate_${uid}` : "lastSpinWheelDate";
+}
+
+function getDailySpinWinDateStorageKey(uid = currentUser?.uid) {
+    return uid ? `dailySpinWinDate_${uid}` : "dailySpinWinDate";
+}
+
+function getDailySpinBonusStorageKey(uid = currentUser?.uid) {
+    return uid ? `dailySpinBonusSpins_${uid}` : "dailySpinBonusSpins";
+}
+
+function normalizeDailySpinBonusCount(value) {
+    return Math.max(0, Math.floor(Number(value) || 0));
+}
+
+function getSpinWheelAuthUid() {
+    const authUser = typeof firebase !== "undefined" && firebase.auth ? firebase.auth().currentUser : null;
+    return currentUser?.uid || authUser?.uid || null;
 }
 
 function getStoredLastSpinWheelDate(uid = currentUser?.uid) {
@@ -2509,15 +2529,64 @@ function getStoredLastSpinWheelDate(uid = currentUser?.uid) {
     );
 }
 
+function getStoredDailySpinWinDate(profileData = getCurrentProfileData(), uid = getSpinWheelAuthUid()) {
+    return normalizeStoredDateValue(
+        localStorage.getItem(getDailySpinWinDateStorageKey(uid)) ||
+        profileData.dailySpinWinDate
+    );
+}
+
+function getDailySpinBonusCount(profileData = getCurrentProfileData(), uid = getSpinWheelAuthUid()) {
+    const storedValue = uid ? localStorage.getItem(getDailySpinBonusStorageKey(uid)) : null;
+    return normalizeDailySpinBonusCount(storedValue !== null ? storedValue : profileData.dailySpinBonusSpins);
+}
+
+function setDailySpinBonusCount(profileData = getCurrentProfileData(), count = 0, uid = getSpinWheelAuthUid()) {
+    const normalizedCount = normalizeDailySpinBonusCount(count);
+    profileData.dailySpinBonusSpins = normalizedCount;
+    if (uid) {
+        const storageKey = getDailySpinBonusStorageKey(uid);
+        if (normalizedCount > 0) {
+            localStorage.setItem(storageKey, String(normalizedCount));
+        } else {
+            localStorage.removeItem(storageKey);
+        }
+    }
+    return normalizedCount;
+}
+
+function hasUnlockedDailySpinToday(profileData = getCurrentProfileData()) {
+    const uid = getSpinWheelAuthUid();
+    return Boolean(uid) && getStoredDailySpinWinDate(profileData, uid) === getLocalDateKey();
+}
+
 function canUseDailySpin(profileData = getCurrentProfileData()) {
-    if (!currentUser) return false;
-    return getStoredLastSpinWheelDate(currentUser.uid) !== getLocalDateKey();
+    const uid = getSpinWheelAuthUid();
+    if (!uid) return false;
+    if (getDailySpinBonusCount(profileData, uid) > 0) return true;
+    if (!hasUnlockedDailySpinToday(profileData)) return false;
+    return getStoredLastSpinWheelDate(uid) !== getLocalDateKey();
+}
+
+function markDailySpinWinUnlocked(profileData = getCurrentProfileData()) {
+    const uid = getSpinWheelAuthUid();
+    if (!uid) return profileData;
+    const today = getLocalDateKey();
+    profileData.dailySpinWinDate = today;
+    localStorage.setItem(getDailySpinWinDateStorageKey(uid), today);
+    updateSpinWheelUI();
+    return profileData;
 }
 
 function markDailySpinUsed(profileData = getCurrentProfileData()) {
+    const uid = getSpinWheelAuthUid();
     const today = getLocalDateKey();
+    const bonusSpins = getDailySpinBonusCount(profileData, uid);
+    if (bonusSpins > 0) {
+        setDailySpinBonusCount(profileData, bonusSpins - 1, uid);
+    }
     profileData.lastSpinWheelDate = today;
-    localStorage.setItem(getLastSpinWheelDateStorageKey(currentUser?.uid), today);
+    localStorage.setItem(getLastSpinWheelDateStorageKey(uid), today);
     return profileData;
 }
 
@@ -2583,24 +2652,34 @@ function grantSpinWheelReward(profileData, reward) {
 }
 
 function getSpinWheelSliceGeometry() {
-    const totalWeight = spinWheelRewards.reduce((sum, reward) => sum + Math.max(0, Number(reward.weight) || 0), 0);
-    let cursor = 0;
-    return spinWheelRewards.map(reward => {
-        const slice = (Math.max(0, Number(reward.weight) || 0) / totalWeight) * 360;
-        const start = cursor;
-        const mid = cursor + (slice / 2);
-        cursor += slice;
-        return { reward, start, end: cursor, mid, slice };
+    const sliceCount = Math.max(1, spinWheelRewards.length);
+    const slice = 360 / sliceCount;
+    return spinWheelRewards.map((reward, index) => {
+        const start = index * slice;
+        const end = start + slice;
+        const mid = start + (slice / 2);
+        return { reward, start, end, mid, slice };
     });
+}
+
+function normalizeSpinWheelDegrees(degrees) {
+    return ((degrees % 360) + 360) % 360;
+}
+
+function getSpinWheelRotationForSlice(slice) {
+    const visualMidpoint = SPIN_WHEEL_GRADIENT_START_DEGREES + slice.mid;
+    return normalizeSpinWheelDegrees(SPIN_WHEEL_POINTER_DEGREES - visualMidpoint);
 }
 
 function buildSpinWheelGradient() {
     const slices = getSpinWheelSliceGeometry();
     const stops = slices.map(entry => {
-        const separator = Math.min(entry.end, entry.start + 0.65);
-        return `rgba(7, 28, 44, 0.78) ${entry.start}deg ${separator}deg, ${entry.reward.color} ${separator}deg ${entry.end}deg`;
+        const separatorSize = Math.min(0.42, entry.slice * 0.025);
+        const colorStart = entry.start + separatorSize;
+        const colorEnd = entry.end - separatorSize;
+        return `rgba(7, 28, 44, 0.5) ${entry.start}deg ${colorStart}deg, ${entry.reward.color} ${colorStart}deg ${colorEnd}deg, rgba(7, 28, 44, 0.5) ${colorEnd}deg ${entry.end}deg`;
     });
-    return `conic-gradient(from -90deg, ${stops.join(", ")})`;
+    return `conic-gradient(from ${SPIN_WHEEL_GRADIENT_START_DEGREES}deg, ${stops.join(", ")})`;
 }
 
 function getSpinWheelChancePercent(reward) {
@@ -2610,38 +2689,17 @@ function getSpinWheelChancePercent(reward) {
     return `${Number.isInteger(percent) ? percent : percent.toFixed(1)}%`;
 }
 
-function getSpinWheelLabelRadius(reward) {
-    return ({
-        spin_pass_level: 27,
-        spin_badge: 38,
-        spin_theme: 38,
-        spin_pfp: 24,
-        spin_reef_crate: 31
-    })[reward.id] || 33;
-}
-
 function renderSpinWheelSliceLabels() {
     const disk = document.getElementById("spin-wheel-disk");
     if (!disk) return;
-    const slices = getSpinWheelSliceGeometry();
-    disk.innerHTML = slices.map(entry => {
-        const angleRadians = entry.mid * Math.PI / 180;
-        const labelRadius = getSpinWheelLabelRadius(entry.reward);
-        const labelX = 50 + Math.sin(angleRadians) * labelRadius;
-        const labelY = 50 - Math.cos(angleRadians) * labelRadius;
-        let labelAngle = entry.mid - 90;
-        if (labelAngle > 90) labelAngle -= 180;
-        if (labelAngle < -90) labelAngle += 180;
-        return `
-        <div class="spin-wheel-slice-label rarity-${entry.reward.rarity}" style="--slice-x:${labelX.toFixed(2)}%; --slice-y:${labelY.toFixed(2)}%; --label-angle:${labelAngle.toFixed(2)}deg;">
-            <span class="slice-icon">${entry.reward.icon}</span>
-            <span class="slice-copy">
-                <strong>${entry.reward.wheelLabel || entry.reward.label}</strong>
-                <small>${getSpinWheelChancePercent(entry.reward)}</small>
-            </span>
-        </div>
-    `;
-    }).join("");
+    disk.innerHTML = "";
+}
+
+function getSpinWheelLegendIconMarkup(reward) {
+    if (reward.type === "pfp" && reward.imagePath) {
+        return `<span class="legend-icon legend-icon-pfp"><img src="${escapeHtml(reward.imagePath)}" alt=""></span>`;
+    }
+    return `<span class="legend-icon">${escapeHtml(reward.icon || "")}</span>`;
 }
 
 function renderSpinWheelLegend() {
@@ -2650,11 +2708,12 @@ function renderSpinWheelLegend() {
     legend.innerHTML = spinWheelRewards.map(reward => `
         <li class="spin-wheel-legend-item rarity-${reward.rarity}">
             <span class="legend-swatch" style="background:${reward.color};"></span>
-            <span class="legend-icon">${reward.icon}</span>
+            ${getSpinWheelLegendIconMarkup(reward)}
             <span class="legend-copy">
                 <strong>${reward.label}</strong>
                 <small>${reward.rarity}</small>
             </span>
+            <span class="legend-chance">${getSpinWheelChancePercent(reward)}</span>
         </li>
     `).join("");
 }
@@ -2664,7 +2723,10 @@ function updateSpinWheelUI() {
     const statusEl = document.getElementById("spin-wheel-status");
     const actionBtn = document.getElementById("spin-wheel-action-btn");
     const subtitle = document.getElementById("spin-wheel-subtitle");
-    const canSpin = canUseDailySpin();
+    const profileData = getCurrentProfileData();
+    const canSpin = canUseDailySpin(profileData);
+    const bonusSpins = getDailySpinBonusCount(profileData);
+    const usedToday = Boolean(getSpinWheelAuthUid()) && getStoredLastSpinWheelDate(getSpinWheelAuthUid()) === getLocalDateKey();
 
     if (btn) {
         if (currentUser) {
@@ -2676,16 +2738,20 @@ function updateSpinWheelUI() {
         }
     }
     if (statusEl) {
-        statusEl.textContent = canSpin ? "Ready!" : "Used";
+        statusEl.textContent = canSpin ? (bonusSpins > 1 ? `${bonusSpins}x` : "Ready") : usedToday ? "Used" : "Win";
     }
     if (actionBtn) {
         actionBtn.disabled = !canSpin || spinWheelSpinning;
-        actionBtn.textContent = canSpin ? "Spin the Wheel" : "Come Back Tomorrow";
+        actionBtn.textContent = canSpin ? (bonusSpins > 1 ? `Spin the Wheel (${bonusSpins})` : "Spin the Wheel") : usedToday ? "Come Back Tomorrow" : "Win Today to Unlock";
     }
     if (subtitle) {
         subtitle.textContent = canSpin
-            ? "You have 1 free spin today. Land the legendary slice for the exclusive Wheel Shark profile icon!"
-            : "You already used today's spin. Come back after midnight for another free spin.";
+            ? bonusSpins > 0
+                ? `You have ${bonusSpins} granted spin${bonusSpins === 1 ? "" : "s"} available. Land the jackpot slice for the Blue-spotted Ribbontail Ray profile picture.`
+                : "Your first win today unlocked 1 spin. Land the jackpot slice for the Blue-spotted Ribbontail Ray profile picture."
+            : usedToday
+            ? "You already used today's spin. Come back after midnight and win again for another shot."
+            : "Win a Daily or Infinite game today to unlock 1 spin.";
     }
 }
 
@@ -2718,6 +2784,9 @@ function closeSpinWheelModal() {
 
 async function spinDailyWheel() {
     if (!currentUser || spinWheelSpinning || !canUseDailySpin()) {
+        if (currentUser && !hasUnlockedDailySpinToday()) {
+            showNotification("Win a Daily or Infinite game today to unlock the wheel.", "info", 3200);
+        }
         updateSpinWheelUI();
         return;
     }
@@ -2735,7 +2804,10 @@ async function spinDailyWheel() {
     const slices = getSpinWheelSliceGeometry();
     const winningSlice = slices[rewardIndex] || slices[0];
     const extraTurns = 5 + Math.floor(Math.random() * 3);
-    const targetRotation = (extraTurns * 360) + (360 - winningSlice.mid);
+    const currentRotation = normalizeSpinWheelDegrees(spinWheelRotation);
+    const desiredRotation = getSpinWheelRotationForSlice(winningSlice);
+    const rotationDelta = normalizeSpinWheelDegrees(desiredRotation - currentRotation);
+    const targetRotation = (extraTurns * 360) + rotationDelta;
     spinWheelRotation += targetRotation;
     disk.style.transform = `rotate(${spinWheelRotation}deg)`;
 
@@ -2755,7 +2827,9 @@ async function spinDailyWheel() {
                 unlockedCardThemes: profileData.unlockedCardThemes,
                 crateInventory: normalizeCrateInventory(profileData.crateInventory),
                 streakShields: getStreakShieldCount(profileData),
-                lastSpinWheelDate: profileData.lastSpinWheelDate
+                lastSpinWheelDate: profileData.lastSpinWheelDate,
+                dailySpinWinDate: profileData.dailySpinWinDate,
+                dailySpinBonusSpins: getDailySpinBonusCount(profileData)
             }, { merge: true });
         } catch (error) {
             console.warn("Spin wheel sync failed:", error);
@@ -2772,7 +2846,7 @@ async function spinDailyWheel() {
             name: reward.name,
             imagePath: reward.imagePath
         }, {
-            title: "Legendary Spin Reward!",
+            title: "Jackpot Spin Reward!",
             subtitle: reward.name,
             accent: "#ffd47f",
             background: "linear-gradient(135deg, rgba(255, 212, 127, 0.96), rgba(91, 58, 9, 0.96))",
@@ -2790,9 +2864,9 @@ async function spinDailyWheel() {
     if (typeof renderThemeSelection === "function") renderThemeSelection();
     if (typeof renderBadgeSelection === "function") renderBadgeSelection();
     if (typeof updateProfileBadgeUI === "function") updateProfileBadgeUI();
+    spinWheelSpinning = false;
     updateIndexStats();
     updateSpinWheelUI();
-    spinWheelSpinning = false;
 }
 
 function collectAllUnlockablePfps() {
@@ -2883,9 +2957,41 @@ window.resetDailySpin = function() {
     console.log("✅ Daily spin reset. You can spin again.");
 };
 
-window.openSpinWheelModal = function() {};
-window.closeSpinWheelModal = function() {};
-window.spinDailyWheel = function() {};
+window.giveDailySpin = function(count = 1) {
+    if (!currentUser || !isDeveloperUid(currentUser.uid)) {
+        console.log("❌ Access denied. giveDailySpin() is for developers only.");
+        return;
+    }
+    const grantCount = Math.max(1, Math.floor(Number(count) || 1));
+    const today = getLocalDateKey();
+    const profileData = getCurrentProfileData();
+    const nextBonusSpins = setDailySpinBonusCount(
+        profileData,
+        getDailySpinBonusCount(profileData, currentUser.uid) + grantCount,
+        currentUser.uid
+    );
+    profileData.dailySpinWinDate = today;
+    profileData.lastSpinWheelDate = today;
+    localStorage.setItem(getDailySpinWinDateStorageKey(currentUser.uid), today);
+    localStorage.setItem(getLastSpinWheelDateStorageKey(currentUser.uid), today);
+    saveUserProfileLocally(profileData);
+    if (db) {
+        db.collection("userStats").doc(currentUser.uid).set({
+            dailySpinWinDate: today,
+            lastSpinWheelDate: today,
+            dailySpinBonusSpins: nextBonusSpins
+        }, { merge: true }).catch(() => {});
+    }
+    updateSpinWheelUI();
+    console.log(`✅ Granted ${grantCount} daily wheel spin${grantCount === 1 ? "" : "s"}. You now have ${nextBonusSpins} spin${nextBonusSpins === 1 ? "" : "s"} available.`);
+};
+
+window.giveSpin = window.giveDailySpin;
+
+window.markDailySpinWinUnlocked = markDailySpinWinUnlocked;
+window.openSpinWheelModal = openSpinWheelModal;
+window.closeSpinWheelModal = closeSpinWheelModal;
+window.spinDailyWheel = spinDailyWheel;
 
 function getAllCrateRewardPools() {
     return [crateRewardPool, summerCrateRewardPool, christmasCrateRewardPool, halloweenCrateRewardPool];
@@ -4243,7 +4349,8 @@ window.closeCommunityBossRanksModal = closeCommunityBossRanksModal;
 window.openCommunityBossEventModal = openCommunityBossEventModal;
 window.closeCommunityBossEventModal = closeCommunityBossEventModal;
 
-const MEGALODON_ESCAPE_AWARD_ID = "summer-megaladon-2026-participation";
+const MEGALODON_ESCAPE_EVENT_ID = "summer-megaladon-2026";
+const MEGALODON_ESCAPE_AWARD_ID = `${MEGALODON_ESCAPE_EVENT_ID}-participation`;
 const MEGALODON_ESCAPE_AWARD_STORAGE_KEY = "megalodonEscapeParticipationAwardClaimed";
 const MEGALODON_ESCAPE_AWARD_XP = 1000;
 const MEGALODON_ESCAPE_AWARD_CRATE_ID = "summer";
@@ -4254,7 +4361,88 @@ function getMegalodonEscapeAwardStorageKey(uid = currentUser?.uid) {
     return uid ? `${MEGALODON_ESCAPE_AWARD_STORAGE_KEY}_${uid}` : MEGALODON_ESCAPE_AWARD_STORAGE_KEY;
 }
 
+function getMegalodonEscapeAwardAuthUser() {
+    const authUser = typeof firebase !== "undefined" && firebase.auth ? firebase.auth().currentUser : null;
+    return currentUser && authUser?.uid === currentUser.uid ? authUser : null;
+}
+
+function getMegalodonEscapeContributorRef(uid = currentUser?.uid) {
+    return db && uid
+        ? db.collection("communityEvents").doc(MEGALODON_ESCAPE_EVENT_ID).collection("contributors").doc(uid)
+        : null;
+}
+
+async function hasMegalodonEscapeContribution(authUser = getMegalodonEscapeAwardAuthUser()) {
+    if (!authUser || !db) return false;
+    const contributorRef = getMegalodonEscapeContributorRef(authUser.uid);
+    if (!contributorRef) return false;
+
+    try {
+        const snapshot = await contributorRef.get();
+        const wins = Math.max(0, Number(snapshot.data()?.wins) || 0);
+        return snapshot.exists && wins > 0;
+    } catch (error) {
+        console.warn("Unable to verify Megalodon participation:", error);
+        return false;
+    }
+}
+
+function removeAnonymousMegalodonEscapeAward(profileData) {
+    if (!profileData || typeof profileData !== "object" || profileData.uid) return profileData || {};
+    const communityBossRewards = profileData.communityBossRewards;
+    if (!communityBossRewards || typeof communityBossRewards !== "object" || !communityBossRewards[MEGALODON_ESCAPE_AWARD_ID]) {
+        return profileData;
+    }
+
+    const sanitizedRewards = { ...communityBossRewards };
+    delete sanitizedRewards[MEGALODON_ESCAPE_AWARD_ID];
+
+    const sanitizedProfile = {
+        ...profileData,
+        communityBossRewards: sanitizedRewards,
+        totalXP: Math.max(0, (Number(profileData.totalXP) || 0) - MEGALODON_ESCAPE_AWARD_XP)
+    };
+    const inventory = normalizeCrateInventory(profileData.crateInventory);
+    inventory[MEGALODON_ESCAPE_AWARD_CRATE_ID] = Math.max(
+        0,
+        (Number(inventory[MEGALODON_ESCAPE_AWARD_CRATE_ID]) || 0) - MEGALODON_ESCAPE_AWARD_CRATE_COUNT
+    );
+    sanitizedProfile.crateInventory = normalizeCrateInventory(inventory);
+    return sanitizedProfile;
+}
+
+function clearAnonymousMegalodonEscapeAwardCache() {
+    let didSanitize = false;
+    let sanitizedTotalXp = null;
+    ["userProfile", "userProfileBackup"].forEach(key => {
+        try {
+            const rawProfile = localStorage.getItem(key);
+            if (!rawProfile) return;
+            const profileData = JSON.parse(rawProfile);
+            const sanitizedProfile = removeAnonymousMegalodonEscapeAward(profileData);
+            if (sanitizedProfile === profileData) return;
+            didSanitize = true;
+            localStorage.setItem(key, JSON.stringify(sanitizedProfile));
+            if (Object.prototype.hasOwnProperty.call(sanitizedProfile, "totalXP")) {
+                const nextTotalXp = Math.max(0, Number(sanitizedProfile.totalXP) || 0);
+                if (key === "userProfile" || sanitizedTotalXp === null) {
+                    sanitizedTotalXp = nextTotalXp;
+                }
+            }
+        } catch (error) {
+            console.warn("Unable to clear anonymous Megalodon award cache:", error);
+        }
+    });
+
+    if (sanitizedTotalXp !== null) {
+        localStorage.setItem("totalXP", String(sanitizedTotalXp));
+    }
+    localStorage.removeItem(MEGALODON_ESCAPE_AWARD_STORAGE_KEY);
+    return didSanitize;
+}
+
 function hasClaimedMegalodonEscapeAward(profileData = getCurrentProfileData()) {
+    if (!getMegalodonEscapeAwardAuthUser()) return false;
     const rewardClaim = profileData?.communityBossRewards?.[MEGALODON_ESCAPE_AWARD_ID];
     return Boolean(rewardClaim) || localStorage.getItem(getMegalodonEscapeAwardStorageKey()) === "true";
 }
@@ -4264,15 +4452,17 @@ function closeMegalodonEscapeAwardModal() {
     if (modal) modal.classList.add("hidden");
 }
 
-function grantMegalodonEscapeAward() {
+async function grantMegalodonEscapeAward() {
+    const authUser = getMegalodonEscapeAwardAuthUser();
+    if (!authUser || !db) return false;
+    if (!(await hasMegalodonEscapeContribution(authUser))) return false;
+
     const profileData = getCurrentProfileData();
     if (hasClaimedMegalodonEscapeAward(profileData)) return false;
 
-    if (currentUser) {
-        profileData.uid = currentUser.uid;
-        profileData.email = profileData.email || currentUser.email;
-        profileData.username = profileData.username || getStoredPreferredUsername() || currentUser.email?.split("@")[0] || "Sharkdle Player";
-    }
+    profileData.uid = authUser.uid;
+    profileData.email = profileData.email || authUser.email;
+    profileData.username = profileData.username || getStoredPreferredUsername() || authUser.email?.split("@")[0] || "Sharkdle Player";
 
     const inventory = getCrateInventory(profileData);
     inventory[MEGALODON_ESCAPE_AWARD_CRATE_ID] = (inventory[MEGALODON_ESCAPE_AWARD_CRATE_ID] || 0) + MEGALODON_ESCAPE_AWARD_CRATE_COUNT;
@@ -4294,14 +4484,12 @@ function grantMegalodonEscapeAward() {
     saveUserProfileLocally(profileData);
     localStorage.setItem(getMegalodonEscapeAwardStorageKey(profileData.uid), "true");
 
-    if (currentUser && db) {
-        db.collection("userStats").doc(currentUser.uid).set({
-            totalXP: profileData.totalXP,
-            crateInventory: profileData.crateInventory,
-            communityBossRewards: profileData.communityBossRewards,
-            lastUpdated: new Date()
-        }, { merge: true }).catch(error => console.warn("Megalodon participation award sync failed:", error));
-    }
+    db.collection("userStats").doc(authUser.uid).set({
+        totalXP: profileData.totalXP,
+        crateInventory: profileData.crateInventory,
+        communityBossRewards: profileData.communityBossRewards,
+        lastUpdated: new Date()
+    }, { merge: true }).catch(error => console.warn("Megalodon participation award sync failed:", error));
 
     updateProfileDisplay(profileData);
     updateIndexStats();
@@ -4311,7 +4499,17 @@ function grantMegalodonEscapeAward() {
     return true;
 }
 
-function maybeShowMegalodonEscapeAwardModal() {
+async function maybeShowMegalodonEscapeAwardModal() {
+    if (!getMegalodonEscapeAwardAuthUser()) {
+        if (clearAnonymousMegalodonEscapeAwardCache()) {
+            const profileData = getCurrentProfileData();
+            updateProfileDisplay(profileData);
+            updateIndexStats();
+            renderCratesButton();
+            renderHomeCratesModal();
+        }
+        return;
+    }
     const modal = document.getElementById("megalodonEscapeAwardModal");
     if (!modal || modal.dataset.awardHandled === "true" || hasClaimedMegalodonEscapeAward()) return;
 
@@ -4329,7 +4527,7 @@ function maybeShowMegalodonEscapeAwardModal() {
     }
 
     try {
-        if (!grantMegalodonEscapeAward()) return;
+        if (!(await grantMegalodonEscapeAward())) return;
         modal.dataset.awardHandled = "true";
         modal.classList.remove("hidden");
     } catch (error) {
@@ -5694,7 +5892,7 @@ const allBadges = [
     { id: "dev", name: "Developer", emoji: "🖥️", description: "Awarded only to the developer.", devOnly: true },
     { id: "tester", name: "Tester", emoji: "🎮", description: "Awarded for testing via code redeem.", codeUnlock: true },
     { id: "anniversary", name: "Anniversary", emoji: "🎉", description: "Awarded for redeeming the Anniversary code.", codeUnlock: true },
-    { id: "lucky-fin", name: "Lucky Fin", emoji: "🍀", description: "Awarded from the daily prize wheel.", codeUnlock: true },
+    { id: "lucky-fin", name: "Lucky Fin", emoji: "🍀", description: "Awarded from the daily win wheel.", codeUnlock: true },
     { id: "extinction", name: "Extinction", emoji: "☄️", description: "Awarded for defeating a summer community boss.", rarity: "legendary", codeUnlock: true },
     { id: "spiral-hunter", name: "Spiral Hunter", emoji: "🌀", description: "Awarded for defeating the Halloween Helicoprion community boss.", rarity: "legendary", codeUnlock: true },
     { id: "frost-anvil", name: "Frost Anvil", emoji: "❄️", description: "Awarded for defeating the Christmas Stethacanthus community boss.", rarity: "legendary", codeUnlock: true }
@@ -7065,6 +7263,7 @@ function saveUserProfileLocally(profileData, options = {}) {
     profileData.cratesOpened = Math.max(0, Number(profileData.cratesOpened) || 0);
     profileData.cratesSinceLegendary = getCratesSinceLegendary(profileData);
     profileData.streakShields = getStreakShieldCount(profileData);
+    profileData.dailySpinBonusSpins = normalizeDailySpinBonusCount(profileData.dailySpinBonusSpins);
     profileData.instantCrateOpen = getCrateInstantOpenEnabled(profileData);
     profileData.pearlBoostExpiresAt = getPearlBoostExpiresAt(profileData);
     profileData.seasonXpBoosts = getSeasonXpBoosts(profileData);
@@ -7239,6 +7438,9 @@ function mergeProfilesSafely(localProfile, firebaseData) {
     const preferredStreakShields = localUpdatedMs >= firebaseUpdatedMs
         ? getStreakShieldCount(localProfile)
         : getStreakShieldCount(firebaseData);
+    const preferredDailySpinBonusSpins = localUpdatedMs >= firebaseUpdatedMs
+        ? normalizeDailySpinBonusCount(localProfile.dailySpinBonusSpins)
+        : normalizeDailySpinBonusCount(firebaseData.dailySpinBonusSpins);
     const preferLocalProfileFields = localUpdatedMs > firebaseUpdatedMs;
     const localProfilePic = localProfile.profilePicture || localProfile.profilePic;
     const remoteProfilePic = firebaseData.profilePicture || firebaseData.profilePic;
@@ -7354,6 +7556,8 @@ function mergeProfilesSafely(localProfile, firebaseData) {
         lastLoginDate: mergedLoginProgress.lastLoginDate,
         dailyLoginModalShownToday: mergedLoginProgress.dailyLoginModalShownToday,
         lastSpinWheelDate: [normalizeStoredDateValue(localProfile.lastSpinWheelDate), normalizeStoredDateValue(firebaseData.lastSpinWheelDate)].filter(Boolean).sort().pop() || "",
+        dailySpinWinDate: [normalizeStoredDateValue(localProfile.dailySpinWinDate), normalizeStoredDateValue(firebaseData.dailySpinWinDate)].filter(Boolean).sort().pop() || "",
+        dailySpinBonusSpins: preferredDailySpinBonusSpins,
         lastUpdated: Math.max(localUpdatedMs, firebaseUpdatedMs)
     };
 }
@@ -7403,6 +7607,18 @@ async function loadUserProfile(options = {}) {
                 localStorage.setItem(getLastSpinWheelDateStorageKey(currentUser.uid), normalizedSpinDate);
             } else {
                 localStorage.removeItem(getLastSpinWheelDateStorageKey(currentUser.uid));
+            }
+            const normalizedSpinWinDate = normalizeStoredDateValue(firebaseData.dailySpinWinDate);
+            if (normalizedSpinWinDate) {
+                localStorage.setItem(getDailySpinWinDateStorageKey(currentUser.uid), normalizedSpinWinDate);
+            } else {
+                localStorage.removeItem(getDailySpinWinDateStorageKey(currentUser.uid));
+            }
+            const loadedDailySpinBonusSpins = normalizeDailySpinBonusCount(userData.dailySpinBonusSpins);
+            if (loadedDailySpinBonusSpins > 0) {
+                localStorage.setItem(getDailySpinBonusStorageKey(currentUser.uid), String(loadedDailySpinBonusSpins));
+            } else {
+                localStorage.removeItem(getDailySpinBonusStorageKey(currentUser.uid));
             }
             // Merge achievements instead of letting a stale Firestore snapshot clear local claims.
             const mergedClaimedAchievements = getMergedUniqueIds(
@@ -8543,11 +8759,16 @@ async function signupUser() {
         // Proceed with account creation
         const result = await auth.createUserWithEmailAndPassword(email, password);
         const userRef = db.collection("userStats").doc(result.user.uid);
-        
+
         // Migrate local offline stats - check both new and old storage locations
         const rawLocalProfile = JSON.parse(localStorage.getItem("userProfile") || "{}");
-        const localProfile = rawLocalProfile && !rawLocalProfile.uid ? rawLocalProfile : {};
-        const _totalXP = localProfile.totalXP || parseInt(localStorage.getItem("totalXP")) || 0;
+        const localProfile = rawLocalProfile && !rawLocalProfile.uid
+            ? removeAnonymousMegalodonEscapeAward(rawLocalProfile)
+            : {};
+        const hasLocalProfileTotalXp = Object.prototype.hasOwnProperty.call(localProfile, "totalXP");
+        const _totalXP = hasLocalProfileTotalXp
+            ? Math.max(0, Number(localProfile.totalXP) || 0)
+            : parseInt(localStorage.getItem("totalXP")) || 0;
         const _gamesPlayed = localProfile.gamesPlayed || parseInt(localStorage.getItem("games")) || 0;
         const _wins = localProfile.wins || parseInt(localStorage.getItem("wins")) || 0;
         const _losses = localProfile.losses || parseInt(localStorage.getItem("losses")) || 0;
@@ -8969,7 +9190,7 @@ function getCosmeticSourceLabel(cosmetic = {}) {
     if (/leaderPfp\/Monthly/i.test(cosmetic.imagePath || "")) return "Monthly leaderboard #1";
     if (/codePfp/i.test(cosmetic.imagePath || "")) return "Redeem code reward";
     if (/loginPfp/i.test(cosmetic.imagePath || "")) return "Day 7 login reward";
-    if ((cosmetic.imagePath || "") === SPIN_WHEEL_LEGENDARY_PFP.imagePath || cosmetic.spinReward) return "Daily prize wheel";
+    if ((cosmetic.imagePath || "") === SPIN_WHEEL_LEGENDARY_PFP.imagePath || cosmetic.spinReward) return "Daily win wheel";
     if (/cratePfp/i.test(cosmetic.imagePath || "")) return "Cosmetic crate";
     if (cosmetic.level) return `Shark Pass level ${cosmetic.level}`;
     return "Special reward";
@@ -9054,7 +9275,7 @@ function buildProfilePicPickerCatalog() {
         { imagePath: "images/leaderPfp/Daily/Shark1.png", name: "Catshark", source: "Daily leaderboard #1" },
         { imagePath: "images/leaderPfp/Monthly/Shark1.png", name: "Whitetip Reef Shark", source: "Monthly leaderboard #1" },
         { imagePath: "images/leaderPfp/Shark19.png", name: "Port Jackson Shark", source: "All-time leaderboard top 3", isLeader: true },
-        { imagePath: SPIN_WHEEL_LEGENDARY_PFP.imagePath, name: "Wheel Shark", source: "Daily prize wheel" },
+        { imagePath: SPIN_WHEEL_LEGENDARY_PFP.imagePath, name: SPIN_WHEEL_LEGENDARY_PFP.name, source: "Daily win wheel" },
         { imagePath: "images/loginPfp/Shark20.png", name: "Bull Shark", source: "Day 7 login reward" }
     ];
 
@@ -9226,7 +9447,7 @@ const LEADER_REWARD_PFP_NAMES = {
     "images/leaderPfp/Daily/Shark1.png": "Catshark",
     "images/leaderPfp/Monthly/Shark1.png": "Whitetip Reef Shark",
     "images/leaderPfp/Shark19.png": "Port Jackson Shark",
-    [SPIN_WHEEL_LEGENDARY_PFP.imagePath]: "Wheel Shark"
+    [SPIN_WHEEL_LEGENDARY_PFP.imagePath]: SPIN_WHEEL_LEGENDARY_PFP.name
 };
 
 function getCosmeticDisplayName(cosmetic) {
@@ -9566,6 +9787,8 @@ async function syncStatsToFirebase() {
         }
         stats.dailyLoginModalShownToday = normalizedModalShownDate;
         stats.lastSpinWheelDate = normalizeStoredDateValue(mergedProfile.lastSpinWheelDate);
+        stats.dailySpinWinDate = normalizeStoredDateValue(mergedProfile.dailySpinWinDate);
+        stats.dailySpinBonusSpins = normalizeDailySpinBonusCount(mergedProfile.dailySpinBonusSpins);
 
         // Save stats to userStats collection
         await statsRef.set(stats, { merge: true });
@@ -11242,6 +11465,7 @@ function showCommands() {
     console.log("skipLoginDay(1) - Simulate missing 1 day and re-run daily login logic");
     console.log("addCrates(3) - Add Cosmetic Crates for testing");
     console.log("addStreakShields(3) - Add Streak Shields for testing");
+    console.log("giveDailySpin(5) / giveSpin(5) - Grant daily wheel spins for testing");
     console.log("resetDailySpin() - Reset today's daily spin wheel");
     console.log("unlockAllCosmetics() - Unlock all profile icons, badges, and themes");
     console.log("addTestStats() - Quick test add (500 XP, 10 wins, 5 losses, 15 games, 75 guesses)");

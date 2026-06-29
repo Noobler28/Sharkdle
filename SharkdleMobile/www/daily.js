@@ -435,7 +435,10 @@ if(shark.name === targetShark.name){
     if (typeof incrementProfilePeriodWins === 'function') {
         incrementProfilePeriodWins(profileData);
     }
-    
+    if (typeof window.markDailySpinWinUnlocked === 'function') {
+        profileData = window.markDailySpinWinUnlocked(profileData);
+    }
+
     // Update best game (fewest guesses)
     if (!profileData.bestGame || profileData.bestGame === 'N/A' || guessesTaken < parseInt(profileData.bestGame)) {
         profileData.bestGame = guessesTaken;
