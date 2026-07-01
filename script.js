@@ -7978,7 +7978,49 @@ function grantPearlShopItem(profileData, itemId) {
     return { success: false, message: "Unknown shop item." };
 }
 
-function buyPearlShopItem(itemId) {
+function getPearlShopAuthUser() {
+    const authUser = typeof firebase !== "undefined" && typeof firebase.auth === "function"
+        ? firebase.auth().currentUser
+        : null;
+    return authUser || window.currentUser || currentUser || null;
+}
+
+async function persistPearlShopPurchase(profileData, itemId, item) {
+    const authUser = getPearlShopAuthUser();
+    const nextProfile = {
+        ...profileData,
+        uid: window.currentUser?.uid || authUser?.uid || profileData.uid
+    };
+
+    saveUserProfileLocally(nextProfile, { skipRemoteSync: true });
+
+    if (authUser && typeof db !== "undefined") {
+        try {
+            await db.collection("userStats").doc(authUser.uid).set({
+                uid: authUser.uid,
+                pearls: getPearlCount(nextProfile),
+                pearlBoostExpiresAt: getPearlBoostExpiresAt(nextProfile),
+                streakShields: getStreakShieldCount(nextProfile),
+                crateInventory: normalizeCrateInventory(nextProfile.crateInventory),
+                seasonXpBoosts: getSeasonXpBoosts(nextProfile),
+                sharkPassSeasonId: nextProfile.sharkPassSeasonId || SHARK_PASS_ACTIVE_SEASON_ID,
+                lastPearlShopPurchase: {
+                    itemId,
+                    label: item.label,
+                    price: item.price,
+                    purchasedAt: new Date()
+                },
+                lastUpdated: new Date()
+            }, { merge: true });
+        } catch (error) {
+            console.warn("Error saving pearl shop purchase:", error);
+        }
+    }
+
+    return nextProfile;
+}
+
+async function buyPearlShopItem(itemId) {
     const item = PEARL_SHOP_ITEMS[itemId];
     if (!item) return;
     if (!currentUser) {
@@ -8007,14 +8049,12 @@ function buyPearlShopItem(itemId) {
     }
 
     setPearlCount(profileData, pearls - item.price);
-    saveUserProfileLocally({
-        ...profileData,
-        uid: window.currentUser?.uid || firebase.auth().currentUser?.uid || profileData.uid
-    });
-    updateHomeV3Sidebar(profileData);
+    const nextProfile = await persistPearlShopPurchase(profileData, itemId, item);
+    updateHomeV3Sidebar(nextProfile);
+    renderPearlShop(nextProfile);
     renderCratesButton();
     renderCratesModal();
-    updateSeasonalCratePanels(profileData);
+    updateSeasonalCratePanels(nextProfile);
     showNotification(`${grant.message} -${item.price} pearls`, "success", 3400);
 }
 
