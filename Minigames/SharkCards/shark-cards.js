@@ -12,10 +12,10 @@
     const IMAGE_CACHE_MAX_AGE = 1000 * 60 * 60 * 24 * 30;
 
     const FALLBACK_SHARKS = [
-        { name: "Blacktip Shark", family: "Carcharhinidae", order: "Carcharhiniformes", genus: "Carcharhinus", size: "Medium", habitat: "Epipelagic", yod: 1839, OneIn: 87 },
-        { name: "White Shark", family: "Lamnidae", order: "Lamniformes", genus: "Carcharodon", size: "Large", habitat: "Epipelagic", yod: 1758, OneIn: 6000 },
-        { name: "Whale Shark", family: "Rhincodontidae", order: "Orectolobiformes", genus: "Rhincodon", size: "Giant", habitat: "Epipelagic", yod: 1828, OneIn: 82 },
-        { name: "Goblin Shark", family: "Mitsukurinidae", order: "Lamniformes", genus: "Mitsukurina", size: "Large", habitat: "Bathypelagic", yod: 1898, OneIn: 56 }
+        { name: "Blacktip Shark", family: "Carcharhinidae", order: "Carcharhiniformes", genus: "Carcharhinus", size: "Medium", depth: "Epipelagic", yod: 1839, OneIn: 87 },
+        { name: "White Shark", family: "Lamnidae", order: "Lamniformes", genus: "Carcharodon", size: "Large", depth: "Epipelagic", yod: 1758, OneIn: 6000 },
+        { name: "Whale Shark", family: "Rhincodontidae", order: "Orectolobiformes", genus: "Rhincodon", size: "Giant", depth: "Epipelagic", yod: 1828, OneIn: 82 },
+        { name: "Goblin Shark", family: "Mitsukurinidae", order: "Lamniformes", genus: "Mitsukurina", size: "Large", depth: "Bathypelagic", yod: 1898, OneIn: 56 }
     ];
 
     const STARTER_NAMES = [
@@ -300,7 +300,7 @@
         if (!shark) return;
 
         const card = buildCard(cardId);
-        const comboKey = card.order || card.habitat || card.rarity.name;
+        const comboKey = card.order || card.depth || card.rarity.name;
         battle.comboCount = battle.comboKey === comboKey ? battle.comboCount + 1 : 1;
         battle.comboKey = comboKey;
 
@@ -835,7 +835,7 @@
             family: shark.family || "Unknown",
             order: shark.order || "Unknown",
             genus: shark.genus || "Unknown",
-            habitat: shark.habitat || "Open Ocean",
+            depth: shark.depth || "Open Ocean",
             size: shark.size || "Medium",
             yod: shark.yod || "",
             oneIn,
@@ -866,7 +866,7 @@
                 <span class="sc-card-art"><img src="${card.art}" data-species-image="${card.id}" alt="${escapeAttr(card.name)}"></span>
                 <span class="sc-card-foot">
                     <span>${escapeHtml(card.size)}</span>
-                    <span>${escapeHtml(card.habitat)}</span>
+                    <span>${escapeHtml(card.depth)}</span>
                     <span>1/${formatNumber(card.oneIn)}</span>
                 </span>
             </${tag}>

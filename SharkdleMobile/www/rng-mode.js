@@ -1408,8 +1408,8 @@ let rollPool = [];
         else if (shark.size === "Giant") score += 20;
         else if (shark.size === "Large") score += 8;
 
-        if (shark.habitat === "Bathypelagic") score += 18;
-        else if (shark.habitat === "Mesopelagic") score += 8;
+        if (shark.depth === "Bathypelagic") score += 18;
+        else if (shark.depth === "Mesopelagic") score += 8;
 
         return score;
     }
@@ -1564,7 +1564,7 @@ let rollPool = [];
                 family: shark.family,
                 order: shark.order,
                 size: shark.size,
-                habitat: shark.habitat,
+                depth: shark.depth,
                 yod: shark.yod,
                 tier: tierName,
                 baseTier: tierName,
@@ -3231,7 +3231,7 @@ function updateAllUi() {
                     <p class="rng-cutscene-tier">${oddsTier}</p>
                     <h2 class="rng-cutscene-name${shark.mutation ? ' ' + shark.mutation : ''}">${shark.name}</h2>
                     <p class="rng-cutscene-odds">1 in ${formatOneIn(shark.oneIn)}</p>
-                    <p class="rng-cutscene-meta">${shark.habitat || "Unknown"} \u00b7 ${shark.size || "?"} \u00b7 ${isNew ? "NEW species!" : "Added to collection"}${shark.mutation ? ' \u00b7 <span class="rng-mutation-tag ' + shark.mutation + '">' + MUTATION_TYPES[shark.mutation]?.icon + ' ' + shark.mutation.toUpperCase() + '</span>' : ''}</p>
+                    <p class="rng-cutscene-meta">${shark.depth || "Unknown"} \u00b7 ${shark.size || "?"} \u00b7 ${isNew ? "NEW species!" : "Added to collection"}${shark.mutation ? ' \u00b7 <span class="rng-mutation-tag ' + shark.mutation + '">' + MUTATION_TYPES[shark.mutation]?.icon + ' ' + shark.mutation.toUpperCase() + '</span>' : ''}</p>
                     <button type="button" class="rng-cutscene-btn" id="rng-cutscene-close">Continue</button>
                 </div>
             `;

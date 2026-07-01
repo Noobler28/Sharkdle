@@ -588,7 +588,7 @@ function buildDuelFeedback(guessedShark, targetShark) {
         { category: 'Order', value: guessedShark.order, correct: guessedShark.order === targetShark.order },
         { category: 'Genus', value: guessedShark.genus, correct: guessedShark.genus === targetShark.genus },
         { category: 'Size', value: guessedShark.size, correct: guessedShark.size === targetShark.size },
-        { category: 'Habitat', value: guessedShark.habitat, correct: guessedShark.habitat === targetShark.habitat },
+        { category: 'Depth', value: guessedShark.depth, correct: guessedShark.depth === targetShark.depth },
         { category: 'Year of Discovery', value: guessedShark.yod, correct: guessedShark.yod === targetShark.yod }
     ];
 }

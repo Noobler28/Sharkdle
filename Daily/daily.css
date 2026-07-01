@@ -206,6 +206,16 @@ body.mode-v3-page .guess-hero h2 {
     position: relative;
     min-height: 280px;
     border-radius: 14px;
+    border: 1px solid rgba(142, 245, 239, 0.14);
+    background:
+        linear-gradient(90deg, rgba(142, 245, 239, 0.05) 1px, transparent 1px),
+        linear-gradient(0deg, rgba(142, 245, 239, 0.045) 1px, transparent 1px),
+        linear-gradient(160deg, rgba(2, 13, 24, 0.44), rgba(8, 42, 62, 0.18));
+    background-size: 34px 34px, 34px 34px, auto;
+    display: flex;
+    align-items: stretch;
+    justify-content: center;
+    padding: 10px;
     overflow: hidden;
 }
 
@@ -263,6 +273,160 @@ body.species-mode-mixed .guess-hero-fg {
     object-position: center;
 }
 
+.mystery-profile-panel {
+    position: relative;
+    z-index: 2;
+    width: 100%;
+    min-height: 100%;
+    padding: 18px;
+    border-radius: 12px;
+    background:
+        linear-gradient(180deg, rgba(255,255,255,0.07), rgba(255,255,255,0.02)),
+        rgba(2, 13, 24, 0.4);
+    box-shadow:
+        inset 0 1px 0 rgba(255,255,255,0.08);
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.mystery-profile-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    color: rgba(224, 247, 250, 0.76);
+    font-size: 12px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0;
+}
+
+.mystery-profile-ping {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #43e97b;
+    box-shadow: 0 0 0 6px rgba(67, 233, 123, 0.12), 0 0 18px rgba(67, 233, 123, 0.34);
+}
+
+.mystery-profile-target {
+    display: grid;
+    grid-template-columns: 72px minmax(0, 1fr);
+    align-items: center;
+    gap: 14px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid rgba(142, 245, 239, 0.14);
+}
+
+.mystery-profile-mark {
+    width: 72px;
+    aspect-ratio: 1;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    border: 1px solid rgba(142, 245, 239, 0.32);
+    background: rgba(2, 13, 24, 0.62);
+    color: #f5fdff;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 62px;
+    font-weight: 900;
+    line-height: 1;
+    box-shadow:
+        inset 0 0 24px rgba(44, 196, 196, 0.12),
+        0 16px 34px rgba(0, 0, 0, 0.22);
+}
+
+.mystery-profile-target strong {
+    display: block;
+    color: #f5fdff;
+    font-size: 24px;
+    line-height: 1;
+}
+
+.mystery-profile-target small {
+    display: block;
+    margin-top: 6px;
+    color: rgba(224, 247, 250, 0.62);
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.mystery-profile-rows {
+    display: grid;
+    gap: 8px;
+}
+
+.mystery-profile-row {
+    min-height: 32px;
+    display: grid;
+    grid-template-columns: minmax(78px, 0.45fr) minmax(0, 1fr);
+    align-items: center;
+    gap: 12px;
+    padding: 0 12px;
+    border-radius: 8px;
+    border: 1px solid rgba(142, 245, 239, 0.1);
+    background: rgba(13, 43, 64, 0.56);
+    color: rgba(224, 247, 250, 0.86);
+    font-size: 13px;
+    font-weight: 800;
+}
+
+.mystery-profile-value {
+    display: block;
+    width: 100%;
+    height: 10px;
+    border-radius: 999px;
+    background: linear-gradient(90deg, rgba(142, 245, 239, 0.62), rgba(44, 196, 196, 0.12));
+}
+
+.mystery-profile-row:nth-child(2) .mystery-profile-value,
+.mystery-profile-row:nth-child(5) .mystery-profile-value {
+    background: linear-gradient(90deg, rgba(67, 233, 123, 0.64), rgba(67, 233, 123, 0.14));
+}
+
+.mystery-profile-row:nth-child(3) .mystery-profile-value,
+.mystery-profile-row:nth-child(6) .mystery-profile-value {
+    background: linear-gradient(90deg, rgba(255, 216, 107, 0.62), rgba(255, 216, 107, 0.12));
+}
+
+.mystery-profile-panel.has-reveals {
+    border-color: rgba(67, 233, 123, 0.28);
+}
+
+.mystery-profile-panel.has-reveals .mystery-profile-mark {
+    border-color: rgba(67, 233, 123, 0.46);
+    color: #b8ffd2;
+}
+
+.mystery-profile-panel.has-reveals .mystery-profile-target small {
+    color: rgba(184, 255, 210, 0.78);
+}
+
+.mystery-profile-row.revealed {
+    border-color: rgba(67, 233, 123, 0.42);
+    background: linear-gradient(90deg, rgba(12, 86, 70, 0.74), rgba(7, 37, 55, 0.68));
+    color: #f5fdff;
+}
+
+.mystery-profile-row.purchased {
+    border-color: rgba(255, 216, 107, 0.46);
+}
+
+.mystery-profile-row.revealed .mystery-profile-value {
+    height: auto;
+    min-height: 0;
+    border-radius: 0;
+    background: transparent;
+    color: #f5fdff;
+    font-size: 12px;
+    font-weight: 900;
+    line-height: 1.2;
+    text-align: right;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
 body.mode-v3-page .input-panel,
 body.mode-v3-page #guesses {
     border-radius: 14px;
@@ -907,6 +1071,31 @@ button:hover {
     body.mode-v3-page .guess-hero-copy,
     body.mode-v3-page .guess-hero-art {
         min-height: 180px;
+    }
+
+    .mystery-profile-panel {
+        padding: 14px;
+        gap: 11px;
+    }
+
+    .mystery-profile-target {
+        grid-template-columns: 58px minmax(0, 1fr);
+        gap: 12px;
+    }
+
+    .mystery-profile-mark {
+        width: 58px;
+        font-size: 50px;
+    }
+
+    .mystery-profile-target strong {
+        font-size: 20px;
+    }
+
+    .mystery-profile-row {
+        min-height: 30px;
+        grid-template-columns: 76px minmax(0, 1fr);
+        font-size: 12px;
     }
 
     .category-reveal-panel {

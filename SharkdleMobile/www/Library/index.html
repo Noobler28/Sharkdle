@@ -1700,10 +1700,10 @@
         <div style="width:100%"><div class="filter-group">
             <label>Depth:</label>
             <div class="filter-buttons">
-                <button class="filter-option" data-filter="habitat" data-value="Epipelagic">Epipelagic (0-200m)</button>
-                <button class="filter-option" data-filter="habitat" data-value="Mesopelagic">Mesopelagic (200-1000m)</button>
-                <button class="filter-option" data-filter="habitat" data-value="Bathypelagic">Bathypelagic (1000-4000m)</button>
-                <button class="filter-option clear-habitat" data-filter="habitat" data-value="">Clear</button>
+                <button class="filter-option" data-filter="depth" data-value="Epipelagic">Epipelagic (0-200m)</button>
+                <button class="filter-option" data-filter="depth" data-value="Mesopelagic">Mesopelagic (200-1000m)</button>
+                <button class="filter-option" data-filter="depth" data-value="Bathypelagic">Bathypelagic (1000-4000m)</button>
+                <button class="filter-option clear-depth" data-filter="depth" data-value="">Clear</button>
             </div>
         </div></div>
         <div style="width:100%"><div class="filter-group">
@@ -1751,7 +1751,7 @@
         let reviewSpeciesScrolled = false;
         let activeFilters = {
             size: null,
-            habitat: null
+            depth: null
         };
         window.activeFilters = activeFilters;
 
@@ -1835,15 +1835,15 @@
             return thresholds[sharkSize] || sharkSize;
         }
 
-        // Get habitat display text for card
-        function getHabitatDisplay(habitat) {
-            const habitatDisplay = {
+        // Get depth display text for card
+        function getDepthDisplay(depth) {
+            const depthDisplay = {
                 'Epipelagic': 'Epipelagic (0-200m)',
                 'Mesopelagic': 'Mesopelagic (200-1000m)',
                 'Bathypelagic': 'Bathypelagic (1000-4000m)',
                 'Tropical': 'Tropical (Coastal/Surface)'
             };
-            return habitatDisplay[habitat] || habitat;
+            return depthDisplay[depth] || depth;
         }
 
         function loadHeartedSharks() {
@@ -2088,7 +2088,7 @@
             if (showOnlyHearted) count += 1;
             if (showNeedsPractice) count += 1;
             if (activeFilters.size) count += 1;
-            if (activeFilters.habitat) count += 1;
+            if (activeFilters.depth) count += 1;
             if (document.getElementById('year-earliest')?.value) count += 1;
             if (document.getElementById('year-latest')?.value) count += 1;
             if (document.getElementById('shark-search')?.value.trim()) count += 1;
@@ -2114,7 +2114,7 @@
             showOnlyHearted = false;
             showNeedsPractice = false;
             activeFilters.size = null;
-            activeFilters.habitat = null;
+            activeFilters.depth = null;
 
             const searchInput = document.getElementById('shark-search');
             const yearEarliest = document.getElementById('year-earliest');
@@ -2190,9 +2190,9 @@
                     baseSharks = baseSharks.filter(shark => sizeValues.includes(shark.size));
                 }
             }
-            // Apply habitat filter
-            if (activeFilters.habitat) {
-                baseSharks = baseSharks.filter(shark => shark.habitat === activeFilters.habitat);
+            // Apply depth filter
+            if (activeFilters.depth) {
+                baseSharks = baseSharks.filter(shark => shark.depth === activeFilters.depth);
             }
 
             // Year range filter (strict, only valid years) - moved below depth
@@ -2308,7 +2308,7 @@
                                 <div class="card-front-content">
                                     <div class="card-front-meta">
                                         <span class="shark-chip">${shark.size}</span>
-                                        <span class="shark-chip">${shark.habitat}</span>
+                                        <span class="shark-chip">${shark.depth}</span>
                                         ${getSpeciesHistoryIndicatorHtml(shark.name)}
                                     </div>
                                     <div>
@@ -2324,7 +2324,7 @@
                                 <div class="stat"><strong>Order:</strong> ${shark.order}${getCommonName(shark.order) ? `<br/><small>(${getCommonName(shark.order)})</small>` : ''}</div>
                                 <div class="stat"><strong>Genus:</strong> ${shark.genus}</div>
                                 <div class="stat"><strong>Size:</strong> ${getSizeThreshold(shark.size)}</div>
-                                <div class="stat"><strong>Habitat:</strong> ${getHabitatDisplay(shark.habitat)}</div>
+                                <div class="stat"><strong>Depth:</strong> ${getDepthDisplay(shark.depth)}</div>
                                 <div class="stat"><strong>Year of Discovery:</strong> ${shark.yod}</div>
                                 ${getSpeciesHistoryDetailsHtml(shark.name)}
                             </div>
@@ -2441,7 +2441,7 @@
                 clearFiltersBtn.addEventListener('click', resetAllFilters);
             }
             
-            // Setup size and habitat filter listeners
+            // Setup size and depth filter listeners
             const filterOptions = document.querySelectorAll('.filter-option');
             filterOptions.forEach(button => {
                 button.addEventListener('click', function() {

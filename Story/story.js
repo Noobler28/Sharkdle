@@ -82,7 +82,7 @@ const areaDefinitions = [
         "Tiger Sharks have one of the broadest diets of any shark, consuming fish, turtles, birds, and even inedible debris.",
         "Salmon Sharks can regulate their body temperature, allowing them to hunt in cold North Pacific waters.",
         "Oceanic Whitetip Sharks are pelagic sharks associated with warm open-ocean waters.",
-        "Tiger Sharks are found across many tropical and subtropical Pacific habitats.",
+        "Tiger Sharks are found across many tropical and subtropical Pacific depth zones.",
         "Salmon Sharks are close relatives of makos and porbeagles."
     ],
     falseFacts: [
@@ -135,7 +135,7 @@ const areaDefinitions = [
             "Bull Sharks are able to osmoregulate across changing salinity."
         ],
         falseFacts: [
-            "Bull Sharks cannot enter freshwater and are restricted to open ocean habitats.",
+            "Bull Sharks cannot enter freshwater and are restricted to open ocean depth zones.",
             "Zebra Sharks are filter feeders that consume only microscopic plankton.",
             "Whitetip Reef Sharks migrate annually to the Arctic to breed.",
             "Bull Sharks lack the ability to osmoregulate in changing salinity.",
@@ -145,7 +145,7 @@ const areaDefinitions = [
             challenges: [
                 { name: "Species Identification", desc: "Identify the three Indian Ocean species from reef and river-edge records." },
                 { name: "Image Mix Up", desc: "Match the Indian Ocean images before the reef archive desyncs." },
-                { name: "Region Report", desc: "Sort real Indian Ocean field notes from corrupted habitat claims." }
+                { name: "Region Report", desc: "Sort real Indian Ocean field notes from corrupted depth claims." }
             ],
         bossMission: {
             title: "The Monsoon Vault",
@@ -178,8 +178,8 @@ const areaDefinitions = [
         narrative: "The Mediterranean station is caught between old expedition notes and live telemetry. Angel shark sand-flat records are fading, rare sandtiger sightings are buried under duplicate names, and basking shark plankton routes are being rewritten as predator attacks. Restore the crossroads archive.",
         completionNarrative: "The Mediterranean grid steadies. Dr. Finn reports: 'Excellent, {playerUsername}. The western records hold for now. Australian telemetry just flatlined. Cross the map and restore the South Pacific sector next.'",
         facts: [
-            "Angel Sharks are flattened ambush predators that can bury themselves in sandy habitats.",
-            "Small-tooth Sandtiger Sharks are rare lamniform sharks associated with deeper slopes and offshore habitats.",
+            "Angel Sharks are flattened ambush predators that can bury themselves in sandy depth zones.",
+            "Small-tooth Sandtiger Sharks are rare lamniform sharks associated with deeper slopes and offshore depth zones.",
             "Basking Sharks are enormous filter feeders that strain plankton through modified gill rakers.",
             "Basking Sharks may appear near the surface while feeding on plankton blooms.",
             "Angel Sharks have broad pectoral fins that give them a ray-like outline."
@@ -231,7 +231,7 @@ const areaDefinitions = [
             "Port Jackson Sharks lay distinctive spiral-shaped egg cases often called mermaid purses.",
             "Epaulette Sharks can survive low oxygen by slowing movement and using fins to walk across reef flats.",
             "Port Jackson Sharks have crushing teeth suited for hard-shelled prey.",
-            "Epaulette Sharks can move through very shallow reef habitats using their paired fins."
+            "Epaulette Sharks can move through very shallow reef depth zones using their paired fins."
         ],
         falseFacts: [
             "Spotted Wobbegongs are open-ocean filter feeders that never rest on the seafloor.",
@@ -329,7 +329,7 @@ const areaDefinitions = [
         facts: [
             "Sand Tiger Sharks are common along the US East Coast and often seen hovering near wrecks.",
             "Dusky Sharks are large coastal carcharhinids with long-distance seasonal migrations.",
-            "Bonnethead Sharks are the smallest hammerhead species and often forage in seagrass habitats.",
+            "Bonnethead Sharks are the smallest hammerhead species and often forage in seagrass depth zones.",
             "Sand Tiger Sharks can hover with a distinctive, slow-moving posture around reefs and wrecks.",
             "Dusky Sharks use broad coastal ranges and can travel long distances."
         ],
@@ -2123,11 +2123,11 @@ function getSharkDescriptor(sharkName) {
         Giant: "massive, almost impossible to mistake"
     }[shark.size] || "distinctive in the water";
 
-    const habitatText = shark.habitat
-        ? `${shark.habitat.toLowerCase()} waters`
+    const depthText = shark.depth
+        ? `${shark.depth.toLowerCase()} waters`
         : "open water";
     const genusText = shark.genus ? `genus ${shark.genus}` : "a familiar shark lineage";
-    return `${sizeText}, built for ${habitatText}, with ${genusText} traits`;
+    return `${sizeText}, built for ${depthText}, with ${genusText} traits`;
 }
 
 function getSharkVisualClue(sharkName) {
@@ -2147,12 +2147,12 @@ function getSharkVisualClue(sharkName) {
         }[shark.size] || `${shark.size.toLowerCase()} in build`
         : "hard to judge in size";
 
-    const habitatText = shark.habitat
-        ? `it seems adapted to ${shark.habitat.toLowerCase()} waters`
-        : "it is hard to place by habitat alone";
+    const depthText = shark.depth
+        ? `it seems adapted to ${shark.depth.toLowerCase()} waters`
+        : "it is hard to place by depth alone";
     const fallbackClues = [
         `It looks ${sizeText}.`,
-        `From the hull, you can tell that ${habitatText}.`
+        `From the hull, you can tell that ${depthText}.`
     ];
     return shuffle(fallbackClues).join(" ");
 }
@@ -2164,8 +2164,8 @@ function getSharkEvidence(sharkName) {
     }
     const shark = window.sharks?.find?.(entry => entry.name === sharkName) || {};
     const sizeText = shark.size ? shark.size.toLowerCase() : "hard to judge in size";
-    const habitatText = shark.habitat ? `it seems suited to ${shark.habitat.toLowerCase()} waters` : "it blends into the water";
-    return `the shark looks ${sizeText} and ${habitatText}`;
+    const depthText = shark.depth ? `it seems suited to ${shark.depth.toLowerCase()} waters` : "it blends into the water";
+    return `the shark looks ${sizeText} and ${depthText}`;
 }
 
 function getObservationIntro() {

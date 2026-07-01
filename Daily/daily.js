@@ -195,7 +195,7 @@ function generateDailyShareText() {
     const title = `${speciesMode.shareTitle} ${today} - ${gameWon ? guesses.length : 'X'}/${12}`;
     // Build grid: 6 categories per guess -> green for correct, black for incorrect
     const rows = guesses.map(g => {
-        const order = ['family','order','genus','size','habitat','yod'];
+        const order = ['family','order','genus','size','depth','yod'];
         return order.map(cat => (g.feedback && g.feedback[cat]) ? '🟩' : '⬛').join('');
     });
     const body = rows.join('\n');
@@ -284,13 +284,53 @@ function getSizeWithThreshold(size) {
     return threshold ? `${size} (${threshold})` : size;
 }
 
+const depthClues = {
+    "Epipelagic": "0-200m deep",
+    "Mesopelagic": "200-1000m deep",
+    "Bathypelagic": "1000-4000m deep"
+};
+
+function getDepthWithClue(depth) {
+    const clue = depthClues[depth];
+    return clue ? `${depth} (${clue})` : depth;
+}
+
+function normalizeSavedFeedback(shark, savedFeedback = {}) {
+    return {
+        family: savedFeedback.family ?? shark.family === targetShark.family,
+        order: savedFeedback.order ?? shark.order === targetShark.order,
+        genus: savedFeedback.genus ?? shark.genus === targetShark.genus,
+        size: savedFeedback.size ?? shark.size === targetShark.size,
+        depth: savedFeedback.depth ?? shark.depth === targetShark.depth,
+        yod: savedFeedback.yod ?? shark.yod === targetShark.yod
+    };
+}
+
+function normalizeSavedGuess(guess) {
+    const savedShark = guess?.shark || guess?.species || guess;
+    if (!savedShark?.name) return null;
+
+    const currentSpecies = speciesPool.find(species => species.name === savedShark.name);
+    const shark = { ...savedShark, ...(currentSpecies || {}) };
+
+    return {
+        shark,
+        feedback: normalizeSavedFeedback(shark, guess?.feedback || {})
+    };
+}
+
+function normalizeSavedGuesses(savedGuesses) {
+    if (!Array.isArray(savedGuesses)) return [];
+    return savedGuesses.map(normalizeSavedGuess).filter(Boolean);
+}
+
 const CATEGORY_REVEAL_PRICE = 25;
 const CATEGORY_REVEAL_OPTIONS = [
     { key: "family", label: "Family", getValue: shark => shark.family },
     { key: "order", label: "Order", getValue: shark => shark.order },
     { key: "genus", label: "Genus", getValue: shark => shark.genus },
     { key: "size", label: "Size", getValue: shark => getSizeWithThreshold(shark.size) },
-    { key: "habitat", label: "Habitat", getValue: shark => shark.habitat },
+    { key: "depth", label: "Depth", getValue: shark => getDepthWithClue(shark.depth) },
     { key: "yod", label: "Year of Discovery", getValue: shark => shark.yod }
 ];
 
@@ -346,6 +386,47 @@ function formatCategoryRevealText(option) {
     const value = option.getValue(targetShark);
     const commonName = getCategoryRevealCommonName(option);
     return commonName ? `${option.label}: ${value} (${commonName})` : `${option.label}: ${value}`;
+}
+
+function hasCorrectGuessForProfileField(key) {
+    return guesses.some(guess => guess?.feedback?.[key]);
+}
+
+function updateMysteryProfilePanel() {
+    const panel = document.querySelector(".mystery-profile-panel");
+    if (!panel) return;
+
+    let confirmedCount = 0;
+
+    CATEGORY_REVEAL_OPTIONS.forEach(option => {
+        const row = panel.querySelector(`[data-profile-key="${option.key}"]`);
+        if (!row) return;
+
+        const valueElement = row.querySelector(".mystery-profile-value");
+        const confirmedByGuess = hasCorrectGuessForProfileField(option.key);
+        const confirmedByReveal = categoryReveal?.key === option.key;
+        const isConfirmed = confirmedByGuess || confirmedByReveal;
+        const value = isConfirmed ? String(option.getValue(targetShark) ?? "") : "";
+
+        row.classList.toggle("revealed", isConfirmed);
+        row.classList.toggle("purchased", confirmedByReveal && !confirmedByGuess);
+
+        if (valueElement) {
+            valueElement.textContent = value;
+            valueElement.title = value;
+        }
+
+        if (isConfirmed) confirmedCount++;
+    });
+
+    panel.classList.toggle("has-reveals", confirmedCount > 0);
+
+    const status = panel.querySelector(".mystery-profile-target small");
+    if (status) {
+        status.textContent = confirmedCount > 0
+            ? `${confirmedCount}/${CATEGORY_REVEAL_OPTIONS.length} clues confirmed`
+            : "Profile locked";
+    }
 }
 
 function getCategoryRevealProfile() {
@@ -543,6 +624,7 @@ async function buyCategoryReveal() {
     await persistCategoryRevealProfile(profileData, authUser);
     await saveGameState();
     updateCategoryRevealPanel();
+    updateMysteryProfilePanel();
     setCategoryRevealMessage(`${formatCategoryRevealText(option)} revealed.`, "success");
 }
 
@@ -557,7 +639,7 @@ async function loadGameState() {
         const state = JSON.parse(stored)
         // Validate that stored state is actually for today (not from device date manipulation)
         if (state.date === today) {
-            guesses = state.guesses || []
+            guesses = normalizeSavedGuesses(state.guesses)
             attempts = state.attempts || 12
             gameCompleted = state.completed || false
             gameWon = state.won || false
@@ -592,7 +674,7 @@ async function loadGameState() {
                     // If they played today (according to server time), load their game
                     // regardless of what their client date says
                     if (lastPlayUTC === today) {
-                        guesses = modeData.guesses || []
+                        guesses = normalizeSavedGuesses(modeData.guesses)
                         attempts = modeData.attempts || 12
                         gameCompleted = modeData.completed || false
                         gameWon = modeData.won || false
@@ -615,7 +697,7 @@ async function loadGameState() {
 
                 // Fallback: validate the saved date against stored date field
                 if (modeData.date === today) {
-                    guesses = modeData.guesses || []
+                    guesses = normalizeSavedGuesses(modeData.guesses)
                     attempts = modeData.attempts || 12
                     gameCompleted = modeData.completed || false
                     gameWon = modeData.won || false
@@ -704,6 +786,7 @@ async function initializeGame() {
     });
 
     updateCategoryRevealPanel();
+    updateMysteryProfilePanel();
 }
 
 // Start the initialization when the page loads
@@ -880,7 +963,7 @@ const feedback = {
     order: shark.order === targetShark.order,
     genus: shark.genus === targetShark.genus,
     size: shark.size === targetShark.size,
-    habitat: shark.habitat === targetShark.habitat,
+    depth: shark.depth === targetShark.depth,
     yod: shark.yod === targetShark.yod
 }
 
@@ -906,6 +989,7 @@ if (cards.length > 0) {
 }
 
 updateCategoryRevealPanel();
+updateMysteryProfilePanel();
 
 if(shark.name === targetShark.name){
 
@@ -1099,7 +1183,7 @@ feedbackDiv.appendChild(createCategory("Family", shark.family, feedback.family))
 feedbackDiv.appendChild(createCategory("Order", shark.order, feedback.order))
 feedbackDiv.appendChild(createCategory("Genus", shark.genus, feedback.genus))
 feedbackDiv.appendChild(createCategory("Size", getSizeWithThreshold(shark.size), feedback.size))
-feedbackDiv.appendChild(createCategory("Habitat", shark.habitat, feedback.habitat))
+feedbackDiv.appendChild(createCategory("Depth", getDepthWithClue(shark.depth ?? "Unknown"), feedback.depth))
 
 // Calculate arrow for year of discovery
 let yodArrow = ""

@@ -108,7 +108,7 @@ const areaDefinitions = [
             "Whitetip Reef Sharks are highly site-attached and commonly patrol the same reef sections each night."
         ],
         falseFacts: [
-            "Bull Sharks cannot enter freshwater and are restricted to open ocean habitats.",
+            "Bull Sharks cannot enter freshwater and are restricted to open ocean depth zones.",
             "Zebra Sharks are filter feeders that consume only microscopic plankton.",
             "Nurse Sharks are the fastest pelagic hunters in the Indian Ocean.",
             "Grey Reef Sharks are strictly deep-sea species never found on coral reefs.",
@@ -265,7 +265,7 @@ const areaDefinitions = [
             "Dusky Sharks are large coastal carcharhinids with long-distance seasonal migrations.",
             "Spinner Sharks are named for leaping and spinning out of the water while feeding on fish schools.",
             "Blacktip Sharks are fast reef and coastal predators with dark fin margins.",
-            "Bonnethead Sharks are the smallest hammerhead species and often forage in seagrass habitats."
+            "Bonnethead Sharks are the smallest hammerhead species and often forage in seagrass depth zones."
         ],
         falseFacts: [
             "Sand Tiger Sharks are freshwater catfish unrelated to true sharks.",

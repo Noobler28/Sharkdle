@@ -84,6 +84,67 @@ function getSizeWithThreshold(size) {
     return threshold ? `${size} (${threshold})` : size;
 }
 
+const depthClues = {
+    "Epipelagic": "0-200m deep",
+    "Mesopelagic": "200-1000m deep",
+    "Bathypelagic": "1000-4000m deep"
+};
+
+function getDepthWithClue(depth) {
+    const clue = depthClues[depth];
+    return clue ? `${depth} (${clue})` : depth;
+}
+
+const MYSTERY_PROFILE_FIELDS = [
+    { key: "family", getValue: shark => shark.family },
+    { key: "order", getValue: shark => shark.order },
+    { key: "genus", getValue: shark => shark.genus },
+    { key: "size", getValue: shark => getSizeWithThreshold(shark.size) },
+    { key: "depth", getValue: shark => getDepthWithClue(shark.depth) },
+    { key: "yod", getValue: shark => shark.yod }
+];
+
+function hasCorrectGuessForProfileField(field) {
+    return sharks.some(shark =>
+        shark.guessed && field.getValue(shark) === field.getValue(targetShark)
+    );
+}
+
+function updateMysteryProfilePanel() {
+    const panel = document.querySelector(".mystery-profile-panel");
+    if (!panel) return;
+
+    let confirmedCount = 0;
+
+    MYSTERY_PROFILE_FIELDS.forEach(field => {
+        const row = panel.querySelector(`[data-profile-key="${field.key}"]`);
+        if (!row) return;
+
+        const valueElement = row.querySelector(".mystery-profile-value");
+        const isConfirmed = hasCorrectGuessForProfileField(field);
+        const value = isConfirmed ? String(field.getValue(targetShark) ?? "") : "";
+
+        row.classList.toggle("revealed", isConfirmed);
+        row.classList.remove("purchased");
+
+        if (valueElement) {
+            valueElement.textContent = value;
+            valueElement.title = value;
+        }
+
+        if (isConfirmed) confirmedCount++;
+    });
+
+    panel.classList.toggle("has-reveals", confirmedCount > 0);
+
+    const status = panel.querySelector(".mystery-profile-target small");
+    if (status) {
+        status.textContent = confirmedCount > 0
+            ? `${confirmedCount}/${MYSTERY_PROFILE_FIELDS.length} clues confirmed`
+            : "Profile locked";
+    }
+}
+
 
 
 
@@ -209,13 +270,14 @@ function makeGuess() {
         { category: "Order", value: guessedShark.order, correct: guessedShark.order === targetShark.order },
         { category: "Genus", value: guessedShark.genus, correct: guessedShark.genus === targetShark.genus },
         { category: "Size", value: guessedShark.size, correct: guessedShark.size === targetShark.size },
-        { category: "Habitat", value: guessedShark.habitat, correct: guessedShark.habitat === targetShark.habitat },
+        { category: "Depth", value: guessedShark.depth, correct: guessedShark.depth === targetShark.depth },
         { category: "Year of Discovery", value: guessedShark.yod, correct: guessedShark.yod === targetShark.yod }
     ];
     speciesTrackerGuesses.push({ species: guessedShark, feedback });
-    
+
     renderGuess(guessedShark, feedback);
-    
+    updateMysteryProfilePanel();
+
     // Close guesses with no correct information, then open the newest
     const cards = document.querySelectorAll('#guesses .guess-card');
     cards.forEach(card => {
@@ -383,6 +445,9 @@ feedback.forEach(item => {
         const threshold = sizeThresholds[item.value];
         displayValue = threshold ? `${item.value} (${threshold})` : item.value;
     }
+    if (item.category === "Depth") {
+        displayValue = getDepthWithClue(item.value);
+    }
 
     if (commonName) {
         const tooltip = document.createElement("span");
@@ -435,6 +500,7 @@ document.getElementById("sharkGuess").addEventListener("keydown", function(event
 });
 
 document.getElementById("guessBtn").addEventListener("click", makeGuess);
+updateMysteryProfilePanel();
 
 const sharkGuessInput = document.getElementById("sharkGuess");
 const suggestionsDiv = document.getElementById("suggestions");

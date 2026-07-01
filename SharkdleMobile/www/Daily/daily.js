@@ -12,7 +12,7 @@ function generateDailyShareText() {
     const title = `Sharkdle Daily ${today} - ${gameWon ? guesses.length : 'X'}/${12}`;
     // Build grid: 6 categories per guess -> green for correct, black for incorrect
     const rows = guesses.map(g => {
-        const order = ['family','order','genus','size','habitat','yod'];
+        const order = ['family','order','genus','size','depth','yod'];
         return order.map(cat => (g.feedback && g.feedback[cat]) ? '🟩' : '⬛').join('');
     });
     const body = rows.join('\n');
@@ -117,6 +117,90 @@ function getSizeWithThreshold(size) {
     return threshold ? `${size} (${threshold})` : size;
 }
 
+const depthClues = {
+    "Epipelagic": "0-200m deep",
+    "Mesopelagic": "200-1000m deep",
+    "Bathypelagic": "1000-4000m deep"
+};
+
+function getDepthWithClue(depth) {
+    const clue = depthClues[depth];
+    return clue ? `${depth} (${clue})` : depth;
+}
+
+function normalizeSavedFeedback(shark, savedFeedback = {}) {
+    return {
+        family: savedFeedback.family ?? shark.family === targetShark.family,
+        order: savedFeedback.order ?? shark.order === targetShark.order,
+        genus: savedFeedback.genus ?? shark.genus === targetShark.genus,
+        size: savedFeedback.size ?? shark.size === targetShark.size,
+        depth: savedFeedback.depth ?? shark.depth === targetShark.depth,
+        yod: savedFeedback.yod ?? shark.yod === targetShark.yod
+    };
+}
+
+function normalizeSavedGuess(guess) {
+    const savedShark = guess?.shark || guess?.species || guess;
+    if (!savedShark?.name) return null;
+
+    const currentSpecies = sharks.find(species => species.name === savedShark.name);
+    const shark = { ...savedShark, ...(currentSpecies || {}) };
+
+    return {
+        shark,
+        feedback: normalizeSavedFeedback(shark, guess?.feedback || {})
+    };
+}
+
+function normalizeSavedGuesses(savedGuesses) {
+    if (!Array.isArray(savedGuesses)) return [];
+    return savedGuesses.map(normalizeSavedGuess).filter(Boolean);
+}
+
+const MYSTERY_PROFILE_FIELDS = [
+    { key: "family", getValue: shark => shark.family },
+    { key: "order", getValue: shark => shark.order },
+    { key: "genus", getValue: shark => shark.genus },
+    { key: "size", getValue: shark => getSizeWithThreshold(shark.size) },
+    { key: "depth", getValue: shark => getDepthWithClue(shark.depth) },
+    { key: "yod", getValue: shark => shark.yod }
+];
+
+function updateMysteryProfilePanel() {
+    const panel = document.querySelector(".mystery-profile-panel");
+    if (!panel) return;
+
+    let confirmedCount = 0;
+
+    MYSTERY_PROFILE_FIELDS.forEach(field => {
+        const row = panel.querySelector(`[data-profile-key="${field.key}"]`);
+        if (!row) return;
+
+        const valueElement = row.querySelector(".mystery-profile-value");
+        const isConfirmed = guesses.some(guess => guess?.feedback?.[field.key]);
+        const value = isConfirmed ? String(field.getValue(targetShark) ?? "") : "";
+
+        row.classList.toggle("revealed", isConfirmed);
+        row.classList.remove("purchased");
+
+        if (valueElement) {
+            valueElement.textContent = value;
+            valueElement.title = value;
+        }
+
+        if (isConfirmed) confirmedCount++;
+    });
+
+    panel.classList.toggle("has-reveals", confirmedCount > 0);
+
+    const status = panel.querySelector(".mystery-profile-target small");
+    if (status) {
+        status.textContent = confirmedCount > 0
+            ? `${confirmedCount}/${MYSTERY_PROFILE_FIELDS.length} clues confirmed`
+            : "Profile locked";
+    }
+}
+
 
 
 
@@ -128,7 +212,7 @@ async function loadGameState() {
         const state = JSON.parse(stored)
         // Validate that stored state is actually for today (not from device date manipulation)
         if (state.date === today) {
-            guesses = state.guesses || []
+            guesses = normalizeSavedGuesses(state.guesses)
             attempts = state.attempts || 12
             gameCompleted = state.completed || false
             gameWon = state.won || false
@@ -160,7 +244,7 @@ async function loadGameState() {
                     // If they played today (according to server time), load their game
                     // regardless of what their client date says
                     if (lastPlayUTC === today) {
-                        guesses = firebaseData.guesses || []
+                        guesses = normalizeSavedGuesses(firebaseData.guesses)
                         attempts = firebaseData.attempts || 12
                         gameCompleted = firebaseData.completed || false
                         gameWon = firebaseData.won || false
@@ -181,7 +265,7 @@ async function loadGameState() {
                 
                 // Fallback: validate the saved date against stored date field
                 if (firebaseData.date === today) {
-                    guesses = firebaseData.guesses || []
+                    guesses = normalizeSavedGuesses(firebaseData.guesses)
                     attempts = firebaseData.attempts || 12
                     gameCompleted = firebaseData.completed || false
                     gameWon = firebaseData.won || false
@@ -268,6 +352,8 @@ async function initializeGame() {
             feedbackDiv.style.display = 'none';
         }
     });
+
+    updateMysteryProfilePanel();
 }
 
 // Start the initialization when the page loads
@@ -418,7 +504,7 @@ const feedback = {
     order: shark.order === targetShark.order,
     genus: shark.genus === targetShark.genus,
     size: shark.size === targetShark.size,
-    habitat: shark.habitat === targetShark.habitat,
+    depth: shark.depth === targetShark.depth,
     yod: shark.yod === targetShark.yod
 }
 
@@ -427,6 +513,7 @@ guesses.push({ shark: shark, feedback: feedback })
 saveGameState()
 
 renderGuess(shark, feedback)
+updateMysteryProfilePanel()
 
 // Close guesses with no correct information, then open the newest
 const cards = document.querySelectorAll('#guesses .guess-card');
@@ -632,7 +719,7 @@ feedbackDiv.appendChild(createCategory("Family", shark.family, feedback.family))
 feedbackDiv.appendChild(createCategory("Order", shark.order, feedback.order))
 feedbackDiv.appendChild(createCategory("Genus", shark.genus, feedback.genus))
 feedbackDiv.appendChild(createCategory("Size", getSizeWithThreshold(shark.size), feedback.size))
-feedbackDiv.appendChild(createCategory("Habitat", shark.habitat, feedback.habitat))
+feedbackDiv.appendChild(createCategory("Depth", getDepthWithClue(shark.depth ?? "Unknown"), feedback.depth))
 
 // Calculate arrow for year of discovery
 let yodArrow = ""

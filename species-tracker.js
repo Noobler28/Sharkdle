@@ -9,7 +9,7 @@
         order: "Order",
         genus: "Genus",
         size: "Size",
-        habitat: "Depth",
+        depth: "Depth",
         yod: "Discovery Year"
     });
 
@@ -52,8 +52,7 @@
             order: "order",
             genus: "genus",
             size: "size",
-            habitat: "habitat",
-            depth: "habitat",
+            depth: "depth",
             yod: "yod",
             yearofdiscovery: "yod",
             discoveryyear: "yod"
