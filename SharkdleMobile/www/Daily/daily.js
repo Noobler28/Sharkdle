@@ -166,6 +166,10 @@ const MYSTERY_PROFILE_FIELDS = [
     { key: "yod", getValue: shark => shark.yod }
 ];
 
+function isMysteryProfileSpeciesDiscovered() {
+    return gameWon || guesses.some(guess => guess?.shark?.name === targetShark.name);
+}
+
 function updateMysteryProfilePanel() {
     const panel = document.querySelector(".mystery-profile-panel");
     if (!panel) return;
@@ -192,6 +196,13 @@ function updateMysteryProfilePanel() {
     });
 
     panel.classList.toggle("has-reveals", confirmedCount > 0);
+
+    const name = panel.querySelector(".mystery-profile-target strong");
+    if (name) {
+        const discovered = isMysteryProfileSpeciesDiscovered();
+        name.textContent = discovered ? targetShark.name : "Unknown species";
+        name.title = discovered ? targetShark.name : "";
+    }
 
     const status = panel.querySelector(".mystery-profile-target small");
     if (status) {
