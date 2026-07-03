@@ -14,6 +14,11 @@
     };
     const RNG_LEADERBOARD_COLLECTION = "rngLeaderboard";
     const RNG_LEADERBOARD_FALLBACK_COLLECTION = "userStats";
+    const RNG_PROFILE_COLLECTION = "rngProfiles";
+    const RNG_PROFILE_CHUNK_COLLECTION = "chunks";
+    const RNG_PROFILE_SCHEMA_VERSION = 1;
+    const RNG_PROFILE_CHUNK_SIZE = 300;
+    const RNG_CLOUD_SAVE_INTERVAL_MS = 60000;
     const RNG_LEADERBOARD_LIMIT = 10;
     const RNG_LEADERBOARD_QUERY_LIMIT = 30;
     const RNG_LEADERBOARD_SYNC_INTERVAL_MS = 120000;
@@ -969,6 +974,10 @@ let rollPool = [];
     let rngLeaderboardLastSyncAt = 0;
     let rngLeaderboardLoading = false;
     let rngDevForcedMutationType = null;
+    let rngCloudSaveTimer = null;
+    let rngCloudSaveDirty = false;
+    let rngCloudSaveInFlight = false;
+    let rngCloudHydratedUid = null;
     let collectionSortRarestFirst = true;
     let collectionGridDirty = false;
     let localSaveTimer = null;
@@ -1303,6 +1312,10 @@ let rollPool = [];
         if (status) status.textContent = message;
     }
 
+    function getRngCurrentUser() {
+        return rngLeaderboardAuth?.currentUser || rngLeaderboardUser || null;
+    }
+
     function ensureRngLeaderboardServices() {
         if (rngLeaderboardDb && rngLeaderboardAuth) return true;
         if (typeof firebase === "undefined" || !firebase?.firestore || !firebase?.auth) {
@@ -1322,6 +1335,310 @@ let rollPool = [];
             console.warn("Unable to prepare RNG leaderboard services:", error);
             return false;
         }
+    }
+
+    function cloneRngData(value) {
+        try {
+            return JSON.parse(JSON.stringify(value || {}));
+        } catch (error) {
+            return {};
+        }
+    }
+
+    function getRawLocalRngProfile() {
+        try {
+            const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+            return parsed && typeof parsed === "object" ? parsed : {};
+        } catch (error) {
+            return {};
+        }
+    }
+
+    function getRngCollectionCount(profile = {}) {
+        if (profile.collection && typeof profile.collection === "object") {
+            return Object.keys(profile.collection).length;
+        }
+        return Math.max(0, Math.floor(Number(profile.collectionCount) || Number(profile.collectionEntryCount) || 0));
+    }
+
+    function getRngProgressRank(profile = {}) {
+        return [
+            getRngCollectionCount(profile),
+            Math.max(0, Math.floor(Number(profile.prestigeLevel) || 0)),
+            Math.max(0, Math.floor(Number(profile.totalPrestigePoints) || Number(profile.prestigePoints) || 0)),
+            Math.max(0, Number(profile.bestOneIn) || 0),
+            Math.max(0, Math.floor(Number(profile.rngXp) || 0)),
+            Math.max(0, Math.floor(Number(profile.rolls) || 0)),
+            Math.max(0, Math.floor(Number(profile.coins) || 0))
+        ];
+    }
+
+    function compareRngProfileProgress(left = {}, right = {}) {
+        const leftRank = getRngProgressRank(left);
+        const rightRank = getRngProgressRank(right);
+        for (let i = 0; i < leftRank.length; i++) {
+            if (leftRank[i] !== rightRank[i]) return leftRank[i] - rightRank[i];
+        }
+        return 0;
+    }
+
+    function mergeRngCollectionForCloud(...collections) {
+        const merged = {};
+        collections.forEach(collection => {
+            if (!collection || typeof collection !== "object") return;
+            Object.entries(collection).forEach(([key, entry]) => {
+                if (!entry || typeof entry !== "object") return;
+                const existing = merged[key];
+                if (!existing) {
+                    merged[key] = cloneRngData(entry);
+                    return;
+                }
+
+                const existingFirstRoll = Math.max(0, Number(existing.firstRoll) || 0);
+                const nextFirstRoll = Math.max(0, Number(entry.firstRoll) || 0);
+                merged[key] = {
+                    ...existing,
+                    ...cloneRngData(entry),
+                    count: Math.max(Number(existing.count) || 0, Number(entry.count) || 0),
+                    firstRoll: existingFirstRoll && nextFirstRoll
+                        ? Math.min(existingFirstRoll, nextFirstRoll)
+                        : existingFirstRoll || nextFirstRoll || 0,
+                    oneIn: Math.max(Number(existing.oneIn) || 0, Number(entry.oneIn) || 0)
+                };
+            });
+        });
+        return merged;
+    }
+
+    function mergeRngProfilesForHydration(localProfile = {}, remoteProfile = {}) {
+        const preferRemote = compareRngProfileProgress(remoteProfile, localProfile) >= 0;
+        const preferred = preferRemote ? remoteProfile : localProfile;
+        const secondary = preferRemote ? localProfile : remoteProfile;
+        const merged = {
+            ...cloneRngData(secondary),
+            ...cloneRngData(preferred)
+        };
+
+        merged.collection = mergeRngCollectionForCloud(localProfile.collection, remoteProfile.collection);
+        merged.claimedIndexRewards = [...new Set([
+            ...(Array.isArray(localProfile.claimedIndexRewards) ? localProfile.claimedIndexRewards : []),
+            ...(Array.isArray(remoteProfile.claimedIndexRewards) ? remoteProfile.claimedIndexRewards : [])
+        ])];
+        merged.bestOneIn = Math.max(Number(localProfile.bestOneIn) || 0, Number(remoteProfile.bestOneIn) || 0);
+        merged.runBestOneIn = Math.max(Number(localProfile.runBestOneIn) || 0, Number(remoteProfile.runBestOneIn) || 0);
+        merged.rngCloudUpdatedAtMs = Math.max(Number(localProfile.rngCloudUpdatedAtMs) || 0, Number(remoteProfile.rngCloudUpdatedAtMs) || 0);
+
+        const history = [
+            ...(Array.isArray(preferred.prestigeHistory) ? preferred.prestigeHistory : []),
+            ...(Array.isArray(secondary.prestigeHistory) ? secondary.prestigeHistory : [])
+        ];
+        merged.prestigeHistory = history
+            .filter((entry, index, list) => {
+                const key = JSON.stringify([
+                    entry?.at || entry?.timestamp || "",
+                    entry?.gain || 0,
+                    entry?.bestOneIn || 0,
+                    entry?.rolls || 0
+                ]);
+                return list.findIndex(candidate => JSON.stringify([
+                    candidate?.at || candidate?.timestamp || "",
+                    candidate?.gain || 0,
+                    candidate?.bestOneIn || 0,
+                    candidate?.rolls || 0
+                ]) === key) === index;
+            })
+            .slice(0, PRESTIGE_HISTORY_LIMIT);
+
+        return merged;
+    }
+
+    function buildRngCloudProfilePayload() {
+        const rawPlayer = cloneRngData(player);
+        const collection = rawPlayer.collection && typeof rawPlayer.collection === "object"
+            ? rawPlayer.collection
+            : {};
+        const entries = Object.entries(collection);
+        delete rawPlayer.collection;
+
+        const updatedAtMs = Date.now();
+        const chunks = [];
+        for (let i = 0; i < entries.length; i += RNG_PROFILE_CHUNK_SIZE) {
+            chunks.push(entries.slice(i, i + RNG_PROFILE_CHUNK_SIZE).map(([key, entry]) => ({
+                key,
+                entry
+            })));
+        }
+
+        return {
+            metadata: {
+                ...rawPlayer,
+                schemaVersion: RNG_PROFILE_SCHEMA_VERSION,
+                collectionCount: entries.length,
+                collectionEntryCount: entries.length,
+                chunkCount: chunks.length,
+                rngCloudUpdatedAtMs: updatedAtMs,
+                updatedAtMs
+            },
+            chunks
+        };
+    }
+
+    async function getRngProfileSnapshot(ref) {
+        try {
+            return await ref.get({ source: "server" });
+        } catch (error) {
+            console.warn("Falling back to cached RNG profile snapshot:", error);
+            return ref.get();
+        }
+    }
+
+    async function readRngProfileFromFirebase(user) {
+        if (!rngLeaderboardDb || !user?.uid) return null;
+        const profileRef = rngLeaderboardDb.collection(RNG_PROFILE_COLLECTION).doc(user.uid);
+        const snapshot = await getRngProfileSnapshot(profileRef);
+        if (!snapshot.exists) return null;
+
+        const metadata = snapshot.data() || {};
+        const chunkCount = Math.min(200, Math.max(0, Math.floor(Number(metadata.chunkCount) || 0)));
+        const chunkRefs = Array.from({ length: chunkCount }, (_, index) =>
+            profileRef.collection(RNG_PROFILE_CHUNK_COLLECTION).doc(`chunk_${String(index).padStart(4, "0")}`)
+        );
+        const chunkSnapshots = await Promise.all(chunkRefs.map(ref => ref.get()));
+        const collection = {};
+
+        chunkSnapshots
+            .map((doc, index) => ({
+                index,
+                entries: doc.exists && Array.isArray(doc.data()?.entries) ? doc.data().entries : []
+            }))
+            .sort((a, b) => a.index - b.index)
+            .forEach(chunk => {
+                chunk.entries.forEach(item => {
+                    const key = Array.isArray(item) ? item[0] : item?.key;
+                    const entry = Array.isArray(item) ? item[1] : item?.entry;
+                    if (key && entry && typeof entry === "object") {
+                        collection[key] = entry;
+                    }
+                });
+            });
+
+        const profile = cloneRngData(metadata);
+        delete profile.chunkCount;
+        delete profile.collectionCount;
+        delete profile.collectionEntryCount;
+        delete profile.schemaVersion;
+        profile.collection = collection;
+        profile.rngCloudUpdatedAtMs = Number(metadata.rngCloudUpdatedAtMs) || Number(metadata.updatedAtMs) || 0;
+        return profile;
+    }
+
+    function applyRngProfileData(profileData, options = {}) {
+        if (!profileData || typeof profileData !== "object") return false;
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(profileData));
+        loadLocalProfile();
+        if (options.saveLocal !== false) {
+            saveLocalProfile();
+        }
+        updateAllUi({ forceCollectionGrid: true });
+        updateSettingsUi();
+        return true;
+    }
+
+    async function hydrateRngProfileFromFirebase(options = {}) {
+        if (!ensureRngLeaderboardServices()) return false;
+        const user = getRngCurrentUser();
+        if (!user) return false;
+        if (!options.force && rngCloudHydratedUid === user.uid) return true;
+
+        try {
+            const remoteProfile = await readRngProfileFromFirebase(user);
+            const localProfile = getRawLocalRngProfile();
+            rngCloudHydratedUid = user.uid;
+
+            if (!remoteProfile) {
+                if (getRngProgressRank(localProfile).some(value => value > 0)) {
+                    scheduleRngCloudProfileSync(1000);
+                }
+                return false;
+            }
+
+            const mergedProfile = mergeRngProfilesForHydration(localProfile, remoteProfile);
+            applyRngProfileData(mergedProfile);
+
+            if (JSON.stringify(mergedProfile.collection || {}) !== JSON.stringify(remoteProfile.collection || {})
+                || compareRngProfileProgress(mergedProfile, remoteProfile) > 0) {
+                scheduleRngCloudProfileSync(1000);
+            }
+
+            showToast("Cloud RNG progress loaded.");
+            return true;
+        } catch (error) {
+            console.warn("Unable to hydrate RNG profile from Firebase:", error);
+            return false;
+        }
+    }
+
+    async function syncRngProfileToFirebase(options = {}) {
+        if (!ensureRngLeaderboardServices()) return false;
+        const user = getRngCurrentUser();
+        if (!user) return false;
+
+        if (rngCloudSaveInFlight && !options.force) {
+            rngCloudSaveDirty = true;
+            return false;
+        }
+
+        rngCloudSaveInFlight = true;
+        try {
+            const profileRef = rngLeaderboardDb.collection(RNG_PROFILE_COLLECTION).doc(user.uid);
+            const { metadata, chunks } = buildRngCloudProfilePayload();
+            const batch = rngLeaderboardDb.batch();
+            const payload = {
+                ...metadata,
+                uid: user.uid,
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            };
+
+            batch.set(profileRef, payload, { merge: false });
+            chunks.forEach((entries, index) => {
+                batch.set(
+                    profileRef.collection(RNG_PROFILE_CHUNK_COLLECTION).doc(`chunk_${String(index).padStart(4, "0")}`),
+                    {
+                        index,
+                        entries,
+                        updatedAtMs: metadata.updatedAtMs,
+                        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                    },
+                    { merge: false }
+                );
+            });
+
+            await batch.commit();
+            player.rngCloudUpdatedAtMs = metadata.rngCloudUpdatedAtMs;
+            rngCloudHydratedUid = user.uid;
+            rngCloudSaveDirty = false;
+            return true;
+        } catch (error) {
+            console.warn("Unable to sync full RNG profile:", error);
+            rngCloudSaveDirty = true;
+            return false;
+        } finally {
+            rngCloudSaveInFlight = false;
+            if (rngCloudSaveDirty && !rngCloudSaveTimer) {
+                scheduleRngCloudProfileSync(RNG_CLOUD_SAVE_INTERVAL_MS);
+            }
+        }
+    }
+
+    function scheduleRngCloudProfileSync(delayMs = RNG_CLOUD_SAVE_INTERVAL_MS) {
+        if (!ensureRngLeaderboardServices() || !getRngCurrentUser()) return;
+        rngCloudSaveDirty = true;
+        if (rngCloudSaveTimer) return;
+
+        rngCloudSaveTimer = setTimeout(async () => {
+            rngCloudSaveTimer = null;
+            await syncRngProfileToFirebase();
+        }, Math.max(1000, delayMs));
     }
 
     async function getRngLeaderboardProfile(user) {
@@ -1660,8 +1977,17 @@ let rollPool = [];
         rngLeaderboardAuth.onAuthStateChanged((user) => {
             rngLeaderboardUser = user || null;
             rngLeaderboardProfileCache = null;
+            if (!user) {
+                rngCloudHydratedUid = null;
+            }
             renderRngLeaderboardSelf();
-            loadRngLeaderboard();
+            if (user) {
+                hydrateRngProfileFromFirebase({ force: true }).then(() => {
+                    loadRngLeaderboard();
+                });
+            } else {
+                loadRngLeaderboard();
+            }
         });
 
         loadRngLeaderboard();
@@ -2894,6 +3220,11 @@ function rollForShark(actionContext = createRollActionContext(1)) {
 
     function flushLocalProfileSave() {
         if (localSaveDirty) saveLocalProfile();
+        if (rngCloudSaveDirty) {
+            syncRngProfileToFirebase({ force: true }).catch(error => {
+                console.warn("RNG cloud save flush failed:", error);
+            });
+        }
     }
 
     function scheduleLocalProfileSave() {
@@ -3003,14 +3334,7 @@ function rollForShark(actionContext = createRollActionContext(1)) {
 
     function scheduleCloudSync() {
         scheduleRngLeaderboardSync();
-    }
-
-    function syncRngProfileToFirebase() {
-        return syncRngLeaderboardEntry();
-    }
-
-    function hydrateRngProfileFromFirebase() {
-        return loadRngLeaderboard();
+        scheduleRngCloudProfileSync();
     }
 
     function persistPlayerState(options = {}) {
@@ -4973,12 +5297,13 @@ async function initRngMode() {
          installRngDevCommands();
          bindLocalProfileSaveFlush();
          bindUi();
-         updateAllUi();
-         updateSettingsUi();
-         initRngLeaderboard();
-         startPotionUiTicker();
-         GameFx.initAudio();
-         updateRollButtonState();
+          updateAllUi();
+          updateSettingsUi();
+          initRngLeaderboard();
+          await hydrateRngProfileFromFirebase();
+          startPotionUiTicker();
+          GameFx.initAudio();
+          updateRollButtonState();
      }
 
     window.initRngMode = initRngMode;

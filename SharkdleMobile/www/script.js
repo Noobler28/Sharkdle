@@ -374,25 +374,90 @@ async function persistCrateProfileUpdate(profileData) {
     }, { merge: true });
 }
 
-const SUMMER_CRATE_CRAFT_COST = 2;
-let summerCrateCraftingInProgress = false;
+const SEASONAL_CRATE_IDS = ["summer", "christmas", "halloween"];
+const SEASONAL_CRATE_CRAFT_COST = 2;
+let activeSeasonalCrateThemeId = "default";
+let seasonalCrateCraftingInProgress = false;
 
-function shouldShowSummerCratePanel(profileData = getCurrentProfileData()) {
-    const body = document.body;
-    if (body?.classList.contains("global-ui-theme-summer")) return true;
-    return getCrateInventory(profileData).summer > 0;
+function isSeasonalCrateId(crateId) {
+    return SEASONAL_CRATE_IDS.includes(String(crateId || "").toLowerCase());
+}
+
+function getSeasonalCrateMeta(crateId = "event") {
+    const meta = {
+        event: {
+            id: "event",
+            shortName: "Event",
+            blurb: "Seasonal event rewards.",
+            visualClass: "event",
+            countClass: "event",
+            icon: "fa-star",
+            spinColor: "#7ee8ff",
+            spinIcon: "★"
+        },
+        summer: {
+            id: "summer",
+            shortName: "Summer",
+            blurb: "Summer Splash rewards.",
+            visualClass: "summer",
+            countClass: "summer",
+            icon: "fa-umbrella-beach",
+            spinColor: "#ff8f57",
+            spinIcon: "☀️"
+        },
+        christmas: {
+            id: "christmas",
+            shortName: "Christmas",
+            blurb: "Christmas Reef rewards.",
+            visualClass: "christmas",
+            countClass: "christmas",
+            icon: "fa-gift",
+            spinColor: "#4fd1a5",
+            spinIcon: "🎁"
+        },
+        halloween: {
+            id: "halloween",
+            shortName: "Halloween",
+            blurb: "Halloween Depths rewards.",
+            visualClass: "halloween",
+            countClass: "halloween",
+            icon: "fa-ghost",
+            spinColor: "#b86cff",
+            spinIcon: "🎃"
+        }
+    };
+    return meta[crateId] || meta.event;
+}
+
+function setActiveSeasonalCrateTheme(themeId = "default") {
+    const normalized = typeof normalizeIndexThemeId === "function"
+        ? normalizeIndexThemeId(themeId)
+        : String(themeId || "").trim().toLowerCase();
+    activeSeasonalCrateThemeId = isSeasonalCrateId(normalized) ? normalized : "default";
+}
+
+function getActiveEventThemeId() {
+    // Crate eligibility follows the live global event config, not stale cached/local visual themes.
+    return isSeasonalCrateId(activeSeasonalCrateThemeId) ? activeSeasonalCrateThemeId : "default";
+}
+
+function getActiveSeasonalCrateId() {
+    const themeId = getActiveEventThemeId();
+    return isSeasonalCrateId(themeId) ? themeId : null;
+}
+
+function isSeasonalCrateThemeActive(crateId) {
+    return getActiveSeasonalCrateId() === crateId;
 }
 
 function shouldShowSeasonalCratePanel(crateId, profileData = getCurrentProfileData()) {
-    const body = document.body;
-    if (body?.classList.contains(`global-ui-theme-${crateId}`)) return true;
-    return (getCrateInventory(profileData)[crateId] || 0) > 0;
+    return isSeasonalCrateThemeActive(crateId) || (getCrateInventory(profileData)[crateId] || 0) > 0;
 }
 
 function updateSeasonalCratePanels(profileData = getCurrentProfileData()) {
     const summerPanel = document.getElementById("summer-crate-panel");
     if (summerPanel) {
-        summerPanel.style.display = shouldShowSummerCratePanel(profileData) ? "" : "none";
+        summerPanel.style.display = shouldShowSeasonalCratePanel("summer", profileData) ? "" : "none";
     }
 
     const christmasPanel = document.getElementById("christmas-crate-panel");
@@ -436,27 +501,47 @@ function initCratesModalTabs() {
     inventoryTab.dataset.crateTabsReady = "true";
 }
 
-function updateSummerCrateCraftingUI(profileData = getCurrentProfileData()) {
+function updateSeasonalCrateCraftingUI(profileData = getCurrentProfileData()) {
     const inventory = getCrateInventory(profileData);
     const reefOwned = inventory.reef || 0;
-    const summerOwned = inventory.summer || 0;
-    const canCraft = reefOwned >= SUMMER_CRATE_CRAFT_COST && !summerCrateCraftingInProgress;
+    const activeCrateId = getActiveSeasonalCrateId();
+    const outputMeta = getSeasonalCrateMeta(activeCrateId || "event");
+    const outputDef = activeCrateId ? getCrateDefinition(activeCrateId) : { name: "Event Crate" };
+    const outputOwned = activeCrateId ? (inventory[activeCrateId] || 0) : 0;
+    const canCraft = Boolean(activeCrateId) && reefOwned >= SEASONAL_CRATE_CRAFT_COST && !seasonalCrateCraftingInProgress;
     const canOpenReef = reefOwned > 0 && !crateOpeningInProgress;
-    const canOpenSummer = summerOwned > 0 && !crateOpeningInProgress;
 
     const reefOwnedEl = document.getElementById("craft-reef-owned");
     if (reefOwnedEl) reefOwnedEl.textContent = reefOwned;
 
-    const summerOwnedEl = document.getElementById("craft-summer-owned");
-    if (summerOwnedEl) summerOwnedEl.textContent = summerOwned;
+    const seasonalOwnedEl = document.getElementById("craft-seasonal-owned") || document.getElementById("craft-summer-owned");
+    if (seasonalOwnedEl) seasonalOwnedEl.textContent = outputOwned;
+
+    const outputTitle = document.getElementById("craft-seasonal-output-title");
+    if (outputTitle) outputTitle.textContent = activeCrateId ? `1 ${outputDef.name}` : "Event Crate";
+
+    const outputIcon = document.getElementById("craft-seasonal-output-icon");
+    if (outputIcon) outputIcon.className = `crate-crafting-icon ${outputMeta.visualClass}`;
+
+    const outputSymbol = document.getElementById("craft-seasonal-output-symbol");
+    if (outputSymbol) outputSymbol.className = `fa-solid ${outputMeta.icon}`;
 
     const craftBtn = document.getElementById("craft-summer-crate-btn");
     if (craftBtn) {
         craftBtn.disabled = !canCraft;
         craftBtn.style.opacity = canCraft ? "1" : "0.5";
         craftBtn.textContent = canCraft
-            ? "Craft Crate"
-            : `Need ${SUMMER_CRATE_CRAFT_COST} Cosmetic Crates`;
+            ? `Craft ${outputDef.name}`
+            : activeCrateId
+            ? `Need ${SEASONAL_CRATE_CRAFT_COST} Cosmetic Crates`
+            : "Event Theme Inactive";
+    }
+
+    const dropsBtn = document.getElementById("craft-seasonal-drops-btn");
+    if (dropsBtn) {
+        dropsBtn.disabled = !activeCrateId;
+        dropsBtn.style.opacity = activeCrateId ? "1" : "0.5";
+        dropsBtn.textContent = activeCrateId ? `View ${outputMeta.shortName} Drops` : "No Event Drops";
     }
 
     const openReefBtn = document.getElementById("open-crate-btn");
@@ -465,48 +550,73 @@ function updateSummerCrateCraftingUI(profileData = getCurrentProfileData()) {
         openReefBtn.style.opacity = canOpenReef ? "1" : "0.5";
     }
 
-    const openSummerBtn = document.getElementById("open-summer-crate-btn");
-    if (openSummerBtn) {
-        openSummerBtn.disabled = !canOpenSummer;
-        openSummerBtn.style.opacity = canOpenSummer ? "1" : "0.5";
-    }
+    SEASONAL_CRATE_IDS.forEach(crateId => {
+        const openBtn = document.getElementById(`open-${crateId}-crate-btn`);
+        const canOpenSeasonal = (inventory[crateId] || 0) > 0 && !crateOpeningInProgress;
+        if (openBtn) {
+            openBtn.disabled = !canOpenSeasonal;
+            openBtn.style.opacity = canOpenSeasonal ? "1" : "0.5";
+        }
+    });
 }
 
-window.craftSummerCrate = async function() {
+function updateSummerCrateCraftingUI(profileData = getCurrentProfileData()) {
+    updateSeasonalCrateCraftingUI(profileData);
+}
+
+window.openActiveSeasonalCrateDropsModal = function openActiveSeasonalCrateDropsModal() {
+    const activeCrateId = getActiveSeasonalCrateId();
+    if (!activeCrateId) {
+        showNotification("Seasonal crate drops are only available while an event theme is active.", "info", 3200);
+        return;
+    }
+    openCrateDropsModal(activeCrateId);
+};
+
+window.craftSeasonalCrate = async function() {
     if (!currentUser) {
         openLoginModal();
         return;
     }
-    if (summerCrateCraftingInProgress) return;
+    if (seasonalCrateCraftingInProgress) return;
 
-    const profileData = getCurrentProfileData();
-    const inventory = getCrateInventory(profileData);
-
-    if ((inventory.reef || 0) < SUMMER_CRATE_CRAFT_COST) {
-        showNotification(`You need ${SUMMER_CRATE_CRAFT_COST} Cosmetic Crates to craft 1 Summer Crate.`, "error", 3000);
+    const activeCrateId = getActiveSeasonalCrateId();
+    if (!activeCrateId) {
+        showNotification("Seasonal crates can only be crafted while their event theme is active.", "info", 3400);
         return;
     }
 
-    summerCrateCraftingInProgress = true;
-    updateSummerCrateCraftingUI(profileData);
+    const profileData = getCurrentProfileData();
+    const inventory = getCrateInventory(profileData);
+    const activeCrateName = getCrateDefinition(activeCrateId).name;
 
-    inventory.reef -= SUMMER_CRATE_CRAFT_COST;
-    inventory.summer = (inventory.summer || 0) + 1;
+    if ((inventory.reef || 0) < SEASONAL_CRATE_CRAFT_COST) {
+        showNotification(`You need ${SEASONAL_CRATE_CRAFT_COST} Cosmetic Crates to craft 1 ${activeCrateName}.`, "error", 3000);
+        return;
+    }
+
+    seasonalCrateCraftingInProgress = true;
+    updateSeasonalCrateCraftingUI(profileData);
+
+    inventory.reef -= SEASONAL_CRATE_CRAFT_COST;
+    inventory[activeCrateId] = (inventory[activeCrateId] || 0) + 1;
     profileData.crateInventory = normalizeCrateInventory(inventory);
 
     try {
         await persistCrateProfileUpdate(profileData);
         renderCratesModal();
-        showNotification("Crafted 1 Summer Crate from 2 Cosmetic Crates!", "success", 2500);
+        showNotification(`Crafted 1 ${activeCrateName} from 2 Cosmetic Crates!`, "success", 2500);
     } catch (error) {
         console.warn("Crafting sync failed:", error);
         showNotification("Crafting saved locally but sync failed. Try again later.", "error", 3500);
         renderCratesModal();
     } finally {
-        summerCrateCraftingInProgress = false;
-        updateSummerCrateCraftingUI(getCurrentProfileData());
+        seasonalCrateCraftingInProgress = false;
+        updateSeasonalCrateCraftingUI(getCurrentProfileData());
     }
 };
+
+window.craftSummerCrate = window.craftSeasonalCrate;
 
 function getDuelStatusClass(status) {
     if (status === 'active' || status === 'completed' || status === 'declined') return status;
@@ -1812,7 +1922,7 @@ const sharkPassRewards = [
     { level: 22, type: "badge", name: "Current Rider", badgeId: "current-rider", rarity: "epic", blurb: "A seasonal Shark Pass badge for pushing past the old track." },
     { level: 24, type: "theme", name: "Reef Rush", themeId: "reef-rush", rarity: "epic", blurb: "A bright profile card theme from the active season." },
     { level: 26, type: "badge", name: "Tidebreaker", badgeId: "tidebreaker", rarity: "legendary", blurb: "A late-season badge for serious XP runs." },
-    { level: 28, type: "crate", name: "Summer Crate", crateId: "summer", crateCount: 1, rarity: "legendary", blurb: "A bonus summer cosmetic crate milestone." },
+    { level: 28, type: "crate", name: "Event Crate", crateId: "seasonal", crateCount: 1, rarity: "legendary", blurb: "A bonus event cosmetic crate milestone." },
     { level: 30, type: "theme", name: "Abyssal Current", themeId: "abyssal-current", rarity: "legendary", blurb: "The season capstone profile theme." }
 ];
 
@@ -2153,7 +2263,9 @@ window.claimSharkPassMission = claimSharkPassMission;
 async function syncSharkPassLevelRewards(profileData = getCurrentProfileData()) {
     const playerLevel = getCurrentPlayerLevel(profileData);
     const claimableLevelRewards = sharkPassRewards.filter(reward =>
-        reward.type === "crate" && reward.level <= playerLevel
+        reward.type === "crate" &&
+        reward.level <= playerLevel &&
+        (reward.crateId !== "seasonal" || Boolean(getActiveSeasonalCrateId()))
     );
     if (!claimableLevelRewards.length) return { changed: false, profileData };
 
@@ -2165,8 +2277,12 @@ async function syncSharkPassLevelRewards(profileData = getCurrentProfileData()) 
 
     claimableLevelRewards.forEach(reward => {
         const rewardClaimId = `${reward.level}:${reward.type}:${reward.crateId || reward.name}`;
-        if (claimedRewards.includes(rewardClaimId)) return;
-        const crateId = reward.crateId || "reef";
+        const legacySeasonalClaimIds = reward.crateId === "seasonal"
+            ? SEASONAL_CRATE_IDS.map(crateId => `${reward.level}:${reward.type}:${crateId}`)
+            : [];
+        if (claimedRewards.includes(rewardClaimId) || legacySeasonalClaimIds.some(id => claimedRewards.includes(id))) return;
+        const crateId = reward.crateId === "seasonal" ? getActiveSeasonalCrateId() : (reward.crateId || "reef");
+        if (!crateId) return;
         const crateCount = Math.max(1, Number(reward.crateCount) || 1);
         inventory[crateId] = (inventory[crateId] || 0) + crateCount;
         claimedRewards.push(rewardClaimId);
@@ -2487,7 +2603,7 @@ const spinWheelRewards = [
     { id: "spin_xp_500", type: "xp", amount: 500, weight: 13, label: "500 XP", wheelLabel: "500", rarity: "common", color: "#2f9cff", icon: "⚡" },
     { id: "spin_xp_1000", type: "xp", amount: 1000, weight: 12, label: "1000 XP", wheelLabel: "1K", rarity: "uncommon", color: "#9b7cff", icon: "💫" },
     { id: "spin_reef_crate", type: "crate", crateId: "reef", amount: 1, weight: 14, label: "Cosmetic Crate", wheelLabel: "Crate", rarity: "uncommon", color: "#f6a04d", icon: "📦" },
-    { id: "spin_summer_crate", type: "crate", crateId: "summer", amount: 1, weight: 10, label: "Summer Crate", wheelLabel: "Summer", rarity: "rare", color: "#ff5f57", icon: "☀️" },
+    { id: "spin_event_crate", type: "seasonal_crate", amount: 1, weight: 10, label: "Event Crate", wheelLabel: "Event", rarity: "rare", color: "#ff5f57", icon: "★" },
     { id: "spin_shield", type: "item", itemId: STREAK_SHIELD_ITEM_ID, quantity: 1, weight: 10, label: "Streak Shield", wheelLabel: "Shield", rarity: "rare", color: "#4e7cff", icon: "🛡️" },
     { id: "spin_pass_level", type: "pass_level", amount: 1, weight: 8, label: "Free Shark Pass Level", wheelLabel: "Pass", rarity: "epic", color: "#f4d35e", icon: "⬆️" },
     { id: "spin_badge", type: "badge", badgeId: "lucky-fin", name: "Lucky Fin", weight: 7, label: "Lucky Fin Badge", wheelLabel: "Badge", rarity: "epic", color: "#2ec4b6", icon: "🍀" },
@@ -2590,14 +2706,37 @@ function markDailySpinUsed(profileData = getCurrentProfileData()) {
     return profileData;
 }
 
+function resolveSpinWheelReward(reward) {
+    if (reward.type !== "seasonal_crate") return reward;
+    const crateId = getActiveSeasonalCrateId();
+    if (!crateId) return null;
+    const crateDef = getCrateDefinition(crateId);
+    const crateMeta = getSeasonalCrateMeta(crateId);
+    return {
+        ...reward,
+        id: `spin_${crateId}_crate`,
+        type: "crate",
+        crateId,
+        label: crateDef.name,
+        wheelLabel: crateMeta.shortName,
+        color: crateMeta.spinColor,
+        icon: crateMeta.spinIcon
+    };
+}
+
+function getSpinWheelRewards() {
+    return spinWheelRewards.map(resolveSpinWheelReward).filter(Boolean);
+}
+
 function pickSpinWheelReward() {
-    const totalWeight = spinWheelRewards.reduce((sum, reward) => sum + Math.max(0, Number(reward.weight) || 0), 0);
+    const rewards = getSpinWheelRewards();
+    const totalWeight = rewards.reduce((sum, reward) => sum + Math.max(0, Number(reward.weight) || 0), 0);
     let roll = Math.random() * totalWeight;
-    for (const reward of spinWheelRewards) {
+    for (const reward of rewards) {
         roll -= Math.max(0, Number(reward.weight) || 0);
         if (roll <= 0) return reward;
     }
-    return spinWheelRewards[0];
+    return rewards[0];
 }
 
 function grantSpinWheelReward(profileData, reward) {
@@ -2651,10 +2790,10 @@ function grantSpinWheelReward(profileData, reward) {
     return { profileData, message, duplicate };
 }
 
-function getSpinWheelSliceGeometry() {
-    const sliceCount = Math.max(1, spinWheelRewards.length);
+function getSpinWheelSliceGeometry(rewards = getSpinWheelRewards()) {
+    const sliceCount = Math.max(1, rewards.length);
     const slice = 360 / sliceCount;
-    return spinWheelRewards.map((reward, index) => {
+    return rewards.map((reward, index) => {
         const start = index * slice;
         const end = start + slice;
         const mid = start + (slice / 2);
@@ -2683,7 +2822,7 @@ function buildSpinWheelGradient() {
 }
 
 function getSpinWheelChancePercent(reward) {
-    const totalWeight = spinWheelRewards.reduce((sum, entry) => sum + Math.max(0, Number(entry.weight) || 0), 0);
+    const totalWeight = getSpinWheelRewards().reduce((sum, entry) => sum + Math.max(0, Number(entry.weight) || 0), 0);
     if (!totalWeight) return "0%";
     const percent = (Math.max(0, Number(reward.weight) || 0) / totalWeight) * 100;
     return `${Number.isInteger(percent) ? percent : percent.toFixed(1)}%`;
@@ -2705,7 +2844,7 @@ function getSpinWheelLegendIconMarkup(reward) {
 function renderSpinWheelLegend() {
     const legend = document.getElementById("spin-wheel-legend");
     if (!legend) return;
-    legend.innerHTML = spinWheelRewards.map(reward => `
+    legend.innerHTML = getSpinWheelRewards().map(reward => `
         <li class="spin-wheel-legend-item rarity-${reward.rarity}">
             <span class="legend-swatch" style="background:${reward.color};"></span>
             ${getSpinWheelLegendIconMarkup(reward)}
@@ -2799,9 +2938,10 @@ async function spinDailyWheel() {
     spinWheelSpinning = true;
     if (actionBtn) actionBtn.disabled = true;
 
+    const rewards = getSpinWheelRewards();
     const reward = pickSpinWheelReward();
-    const rewardIndex = Math.max(0, spinWheelRewards.findIndex(entry => entry.id === reward.id));
-    const slices = getSpinWheelSliceGeometry();
+    const rewardIndex = Math.max(0, rewards.findIndex(entry => entry.id === reward.id));
+    const slices = getSpinWheelSliceGeometry(rewards);
     const winningSlice = slices[rewardIndex] || slices[0];
     const extraTurns = 5 + Math.floor(Math.random() * 3);
     const currentRotation = normalizeSpinWheelDegrees(spinWheelRotation);
@@ -3603,18 +3743,60 @@ function ensureCommunityBossStyles() {
     style.id = "community-boss-event-styles";
     style.textContent = `
         .community-boss-event {
-            width: min(1120px, calc(100% - 32px));
-            margin: 18px auto;
-            padding: 18px;
-            border: 1px solid rgba(255, 202, 123, 0.34);
-            border-radius: 20px;
-            background:
+            --community-boss-accent: #ffd78c;
+            --community-boss-accent-soft: rgba(255, 202, 123, 0.14);
+            --community-boss-border: rgba(255, 202, 123, 0.34);
+            --community-boss-bg:
                 radial-gradient(circle at top left, rgba(255, 220, 134, 0.18), transparent 36%),
                 radial-gradient(circle at 88% 18%, rgba(255, 118, 92, 0.14), transparent 28%),
                 linear-gradient(135deg, rgba(5, 38, 54, 0.94), rgba(12, 70, 84, 0.9));
+            --community-boss-progress: linear-gradient(90deg, #57e5d4, #ffd36f, #ff8f70);
+            --community-boss-primary: linear-gradient(135deg, #ffd36f, #ff8f70);
+            --community-boss-primary-text: #122634;
+            width: min(1120px, calc(100% - 32px));
+            margin: 18px auto;
+            padding: 18px;
+            border: 1px solid var(--community-boss-border);
+            border-radius: 20px;
+            background: var(--community-boss-bg);
             color: #f4fdff;
             box-shadow: 0 18px 42px rgba(0, 0, 0, 0.28);
             box-sizing: border-box;
+        }
+        .community-boss-season-summer {
+            --community-boss-accent: #ffe08f;
+            --community-boss-accent-soft: rgba(255, 196, 87, 0.16);
+            --community-boss-border: rgba(255, 196, 87, 0.34);
+            --community-boss-bg:
+                radial-gradient(circle at top left, rgba(255, 225, 130, 0.22), transparent 36%),
+                radial-gradient(circle at 88% 18%, rgba(64, 196, 255, 0.15), transparent 30%),
+                linear-gradient(135deg, rgba(8, 62, 82, 0.95), rgba(10, 106, 116, 0.9));
+            --community-boss-progress: linear-gradient(90deg, #63e6d2, #ffe08f, #ff8f57);
+            --community-boss-primary: linear-gradient(135deg, #ffe08f, #ff8f57);
+        }
+        .community-boss-season-christmas {
+            --community-boss-accent: #d8fff2;
+            --community-boss-accent-soft: rgba(127, 232, 201, 0.15);
+            --community-boss-border: rgba(127, 232, 201, 0.32);
+            --community-boss-bg:
+                radial-gradient(circle at top left, rgba(127, 232, 201, 0.18), transparent 36%),
+                radial-gradient(circle at 88% 18%, rgba(255, 92, 92, 0.15), transparent 30%),
+                linear-gradient(135deg, rgba(10, 55, 46, 0.96), rgba(72, 19, 36, 0.9));
+            --community-boss-progress: linear-gradient(90deg, #70e8bd, #f5fff9, #ff6f7a);
+            --community-boss-primary: linear-gradient(135deg, #d8fff2, #ff6f7a);
+            --community-boss-primary-text: #103126;
+        }
+        .community-boss-season-halloween {
+            --community-boss-accent: #ffd3a1;
+            --community-boss-accent-soft: rgba(190, 108, 255, 0.16);
+            --community-boss-border: rgba(190, 108, 255, 0.32);
+            --community-boss-bg:
+                radial-gradient(circle at top left, rgba(190, 108, 255, 0.2), transparent 36%),
+                radial-gradient(circle at 88% 18%, rgba(255, 132, 50, 0.16), transparent 30%),
+                linear-gradient(135deg, rgba(43, 22, 69, 0.96), rgba(26, 14, 39, 0.92));
+            --community-boss-progress: linear-gradient(90deg, #b86cff, #ffcc7a, #8cffb8);
+            --community-boss-primary: linear-gradient(135deg, #b86cff, #ff8f42);
+            --community-boss-primary-text: #21112f;
         }
         body.home-page .community-boss-event {
             margin-top: 0;
@@ -3696,8 +3878,8 @@ function ensureCommunityBossStyles() {
             width: fit-content;
             padding: 5px 9px;
             border-radius: 999px;
-            background: rgba(255, 202, 123, 0.14);
-            color: #ffd78c;
+            background: var(--community-boss-accent-soft);
+            color: var(--community-boss-accent);
             font-size: 11px;
             font-weight: 900;
             letter-spacing: 0.08em;
@@ -3739,7 +3921,7 @@ function ensureCommunityBossStyles() {
             width: 0%;
             height: 100%;
             border-radius: inherit;
-            background: linear-gradient(90deg, #57e5d4, #ffd36f, #ff8f70);
+            background: var(--community-boss-progress);
             transition: width 0.4s ease;
         }
         .community-boss-reward {
@@ -3750,7 +3932,7 @@ function ensureCommunityBossStyles() {
         }
         .community-boss-reward strong {
             display: block;
-            color: #ffd78c;
+            color: var(--community-boss-accent);
             font-size: 12px;
             text-transform: uppercase;
             letter-spacing: 0.07em;
@@ -3774,7 +3956,7 @@ function ensureCommunityBossStyles() {
             padding-top: 0;
         }
         .community-boss-rewards-list b {
-            color: #fff4c7;
+            color: var(--community-boss-accent);
             font-size: 13px;
         }
         .community-boss-rewards-list span {
@@ -3809,8 +3991,8 @@ function ensureCommunityBossStyles() {
             color: #f8fdff;
         }
         .community-boss-actions button.primary {
-            background: linear-gradient(135deg, #ffd36f, #ff8f70);
-            color: #122634;
+            background: var(--community-boss-primary);
+            color: var(--community-boss-primary-text);
         }
         .community-boss-actions button:disabled {
             cursor: default;
@@ -4204,20 +4386,25 @@ async function claimCommunityBossReward() {
         pendingRewards.forEach(reward => {
             const rewardId = String(reward.id);
             const rewardCrateId = reward.crateId || COMMUNITY_BOSS_EVENT.crateId;
-            const rewardCrateCount = Math.max(0, Number(reward.crateCount) || 0);
+            const rawRewardCrateCount = Math.max(0, Number(reward.crateCount) || 0);
+            const rewardCrateCount = isSeasonalCrateId(rewardCrateId) && !isSeasonalCrateThemeActive(rewardCrateId)
+                ? 0
+                : rawRewardCrateCount;
             const rewardXp = Math.max(0, Number(reward.xp) || 0);
             const rewardGoal = Number(reward.goal) || 0;
 
             claimedRewardIds.add(rewardId);
             if (rewardGoal) claimedMilestones.add(rewardGoal);
             totalXpAwarded += rewardXp;
-            cratesAwarded[rewardCrateId] = (cratesAwarded[rewardCrateId] || 0) + rewardCrateCount;
-            totalCrates[rewardCrateId] = (Number(totalCrates[rewardCrateId]) || 0) + rewardCrateCount;
+            if (rewardCrateCount > 0) {
+                cratesAwarded[rewardCrateId] = (cratesAwarded[rewardCrateId] || 0) + rewardCrateCount;
+                totalCrates[rewardCrateId] = (Number(totalCrates[rewardCrateId]) || 0) + rewardCrateCount;
+            }
             nextClaims[rewardId] = {
                 claimedAt: claimTime,
                 goal: rewardGoal,
                 xp: rewardXp,
-                crates: { [rewardCrateId]: rewardCrateCount },
+                crates: rewardCrateCount > 0 ? { [rewardCrateId]: rewardCrateCount } : {},
                 crateId: rewardCrateId,
                 crateCount: rewardCrateCount,
                 badgeId: shouldGrantBadge ? rewardBadgeId : null
@@ -4272,8 +4459,11 @@ async function claimCommunityBossReward() {
         renderCratesButton();
         renderCommunityBossPanel();
 
-        const badgeText = grantsNewBadge ? `, and the ${COMMUNITY_BOSS_EVENT.rewardBadgeName} badge` : "";
-        showNotification(`Community rewards claimed: ${totalXpAwarded.toLocaleString()} XP, ${formatCommunityBossCrateAwards(cratesAwarded)}${badgeText}.`, "success", 5600);
+        const rewardParts = [`${totalXpAwarded.toLocaleString()} XP`];
+        const crateText = formatCommunityBossCrateAwards(cratesAwarded);
+        if (crateText) rewardParts.push(crateText);
+        if (grantsNewBadge) rewardParts.push(`${COMMUNITY_BOSS_EVENT.rewardBadgeName} badge`);
+        showNotification(`Community rewards claimed: ${rewardParts.join(", ")}.`, "success", 5600);
         return;
     }
 
@@ -4291,11 +4481,16 @@ async function claimCommunityBossReward() {
     const reward = await getCurrentCommunityBossReward();
     const rewardBadgeId = COMMUNITY_BOSS_EVENT.rewardBadgeId;
     const rewardCrateId = reward.crateId || COMMUNITY_BOSS_EVENT.crateId;
-    const rewardCrateCount = Math.max(0, Number(reward.crateCount) || 0);
+    const rawRewardCrateCount = Math.max(0, Number(reward.crateCount) || 0);
+    const rewardCrateCount = isSeasonalCrateId(rewardCrateId) && !isSeasonalCrateThemeActive(rewardCrateId)
+        ? 0
+        : rawRewardCrateCount;
 
     profileData.totalXP = (Number(profileData.totalXP) || 0) + reward.xp;
     const inventory = getCrateInventory(profileData);
-    inventory[rewardCrateId] = (inventory[rewardCrateId] || 0) + rewardCrateCount;
+    if (rewardCrateCount > 0) {
+        inventory[rewardCrateId] = (inventory[rewardCrateId] || 0) + rewardCrateCount;
+    }
     profileData.crateInventory = normalizeCrateInventory(inventory);
     profileData.unlockedBadges = [
         ...new Set([
@@ -4310,7 +4505,7 @@ async function claimCommunityBossReward() {
             claimedAt: Date.now(),
             rank: reward.rank,
             xp: reward.xp,
-            crates: { [rewardCrateId]: rewardCrateCount },
+            crates: rewardCrateCount > 0 ? { [rewardCrateId]: rewardCrateCount } : {},
             crateId: rewardCrateId,
             crateCount: rewardCrateCount,
             badgeId: rewardBadgeId
@@ -4332,7 +4527,10 @@ async function claimCommunityBossReward() {
     updateProfileBadgeUI();
     renderCratesButton();
     renderCommunityBossPanel();
-    showNotification(`${reward.label} reward claimed: ${reward.xp.toLocaleString()} XP, ${formatCommunityBossCrateReward(reward)}, and the ${COMMUNITY_BOSS_EVENT.rewardBadgeName} badge.`, "success", 5600);
+    const rewardParts = [`${reward.xp.toLocaleString()} XP`];
+    if (rewardCrateCount > 0) rewardParts.push(`${rewardCrateCount.toLocaleString()} ${getCommunityBossCrateName(rewardCrateId)}${rewardCrateCount === 1 ? "" : "s"}`);
+    rewardParts.push(`${COMMUNITY_BOSS_EVENT.rewardBadgeName} badge`);
+    showNotification(`${reward.label} reward claimed: ${rewardParts.join(", ")}.`, "success", 5600);
 }
 
 window.contributeCommunityBossWin = contributeCommunityBossWin;
@@ -4777,6 +4975,14 @@ function applyIndexTheme(themeId = "default", force = false) {
     localStorage.setItem("globalIndexThemeId", resolvedThemeId);
     localStorage.setItem("globalUiThemeCache", resolvedThemeId);
     updateSeasonalCratePanels();
+    if (typeof updateSeasonalCrateCraftingUI === "function") updateSeasonalCrateCraftingUI();
+    if (typeof renderHomeCratesModal === "function" && !document.getElementById("homeCratesModal")?.classList.contains("hidden")) renderHomeCratesModal();
+    if (typeof renderPearlShop === "function") renderPearlShop();
+    if (!document.getElementById("spinWheelModal")?.classList.contains("hidden")) {
+        const disk = document.getElementById("spin-wheel-disk");
+        if (disk && typeof buildSpinWheelGradient === "function") disk.style.background = buildSpinWheelGradient();
+        if (typeof renderSpinWheelLegend === "function") renderSpinWheelLegend();
+    }
 
     return appliedThemeId;
 }
@@ -4796,10 +5002,12 @@ function setupGlobalIndexThemeListener() {
         .doc(GLOBAL_INDEX_THEME_CONFIG_PATH.doc)
         .onSnapshot(snapshot => {
             const remoteThemeId = snapshot.exists ? snapshot.data()?.themeId : "default";
+            setActiveSeasonalCrateTheme(remoteThemeId || "default");
             applyIndexTheme(remoteThemeId || "default");
         }, error => {
             console.warn("Global index theme listener failed:", error);
-            applyIndexTheme(localStorage.getItem("globalIndexThemeId") || "default");
+            setActiveSeasonalCrateTheme("default");
+            applyIndexTheme("default");
         });
 }
 
@@ -4854,25 +5062,39 @@ function renderHomeCratesModal() {
     const profileData = getCurrentProfileData();
     const inventory = getCrateInventory(profileData);
     const reefCount = inventory.reef || 0;
-    const summerCount = inventory.summer || 0;
     const totalCount = Object.values(inventory).reduce((sum, value) => sum + (Number(value) || 0), 0);
 
     const reefCountEl = document.getElementById("home-crate-reef-count");
-    const summerCountEl = document.getElementById("home-crate-summer-count");
     const reefBtn = document.getElementById("home-open-reef-crate-btn");
-    const summerBtn = document.getElementById("home-open-summer-crate-btn");
     const status = document.getElementById("home-crates-status");
+    const craftingBtn = document.getElementById("home-crates-crafting-btn");
 
     if (reefCountEl) reefCountEl.textContent = reefCount;
-    if (summerCountEl) summerCountEl.textContent = summerCount;
 
     if (reefBtn) {
         reefBtn.disabled = !currentUser || reefCount <= 0 || crateOpeningInProgress;
         reefBtn.textContent = currentUser ? "Open Crate" : "Login Required";
     }
-    if (summerBtn) {
-        summerBtn.disabled = !currentUser || summerCount <= 0 || crateOpeningInProgress;
-        summerBtn.textContent = currentUser ? "Open Crate" : "Login Required";
+
+    SEASONAL_CRATE_IDS.forEach(crateId => {
+        const count = inventory[crateId] || 0;
+        const card = document.getElementById(`home-crate-${crateId}-card`);
+        const countEl = document.getElementById(`home-crate-${crateId}-count`);
+        const openBtn = document.getElementById(`home-open-${crateId}-crate-btn`);
+        const visible = shouldShowSeasonalCratePanel(crateId, profileData);
+        if (card) card.style.display = visible ? "" : "none";
+        if (countEl) countEl.textContent = count;
+        if (openBtn) {
+            openBtn.disabled = !currentUser || count <= 0 || crateOpeningInProgress;
+            openBtn.textContent = currentUser ? "Open Crate" : "Login Required";
+        }
+    });
+
+    if (craftingBtn) {
+        const activeCrateId = getActiveSeasonalCrateId();
+        const activeCrateName = activeCrateId ? getCrateDefinition(activeCrateId).name : "Event Crate";
+        craftingBtn.textContent = activeCrateId ? `Craft ${activeCrateName}` : "Crafting";
+        craftingBtn.title = activeCrateId ? "" : "Seasonal crate crafting unlocks while an event theme is active.";
     }
 
     if (status) {
@@ -5161,6 +5383,13 @@ function getCrateUnboxCopy(crateId, phase = "opening", rewardName = "") {
     const crateName = getCrateDefinition(crateId).name;
     const itemLabel = rewardName ? String(rewardName) : "something";
 
+    if (isSeasonalCrateId(crateId)) {
+        const crateLabel = crateName.toLowerCase();
+        if (phase === "reward") return `You found ${itemLabel} in the ${crateLabel}!`;
+        if (phase === "duplicate") return `You found ${itemLabel} in the ${crateLabel}! (Already owned - converted to XP.)`;
+        return `The ${crateLabel} is opening...`;
+    }
+
     if (crateId === "summer") {
         if (phase === "reward") return `You found ${itemLabel} in the summer crate!`;
         if (phase === "duplicate") return `You found ${itemLabel} in the summer crate! (Already owned — converted to XP.)`;
@@ -5198,7 +5427,7 @@ function resetCrateUnboxOverlay(crateId = "reef") {
     if (splash) splash.classList.remove("active");
     if (icon) icon.className = `fa-solid ${crateDef.icon}`;
     if (reveal) {
-        reveal.classList.remove("hidden", "crate-reveal-summer");
+        reveal.classList.remove("hidden", "crate-reveal-seasonal", ...SEASONAL_CRATE_IDS.map(id => `crate-reveal-${id}`));
         reveal.innerHTML = "";
     }
 }
@@ -5212,24 +5441,24 @@ function openCrateUnboxOverlay(crateId = "reef") {
 }
 
 function getCrateUnboxRevealDelay(crateId = activeCrateUnboxId) {
-    return crateId === "summer" ? 1150 : 950;
+    return isSeasonalCrateId(crateId) ? 1150 : 950;
 }
 
 function getCrateUnboxRevealHoldDelay(crateId = activeCrateUnboxId) {
-    return crateId === "summer" ? 2050 : 1850;
+    return isSeasonalCrateId(crateId) ? 2050 : 1850;
 }
 
 function applyCrateUnboxOpeningState(reward) {
     const crate = document.getElementById("crate-unbox-crate");
     const burst = document.getElementById("crate-unbox-burst");
     const splash = document.getElementById("crate-unbox-splash");
-    const isSummer = activeCrateUnboxId === "summer";
+    const isSeasonal = isSeasonalCrateId(activeCrateUnboxId);
 
     if (crate) {
-        crate.classList.add(isSummer ? "opening-summer" : "opening", `rarity-${reward.rarity}`);
+        crate.classList.add(isSeasonal ? "opening-seasonal" : "opening", `rarity-${reward.rarity}`);
     }
-    if (burst) burst.classList.add(isSummer ? "active-summer" : "active", `rarity-${reward.rarity}`);
-    if (splash && isSummer) splash.classList.add("active");
+    if (burst) burst.classList.add(isSeasonal ? `active-${activeCrateUnboxId}` : "active", `rarity-${reward.rarity}`);
+    if (splash && isSeasonal) splash.classList.add("active");
 }
 
 function closeCrateUnboxOverlay() {
@@ -5241,18 +5470,18 @@ function closeCrateUnboxOverlay() {
 function showCrateOverlayReward(reward, crateId = activeCrateUnboxId) {
     const copy = document.getElementById("crate-unbox-copy");
     const reveal = document.getElementById("crate-overlay-reveal");
-    const isSummer = crateId === "summer";
+    const isSeasonal = isSeasonalCrateId(crateId);
     applyCrateUnboxOpeningState(reward);
     if (copy) {
-        copy.textContent = isSummer
+        copy.textContent = isSeasonal
             ? getCrateUnboxCopy(crateId, "reward", reward.name)
             : `${reward.name} dropped from the ${getCrateDefinition(crateId).name.toLowerCase()}.`;
     }
     if (reveal) {
         reveal.classList.remove("hidden");
-        if (isSummer) reveal.classList.add("crate-reveal-summer");
+        if (isSeasonal) reveal.classList.add("crate-reveal-seasonal", `crate-reveal-${crateId}`);
         reveal.innerHTML = `
-            <div class="crate-reveal-card crate-reveal-card-${reward.rarity}${isSummer ? " crate-reveal-card-summer" : ""}">
+            <div class="crate-reveal-card crate-reveal-card-${reward.rarity}${isSeasonal ? ` crate-reveal-card-seasonal crate-reveal-card-${crateId}` : ""}">
                 ${getCrateRewardPreviewMarkup(reward)}
                 <div class="crate-reveal-copy">
                     <span class="crate-rarity ${reward.rarity}">${reward.rarity}</span>
@@ -6238,6 +6467,7 @@ function applyCodeCrateRewards(profileData, crateRewards = {}) {
     Object.entries(crateRewards).forEach(([crateId, amount]) => {
         const count = Math.max(0, Math.floor(Number(amount) || 0));
         if (!count || !crateDefinitions[crateId]) return;
+        if (isSeasonalCrateId(crateId) && !isSeasonalCrateThemeActive(crateId)) return;
         inventory[crateId] = (inventory[crateId] || 0) + count;
         granted.push({ crateId, count, name: getCrateDefinition(crateId).name });
     });
@@ -6396,6 +6626,7 @@ async function loadCloudStats(options = {}) {
 
     try {
         const loadedProfile = await loadUserProfile({ rethrowErrors: manual });
+        await runPostProfileHydrationTasks(loadedProfile, { logPending: !manual });
         if (manual && showSuccessToast && loadedProfile) {
             showNotification("Cloud stats loaded.", "success");
         }
@@ -6540,6 +6771,21 @@ function setupProfileSync() {
     });
 }
 
+async function runPostProfileHydrationTasks(loadedProfile, options = {}) {
+    if (!currentUser || !loadedProfile) return false;
+    if (lastServerHydratedProfileUid !== currentUser.uid) {
+        if (options.logPending) {
+            console.warn("Profile hydration pending; delaying login rewards and broad stat sync.");
+        }
+        return false;
+    }
+
+    await initializeDailyLogin();
+    await ensureLoginStreakRewards();
+    syncStatsToFirebase();
+    return true;
+}
+
 async function updateAuthUI() {
     const authContainer = document.getElementById("auth-container");
     const loginWarning = document.getElementById("login-warning");
@@ -6552,16 +6798,13 @@ async function updateAuthUI() {
         updatePresenceHeartbeat();
 
         // Load user profile - need to await so redeemed codes and login streak load first
-        await loadUserProfile();
+        const loadedProfile = await loadUserProfile();
         scheduleCloudProfileReloads();
-        // Initialize daily login first so streak/login fields are updated before any broad stats sync.
-        await initializeDailyLogin();
-        await ensureLoginStreakRewards();
+        // Initialize daily login only after a server-confirmed profile load.
+        await runPostProfileHydrationTasks(loadedProfile, { logPending: true });
         updateSpinWheelUI();
         const legacyProfileBtn = document.getElementById("profile-btn-nav");
         if (legacyProfileBtn) legacyProfileBtn.remove();
-        // Sync local stats to Firebase after daily login initialization to avoid stale login-field overwrites.
-        syncStatsToFirebase();
     } else {
         // User is logged out
         if (loginWarning) loginWarning.classList.remove("hidden");
@@ -7134,18 +7377,18 @@ function saveUserProfileLocally(profileData, options = {}) {
 function showCrateOverlayDuplicateReward(reward, xpAward, crateId = activeCrateUnboxId) {
     const copy = document.getElementById("crate-unbox-copy");
     const reveal = document.getElementById("crate-overlay-reveal");
-    const isSummer = crateId === "summer";
+    const isSeasonal = isSeasonalCrateId(crateId);
     applyCrateUnboxOpeningState(reward);
     if (copy) {
-        copy.textContent = isSummer
+        copy.textContent = isSeasonal
             ? getCrateUnboxCopy(crateId, "duplicate", reward.name)
             : `${reward.name} was a duplicate and converted into XP.`;
     }
     if (reveal) {
         reveal.classList.remove("hidden");
-        if (isSummer) reveal.classList.add("crate-reveal-summer");
+        if (isSeasonal) reveal.classList.add("crate-reveal-seasonal", `crate-reveal-${crateId}`);
         reveal.innerHTML = `
-            <div class="crate-reveal-card crate-reveal-card-${reward.rarity}${isSummer ? " crate-reveal-card-summer" : ""}">
+            <div class="crate-reveal-card crate-reveal-card-${reward.rarity}${isSeasonal ? ` crate-reveal-card-seasonal crate-reveal-card-${crateId}` : ""}">
                 ${getCrateRewardPreviewMarkup(reward)}
                 <div class="crate-reveal-copy">
                     <span class="crate-rarity ${reward.rarity}">${reward.rarity}</span>
@@ -7381,14 +7624,16 @@ async function loadUserProfile(options = {}) {
         // Load from userStats collection
         const statsRef = db.collection("userStats").doc(authUser.uid);
         const { snapshot: statsSnap, fromServer } = await getUserStatsSnapshot(statsRef);
-        // Accept cache-backed hydration as valid so stat sync is not blocked when
-        // a direct server read is temporarily unavailable.
-        lastServerHydratedProfileUid = authUser.uid;
+        const statsData = statsSnap.exists ? (statsSnap.data() || {}) : {};
+        const remoteHasData = statsSnap.exists && Object.keys(statsData).length > 0;
+        if (fromServer) {
+            lastServerHydratedProfileUid = authUser.uid;
+        }
         let userData = {};
         let firebaseData = null;
         // If Firestore doc exists and has at least one stat field, use it as source of truth
-        if (statsSnap.exists && Object.keys(statsSnap.data() || {}).length > 0) {
-            firebaseData = statsSnap.data();
+        if (remoteHasData) {
+            firebaseData = statsData;
             userData = mergeProfilesSafely(localProfile, firebaseData);
             storeLoginProgressLocally(userData, authUser.uid);
             saveUserProfileLocally(userData, { skipRemoteSync: true, preserveLastUpdated: true });
@@ -7461,6 +7706,10 @@ async function loadUserProfile(options = {}) {
             }
             saveUserProfileLocally(userData, { skipRemoteSync: true, preserveLastUpdated: true });
         } else {
+            if (!fromServer) {
+                console.warn("Skipped creating a default profile because userStats was not confirmed empty from the server.");
+                return null;
+            }
             const cachedPreferredUsername = getStoredPreferredUsername();
             const localLoginProgress = getLoginProgressFromLocalStorage(authUser.uid);
             const parseStoredAchievementIds = key => {
@@ -7655,7 +7904,7 @@ function formatShopTimeRemaining(msRemaining) {
 }
 
 function getPearlShopEventCrateId() {
-    return COMMUNITY_BOSS_EVENT?.crateId || "summer";
+    return getActiveSeasonalCrateId();
 }
 
 function getPearlShopPurchaseState(itemId, profileData = getCurrentProfileData()) {
@@ -7688,6 +7937,12 @@ function getPearlShopPurchaseState(itemId, profileData = getCurrentProfileData()
         reason = "Owned";
     }
 
+    if (itemId === "event-crate" && !getPearlShopEventCrateId()) {
+        disabled = true;
+        label = "Inactive";
+        reason = "Event theme inactive";
+    }
+
     return { disabled, label, owned, reason };
 }
 
@@ -7698,8 +7953,8 @@ function renderPearlShop(profileData = getCurrentProfileData()) {
     if (!status && !eventCrateName && !balance && !document.querySelector("[data-pearl-shop-item]")) return;
 
     const eventCrateId = getPearlShopEventCrateId();
-    const eventCrateDef = getCrateDefinition(eventCrateId);
-    if (eventCrateName) eventCrateName.textContent = eventCrateDef.name || "Event Crate";
+    const eventCrateDef = eventCrateId ? getCrateDefinition(eventCrateId) : null;
+    if (eventCrateName) eventCrateName.textContent = eventCrateDef?.name || "Event Crate";
 
     const isLoggedIn = Boolean(currentUser);
     const pearls = getPearlCount(profileData);
@@ -7762,6 +8017,7 @@ function grantPearlShopItem(profileData, itemId) {
 
     if (itemId === "cosmetic-crate" || itemId === "event-crate") {
         const crateId = itemId === "event-crate" ? getPearlShopEventCrateId() : "reef";
+        if (!crateId) return { success: false, message: "Event crates are only available while an event theme is active." };
         const inventory = getCrateInventory(profileData);
         inventory[crateId] = (inventory[crateId] || 0) + 1;
         profileData.crateInventory = normalizeCrateInventory(inventory);
@@ -8137,7 +8393,6 @@ function loginUser() {
             errorEl.style.display = "none";
             showNotification('Login successful!', 'success');
             closeLoginModal();
-            loadUserProfile();
         })
         .catch(error => {
             errorEl.textContent = error.message || "Login failed. Please check your credentials.";
@@ -10187,6 +10442,7 @@ async function setGlobalIndexTheme(themeId = "default") {
         .doc(GLOBAL_INDEX_THEME_CONFIG_PATH.doc)
         .set(payload, { merge: true });
 
+    setActiveSeasonalCrateTheme(resolvedThemeId);
     applyIndexTheme(resolvedThemeId);
     return payload;
 }

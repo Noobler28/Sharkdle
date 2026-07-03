@@ -1050,7 +1050,7 @@ content="Play Sharkdle, the daily shark guessing game. Guess shark species from 
 </div>
 </article>
 
-<article class="home-crate-card summer">
+<article id="home-crate-summer-card" class="home-crate-card summer" style="display:none;">
 <div class="home-crate-topline">
 <div>
 <h3>Summer Crate <span>Limited</span></h3>
@@ -1072,10 +1072,56 @@ content="Play Sharkdle, the daily shark guessing game. Guess shark species from 
 <button type="button" onclick="openCrateDropsModal('summer')">View Drops</button>
 </div>
 </article>
+
+<article id="home-crate-christmas-card" class="home-crate-card christmas" style="display:none;">
+<div class="home-crate-topline">
+<div>
+<h3>Christmas Crate <span>Limited</span></h3>
+<p>Christmas Reef rewards.</p>
+</div>
+<div class="home-crate-count christmas"><span id="home-crate-christmas-count">0</span> ready</div>
+</div>
+<div class="home-crate-showcase">
+<div class="home-crate-visual christmas"><i class="fa-solid fa-gift"></i></div>
+<div class="home-crate-odds">
+<div><span>Common</span><strong>58%</strong></div>
+<div><span>Rare</span><strong>28%</strong></div>
+<div><span>Epic</span><strong>10%</strong></div>
+<div><span>Legendary</span><strong>4%</strong></div>
+</div>
+</div>
+<div class="home-crate-actions">
+<button id="home-open-christmas-crate-btn" type="button" onclick="openHomeCrate('christmas')">Open Crate</button>
+<button type="button" onclick="openCrateDropsModal('christmas')">View Drops</button>
+</div>
+</article>
+
+<article id="home-crate-halloween-card" class="home-crate-card halloween" style="display:none;">
+<div class="home-crate-topline">
+<div>
+<h3>Halloween Crate <span>Limited</span></h3>
+<p>Halloween Depths rewards.</p>
+</div>
+<div class="home-crate-count halloween"><span id="home-crate-halloween-count">0</span> ready</div>
+</div>
+<div class="home-crate-showcase">
+<div class="home-crate-visual halloween"><i class="fa-solid fa-ghost"></i></div>
+<div class="home-crate-odds">
+<div><span>Common</span><strong>58%</strong></div>
+<div><span>Rare</span><strong>28%</strong></div>
+<div><span>Epic</span><strong>10%</strong></div>
+<div><span>Legendary</span><strong>4%</strong></div>
+</div>
+</div>
+<div class="home-crate-actions">
+<button id="home-open-halloween-crate-btn" type="button" onclick="openHomeCrate('halloween')">Open Crate</button>
+<button type="button" onclick="openCrateDropsModal('halloween')">View Drops</button>
+</div>
+</article>
 </div>
 
 <div class="home-crates-actions">
-<button type="button" onclick="openCraftingModalFromHome()">Crafting</button>
+<button id="home-crates-crafting-btn" type="button" onclick="openCraftingModalFromHome()">Crafting</button>
 <button type="button" onclick="closeHomeCratesModal()">Close</button>
 </div>
 <p id="home-crates-status" class="home-crates-status">Win games for a chance to earn crates.</p>
@@ -1097,11 +1143,11 @@ content="Play Sharkdle, the daily shark guessing game. Guess shark species from 
     <div class="crafting-overhaul-grid">
       <article class="crafting-overhaul-card input"><div class="crate-crafting-icon cosmetic"><i class="fa-solid fa-box-open"></i></div><span>Input</span><h3>2 Cosmetic Crates</h3><p><strong id="craft-reef-owned">0</strong> currently owned</p></article>
       <div class="crafting-overhaul-arrow"><i class="fa-solid fa-arrow-right"></i></div>
-      <article class="crafting-overhaul-card output"><div class="crate-crafting-icon summer"><i class="fa-solid fa-umbrella-beach"></i></div><span>Output</span><h3>1 Summer Crate</h3><p><strong id="craft-summer-owned">0</strong> currently owned</p></article>
+      <article class="crafting-overhaul-card output"><div id="craft-seasonal-output-icon" class="crate-crafting-icon event"><i id="craft-seasonal-output-symbol" class="fa-solid fa-star"></i></div><span>Output</span><h3 id="craft-seasonal-output-title">1 Event Crate</h3><p><strong id="craft-seasonal-owned">0</strong> currently owned</p></article>
     </div>
     <div class="crafting-overhaul-actions">
-      <button id="craft-summer-crate-btn" type="button" class="primary-btn crate-craft-btn" onclick="craftSummerCrate()">Craft Crate</button>
-      <button type="button" class="secondary-btn" onclick="openCrateDropsModal('summer')">View Summer Drops</button>
+      <button id="craft-summer-crate-btn" type="button" class="primary-btn crate-craft-btn" onclick="craftSeasonalCrate()">Craft Crate</button>
+      <button id="craft-seasonal-drops-btn" type="button" class="secondary-btn" onclick="openActiveSeasonalCrateDropsModal()">View Event Drops</button>
       <button type="button" class="secondary-btn" onclick="closeCraftingModal()">Close</button>
     </div>
   </div>

@@ -5192,6 +5192,22 @@ body.home-v3-page .pearl-shop-modal-content {
         linear-gradient(180deg, rgba(32,47,47,.92), rgba(10,31,42,.96));
 }
 
+.home-crate-card.christmas {
+    border-color: rgba(127,232,201,.30);
+    background:
+        radial-gradient(ellipse at 90% 0%, rgba(255,92,92,.16), transparent 46%),
+        radial-gradient(ellipse at 10% 8%, rgba(127,232,201,.13), transparent 40%),
+        linear-gradient(180deg, rgba(17,54,45,.93), rgba(41,20,35,.96));
+}
+
+.home-crate-card.halloween {
+    border-color: rgba(190,108,255,.30);
+    background:
+        radial-gradient(ellipse at 90% 0%, rgba(255,136,66,.17), transparent 46%),
+        radial-gradient(ellipse at 12% 10%, rgba(190,108,255,.16), transparent 38%),
+        linear-gradient(180deg, rgba(45,22,72,.94), rgba(23,15,35,.97));
+}
+
 .home-crate-topline {
     display: flex;
     align-items: flex-start;
@@ -5276,6 +5292,20 @@ body.home-v3-page .pearl-shop-modal-content {
     background:
         radial-gradient(circle at top, rgba(255,255,255,.14), transparent 42%),
         linear-gradient(160deg, rgba(255,214,120,.28), rgba(255,120,72,.34));
+}
+
+.home-crate-visual.christmas {
+    color: #eafff7;
+    background:
+        radial-gradient(circle at top, rgba(255,255,255,.16), transparent 42%),
+        linear-gradient(160deg, rgba(80,220,170,.25), rgba(190,42,64,.36));
+}
+
+.home-crate-visual.halloween {
+    color: #ffe7c7;
+    background:
+        radial-gradient(circle at top, rgba(255,255,255,.14), transparent 42%),
+        linear-gradient(160deg, rgba(184,108,255,.28), rgba(255,132,50,.36));
 }
 
 .home-crate-odds {
@@ -6515,12 +6545,36 @@ overflow-y:auto;
     color: #ffe2a5;
 }
 
+.crate-crafting-icon.event {
+    background:
+        radial-gradient(circle at top, rgba(255, 255, 255, 0.14), transparent 42%),
+        linear-gradient(160deg, rgba(126, 232, 255, 0.22), rgba(72, 116, 255, 0.3));
+    border: 1px solid rgba(126, 232, 255, 0.22);
+    color: #dffaff;
+}
+
 .crate-crafting-icon.summer {
     background:
         radial-gradient(circle at top, rgba(255, 255, 255, 0.14), transparent 42%),
         linear-gradient(160deg, rgba(255, 214, 120, 0.28), rgba(255, 120, 72, 0.34));
     border: 1px solid rgba(255, 183, 120, 0.22);
     color: #ffe7b0;
+}
+
+.crate-crafting-icon.christmas {
+    background:
+        radial-gradient(circle at top, rgba(255, 255, 255, 0.16), transparent 42%),
+        linear-gradient(160deg, rgba(80, 220, 170, 0.26), rgba(190, 42, 64, 0.34));
+    border: 1px solid rgba(127, 232, 201, 0.24);
+    color: #eafff7;
+}
+
+.crate-crafting-icon.halloween {
+    background:
+        radial-gradient(circle at top, rgba(255, 255, 255, 0.14), transparent 42%),
+        linear-gradient(160deg, rgba(184, 108, 255, 0.28), rgba(255, 132, 50, 0.34));
+    border: 1px solid rgba(190, 108, 255, 0.24);
+    color: #ffe3bd;
 }
 
 .crate-crafting-arrow {
@@ -7181,11 +7235,13 @@ overflow-y:auto;
         0 18px 36px rgba(255, 120, 72, 0.22);
 }
 
-.crate-unbox-overlay.crate-theme-summer .crate-unbox-crate.opening-summer {
+.crate-unbox-overlay.crate-theme-summer .crate-unbox-crate.opening-summer,
+.crate-unbox-overlay.crate-theme-summer .crate-unbox-crate.opening-seasonal {
     animation: summerCratePop 0.95s cubic-bezier(0.34, 1.35, 0.48, 1) forwards;
 }
 
-.crate-unbox-overlay.crate-theme-summer .crate-unbox-crate.opening-summer .crate-unbox-crate-lid {
+.crate-unbox-overlay.crate-theme-summer .crate-unbox-crate.opening-summer .crate-unbox-crate-lid,
+.crate-unbox-overlay.crate-theme-summer .crate-unbox-crate.opening-seasonal .crate-unbox-crate-lid {
     animation: summerCrateLidFlip 0.72s cubic-bezier(0.22, 1.12, 0.36, 1) forwards;
 }
 
@@ -7225,6 +7281,180 @@ overflow-y:auto;
 
 .crate-reveal-card-summer {
     filter: drop-shadow(0 10px 24px rgba(255, 168, 88, 0.18));
+}
+
+.crate-unbox-overlay.crate-theme-christmas .crate-unbox-backdrop {
+    background:
+        radial-gradient(circle at 50% 18%, rgba(210, 255, 240, 0.24), transparent 34%),
+        radial-gradient(circle at 16% 80%, rgba(255, 90, 95, 0.16), transparent 28%),
+        radial-gradient(circle at 84% 78%, rgba(86, 220, 170, 0.15), transparent 26%),
+        rgba(4, 22, 28, 0.88);
+}
+
+.crate-unbox-overlay.crate-theme-christmas .crate-unbox-stage {
+    background:
+        radial-gradient(circle at top, rgba(226, 255, 246, 0.14), transparent 42%),
+        linear-gradient(180deg, rgba(12, 58, 50, 0.98), rgba(42, 18, 34, 0.98));
+    border-color: rgba(164, 255, 225, 0.2);
+    box-shadow:
+        0 30px 90px rgba(0, 0, 0, 0.45),
+        inset 0 0 0 1px rgba(255, 255, 255, 0.07);
+}
+
+.crate-unbox-overlay.crate-theme-halloween .crate-unbox-backdrop {
+    background:
+        radial-gradient(circle at 50% 18%, rgba(198, 112, 255, 0.22), transparent 34%),
+        radial-gradient(circle at 18% 82%, rgba(255, 132, 50, 0.16), transparent 28%),
+        radial-gradient(circle at 82% 78%, rgba(112, 255, 170, 0.1), transparent 26%),
+        rgba(14, 8, 24, 0.9);
+}
+
+.crate-unbox-overlay.crate-theme-halloween .crate-unbox-stage {
+    background:
+        radial-gradient(circle at top, rgba(190, 108, 255, 0.14), transparent 42%),
+        linear-gradient(180deg, rgba(43, 22, 69, 0.98), rgba(18, 12, 30, 0.98));
+    border-color: rgba(221, 148, 255, 0.2);
+    box-shadow:
+        0 30px 90px rgba(0, 0, 0, 0.48),
+        inset 0 0 0 1px rgba(255, 146, 70, 0.06);
+}
+
+.crate-unbox-overlay.crate-theme-christmas .crate-unbox-fx,
+.crate-unbox-overlay.crate-theme-christmas .crate-unbox-splash,
+.crate-unbox-overlay.crate-theme-halloween .crate-unbox-fx,
+.crate-unbox-overlay.crate-theme-halloween .crate-unbox-splash {
+    display: block;
+}
+
+.crate-unbox-overlay.crate-theme-christmas .crate-unbox-sun {
+    background: radial-gradient(circle, #ffffff 0%, #d8fff2 42%, rgba(84, 220, 170, 0.18) 72%);
+    box-shadow: 0 0 40px rgba(164, 255, 225, 0.36);
+}
+
+.crate-unbox-overlay.crate-theme-halloween .crate-unbox-sun {
+    background: radial-gradient(circle, #fff0c7 0%, #d28cff 44%, rgba(255, 132, 50, 0.18) 74%);
+    box-shadow: 0 0 42px rgba(190, 108, 255, 0.4);
+}
+
+.crate-unbox-overlay.crate-theme-christmas .crate-unbox-rays {
+    opacity: 0.46;
+    background: conic-gradient(from 0deg, rgba(222, 255, 244, 0.38) 0deg 14deg, transparent 14deg 32deg);
+}
+
+.crate-unbox-overlay.crate-theme-halloween .crate-unbox-rays {
+    opacity: 0.5;
+    background: conic-gradient(from 0deg, rgba(255, 132, 50, 0.34) 0deg 12deg, transparent 12deg 32deg, rgba(190, 108, 255, 0.3) 32deg 44deg, transparent 44deg 64deg);
+}
+
+.crate-unbox-overlay.crate-theme-christmas .crate-unbox-waves {
+    background:
+        radial-gradient(ellipse 38% 100% at 18% 100%, rgba(222, 255, 244, 0.28), transparent 70%),
+        radial-gradient(ellipse 34% 100% at 52% 100%, rgba(255, 92, 98, 0.16), transparent 72%),
+        radial-gradient(ellipse 36% 100% at 84% 100%, rgba(127, 232, 201, 0.24), transparent 70%);
+}
+
+.crate-unbox-overlay.crate-theme-halloween .crate-unbox-waves {
+    background:
+        radial-gradient(ellipse 38% 100% at 18% 100%, rgba(190, 108, 255, 0.24), transparent 70%),
+        radial-gradient(ellipse 34% 100% at 52% 100%, rgba(255, 132, 50, 0.18), transparent 72%),
+        radial-gradient(ellipse 36% 100% at 84% 100%, rgba(96, 255, 160, 0.12), transparent 70%);
+}
+
+.crate-unbox-overlay.crate-theme-christmas .crate-unbox-sparkles span {
+    background: rgba(232, 255, 248, 0.95);
+    box-shadow: 0 0 12px rgba(164, 255, 225, 0.8);
+}
+
+.crate-unbox-overlay.crate-theme-halloween .crate-unbox-sparkles span {
+    background: rgba(255, 197, 128, 0.95);
+    box-shadow: 0 0 13px rgba(190, 108, 255, 0.78);
+}
+
+.crate-unbox-overlay.crate-theme-christmas .crate-unbox-crate,
+.crate-unbox-overlay.crate-theme-halloween .crate-unbox-crate {
+    animation: summerCrateFloat 2.1s ease-in-out infinite;
+}
+
+.crate-unbox-overlay.crate-theme-christmas .crate-unbox-crate-lid {
+    background: linear-gradient(180deg, rgba(246, 255, 252, 0.98), rgba(88, 206, 163, 0.95));
+    border-color: rgba(203, 255, 238, 0.42);
+}
+
+.crate-unbox-overlay.crate-theme-christmas .crate-unbox-crate-body {
+    color: #f2fff9;
+    background:
+        radial-gradient(circle at 50% 12%, rgba(255, 255, 255, 0.2), transparent 38%),
+        linear-gradient(180deg, rgba(214, 58, 74, 0.96), rgba(98, 33, 53, 0.98));
+    border-color: rgba(164, 255, 225, 0.28);
+    box-shadow: 0 18px 36px rgba(34, 196, 142, 0.16);
+}
+
+.crate-unbox-overlay.crate-theme-halloween .crate-unbox-crate-lid {
+    background: linear-gradient(180deg, rgba(255, 181, 87, 0.98), rgba(137, 68, 220, 0.95));
+    border-color: rgba(255, 191, 118, 0.36);
+}
+
+.crate-unbox-overlay.crate-theme-halloween .crate-unbox-crate-body {
+    color: #fff1d6;
+    background:
+        radial-gradient(circle at 50% 12%, rgba(255, 255, 255, 0.18), transparent 38%),
+        linear-gradient(180deg, rgba(105, 46, 168, 0.96), rgba(44, 23, 69, 0.98));
+    border-color: rgba(221, 148, 255, 0.28);
+    box-shadow: 0 18px 36px rgba(190, 108, 255, 0.18);
+}
+
+.crate-unbox-overlay.crate-theme-christmas .crate-unbox-crate.opening-seasonal,
+.crate-unbox-overlay.crate-theme-halloween .crate-unbox-crate.opening-seasonal {
+    animation: summerCratePop 0.95s cubic-bezier(0.34, 1.35, 0.48, 1) forwards;
+}
+
+.crate-unbox-overlay.crate-theme-christmas .crate-unbox-crate.opening-seasonal .crate-unbox-crate-lid,
+.crate-unbox-overlay.crate-theme-halloween .crate-unbox-crate.opening-seasonal .crate-unbox-crate-lid {
+    animation: summerCrateLidFlip 0.72s cubic-bezier(0.22, 1.12, 0.36, 1) forwards;
+}
+
+.crate-unbox-burst.active-christmas {
+    background: radial-gradient(circle, rgba(225, 255, 246, 0.76), rgba(86, 220, 170, 0.18) 42%, transparent 70%);
+    animation: summerBurstGlow 1s ease forwards;
+}
+
+.crate-unbox-burst.active-halloween {
+    background: radial-gradient(circle, rgba(255, 168, 80, 0.76), rgba(190, 108, 255, 0.2) 42%, transparent 70%);
+    animation: summerBurstGlow 1s ease forwards;
+}
+
+.crate-unbox-overlay.crate-theme-christmas .crate-unbox-copy {
+    color: #eafff7;
+    text-shadow: 0 2px 16px rgba(84, 220, 170, 0.25);
+}
+
+.crate-unbox-overlay.crate-theme-halloween .crate-unbox-copy {
+    color: #ffe3bd;
+    text-shadow: 0 2px 16px rgba(190, 108, 255, 0.26);
+}
+
+.crate-overlay-reveal.crate-reveal-christmas {
+    border-color: rgba(164, 255, 225, 0.22);
+    background:
+        radial-gradient(circle at top right, rgba(225, 255, 246, 0.16), transparent 36%),
+        linear-gradient(180deg, rgba(11, 52, 45, 0.98), rgba(42, 18, 34, 0.98));
+    animation: summerRevealPop 0.55s cubic-bezier(0.22, 1.12, 0.36, 1);
+}
+
+.crate-overlay-reveal.crate-reveal-halloween {
+    border-color: rgba(221, 148, 255, 0.22);
+    background:
+        radial-gradient(circle at top right, rgba(255, 132, 50, 0.14), transparent 36%),
+        linear-gradient(180deg, rgba(43, 22, 69, 0.98), rgba(18, 12, 30, 0.98));
+    animation: summerRevealPop 0.55s cubic-bezier(0.22, 1.12, 0.36, 1);
+}
+
+.crate-reveal-card-christmas {
+    filter: drop-shadow(0 10px 24px rgba(84, 220, 170, 0.16));
+}
+
+.crate-reveal-card-halloween {
+    filter: drop-shadow(0 10px 24px rgba(190, 108, 255, 0.18));
 }
 
 @keyframes summerSunPulse {
@@ -7308,6 +7538,11 @@ overflow-y:auto;
 @media (prefers-reduced-motion: reduce) {
     .crate-unbox-overlay.crate-theme-summer .crate-unbox-crate,
     .crate-unbox-overlay.crate-theme-summer .crate-unbox-crate.opening-summer,
+    .crate-unbox-overlay.crate-theme-summer .crate-unbox-crate.opening-seasonal,
+    .crate-unbox-overlay.crate-theme-christmas .crate-unbox-crate,
+    .crate-unbox-overlay.crate-theme-christmas .crate-unbox-crate.opening-seasonal,
+    .crate-unbox-overlay.crate-theme-halloween .crate-unbox-crate,
+    .crate-unbox-overlay.crate-theme-halloween .crate-unbox-crate.opening-seasonal,
     .crate-unbox-sun,
     .crate-unbox-rays,
     .crate-unbox-waves,
@@ -7315,7 +7550,10 @@ overflow-y:auto;
         animation: none !important;
     }
 
-    .crate-unbox-overlay.crate-theme-summer .crate-unbox-crate.opening-summer .crate-unbox-crate-lid {
+    .crate-unbox-overlay.crate-theme-summer .crate-unbox-crate.opening-summer .crate-unbox-crate-lid,
+    .crate-unbox-overlay.crate-theme-summer .crate-unbox-crate.opening-seasonal .crate-unbox-crate-lid,
+    .crate-unbox-overlay.crate-theme-christmas .crate-unbox-crate.opening-seasonal .crate-unbox-crate-lid,
+    .crate-unbox-overlay.crate-theme-halloween .crate-unbox-crate.opening-seasonal .crate-unbox-crate-lid {
         transform: translateY(-20px) rotate(-24deg);
     }
 }
