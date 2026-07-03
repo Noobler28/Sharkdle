@@ -1098,6 +1098,27 @@ content="Play Sharkdle, the daily shark guessing game. Guess shark species from 
 <div class="admin-abuse-row">
 <input id="admin-grant-shields-count" type="number" min="1" max="99" step="1" value="1" class="admin-abuse-input" placeholder="Amount">
 <button class="admin-abuse-btn" onclick="adminGrantGlobalStreakShields()">Grant</button>
+</div>
+</div>
+<div id="admin-grant-status" class="admin-abuse-status">Item grants ready.</div>
+</section>
+
+<section class="picker-section admin-abuse-section">
+<h3>Player Compensation</h3>
+<div class="admin-abuse-row">
+<input id="admin-player-comp-target" type="text" class="admin-abuse-input admin-player-target-input" placeholder="UID or exact username">
+<select id="admin-player-comp-type" class="admin-abuse-select">
+<option value="levels">Shark Pass Levels</option>
+<option value="xp">XP</option>
+<option value="pearls">Pearls</option>
+<option value="crates">Cosmetic Crates</option>
+<option value="streak_shields">Streak Shields</option>
+<option value="spins">Daily Spins</option>
+</select>
+<input id="admin-player-comp-count" type="number" min="1" max="1000000" step="1" value="1" class="admin-abuse-input" placeholder="Amount">
+<button class="admin-abuse-btn" onclick="adminCompensatePlayer()">Give</button>
+</div>
+<div id="admin-comp-status" class="admin-abuse-status">Compensation tools ready.</div>
 </section>
 
 <section class="picker-section admin-abuse-section">

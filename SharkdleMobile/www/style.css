@@ -5678,6 +5678,102 @@ overflow-y:auto;
     flex: 1 1 240px;
 }
 
+.admin-player-target-input {
+    flex: 1 1 280px;
+}
+
+.admin-compensation-popup {
+    position: fixed;
+    right: 20px;
+    bottom: 20px;
+    z-index: 10050;
+    width: min(340px, calc(100vw - 32px));
+    padding: 16px;
+    border: 1px solid rgba(126, 232, 255, 0.34);
+    border-radius: 14px;
+    background:
+        linear-gradient(150deg, rgba(6, 34, 52, 0.96), rgba(2, 17, 30, 0.97));
+    color: #ecfdff;
+    box-shadow: 0 18px 38px rgba(0, 0, 0, 0.38);
+    animation: admin-compensation-pop 0.22s ease-out;
+}
+
+.admin-compensation-popup-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    color: #7ee8ff;
+    font-size: 11px;
+    font-weight: 900;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.admin-compensation-popup-close {
+    border: 0;
+    background: rgba(255, 255, 255, 0.08);
+    color: #ecfdff;
+    border-radius: 999px;
+    width: 28px;
+    height: 28px;
+    cursor: pointer;
+    font-weight: 900;
+}
+
+.admin-compensation-popup h3 {
+    margin: 8px 0 10px;
+    color: #ffffff;
+    font-size: 18px;
+    line-height: 1.18;
+}
+
+.admin-compensation-popup ul {
+    display: grid;
+    gap: 7px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.admin-compensation-popup li {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 8px 10px;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.07);
+    color: #d9f8ff;
+    font-weight: 800;
+}
+
+.admin-compensation-popup small {
+    display: block;
+    margin-top: 10px;
+    color: rgba(226, 247, 255, 0.62);
+    font-size: 12px;
+}
+
+@keyframes admin-compensation-pop {
+    from {
+        opacity: 0;
+        transform: translateY(12px) scale(0.98);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+@media (max-width: 640px) {
+    .admin-compensation-popup {
+        right: 16px;
+        bottom: 16px;
+        left: 16px;
+        width: auto;
+    }
+}
+
 .admin-abuse-textarea {
     width: 100%;
     min-height: 86px;

@@ -1,6 +1,7 @@
 const FRIENDS_COLLECTION = 'friendNetwork';
 const FRIEND_CODES_COLLECTION = 'friendCodes';
 let friendDocumentUnsubscribe = null;
+let adminCompensationNoticeUnsubscribe = null;
 let activeDuelsCache = [];
 let currentOpenDuelId = null;
 let duelSharkOptionsReady = false;
@@ -6512,6 +6513,83 @@ function showCosmeticUnlockToast(cosmetic, options = {}) {
     }, duration);
 }
 
+function normalizeAdminCompensationNotice(rawNotice) {
+    if (!rawNotice || typeof rawNotice !== "object") return null;
+    const id = String(rawNotice.id || rawNotice.createdAt || "").trim();
+    if (!id) return null;
+    const grants = Array.isArray(rawNotice.grants)
+        ? rawNotice.grants
+            .filter(grant => grant && typeof grant === "object")
+            .map(grant => ({
+                name: String(grant.name || grant.label || "Reward").trim().slice(0, 60),
+                value: String(grant.value || "").trim().slice(0, 40),
+                detail: String(grant.detail || "").trim().slice(0, 80)
+            }))
+            .filter(grant => grant.name || grant.value)
+        : [];
+    if (!grants.length) return null;
+    return {
+        id,
+        createdAt: Number(rawNotice.createdAt) || Date.now(),
+        grants
+    };
+}
+
+function getAdminCompensationSeenStorageKey(uid = currentUser?.uid) {
+    return uid ? `adminCompensationSeen_${uid}` : "adminCompensationSeen";
+}
+
+function hasSeenAdminCompensationNotice(notice, uid = currentUser?.uid) {
+    if (!notice?.id) return true;
+    return localStorage.getItem(getAdminCompensationSeenStorageKey(uid)) === notice.id;
+}
+
+function markAdminCompensationNoticeSeen(notice, uid = currentUser?.uid) {
+    if (!notice?.id) return;
+    localStorage.setItem(getAdminCompensationSeenStorageKey(uid), notice.id);
+}
+
+function showAdminCompensationPopup(notice) {
+    const normalizedNotice = normalizeAdminCompensationNotice(notice);
+    if (!normalizedNotice) return;
+
+    document.querySelectorAll(".admin-compensation-popup").forEach(element => element.remove());
+
+    const popup = document.createElement("div");
+    popup.className = "admin-compensation-popup";
+    popup.setAttribute("role", "status");
+    popup.innerHTML = `
+        <div class="admin-compensation-popup-header">
+            <span>Admin Compensation</span>
+            <button class="admin-compensation-popup-close" type="button" aria-label="Close compensation popup">x</button>
+        </div>
+        <h3>U have been compensated by an admin</h3>
+        <ul>
+            ${normalizedNotice.grants.map(grant => `
+                <li>
+                    <span>${escapeHtml(grant.name)}</span>
+                    <strong>${escapeHtml(grant.value)}</strong>
+                </li>
+            `).join("")}
+        </ul>
+        ${normalizedNotice.grants.some(grant => grant.detail)
+            ? `<small>${escapeHtml(normalizedNotice.grants.map(grant => grant.detail).filter(Boolean).join(" | "))}</small>`
+            : ""}
+    `;
+
+    popup.querySelector(".admin-compensation-popup-close")?.addEventListener("click", () => popup.remove());
+    document.body.appendChild(popup);
+    setTimeout(() => popup.remove(), 9000);
+}
+
+function maybeShowAdminCompensationNotice(profileData = {}) {
+    const notice = normalizeAdminCompensationNotice(profileData.adminCompensationNotice);
+    if (!notice || hasSeenAdminCompensationNotice(notice, profileData.uid || currentUser?.uid)) return false;
+    markAdminCompensationNoticeSeen(notice, profileData.uid || currentUser?.uid);
+    showAdminCompensationPopup(notice);
+    return true;
+}
+
 // Loading state manager
 function showLoadingState(element, show = true) {
     if (show) {
@@ -6904,8 +6982,10 @@ function setupAuthStateListener() {
             }, 1500);
         }
         unsubscribeFriendNetworkListener();
+        unsubscribeAdminCompensationNoticeListener();
         if (user && db) {
             setupFriendNetworkListener();
+            setupAdminCompensationNoticeListener();
         }
         // Ensure DOM is ready before updating UI
         if (document.readyState === 'loading') {
@@ -6947,6 +7027,30 @@ function unsubscribeFriendNetworkListener() {
     if (friendDocumentUnsubscribe) {
         friendDocumentUnsubscribe();
         friendDocumentUnsubscribe = null;
+    }
+}
+
+function setupAdminCompensationNoticeListener() {
+    if (!db || !currentUser) return;
+    if (adminCompensationNoticeUnsubscribe) {
+        adminCompensationNoticeUnsubscribe();
+    }
+    adminCompensationNoticeUnsubscribe = db.collection("userStats").doc(currentUser.uid).onSnapshot(snapshot => {
+        if (!snapshot.exists) return;
+        const data = snapshot.data() || {};
+        maybeShowAdminCompensationNotice({
+            uid: currentUser.uid,
+            adminCompensationNotice: data.adminCompensationNotice
+        });
+    }, error => {
+        console.warn("Admin compensation notice listener failed:", error);
+    });
+}
+
+function unsubscribeAdminCompensationNoticeListener() {
+    if (adminCompensationNoticeUnsubscribe) {
+        adminCompensationNoticeUnsubscribe();
+        adminCompensationNoticeUnsubscribe = null;
     }
 }
 
@@ -7824,6 +7928,7 @@ function mergeProfilesSafely(localProfile, firebaseData) {
         lastSpinWheelDate: [normalizeStoredDateValue(localProfile.lastSpinWheelDate), normalizeStoredDateValue(firebaseData.lastSpinWheelDate)].filter(Boolean).sort().pop() || "",
         dailySpinWinDate: [normalizeStoredDateValue(localProfile.dailySpinWinDate), normalizeStoredDateValue(firebaseData.dailySpinWinDate)].filter(Boolean).sort().pop() || "",
         dailySpinBonusSpins: preferredDailySpinBonusSpins,
+        adminCompensationNotice: normalizeAdminCompensationNotice(firebaseData.adminCompensationNotice),
         lastUpdated: Math.max(localUpdatedMs, firebaseUpdatedMs)
     };
 }
@@ -8007,6 +8112,7 @@ async function loadUserProfile(options = {}) {
         if (typeof loadAvailablePFPs === "function") {
             loadAvailablePFPs();
         }
+        maybeShowAdminCompensationNotice(userData);
         return userData;
     } catch (error) {
         console.error("Error loading profile:", error);
@@ -11148,6 +11254,260 @@ async function grantGlobalStreakShields(amount = 1) {
     }));
 }
 
+function buildAdminLevelSyncPayload(totalXP) {
+    const safeTotalXP = Math.max(0, Math.floor(Number(totalXP) || 0));
+    const currentLevel = getLevelFromXP(safeTotalXP);
+    const currentXP = getXPInCurrentLevel(safeTotalXP);
+    const xpToNextLevel = getXPToNextLevel(safeTotalXP);
+    const unlockedPfps = levelRewards
+        .filter(reward => reward.level <= currentLevel)
+        .map(reward => ({ level: reward.level, name: reward.name || reward.imagePath }));
+
+    return {
+        totalXP: safeTotalXP,
+        currentLevel,
+        currentXP,
+        xpToNextLevel,
+        unlockedPfps
+    };
+}
+
+async function resolveAdminTargetUserStats(target) {
+    if (!isDeveloperSessionActive()) {
+        throw new Error("Developer access required.");
+    }
+    if (!db) {
+        throw new Error("Firestore is not ready yet.");
+    }
+
+    const lookup = String(target || "").trim();
+    if (!lookup) {
+        throw new Error("Enter a UID or exact username.");
+    }
+
+    const statsCollection = db.collection("userStats");
+    if (!lookup.includes("/")) {
+        const directDoc = await statsCollection.doc(lookup).get();
+        if (directDoc.exists) {
+            return {
+                uid: directDoc.id,
+                ref: directDoc.ref,
+                data: directDoc.data() || {}
+            };
+        }
+    }
+
+    const usernameSnapshot = await statsCollection
+        .where("username", "==", lookup)
+        .limit(2)
+        .get();
+
+    if (usernameSnapshot.size > 1) {
+        throw new Error("Multiple players matched that username. Use UID instead.");
+    }
+
+    if (usernameSnapshot.size === 1) {
+        const doc = usernameSnapshot.docs[0];
+        return {
+            uid: doc.id,
+            ref: doc.ref,
+            data: doc.data() || {}
+        };
+    }
+
+    throw new Error("No player found for that UID or exact username.");
+}
+
+function getAdminPlayerLabel(uid, data = {}) {
+    const username = String(data.username || "").trim();
+    if (username) return username;
+    return `Player ${String(uid || "").slice(0, 6)}`;
+}
+
+const ADMIN_COMPENSATION_TYPES = {
+    levels: { max: 100, name: "Shark Pass Levels" },
+    xp: { max: 1000000, name: "XP" },
+    pearls: { max: 1000000, name: "Pearls" },
+    crates: { max: 999, name: "Cosmetic Crates" },
+    streak_shields: { max: 3, name: "Streak Shields" },
+    spins: { max: 999, name: "Daily Spins" }
+};
+
+function normalizeAdminCompensationType(type = "levels") {
+    const normalized = String(type || "").trim().toLowerCase().replace(/-/g, "_");
+    return ADMIN_COMPENSATION_TYPES[normalized] ? normalized : "levels";
+}
+
+function getAdminCompensationAmount(type, rawAmount) {
+    const meta = ADMIN_COMPENSATION_TYPES[normalizeAdminCompensationType(type)];
+    const count = Math.floor(Number(rawAmount));
+    if (!Number.isFinite(count) || count <= 0 || count > meta.max) {
+        throw new Error(`Enter an amount from 1 to ${meta.max.toLocaleString()}.`);
+    }
+    return count;
+}
+
+function formatAdminCompensationValue(amount) {
+    return `+${Math.max(0, Math.floor(Number(amount) || 0)).toLocaleString()}`;
+}
+
+function buildAdminCompensationNotice(grant, nowMs) {
+    return {
+        id: `admin-comp-${nowMs}-${Math.random().toString(36).slice(2, 8)}`,
+        createdAt: nowMs,
+        grantedBy: currentUser.uid,
+        grants: [grant]
+    };
+}
+
+function buildAdminCompensationPayload(targetUser, type, amount, nowMs) {
+    const data = targetUser.data || {};
+    const normalizedType = normalizeAdminCompensationType(type);
+    const payload = {
+        lastUpdated: nowMs
+    };
+    let grant = null;
+    const result = {};
+
+    if (normalizedType === "levels") {
+        const currentTotalXP = Math.max(0, Math.floor(Number(data.totalXP) || 0));
+        const currentLevel = getLevelFromXP(currentTotalXP);
+        const currentLevelStartXP = getXPForLevel(currentLevel);
+        const targetLevel = currentLevel + amount;
+        const xpAdded = getXPForLevel(targetLevel) - currentLevelStartXP;
+        const nextTotalXP = currentTotalXP + xpAdded;
+        Object.assign(payload, buildAdminLevelSyncPayload(nextTotalXP), {
+            lastAdminLevelGrant: {
+                levelsAdded: amount,
+                xpAdded,
+                fromLevel: currentLevel,
+                toLevel: targetLevel,
+                grantedAt: nowMs,
+                grantedBy: currentUser.uid
+            }
+        });
+        grant = {
+            name: "Shark Pass Levels",
+            value: formatAdminCompensationValue(amount),
+            detail: `Level ${currentLevel} -> ${targetLevel}`
+        };
+        Object.assign(result, { fromLevel: currentLevel, toLevel: targetLevel, xpAdded, totalXP: nextTotalXP });
+    } else if (normalizedType === "xp") {
+        const currentTotalXP = Math.max(0, Math.floor(Number(data.totalXP) || 0));
+        const nextTotalXP = currentTotalXP + amount;
+        Object.assign(payload, buildAdminLevelSyncPayload(nextTotalXP));
+        grant = {
+            name: "XP",
+            value: formatAdminCompensationValue(amount),
+            detail: `Total XP ${currentTotalXP.toLocaleString()} -> ${nextTotalXP.toLocaleString()}`
+        };
+        Object.assign(result, { xpAdded: amount, totalXP: nextTotalXP });
+    } else if (normalizedType === "pearls") {
+        const currentPearls = Math.max(0, Math.floor(Number(data.pearls ?? data.tidePearls) || 0));
+        const nextPearls = currentPearls + amount;
+        payload.pearls = nextPearls;
+        grant = {
+            name: "Pearls",
+            value: formatAdminCompensationValue(amount),
+            detail: `Pearls ${currentPearls.toLocaleString()} -> ${nextPearls.toLocaleString()}`
+        };
+        Object.assign(result, { pearlsAdded: amount, pearls: nextPearls });
+    } else if (normalizedType === "crates") {
+        const inventory = normalizeCrateInventory(data.crateInventory || {});
+        inventory.reef = (Number(inventory.reef) || 0) + amount;
+        payload.crateInventory = inventory;
+        grant = {
+            name: "Cosmetic Crates",
+            value: formatAdminCompensationValue(amount),
+            detail: `Cosmetic Crates ${inventory.reef.toLocaleString()} total`
+        };
+        Object.assign(result, { cratesAdded: amount, crateInventory: inventory });
+    } else if (normalizedType === "streak_shields") {
+        const currentShields = getStreakShieldCount(data);
+        const nextShields = Math.min(3, currentShields + amount);
+        const actualAmount = nextShields - currentShields;
+        if (actualAmount <= 0) {
+            throw new Error("That player already has max streak shields.");
+        }
+        payload.streakShields = nextShields;
+        grant = {
+            name: "Streak Shields",
+            value: formatAdminCompensationValue(actualAmount),
+            detail: `Streak Shields ${currentShields} -> ${nextShields}`
+        };
+        Object.assign(result, { shieldsAdded: actualAmount, streakShields: nextShields });
+    } else if (normalizedType === "spins") {
+        const currentSpins = normalizeDailySpinBonusCount(data.dailySpinBonusSpins);
+        const nextSpins = currentSpins + amount;
+        payload.dailySpinBonusSpins = nextSpins;
+        grant = {
+            name: "Daily Spins",
+            value: formatAdminCompensationValue(amount),
+            detail: `Daily Spins ${currentSpins.toLocaleString()} -> ${nextSpins.toLocaleString()}`
+        };
+        Object.assign(result, { spinsAdded: amount, dailySpinBonusSpins: nextSpins });
+    }
+
+    payload.adminCompensationNotice = buildAdminCompensationNotice(grant, nowMs);
+    payload.lastAdminCompensation = {
+        type: normalizedType,
+        amount: Number(String(grant.value).replace(/[^0-9]/g, "")) || amount,
+        label: `${grant.name} ${grant.value}`,
+        grantedAt: nowMs,
+        grantedBy: currentUser.uid
+    };
+
+    return { payload, grant, result, type: normalizedType };
+}
+
+async function compensatePlayer(target, type = "levels", amount = 1) {
+    const normalizedType = normalizeAdminCompensationType(type);
+    const count = getAdminCompensationAmount(normalizedType, amount);
+    const targetUser = await resolveAdminTargetUserStats(target);
+    const nowMs = Date.now();
+    const { payload, grant, result } = buildAdminCompensationPayload(targetUser, normalizedType, count, nowMs);
+
+    await targetUser.ref.set(payload, { merge: true });
+
+    if (targetUser.uid === currentUser.uid) {
+        await loadUserProfile();
+        updateAuthUI();
+    }
+
+    return {
+        uid: targetUser.uid,
+        username: getAdminPlayerLabel(targetUser.uid, targetUser.data),
+        type: normalizedType,
+        amount: count,
+        grant,
+        ...result
+    };
+}
+
+function addLevelsToPlayer(target, levelsToAdd = 1) {
+    return compensatePlayer(target, "levels", levelsToAdd);
+}
+
+function addXPToPlayer(target, xpAmount = 1) {
+    return compensatePlayer(target, "xp", xpAmount);
+}
+
+function addPearlsToPlayer(target, pearlAmount = 1) {
+    return compensatePlayer(target, "pearls", pearlAmount);
+}
+
+function addCratesToPlayer(target, crateAmount = 1) {
+    return compensatePlayer(target, "crates", crateAmount);
+}
+
+function addStreakShieldsToPlayer(target, shieldAmount = 1) {
+    return compensatePlayer(target, "streak_shields", shieldAmount);
+}
+
+function giveSpinsToPlayer(target, spinAmount = 1) {
+    return compensatePlayer(target, "spins", spinAmount);
+}
+
 async function refreshAdminAbusePanel() {
     if (!isDeveloperSessionActive() || !db) return false;
 
@@ -11284,6 +11644,44 @@ async function adminGrantGlobalStreakShields() {
     } catch (error) {
         setAdminAbuseStatus("admin-grant-status", `Shield grant failed: ${error.message || error}`, { error: true });
     }
+}
+
+async function adminCompensatePlayer() {
+    if (!isDeveloperSessionActive()) {
+        showNotification("Developer access required.", "error", 3000);
+        return;
+    }
+
+    const targetInput = document.getElementById("admin-player-comp-target");
+    const typeSelect = document.getElementById("admin-player-comp-type");
+    const countInput = document.getElementById("admin-player-comp-count");
+    const target = String(targetInput?.value || "").trim();
+    const type = normalizeAdminCompensationType(typeSelect?.value || "levels");
+    const count = Math.floor(Number(countInput?.value));
+
+    if (!target) {
+        setAdminAbuseStatus("admin-comp-status", "Enter a UID or exact username.", { error: true });
+        return;
+    }
+
+    try {
+        const safeCount = getAdminCompensationAmount(type, count);
+        const meta = ADMIN_COMPENSATION_TYPES[type];
+        setAdminAbuseStatus("admin-comp-status", `Giving ${safeCount.toLocaleString()} ${meta.name}...`);
+        const result = await compensatePlayer(target, type, safeCount);
+        const detail = result.grant.detail ? ` (${result.grant.detail})` : "";
+        setAdminAbuseStatus(
+            "admin-comp-status",
+            `Gave ${result.grant.value} ${result.grant.name} to ${result.username}${detail}.`
+        );
+        showNotification(`Gave ${result.grant.value} ${result.grant.name} to ${result.username}.`, "success", 3400);
+    } catch (error) {
+        setAdminAbuseStatus("admin-comp-status", `Compensation failed: ${error.message || error}`, { error: true });
+    }
+}
+
+function adminAddPlayerLevels() {
+    return adminCompensatePlayer();
 }
 
 async function adminApplyIndexTheme() {
@@ -11774,6 +12172,13 @@ function showCommands() {
     console.log("addXP(100) - Add XP");
     console.log("setLevel(10) - Set your level directly");
     console.log("openAdminAbuseMenu() - Open the Admin Abuse panel");
+    console.log("compensatePlayer('uid-or-username', 'xp', 500) - Give a targeted admin compensation");
+    console.log("addLevelsToPlayer('uid-or-username', 3) - Add Shark Pass levels to a player");
+    console.log("addXPToPlayer('uid-or-username', 500) - Add XP to a player");
+    console.log("addPearlsToPlayer('uid-or-username', 100) - Add pearls to a player");
+    console.log("addCratesToPlayer('uid-or-username', 2) - Add Cosmetic Crates to a player");
+    console.log("addStreakShieldsToPlayer('uid-or-username', 1) - Add Streak Shields to a player");
+    console.log("giveSpinsToPlayer('uid-or-username', 1) - Add daily wheel spins to a player");
     console.log("startGlobalDoubleXpEvent(72) - Start a global 2x XP event");
     console.log("stopGlobalDoubleXpEvent() - Stop the global 2x XP event");
     console.log("addWin() - Add 1 win");
