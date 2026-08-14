@@ -5698,9 +5698,12 @@ async function performRoll() {
             throw new Error("Firestore is not ready yet.");
         }
 
-        const lookup = typeof target === "object" && target
+        const rawLookup = typeof target === "object" && target
             ? String(target.uid || target.id || target.username || "").trim()
             : String(target || "").trim();
+        const explicitUidMatch = rawLookup.match(/^uid\s*:\s*(.+)$/i);
+        const explicitUid = explicitUidMatch ? explicitUidMatch[1].trim() : "";
+        const lookup = explicitUid || rawLookup;
 
         if (!lookup) {
             throw new Error("Enter a UID or exact username.");
@@ -5719,7 +5722,7 @@ async function performRoll() {
         }
         if (usernameTargets.length === 1) return usernameTargets[0];
 
-        if (/^[A-Za-z0-9_-]{8,}$/.test(lookup)) {
+        if (explicitUid && /^[A-Za-z0-9_-]{8,}$/.test(lookup)) {
             return {
                 uid: lookup,
                 data: {},
@@ -5727,7 +5730,7 @@ async function performRoll() {
             };
         }
 
-        throw new Error("No player found for that UID or exact username.");
+        throw new Error("No player found for that exact username. Use their Firebase UID as uid:THEIR_UID if needed.");
     }
 
     function parseRngNextRollArgs(target, sharkName, mutation = "base") {
@@ -5983,9 +5986,9 @@ async function performRoll() {
             console.log("addRngPrestigePoints(10) - Alias for addRngRebirthTokens");
             console.log("unlockRngIndex() - Unlock every RNG index entry");
             console.log("nextRollApex() - Force the next RNG roll to be Apex");
-            console.log('nextroll("username or uid", "Great White Shark", "apex") - Queue any species/mutation as someone\'s next RNG roll');
-            console.log('nextroll("username - Great White Shark - apex") - Same command using dashed text');
-            console.log('clearNextRngRoll("username or uid") - Clear someone\'s queued RNG next roll');
+            console.log('nextroll("exact username or uid:firebaseUid", "Great White Shark", "apex") - Queue any species/mutation as someone\'s next RNG roll');
+            console.log('nextroll("exact username - Great White Shark - apex") - Same command using dashed text');
+            console.log('clearNextRngRoll("exact username or uid:firebaseUid") - Clear someone\'s queued RNG next roll');
             console.log('findRngSharks("white") - Search exact RNG species names');
             console.log("showRngStats() - Display current RNG stats");
             console.log("showRngCommands() - Show this help");
