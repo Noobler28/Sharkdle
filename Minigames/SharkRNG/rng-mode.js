@@ -173,6 +173,8 @@
     const PRESTIGE_XP_PER_POINT = 0.015;
     const PRESTIGE_MULTI_ROLL_COUNTS = [1, 2, 3, 5, 8];
     const POTION_BUY_AMOUNT_MAX = 999_999;
+    const INDEX_BUILD_BATCH_SIZE = 80;
+    const INDEX_RENDER_BATCH_SIZE = 48;
     const PRESTIGE_UPGRADE_DEFS = [
         {
             id: "pearlLuck",
@@ -658,7 +660,7 @@
     const APEX_UPGRADE_BASE_ONE_IN = 4_000_000;
     const APEX_UPGRADE_MIN_ONE_IN = 60_000;
     const APEX_PRESTIGE_UNLOCK_ONE_IN = 2_500_000;
-    const APEX_SURGE_POTION_ONE_IN = 500;
+    const APEX_SURGE_POTION_ONE_IN = 5000;
 
     function buildApexUpgrades() {
         const list = [];
@@ -816,9 +818,11 @@
         apexSurge: {
             name: "Apex Surge Potion",
             icon: "\u{1F988}",
-            desc: "Apex rolls become 1 in 500 for 50 rolls, not guaranteed",
+            desc: "Apex rolls become 1 in 5,000 for your next roll, not guaranteed",
             cost: 1000000000,
-            rolls: 50
+            rolls: 1,
+            maxOwned: 1,
+            fixedRolls: true
         },
         albino: {
             name: "Albino Potion",
@@ -998,6 +1002,8 @@ let rollPool = [];
     let rngCloudHydratedUid = null;
     let collectionSortRarestFirst = true;
     let collectionGridDirty = false;
+    let collectionRenderTimer = null;
+    let collectionRenderToken = 0;
     let localSaveTimer = null;
     let localSaveDirty = false;
     let localSaveFlushBound = false;
@@ -2401,7 +2407,9 @@ let rollPool = [];
     }
 
     function getPotionEffectRolls(def) {
-        return Math.max(1, Math.round((def?.rolls || 0) * getPrestigePotionDurationMultiplier()));
+        const baseRolls = Math.max(1, Math.floor(Number(def?.rolls) || 0));
+        if (def?.fixedRolls) return baseRolls;
+        return Math.max(1, Math.round(baseRolls * getPrestigePotionDurationMultiplier()));
     }
 
     function getLuckPotionStacks() {
@@ -4129,6 +4137,15 @@ function updateAllUi(options = {}) {
          updateStatsUi();
          updateRankUi();
          updateEquippedUi();
+         if (options.lightUi) {
+             if ((options.forceCollectionGrid || options.deferCollectionGridDuringRoll) && isCollectionModalOpen()) {
+                 collectionGridDirty = true;
+             }
+             renderRngLeaderboardSelf();
+             updateAutoButtonUi();
+             updateRollButtonState();
+             return;
+         }
          renderPrestigePanel();
          renderUpgradeShop();
          renderPotionShop();
@@ -4286,6 +4303,140 @@ function updateAllUi(options = {}) {
         renderCollectionGrid({ force: true });
     }
 
+    function cancelCollectionGridRender() {
+        collectionRenderToken += 1;
+        if (collectionRenderTimer) {
+            clearTimeout(collectionRenderTimer);
+            collectionRenderTimer = null;
+        }
+    }
+
+    function scheduleCollectionRenderStep(token, callback) {
+        if (collectionRenderTimer) clearTimeout(collectionRenderTimer);
+        collectionRenderTimer = setTimeout(() => {
+            collectionRenderTimer = null;
+            if (token !== collectionRenderToken || !isCollectionModalOpen()) return;
+            callback();
+        }, autoEnabled ? 14 : 0);
+    }
+
+    function createIndexNote(text) {
+        const note = document.createElement("p");
+        note.className = "rng-empty-note";
+        note.textContent = text;
+        return note;
+    }
+
+    function getIndexSectionDefs(baseOnlyFilter, mutationFilter) {
+        return [
+            { key: "base", title: "Base Species", mutation: null },
+            ...MUTATION_CHANCE_ORDER.map((key) => ({
+                key,
+                title: `${MUTATION_TYPES[key]?.icon || ""} ${MUTATION_TYPES[key]?.name || key}`,
+                mutation: key
+            }))
+        ].filter((section) => {
+            if (baseOnlyFilter) return section.key === "base";
+            if (mutationFilter) return section.key === mutationFilter;
+            return true;
+        });
+    }
+
+    function getIndexCandidateForSection(section, baseShark, filters) {
+        const { baseOnlyFilter, mutationFilter, tierFilter, ownedOnly, searchTokens } = filters;
+        const canonical = section.mutation ? applyStableMutation(baseShark, section.mutation) : baseShark;
+        const key = getCollectionKey(canonical);
+        const entry = player.collection[key] || null;
+        const source = entry || canonical;
+        const displayName = section.mutation ? baseShark.name : canonical.name;
+        const baseTier = getBaseTierName(source);
+        const oddsTier = getOddsTierName(source);
+        const searchHaystack = `${displayName} ${section.title} ${baseTier} ${oddsTier}`.toLowerCase();
+
+        if (!baseOnlyFilter && !mutationFilter && tierFilter !== "all" && baseTier !== tierFilter) {
+            return null;
+        }
+        if (ownedOnly && !entry) {
+            return null;
+        }
+        if (searchTokens.length && !searchTokens.every(token => searchHaystack.includes(token))) {
+            return null;
+        }
+
+        return {
+            key,
+            entry,
+            canonical,
+            displayName,
+            baseTier,
+            oddsTier,
+            obtained: Boolean(entry)
+        };
+    }
+
+    function sortIndexCandidates(candidates) {
+        candidates.sort((a, b) => {
+            const oddsDiff = collectionSortRarestFirst
+                ? (b.canonical.oneIn || 0) - (a.canonical.oneIn || 0)
+                : (a.canonical.oneIn || 0) - (b.canonical.oneIn || 0);
+            if (oddsDiff !== 0) return oddsDiff;
+            const tierDiff = collectionSortRarestFirst
+                ? (TIER_RANK[b.baseTier] || 0) - (TIER_RANK[a.baseTier] || 0)
+                : (TIER_RANK[a.baseTier] || 0) - (TIER_RANK[b.baseTier] || 0);
+            if (tierDiff !== 0) return tierDiff;
+            return a.displayName.localeCompare(b.displayName);
+        });
+    }
+
+    function createIndexSectionHeader(section, ownedCount, totalCount) {
+        const header = document.createElement("div");
+        header.className = "rng-index-section-header";
+
+        const title = document.createElement("strong");
+        title.textContent = section.title;
+
+        const count = document.createElement("span");
+        count.textContent = `${ownedCount}/${totalCount}`;
+
+        header.append(title, count);
+        return header;
+    }
+
+    function createIndexCard(candidate) {
+        const { key, entry, canonical, displayName, baseTier, oddsTier, obtained } = candidate;
+        const oddsNote = oddsTier !== baseTier ? ` \u00b7 ${oddsTier} odds` : "";
+        const card = document.createElement("button");
+        card.type = "button";
+        card.disabled = !obtained;
+        card.className = `rng-collection-card ${getRarityClass(baseTier)}${obtained ? " obtained" : " missing"}${player.equipped === key ? " equipped" : ""}${canonical.mutation ? ' ' + canonical.mutation : ""}`;
+
+        const tier = document.createElement("span");
+        tier.className = "rng-collection-card-tier";
+        tier.textContent = `${baseTier}${canonical.mutation ? ' \u00b7 ' + MUTATION_TYPES[canonical.mutation]?.name : ''}`;
+
+        const name = document.createElement("strong");
+        name.textContent = displayName;
+
+        const meta = document.createElement("span");
+        meta.className = "rng-collection-card-meta";
+        meta.textContent = obtained
+            ? `1 in ${formatOneIn(entry.oneIn)}${oddsNote} \u00b7 x${entry.count}`
+            : `Missing \u00b7 1 in ${formatOneIn(canonical.oneIn)}${oddsNote}`;
+
+        const status = document.createElement("span");
+        status.className = "rng-index-status";
+        status.textContent = obtained ? "Obtained" : "Missing";
+
+        card.append(tier, name, meta, status);
+        if (obtained) {
+            card.addEventListener("click", () => {
+                player.equipped = key;
+                persistPlayerState({ forceCollectionGrid: true });
+            });
+        }
+        return card;
+    }
+
     function renderCollectionGrid(options = {}) {
         const grid = document.getElementById("rng-collection-grid");
         const filter = document.getElementById("rng-collection-filter");
@@ -4319,113 +4470,121 @@ function updateAllUi(options = {}) {
             return;
         }
 
-        const fragment = document.createDocumentFragment();
-
-        const sectionDefs = [
-            { key: "base", title: "Base Species", mutation: null },
-            ...MUTATION_CHANCE_ORDER.map((key) => ({
-                key,
-                title: `${MUTATION_TYPES[key]?.icon || ""} ${MUTATION_TYPES[key]?.name || key}`,
-                mutation: key
-            }))
-        ].filter((section) => {
-            if (baseOnlyFilter) return section.key === "base";
-            if (mutationFilter) return section.key === mutationFilter;
-            return true;
-        });
-
+        cancelCollectionGridRender();
+        const token = collectionRenderToken;
+        const sectionDefs = getIndexSectionDefs(baseOnlyFilter, mutationFilter);
+        const filters = { baseOnlyFilter, mutationFilter, tierFilter, ownedOnly, searchTokens };
+        let sectionIndex = 0;
+        let sectionState = null;
         let rendered = 0;
+        let clearedLoading = false;
 
-        for (const section of sectionDefs) {
-            const candidates = rollPool
-                .map((baseShark) => {
-                    const canonical = section.mutation ? applyStableMutation(baseShark, section.mutation) : baseShark;
-                    const key = getCollectionKey(canonical);
-                    const entry = player.collection[key] || null;
-                    const source = entry || canonical;
-                    const displayName = section.mutation ? baseShark.name : canonical.name;
-                    const baseTier = getBaseTierName(source);
-                    const oddsTier = getOddsTierName(source);
-                    const searchHaystack = `${displayName} ${section.title} ${baseTier} ${oddsTier}`.toLowerCase();
+        grid.replaceChildren(createIndexNote(autoEnabled ? "Building index while Auto Roll stays active..." : "Building index..."));
+        collectionGridDirty = false;
 
-                    if (!baseOnlyFilter && !mutationFilter && tierFilter !== "all" && baseTier !== tierFilter) {
-                        return null;
-                    }
-                    if (ownedOnly && !entry) {
-                        return null;
-                    }
-                    if (searchTokens.length && !searchTokens.every(token => searchHaystack.includes(token))) {
-                        return null;
-                    }
+        function appendFragment(fragment) {
+            if (!fragment.childNodes.length) return;
+            if (!clearedLoading) {
+                grid.replaceChildren();
+                clearedLoading = true;
+            }
+            grid.appendChild(fragment);
+        }
 
-                    return {
-                        key,
-                        entry,
-                        canonical,
-                        displayName,
-                        baseTier,
-                        oddsTier,
-                        obtained: Boolean(entry)
-                    };
-                })
-                .filter(Boolean)
-                .sort((a, b) => {
-                    const oddsDiff = collectionSortRarestFirst
-                        ? (b.canonical.oneIn || 0) - (a.canonical.oneIn || 0)
-                        : (a.canonical.oneIn || 0) - (b.canonical.oneIn || 0);
-                    if (oddsDiff !== 0) return oddsDiff;
-                    const tierDiff = collectionSortRarestFirst
-                        ? (TIER_RANK[b.baseTier] || 0) - (TIER_RANK[a.baseTier] || 0)
-                        : (TIER_RANK[a.baseTier] || 0) - (TIER_RANK[b.baseTier] || 0);
-                    if (tierDiff !== 0) return tierDiff;
-                    return a.displayName.localeCompare(b.displayName);
-                });
+        function finishRender() {
+            if (token !== collectionRenderToken) return;
+            if (!rendered) {
+                grid.replaceChildren(createIndexNote("No matching index entries."));
+            }
+            collectionGridDirty = false;
+        }
 
-            if (!candidates.length) continue;
+        function ensureSectionState() {
+            if (sectionState || sectionIndex >= sectionDefs.length) return;
+            sectionState = {
+                section: sectionDefs[sectionIndex],
+                scanIndex: 0,
+                renderIndex: 0,
+                candidates: [],
+                headerAdded: false,
+                sorted: false
+            };
+        }
 
-            const ownedInSection = candidates.filter((candidate) => candidate.obtained).length;
-            const header = document.createElement("div");
-            header.className = "rng-index-section-header";
-            header.innerHTML = `
-                <strong>${section.title}</strong>
-                <span>${ownedInSection}/${candidates.length}</span>
-            `;
-            fragment.appendChild(header);
+        function renderStep() {
+            if (token !== collectionRenderToken || !isCollectionModalOpen()) return;
+            ensureSectionState();
 
-            for (const candidate of candidates) {
-                const { key, entry, canonical, displayName, baseTier, oddsTier, obtained } = candidate;
-                const oddsNote = oddsTier !== baseTier ? ` \u00b7 ${oddsTier} odds` : "";
-                const card = document.createElement("button");
-                card.type = "button";
-                card.disabled = !obtained;
-                card.className = `rng-collection-card ${getRarityClass(baseTier)}${obtained ? " obtained" : " missing"}${player.equipped === key ? " equipped" : ""}${canonical.mutation ? ' ' + canonical.mutation : ""}`;
-                card.innerHTML = `
-                    <span class="rng-collection-card-tier">${baseTier}${canonical.mutation ? ' \u00b7 ' + MUTATION_TYPES[canonical.mutation]?.name : ''}</span>
-                    <strong>${displayName}</strong>
-                    <span class="rng-collection-card-meta">${obtained
-                        ? `1 in ${formatOneIn(entry.oneIn)}${oddsNote} \u00b7 x${entry.count}`
-                        : `Missing \u00b7 1 in ${formatOneIn(canonical.oneIn)}${oddsNote}`}</span>
-                    <span class="rng-index-status">${obtained ? "Obtained" : "Missing"}</span>
-                `;
-                if (obtained) {
-                    card.addEventListener("click", () => {
-                        player.equipped = key;
-                        persistPlayerState({ forceCollectionGrid: true });
-                    });
-                }
-                fragment.appendChild(card);
+            if (!sectionState) {
+                finishRender();
+                return;
+            }
+
+            let scanned = 0;
+            while (sectionState.scanIndex < rollPool.length && scanned < INDEX_BUILD_BATCH_SIZE) {
+                const candidate = getIndexCandidateForSection(
+                    sectionState.section,
+                    rollPool[sectionState.scanIndex],
+                    filters
+                );
+                if (candidate) sectionState.candidates.push(candidate);
+                sectionState.scanIndex++;
+                scanned++;
+            }
+
+            if (sectionState.scanIndex < rollPool.length) {
+                scheduleCollectionRenderStep(token, renderStep);
+                return;
+            }
+
+            if (!sectionState.sorted) {
+                sortIndexCandidates(sectionState.candidates);
+                sectionState.sorted = true;
+            }
+
+            if (!sectionState.candidates.length) {
+                sectionIndex++;
+                sectionState = null;
+                scheduleCollectionRenderStep(token, renderStep);
+                return;
+            }
+
+            const fragment = document.createDocumentFragment();
+
+            if (!sectionState.headerAdded) {
+                const ownedInSection = sectionState.candidates.filter((candidate) => candidate.obtained).length;
+                fragment.appendChild(createIndexSectionHeader(
+                    sectionState.section,
+                    ownedInSection,
+                    sectionState.candidates.length
+                ));
+                sectionState.headerAdded = true;
+            }
+
+            let cardsRendered = 0;
+            while (
+                sectionState.renderIndex < sectionState.candidates.length &&
+                cardsRendered < INDEX_RENDER_BATCH_SIZE
+            ) {
+                fragment.appendChild(createIndexCard(sectionState.candidates[sectionState.renderIndex]));
+                sectionState.renderIndex++;
+                cardsRendered++;
                 rendered++;
             }
+
+            appendFragment(fragment);
+
+            if (sectionState.renderIndex < sectionState.candidates.length) {
+                scheduleCollectionRenderStep(token, renderStep);
+                return;
+            }
+
+            sectionIndex++;
+            sectionState = null;
+            scheduleCollectionRenderStep(token, renderStep);
         }
 
-        if (!rendered) {
-            grid.innerHTML = `<p class="rng-empty-note">No matching index entries.</p>`;
-            collectionGridDirty = false;
-            return;
-        }
-
-        grid.replaceChildren(fragment);
-        collectionGridDirty = false;
+        scheduleCollectionRenderStep(token, renderStep);
     }
 
     function getBestBurstRoll(rolls) {
@@ -4472,6 +4631,18 @@ function updateAllUi(options = {}) {
         }).join(" \u00b7 ");
     }
 
+    function shouldUseLeanRollAnimation(rollCount) {
+        const reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
+        const saveData = navigator.connection?.saveData;
+        const lowCoreDevice = (navigator.hardwareConcurrency || 8) <= 4;
+        return Boolean(reducedMotion || saveData || lowCoreDevice || rollCount >= 5);
+    }
+
+    function getRollAnimationFrameCount(rollCount) {
+        if (rollCount <= 1) return shouldUseLeanRollAnimation(rollCount) ? 9 : 14;
+        return shouldUseLeanRollAnimation(rollCount) ? 7 : 10;
+    }
+
     function clearMultiRollGrid(stage = document.querySelector(".rng-roll-stage")) {
         stage?.classList.remove("rng-roll-stage-multi");
         stage?.querySelector(".rng-multi-roll-grid")?.remove();
@@ -4496,13 +4667,33 @@ function updateAllUi(options = {}) {
             const slot = document.createElement("div");
             slot.className = "rng-multi-roll-slot common spinning";
             slot.innerHTML = `
-                <span>Roll ${index + 1}</span>
-                <strong>...</strong>
-                <em>Rolling</em>
+                <span data-slot-label>Roll ${index + 1}</span>
+                <strong data-slot-name>...</strong>
+                <em data-slot-meta>Rolling</em>
             `;
             return slot;
         }));
         return grid;
+    }
+
+    function setMultiRollSlotText(slot, label, name, meta) {
+        let labelEl = slot.querySelector("[data-slot-label]");
+        let nameEl = slot.querySelector("[data-slot-name]");
+        let metaEl = slot.querySelector("[data-slot-meta]");
+
+        if (!labelEl || !nameEl || !metaEl) {
+            labelEl = document.createElement("span");
+            nameEl = document.createElement("strong");
+            metaEl = document.createElement("em");
+            labelEl.dataset.slotLabel = "";
+            nameEl.dataset.slotName = "";
+            metaEl.dataset.slotMeta = "";
+            slot.replaceChildren(labelEl, nameEl, metaEl);
+        }
+
+        if (labelEl.textContent !== label) labelEl.textContent = label;
+        if (nameEl.textContent !== name) nameEl.textContent = name;
+        if (metaEl.textContent !== meta) metaEl.textContent = meta;
     }
 
     function updateMultiRollSlot(slot, shark, index, options = {}) {
@@ -4510,18 +4701,20 @@ function updateAllUi(options = {}) {
 
         const isFinal = Boolean(options.final);
         const isBest = Boolean(options.best);
-        slot.className = [
+        const nextClassName = [
             "rng-multi-roll-slot",
             getRarityClass(getOddsTierName(shark)),
             shark.mutation || "",
             isFinal ? "revealed" : "spinning",
             isBest ? "best" : ""
         ].filter(Boolean).join(" ");
-        slot.innerHTML = `
-            <span>${isBest ? "Best" : `Roll ${index + 1}`}</span>
-            <strong>${escapeHtml(shark.name)}</strong>
-            <em>${isFinal ? `1/${formatOneIn(shark.oneIn)}` : "Rolling"}</em>
-        `;
+        if (slot.className !== nextClassName) slot.className = nextClassName;
+        setMultiRollSlotText(
+            slot,
+            isBest ? "Best" : `Roll ${index + 1}`,
+            shark.name,
+            isFinal ? `1/${formatOneIn(shark.oneIn)}` : "Rolling"
+        );
     }
 
     async function animateRoll(finalShark, rollContext = {}) {
@@ -4550,9 +4743,10 @@ function updateAllUi(options = {}) {
         }
 
         const flashPool = rollPool.length ? rollPool : [finalShark];
-        const frameDelay = Math.max(35, Math.round(getRollCooldownMs() / 16));
+        const frameCount = getRollAnimationFrameCount(rollCount);
+        const frameDelay = Math.max(32, Math.round(getRollCooldownMs() / Math.max(10, frameCount)));
 
-        for (let i = 0; i < 14; i++) {
+        for (let i = 0; i < frameCount; i++) {
             if (multiSlots.length) {
                 multiSlots.forEach((slot, index) => {
                     const randomShark = flashPool[Math.floor(Math.random() * flashPool.length)];
@@ -4870,7 +5064,7 @@ async function performRoll() {
          await animateRoll(finalShark, rollContext);
          applyRollJuice(revealShark, rollContext);
          await showRollReveal(revealShark);
-         persistPlayerState({ deferCollectionGridDuringRoll: true });
+         persistPlayerState({ deferCollectionGridDuringRoll: true, lightUi: true });
 
          rollLockedUntil = Date.now() + getRollCooldownMs();
          startCooldownTimer();
@@ -4946,6 +5140,7 @@ async function performRoll() {
 
     function closeCollectionModal() {
         document.getElementById("rng-collection-modal")?.classList.add("hidden");
+        cancelCollectionGridRender();
         collectionGridDirty = false;
     }
 
@@ -4979,6 +5174,18 @@ async function performRoll() {
         if (quantity <= 0) {
             const blockReason = getPotionPurchaseBlockReason(key, getPotionBuyQuantity(key, 1)) || "Cannot buy any right now.";
             showToast(blockReason, "error");
+            return;
+        }
+
+        const def = POTION_DEFS[key];
+        const cost = getPotionBatchCost(key, quantity);
+        const coins = Math.max(0, Math.floor(Number(player.coins) || 0));
+        const remaining = Math.max(0, coins - cost);
+        const balanceWarning = cost >= coins
+            ? "You are about to spend all your money."
+            : `You are about to spend ${cost.toLocaleString()} coins and leave ${remaining.toLocaleString()} coins.`;
+
+        if (!confirm(`Buy max ${def?.name || "potion"}?\n\n${balanceWarning}\n\nBuy ${quantity.toLocaleString()} for ${cost.toLocaleString()} coins?`)) {
             return;
         }
 
