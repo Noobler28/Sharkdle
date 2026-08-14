@@ -23,6 +23,9 @@
     const RNG_LEADERBOARD_LIMIT = 10;
     const RNG_LEADERBOARD_QUERY_LIMIT = 30;
     const RNG_LEADERBOARD_SYNC_INTERVAL_MS = 120000;
+    const RNG_ADMIN_NEXT_ROLL_CONFIG_PREFIX = "rngNextRoll_";
+    const RNG_ADMIN_NEXT_ROLL_EXPIRY_MS = 7 * 24 * 60 * 60 * 1000;
+    const RNG_ADMIN_NEXT_ROLL_CONSUMED_LIMIT = 30;
     const RNG_DEV_UIDS = [
         "ETPtQC0VA2NiSnX67rS2P2ma2tC2",
         "gOcPqOuyPJRWisE4dxvFkGTOl5g2"
@@ -996,6 +999,8 @@ let rollPool = [];
     let rngLeaderboardLastSyncAt = 0;
     let rngLeaderboardLoading = false;
     let rngDevForcedMutationType = null;
+    let rngAdminNextRollCommand = null;
+    let rngAdminNextRollUnsubscribe = null;
     let rngCloudSaveTimer = null;
     let rngCloudSaveDirty = false;
     let rngCloudSaveInFlight = false;
@@ -1106,6 +1111,7 @@ let rollPool = [];
             xpLevel: 0,
             collection: {},
             claimedIndexRewards: [],
+            adminNextRollConsumedIds: [],
             equipped: null,
             bestOneIn: 0,
             runBestOneIn: 0,
@@ -1176,6 +1182,15 @@ let rollPool = [];
     function toSafeNumber(value) {
         const number = Number(value);
         return Number.isFinite(number) ? number : 0;
+    }
+
+    function normalizeRngLookupText(value) {
+        return String(value ?? "")
+            .trim()
+            .toLowerCase()
+            .replace(/'/g, "")
+            .replace(/[^a-z0-9]+/g, " ")
+            .trim();
     }
 
     function getTimestampMs(value) {
@@ -1360,6 +1375,15 @@ let rollPool = [];
             console.warn("Unable to prepare RNG leaderboard services:", error);
             return false;
         }
+    }
+
+    function getRngAdminNextRollConfigId(uid) {
+        return `${RNG_ADMIN_NEXT_ROLL_CONFIG_PREFIX}${String(uid || "").replace(/\//g, "_")}`;
+    }
+
+    function getRngAdminNextRollRef(uid) {
+        if (!ensureRngLeaderboardServices() || !uid) return null;
+        return rngLeaderboardDb.collection("globalConfig").doc(getRngAdminNextRollConfigId(uid));
     }
 
     function cloneRngData(value) {
@@ -1991,6 +2015,29 @@ let rollPool = [];
         }
     }
 
+    function clearRngAdminNextRollSubscription() {
+        if (rngAdminNextRollUnsubscribe) {
+            rngAdminNextRollUnsubscribe();
+            rngAdminNextRollUnsubscribe = null;
+        }
+        rngAdminNextRollCommand = null;
+    }
+
+    function subscribeRngAdminNextRollCommand(user) {
+        clearRngAdminNextRollSubscription();
+        if (!user?.uid || !ensureRngLeaderboardServices()) return;
+
+        const commandRef = getRngAdminNextRollRef(user.uid);
+        if (!commandRef) return;
+
+        rngAdminNextRollUnsubscribe = commandRef.onSnapshot((snapshot) => {
+            rngAdminNextRollCommand = snapshot.exists ? snapshot.data() || null : null;
+        }, (error) => {
+            console.warn("Unable to listen for RNG admin next-roll command:", error);
+            rngAdminNextRollCommand = null;
+        });
+    }
+
     function initRngLeaderboard() {
         renderRngLeaderboardSelf();
 
@@ -2002,6 +2049,7 @@ let rollPool = [];
         rngLeaderboardAuth.onAuthStateChanged((user) => {
             rngLeaderboardUser = user || null;
             rngLeaderboardProfileCache = null;
+            subscribeRngAdminNextRollCommand(user);
             if (!user) {
                 rngCloudHydratedUid = null;
             }
@@ -2121,6 +2169,68 @@ let rollPool = [];
 
     function getRollPoolEntryByName(name) {
         return rollPool.find((shark) => shark.name === name) || null;
+    }
+
+    function getRngRollPoolMatches(name) {
+        const lookup = String(name || "").trim();
+        const normalized = normalizeRngLookupText(lookup);
+        if (!lookup || !normalized) return [];
+
+        const exact = rollPool.filter((shark) => shark.name.toLowerCase() === lookup.toLowerCase());
+        if (exact.length) return exact;
+
+        const normalizedExact = rollPool.filter((shark) => normalizeRngLookupText(shark.name) === normalized);
+        if (normalizedExact.length) return normalizedExact;
+
+        return rollPool.filter((shark) => normalizeRngLookupText(shark.name).includes(normalized));
+    }
+
+    function resolveRngRollPoolEntry(name) {
+        const matches = getRngRollPoolMatches(name);
+        if (matches.length === 1) return matches[0];
+        if (matches.length > 1) {
+            throw new Error(`Multiple species matched "${name}": ${matches.slice(0, 8).map(shark => shark.name).join(", ")}. Be more specific.`);
+        }
+        throw new Error(`No RNG species found for "${name}".`);
+    }
+
+    function getRngRollPoolEntryForCommand(name) {
+        try {
+            return resolveRngRollPoolEntry(name);
+        } catch (error) {
+            console.warn("Unable to resolve queued RNG next-roll species:", error);
+            return null;
+        }
+    }
+
+    function getRngMutationOptionsText() {
+        return ["base", ...MUTATION_CHANCE_ORDER].join(", ");
+    }
+
+    function resolveRngMutationKey(input = "base") {
+        const raw = String(input ?? "base").trim();
+        const normalized = normalizeRngLookupText(raw || "base");
+        if (!normalized || ["base", "none", "normal", "nomutation", "no mutation"].includes(normalized)) {
+            return null;
+        }
+
+        for (const key of MUTATION_CHANCE_ORDER) {
+            const mutation = MUTATION_TYPES[key];
+            if (normalized === normalizeRngLookupText(key) || normalized === normalizeRngLookupText(mutation?.name)) {
+                return key;
+            }
+        }
+
+        throw new Error(`Unknown mutation "${input}". Use one of: ${getRngMutationOptionsText()}.`);
+    }
+
+    function getRngMutationKeyForCommand(input = "base") {
+        try {
+            return resolveRngMutationKey(input);
+        } catch (error) {
+            console.warn("Unable to resolve queued RNG next-roll mutation:", error);
+            return null;
+        }
     }
 
     function getMutationKeyFromCollectionName(name) {
@@ -2686,11 +2796,14 @@ let rollPool = [];
     }
 
     function createRollActionContext(rollCount = 1) {
+        const adminForcedRoll = consumeRngAdminNextRollCommand();
         return {
             rollCount: Math.max(1, Math.floor(Number(rollCount) || 1)),
-            guaranteedPotionKey: getActiveGuaranteedPotionKey(),
-            forcedMutationEffectKey: getActiveForcedMutationEffectKey(),
+            guaranteedPotionKey: adminForcedRoll ? null : getActiveGuaranteedPotionKey(),
+            forcedMutationEffectKey: adminForcedRoll ? null : getActiveForcedMutationEffectKey(),
             usedMutationEffectKey: null,
+            adminForcedRoll,
+            adminForcedRollConsumed: false,
             devForcedMutationType: consumeQueuedDevForcedMutationType(),
             devForcedMutationConsumed: false
         };
@@ -2729,6 +2842,83 @@ let rollPool = [];
         const type = rngDevForcedMutationType;
         rngDevForcedMutationType = null;
         return MUTATION_TYPES[type] ? type : null;
+    }
+
+    function getRngAdminNextRollCommandId(command) {
+        const explicitId = String(command?.commandId || "").trim();
+        if (explicitId) return explicitId;
+        return [
+            command?.targetUid || "",
+            command?.createdAtMs || "",
+            command?.sharkName || "",
+            command?.mutation || "base"
+        ].join(":");
+    }
+
+    function getRngAdminNextRollConsumedIds() {
+        if (!Array.isArray(player.adminNextRollConsumedIds)) {
+            player.adminNextRollConsumedIds = [];
+        }
+
+        player.adminNextRollConsumedIds = player.adminNextRollConsumedIds
+            .map(String)
+            .filter(Boolean)
+            .slice(-RNG_ADMIN_NEXT_ROLL_CONSUMED_LIMIT);
+        return player.adminNextRollConsumedIds;
+    }
+
+    function hasConsumedRngAdminNextRollCommand(command) {
+        const commandId = getRngAdminNextRollCommandId(command);
+        return Boolean(commandId && getRngAdminNextRollConsumedIds().includes(commandId));
+    }
+
+    function markRngAdminNextRollCommandConsumed(command) {
+        const commandId = getRngAdminNextRollCommandId(command);
+        if (!commandId) return;
+
+        const consumedIds = getRngAdminNextRollConsumedIds()
+            .filter((id) => id !== commandId);
+        consumedIds.push(commandId);
+        player.adminNextRollConsumedIds = consumedIds.slice(-RNG_ADMIN_NEXT_ROLL_CONSUMED_LIMIT);
+    }
+
+    function getRngAdminNextRollForcedShark(command) {
+        if (!command || typeof command !== "object") return null;
+
+        const currentUser = getRngCurrentUser();
+        const targetUid = String(command.targetUid || "").trim();
+        if (targetUid && targetUid !== currentUser?.uid) return null;
+        if (hasConsumedRngAdminNextRollCommand(command)) return null;
+
+        const expiresAtMs = toSafeNumber(command.expiresAtMs);
+        if (expiresAtMs > 0 && Date.now() > expiresAtMs) return null;
+
+        const baseShark = getRngRollPoolEntryForCommand(command.sharkName || command.shark || command.species);
+        if (!baseShark) return null;
+
+        let mutationKey = null;
+        try {
+            mutationKey = resolveRngMutationKey(command.mutation || "base");
+        } catch (error) {
+            console.warn("Queued RNG next-roll command has an invalid mutation:", error);
+            return null;
+        }
+
+        return {
+            ...(mutationKey ? applyStableMutation(baseShark, mutationKey) : baseShark),
+            adminCommandId: getRngAdminNextRollCommandId(command)
+        };
+    }
+
+    function consumeRngAdminNextRollCommand() {
+        const command = rngAdminNextRollCommand;
+        const forcedShark = getRngAdminNextRollForcedShark(command);
+        if (!forcedShark) return null;
+
+        markRngAdminNextRollCommandConsumed(command);
+        saveLocalProfile();
+        rngAdminNextRollCommand = null;
+        return forcedShark;
     }
 
     function consumeRollActionEffects(actionContext = {}) {
@@ -3164,16 +3354,24 @@ function rollForShark(actionContext = createRollActionContext(1)) {
     const devForcedMutationType = consumeActionDevForcedMutationType(actionContext);
     const hasForcedMutation = forcedMutation || devForcedMutationType;
     const guaranteedPotionKey = actionContext.guaranteedPotionKey || null;
+    const adminForcedRoll = actionContext.adminForcedRoll && !actionContext.adminForcedRollConsumed
+        ? actionContext.adminForcedRoll
+        : null;
+
+    if (adminForcedRoll) {
+        actionContext.adminForcedRollConsumed = true;
+        rolled = { ...adminForcedRoll };
+    }
 
     // =========================================
     // OMEGA / ULTRA GUARANTEED POTIONS
     // =========================================
 
-    if (guaranteedPotionKey === "omega") {
+    if (!rolled && guaranteedPotionKey === "omega") {
 
         rolled = markGuaranteedPotionRoll(pickGuaranteedOmegaOrBetter(), "omegaPotion");
 
-    } else if (guaranteedPotionKey === "ultra") {
+    } else if (!rolled && guaranteedPotionKey === "ultra") {
 
         rolled = markGuaranteedPotionRoll(pickGuaranteedUltraRare(), "ultraPotion");
     }
@@ -3343,6 +3541,9 @@ function rollForShark(actionContext = createRollActionContext(1)) {
                 },
                 collection: parsed.collection && typeof parsed.collection === "object" ? parsed.collection : {},
                 claimedIndexRewards: Array.isArray(parsed.claimedIndexRewards) ? parsed.claimedIndexRewards : [],
+                adminNextRollConsumedIds: Array.isArray(parsed.adminNextRollConsumedIds)
+                    ? parsed.adminNextRollConsumedIds.map(String).filter(Boolean).slice(-RNG_ADMIN_NEXT_ROLL_CONSUMED_LIMIT)
+                    : [],
                 prestigeLevel: parsedPrestigeLevel,
                 prestigePoints: Math.max(0, Math.floor(Number(parsed.prestigePoints) || 0)),
                 totalPrestigePoints: Math.max(0, Math.floor(Number(parsed.totalPrestigePoints) || Number(parsed.prestigePoints) || 0)),
@@ -4588,6 +4789,10 @@ function updateAllUi(options = {}) {
     }
 
     function getBestBurstRoll(rolls) {
+        const adminForcedRoll = [...(Array.isArray(rolls) ? rolls : [])]
+            .find((shark) => shark?.adminCommandId);
+        if (adminForcedRoll) return adminForcedRoll;
+
         return rolls.reduce((best, current) => {
             if (!best) return current;
             if ((current.oneIn || 0) !== (best.oneIn || 0)) {
@@ -4602,6 +4807,10 @@ function updateAllUi(options = {}) {
     }
 
     function getRollRevealShark(rolls, fallback) {
+        const adminForcedRoll = [...(Array.isArray(rolls) ? rolls : [])]
+            .find((shark) => shark?.adminCommandId);
+        if (adminForcedRoll) return adminForcedRoll;
+
         const apexRoll = [...(Array.isArray(rolls) ? rolls : [])]
             .filter(isApexPull)
             .sort((a, b) => {
@@ -4613,17 +4822,23 @@ function updateAllUi(options = {}) {
     }
 
     function getMultiRollResultSummary(rolls) {
-        const topRolls = [...(Array.isArray(rolls) ? rolls : [])]
+        const sortedRolls = [...(Array.isArray(rolls) ? rolls : [])]
             .filter(Boolean)
             .sort((a, b) => {
                 const oddsDiff = (b.oneIn || 0) - (a.oneIn || 0);
                 if (oddsDiff !== 0) return oddsDiff;
                 return (b.coinReward || 0) - (a.coinReward || 0);
-            })
-            .slice(0, 3);
+            });
+        const adminForcedRoll = sortedRolls.find((shark) => shark?.adminCommandId);
+        const topRolls = adminForcedRoll
+            ? [
+                adminForcedRoll,
+                ...sortedRolls.filter((shark) => shark !== adminForcedRoll).slice(0, 2)
+            ]
+            : sortedRolls.slice(0, 3);
 
         return topRolls.map((shark, index) => {
-            const label = index === 0 ? "Best" : `#${index + 1}`;
+            const label = shark.adminCommandId ? "Queued" : index === 0 ? "Best" : `#${index + 1}`;
             const mutationIcon = shark.mutation && MUTATION_TYPES[shark.mutation]
                 ? ` ${MUTATION_TYPES[shark.mutation].icon}`
                 : "";
@@ -5431,6 +5646,151 @@ async function performRoll() {
         return parsed;
     }
 
+    function createRngAdminCommandId() {
+        if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+            return crypto.randomUUID();
+        }
+        return `${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`;
+    }
+
+    function getRngAdminTargetLabel(uid, data = {}) {
+        const username = String(data.username || data.displayName || "").trim();
+        return username || `Player ${String(uid || "").slice(0, 6)}`;
+    }
+
+    async function getRngAdminTargetFromDoc(collectionName, uid) {
+        const doc = await rngLeaderboardDb.collection(collectionName).doc(uid).get();
+        if (!doc.exists) return null;
+        return {
+            uid: doc.id,
+            data: doc.data() || {},
+            source: collectionName
+        };
+    }
+
+    async function findRngAdminTargetsByUsername(username) {
+        const collections = ["userStats", RNG_LEADERBOARD_COLLECTION, "users"];
+        const byUid = new Map();
+
+        for (const collectionName of collections) {
+            const snapshot = await rngLeaderboardDb
+                .collection(collectionName)
+                .where("username", "==", username)
+                .limit(3)
+                .get();
+
+            snapshot.docs.forEach((doc) => {
+                if (!byUid.has(doc.id)) {
+                    byUid.set(doc.id, {
+                        uid: doc.id,
+                        data: doc.data() || {},
+                        source: collectionName
+                    });
+                }
+            });
+        }
+
+        return [...byUid.values()];
+    }
+
+    async function resolveRngAdminTargetUser(target) {
+        if (!ensureRngLeaderboardServices()) {
+            throw new Error("Firestore is not ready yet.");
+        }
+
+        const lookup = typeof target === "object" && target
+            ? String(target.uid || target.id || target.username || "").trim()
+            : String(target || "").trim();
+
+        if (!lookup) {
+            throw new Error("Enter a UID or exact username.");
+        }
+
+        if (!lookup.includes("/")) {
+            for (const collectionName of ["userStats", RNG_LEADERBOARD_COLLECTION, RNG_PROFILE_COLLECTION, "users"]) {
+                const directTarget = await getRngAdminTargetFromDoc(collectionName, lookup);
+                if (directTarget) return directTarget;
+            }
+        }
+
+        const usernameTargets = await findRngAdminTargetsByUsername(lookup);
+        if (usernameTargets.length > 1) {
+            throw new Error("Multiple players matched that username. Use UID instead.");
+        }
+        if (usernameTargets.length === 1) return usernameTargets[0];
+
+        if (/^[A-Za-z0-9_-]{8,}$/.test(lookup)) {
+            return {
+                uid: lookup,
+                data: {},
+                source: "uid"
+            };
+        }
+
+        throw new Error("No player found for that UID or exact username.");
+    }
+
+    function parseRngNextRollArgs(target, sharkName, mutation = "base") {
+        if (sharkName === undefined && typeof target === "string") {
+            const parts = target.split(/\s+-\s+/).map(part => part.trim()).filter(Boolean);
+            if (parts.length >= 2) {
+                return {
+                    target: parts[0],
+                    sharkName: parts[1],
+                    mutation: parts.slice(2).join(" - ") || "base"
+                };
+            }
+        }
+
+        return { target, sharkName, mutation };
+    }
+
+    async function queueRngAdminNextRoll(target, sharkName, mutation = "base") {
+        if (!requireRngDevCommand("nextRngRoll")) return null;
+        const args = parseRngNextRollArgs(target, sharkName, mutation);
+        const targetUser = await resolveRngAdminTargetUser(args.target);
+        const baseShark = resolveRngRollPoolEntry(args.sharkName);
+        const mutationKey = resolveRngMutationKey(args.mutation);
+        const currentUser = getRngCurrentDevUser();
+        const commandId = createRngAdminCommandId();
+        const now = Date.now();
+        const mutationLabel = mutationKey ? MUTATION_TYPES[mutationKey]?.name || mutationKey : "Base";
+        const payload = {
+            type: "rngNextRoll",
+            commandId,
+            targetUid: targetUser.uid,
+            targetLabel: getRngAdminTargetLabel(targetUser.uid, targetUser.data),
+            sharkName: baseShark.name,
+            mutation: mutationKey || "base",
+            mutationName: mutationLabel,
+            createdBy: currentUser.uid,
+            createdAtMs: now,
+            expiresAtMs: now + RNG_ADMIN_NEXT_ROLL_EXPIRY_MS,
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        };
+
+        const commandRef = getRngAdminNextRollRef(targetUser.uid);
+        if (!commandRef) throw new Error("RNG next-roll command ref is not available.");
+
+        await commandRef.set(payload, { merge: false });
+        console.log(`Queued RNG next roll for ${payload.targetLabel} (${targetUser.uid}): ${baseShark.name}${mutationKey ? ` (${mutationLabel})` : ""}.`);
+        console.log(`Command ID: ${commandId}`);
+        showToast(`Queued ${baseShark.name} for ${payload.targetLabel}.`);
+        return payload;
+    }
+
+    async function clearRngAdminNextRoll(target) {
+        if (!requireRngDevCommand("clearNextRngRoll")) return null;
+        const targetUser = await resolveRngAdminTargetUser(target);
+        const commandRef = getRngAdminNextRollRef(targetUser.uid);
+        if (!commandRef) throw new Error("RNG next-roll command ref is not available.");
+
+        await commandRef.delete();
+        console.log(`Cleared queued RNG next roll for ${getRngAdminTargetLabel(targetUser.uid, targetUser.data)} (${targetUser.uid}).`);
+        showToast("Queued RNG next roll cleared.");
+        return targetUser.uid;
+    }
+
     function installRngDevCommands() {
         function buildRngIndexUnlockEntry(shark) {
             const baseTier = getBaseTierName(shark);
@@ -5563,6 +5923,40 @@ async function performRoll() {
             showToast("Next roll: Apex");
         };
 
+        window.nextRngRoll = function nextRngRoll(target, sharkName, mutation = "base") {
+            return queueRngAdminNextRoll(target, sharkName, mutation).catch((error) => {
+                console.error("Unable to queue RNG next roll:", error);
+                showToast(error.message || "Unable to queue next roll.", "error");
+                return null;
+            });
+        };
+
+        window.nextroll = window.nextRngRoll;
+
+        window.clearNextRngRoll = function clearNextRngRoll(target) {
+            return clearRngAdminNextRoll(target).catch((error) => {
+                console.error("Unable to clear RNG next roll:", error);
+                showToast(error.message || "Unable to clear next roll.", "error");
+                return null;
+            });
+        };
+
+        window.findRngSharks = function findRngSharks(name = "") {
+            if (!requireRngDevCommand("findRngSharks")) return [];
+            const matches = getRngRollPoolMatches(name).slice(0, 25);
+            if (!matches.length) {
+                console.log(`No RNG species matched "${name}".`);
+                return [];
+            }
+
+            console.table(matches.map((shark) => ({
+                name: shark.name,
+                tier: getBaseTierName(shark),
+                oneIn: shark.oneIn
+            })));
+            return matches;
+        };
+
         window.showRngStats = function showRngStats() {
             const rank = getRankInfo();
             const best = getBestCollectionEntry();
@@ -5571,6 +5965,7 @@ async function performRoll() {
             console.log(`Rolls: ${(Number(player.rolls) || 0).toLocaleString()}`);
             console.log(`Level: ${rank.level.toLocaleString()} (${rank.xp.toLocaleString()} / ${rank.next.xp.toLocaleString()} XP)`);
             console.log(`Forced Next Roll: ${rngDevForcedMutationType ? MUTATION_TYPES[rngDevForcedMutationType]?.name || rngDevForcedMutationType : "None"}`);
+            console.log(`Admin Queued Next Roll: ${rngAdminNextRollCommand ? `${rngAdminNextRollCommand.sharkName || "Unknown"} (${rngAdminNextRollCommand.mutationName || rngAdminNextRollCommand.mutation || "Base"})` : "None"}`);
             console.log(`Best: ${best?.tier || "None"} (${player.bestOneIn ? `1 in ${formatOneIn(player.bestOneIn)}` : "none"})`);
             console.log(`Collection: ${getCollectionCount().toLocaleString()} / ${getCollectionTargetCount().toLocaleString()}`);
             console.log(`Rebirth Tokens: ${getPrestigePoints().toLocaleString()} unspent / ${getTotalPrestigePoints().toLocaleString()} earned`);
@@ -5588,6 +5983,10 @@ async function performRoll() {
             console.log("addRngPrestigePoints(10) - Alias for addRngRebirthTokens");
             console.log("unlockRngIndex() - Unlock every RNG index entry");
             console.log("nextRollApex() - Force the next RNG roll to be Apex");
+            console.log('nextroll("username or uid", "Great White Shark", "apex") - Queue any species/mutation as someone\'s next RNG roll');
+            console.log('nextroll("username - Great White Shark - apex") - Same command using dashed text');
+            console.log('clearNextRngRoll("username or uid") - Clear someone\'s queued RNG next roll');
+            console.log('findRngSharks("white") - Search exact RNG species names');
             console.log("showRngStats() - Display current RNG stats");
             console.log("showRngCommands() - Show this help");
             console.log("==============================");
