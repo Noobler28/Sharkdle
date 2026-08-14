@@ -68,14 +68,17 @@
         <div id="rng-active-effects" class="rng-buff-row" data-empty="true"></div>
 
         <div class="rng-action-row">
-            <button id="rng-auto-btn" class="rng-btn" type="button" title="Auto roll">
-                <i class="fa-solid fa-repeat"></i>
-            </button>
+            <div class="rng-auto-wrap">
+                <div id="rng-auto-arrow" class="rng-auto-arrow hidden" aria-hidden="true">
+                    <button id="rng-auto-arrow-dismiss" type="button" aria-label="Dismiss Auto Roll hint">&times;</button>
+                    <span>Auto Roll</span>
+                </div>
+                <button id="rng-auto-btn" class="rng-btn" type="button" title="Auto roll">
+                    <i class="fa-solid fa-repeat"></i>
+                </button>
+            </div>
             <button id="rng-roll-btn" class="rng-btn rng-btn-roll" type="button">
                 <i class="fa-solid fa-dice"></i> Roll
-            </button>
-            <button id="rng-hide-btn" class="rng-btn" type="button" title="Hide roll text">
-                <i class="fa-solid fa-eye-slash"></i>
             </button>
         </div>
 

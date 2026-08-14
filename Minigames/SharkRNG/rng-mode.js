@@ -2,6 +2,7 @@
     "use strict";
 
     const STORAGE_KEY = "sharkRngProfile";
+    const AUTO_ARROW_DISMISSED_KEY = "sharkRngAutoArrowDismissed";
     const LOCAL_SAVE_INTERVAL_MS = 120000;
     const BASE_ROLL_COOLDOWN_MS = 1600;
     const BASE_AUTO_INTERVAL_MS = 1800;
@@ -141,6 +142,15 @@
         }
     };
 
+    const APEX_REVEAL_CONFIG = {
+        eyebrow: "Apex Predator Detected",
+        tierLabel: "Apex Mutation",
+        particleCount: 84,
+        ringCount: 6,
+        beamCount: 12,
+        particleSymbols: ["!", "A", "X", "\u25B2"]
+    };
+
     const STREAK_LUCK_INTERVAL = 10;
     const STREAK_LUCK_BASE = 2;
     const CUTSCENE_SKIP_TIERS = ["Ultra", "Hyper", "Omega", "Singularity"];
@@ -162,7 +172,7 @@
     const PRESTIGE_COIN_PER_POINT = 0.025;
     const PRESTIGE_XP_PER_POINT = 0.015;
     const PRESTIGE_MULTI_ROLL_COUNTS = [1, 2, 3, 5, 8];
-    const POTION_BUY_AMOUNTS = [1, 10, 50, 100];
+    const POTION_BUY_AMOUNT_MAX = 999_999;
     const PRESTIGE_UPGRADE_DEFS = [
         {
             id: "pearlLuck",
@@ -648,6 +658,7 @@
     const APEX_UPGRADE_BASE_ONE_IN = 4_000_000;
     const APEX_UPGRADE_MIN_ONE_IN = 60_000;
     const APEX_PRESTIGE_UNLOCK_ONE_IN = 2_500_000;
+    const APEX_SURGE_POTION_ONE_IN = 500;
 
     function buildApexUpgrades() {
         const list = [];
@@ -802,6 +813,13 @@
             maxOwned: 1,
             restockRolls: 80
         },
+        apexSurge: {
+            name: "Apex Surge Potion",
+            icon: "\u{1F988}",
+            desc: "Apex rolls become 1 in 500 for 50 rolls, not guaranteed",
+            cost: 1000000000,
+            rolls: 50
+        },
         albino: {
             name: "Albino Potion",
             icon: "\u{1F90D}",
@@ -841,7 +859,7 @@
 
     // === MUTATION SYSTEM ===
     // Visual mutations can roll on any species and massively inflate its oneIn.
-    // Apex is natural-only and uses its own upgrade path, not mutation potions.
+    // Apex is natural-only and uses its own upgrade path or temporary odds boost.
     // With no mutation Luck upgrades the base chance is essentially zero.
     const MUTATION_TYPES = {
         melanistic: {
@@ -958,7 +976,7 @@ let rollPool = [];
      let tierPools = {};
      let player = createDefaultPlayer();
      let autoEnabled = false;
-     let hideEnabled = false;
+     let autoArrowDismissed = localStorage.getItem(AUTO_ARROW_DISMISSED_KEY) === "true";
      let autoInterval = null;
      let isRolling = false;
      let rollLockedUntil = 0;
@@ -983,7 +1001,7 @@ let rollPool = [];
     let localSaveTimer = null;
     let localSaveDirty = false;
     let localSaveFlushBound = false;
-    let selectedPotionBuyAmount = POTION_BUY_AMOUNTS[0];
+    let selectedPotionBuyAmount = 1;
 
     const GameFx = {
         initAudio() {
@@ -1097,6 +1115,7 @@ let rollPool = [];
                 speed: { remaining: 0 },
                 ultra: { remaining: 0 },
                 omega: { remaining: 0 },
+                apexSurge: { remaining: 0 },
                 albino: { remaining: 0 },
                 shiny: { remaining: 0 },
                 bioluminescent: { remaining: 0 },
@@ -2634,7 +2653,16 @@ let rollPool = [];
             ? APEX_LUCK_UPGRADES.find((entry) => entry.level === player.apexLevel)
             : null;
         const baseChance = upgrade?.chance || (prestigeLevel > 0 ? APEX_PRESTIGE_UNLOCK_ONE_IN : null);
-        return baseChance ? Math.max(1, Math.round(baseChance / getPrestigeApexOddsMultiplier())) : null;
+        const naturalChance = baseChance
+            ? Math.max(1, Math.round(baseChance / getPrestigeApexOddsMultiplier()))
+            : null;
+        const potionChance = player.activeEffects.apexSurge?.remaining > 0
+            ? APEX_SURGE_POTION_ONE_IN
+            : null;
+
+        if (naturalChance === null) return potionChance;
+        if (potionChance === null) return naturalChance;
+        return Math.min(naturalChance, potionChance);
     }
 
     function getActiveGuaranteedPotionKey() {
@@ -2879,6 +2907,7 @@ let rollPool = [];
         consumeLuckPotionRoll();
         if (player.activeEffects.coin.remaining > 0) player.activeEffects.coin.remaining -= 1;
         if (player.activeEffects.speed.remaining > 0) player.activeEffects.speed.remaining -= 1;
+        if (player.activeEffects.apexSurge?.remaining > 0) player.activeEffects.apexSurge.remaining -= 1;
     }
 
     function getCollectionKey(shark) {
@@ -3297,6 +3326,7 @@ function rollForShark(actionContext = createRollActionContext(1)) {
                     speed: { ...createDefaultPlayer().activeEffects.speed, ...(parsed.activeEffects?.speed || {}) },
                     ultra: { ...createDefaultPlayer().activeEffects.ultra, ...(parsed.activeEffects?.ultra || {}) },
                     omega: { ...createDefaultPlayer().activeEffects.omega, ...(parsed.activeEffects?.omega || {}) },
+                    apexSurge: { ...createDefaultPlayer().activeEffects.apexSurge, ...(parsed.activeEffects?.apexSurge || {}) },
                     albino: { ...createDefaultPlayer().activeEffects.albino, ...(parsed.activeEffects?.albino || {}) },
                     shiny: { ...createDefaultPlayer().activeEffects.shiny, ...(parsed.activeEffects?.shiny || {}) },
                     bioluminescent: { ...createDefaultPlayer().activeEffects.bioluminescent, ...(parsed.activeEffects?.bioluminescent || {}) },
@@ -3399,6 +3429,7 @@ function rollForShark(actionContext = createRollActionContext(1)) {
         const effects = player.activeEffects || {};
         return [
             "luck", "coin", "speed", "ultra", "omega",
+            "apexSurge",
             ...STANDARD_MUTATION_KEYS,
             "randomMutation"
         ].reduce((sum, key) => sum + Math.max(0, effects[key]?.remaining || 0), 0);
@@ -3442,8 +3473,15 @@ function rollForShark(actionContext = createRollActionContext(1)) {
         return Math.max(1, Math.round(def.cost * (1 - getPrestigePotionDiscount())));
     }
 
+    function normalizePotionBuyAmount(value = selectedPotionBuyAmount) {
+        const amount = Math.floor(Number(value));
+        if (!Number.isFinite(amount)) return 1;
+        return Math.min(POTION_BUY_AMOUNT_MAX, Math.max(1, amount));
+    }
+
     function getSelectedPotionBuyAmount() {
-        return POTION_BUY_AMOUNTS.includes(selectedPotionBuyAmount) ? selectedPotionBuyAmount : POTION_BUY_AMOUNTS[0];
+        selectedPotionBuyAmount = normalizePotionBuyAmount(selectedPotionBuyAmount);
+        return selectedPotionBuyAmount;
     }
 
     function getPotionBuyQuantity(key, requestedAmount = getSelectedPotionBuyAmount()) {
@@ -3458,6 +3496,17 @@ function rollForShark(actionContext = createRollActionContext(1)) {
 
     function getPotionBatchCost(key, quantity = getPotionBuyQuantity(key)) {
         return getPotionCost(key) * Math.max(0, quantity);
+    }
+
+    function getPotionMaxBuyQuantity(key) {
+        const def = POTION_DEFS[key];
+        if (!def || getPotionRestock(key) > 0) return 0;
+
+        const cost = getPotionCost(key);
+        const affordable = Math.max(0, Math.floor((Number(player.coins) || 0) / Math.max(1, cost)));
+        if (!def.maxOwned) return affordable;
+
+        return Math.max(0, Math.min(affordable, def.maxOwned - getPotionHeldCount(key)));
     }
 
     function getPotionPurchaseBlockReason(key, quantity = getPotionBuyQuantity(key)) {
@@ -3483,6 +3532,41 @@ function rollForShark(actionContext = createRollActionContext(1)) {
         }
 
         return "";
+    }
+
+    function updatePotionBuyButton(button, key) {
+        if (!button) return;
+
+        const buyQuantity = getPotionBuyQuantity(key);
+        const batchCost = getPotionBatchCost(key, buyQuantity);
+        const blockReason = getPotionPurchaseBlockReason(key, buyQuantity);
+        const restock = getPotionRestock(key);
+        button.textContent = restock > 0
+            ? `${restock} rolls`
+            : buyQuantity > 1
+                ? `x${buyQuantity.toLocaleString()} ${formatCompactCoins(batchCost)}`
+                : formatCompactCoins(batchCost || getPotionCost(key));
+        button.title = blockReason || `Buy ${buyQuantity.toLocaleString()} for ${batchCost.toLocaleString()} coins`;
+        button.disabled = Boolean(blockReason);
+    }
+
+    function updatePotionBuyButtons() {
+        document.querySelectorAll("[data-potion-buy-key]").forEach((button) => {
+            updatePotionBuyButton(button, button.dataset.potionBuyKey);
+        });
+    }
+
+    function updatePotionMaxBuyButton(button, key) {
+        if (!button) return;
+
+        const quantity = getPotionMaxBuyQuantity(key);
+        const blockReason = quantity > 0
+            ? ""
+            : getPotionPurchaseBlockReason(key, getPotionBuyQuantity(key, 1)) || "Cannot buy";
+        button.disabled = quantity <= 0;
+        button.title = quantity > 0
+            ? `Buy max (${quantity.toLocaleString()}) for ${getPotionBatchCost(key, quantity).toLocaleString()} coins`
+            : blockReason;
     }
 
     function startPotionRestock(key) {
@@ -3583,6 +3667,9 @@ function updateActiveEffectsUi() {
          }
          if (player.activeEffects.omega.remaining > 0) {
              parts.push("\u{1F31F} Omega ready");
+         }
+         if (player.activeEffects.apexSurge?.remaining > 0) {
+             parts.push(`\u{1F988} Apex surge (${player.activeEffects.apexSurge.remaining})`);
          }
          for (const key of STANDARD_MUTATION_KEYS) {
              if (player.activeEffects[key]?.remaining > 0) {
@@ -3961,26 +4048,24 @@ function updateActiveEffectsUi() {
         const controls = document.createElement("div");
         controls.className = "rng-potion-summary-controls";
 
-        const buyToggle = document.createElement("div");
-        buyToggle.className = "rng-potion-buy-toggle";
-        buyToggle.setAttribute("aria-label", "Potion buy amount");
+        const buyCustom = document.createElement("label");
+        buyCustom.className = "rng-potion-buy-custom";
+        buyCustom.innerHTML = `
+            <span>Buy</span>
+            <input type="number" inputmode="numeric" min="1" max="${POTION_BUY_AMOUNT_MAX}" step="1" aria-label="Potion buy amount">
+            <span>each</span>
+        `;
+        const buyAmountInput = buyCustom.querySelector("input");
+        buyAmountInput.value = String(getSelectedPotionBuyAmount());
+        const syncBuyAmount = () => {
+            selectedPotionBuyAmount = normalizePotionBuyAmount(buyAmountInput.value);
+            buyAmountInput.value = String(selectedPotionBuyAmount);
+            updatePotionBuyButtons();
+        };
+        buyAmountInput.addEventListener("input", syncBuyAmount);
+        buyAmountInput.addEventListener("change", syncBuyAmount);
 
-        const selectedAmount = getSelectedPotionBuyAmount();
-        for (const amount of POTION_BUY_AMOUNTS) {
-            const amountBtn = document.createElement("button");
-            amountBtn.className = `rng-potion-buy-toggle-btn${amount === selectedAmount ? " active" : ""}`;
-            amountBtn.type = "button";
-            amountBtn.textContent = `x${amount}`;
-            amountBtn.title = `Buy ${amount.toLocaleString()} potion${amount === 1 ? "" : "s"} at a time`;
-            amountBtn.setAttribute("aria-pressed", amount === selectedAmount ? "true" : "false");
-            amountBtn.addEventListener("click", () => {
-                selectedPotionBuyAmount = amount;
-                renderPotionShop();
-            });
-            buyToggle.appendChild(amountBtn);
-        }
-
-        controls.appendChild(buyToggle);
+        controls.appendChild(buyCustom);
         controls.appendChild(consumeAllBtn);
         summary.appendChild(controls);
         shop.appendChild(summary);
@@ -4004,18 +4089,16 @@ function updateActiveEffectsUi() {
             const buyBtn = document.createElement("button");
             buyBtn.className = "rng-btn rng-btn-buy";
             buyBtn.type = "button";
-            const buyQuantity = getPotionBuyQuantity(key);
-            const batchCost = getPotionBatchCost(key, buyQuantity);
-            const blockReason = getPotionPurchaseBlockReason(key, buyQuantity);
-            const restock = getPotionRestock(key);
-            buyBtn.textContent = restock > 0
-                ? `${restock} rolls`
-                : buyQuantity > 1
-                    ? `x${buyQuantity} ${formatCompactCoins(batchCost)}`
-                    : formatCompactCoins(batchCost || getPotionCost(key));
-            buyBtn.title = blockReason || `Buy ${buyQuantity.toLocaleString()} for ${batchCost.toLocaleString()} coins`;
-            buyBtn.disabled = Boolean(blockReason);
+            buyBtn.dataset.potionBuyKey = key;
+            updatePotionBuyButton(buyBtn, key);
             buyBtn.addEventListener("click", () => buyPotion(key));
+
+            const maxBuyBtn = document.createElement("button");
+            maxBuyBtn.className = "rng-btn rng-btn-ghost rng-potion-mini-btn";
+            maxBuyBtn.type = "button";
+            maxBuyBtn.textContent = "Max";
+            updatePotionMaxBuyButton(maxBuyBtn, key);
+            maxBuyBtn.addEventListener("click", () => buyMaxPotion(key));
 
             const useBtn = document.createElement("button");
             useBtn.className = "rng-btn";
@@ -4024,8 +4107,20 @@ function updateActiveEffectsUi() {
             useBtn.disabled = !(player.potions[key] > 0);
             useBtn.addEventListener("click", () => usePotion(key));
 
+            const useAllBtn = document.createElement("button");
+            useAllBtn.className = "rng-btn rng-btn-ghost rng-potion-mini-btn";
+            useAllBtn.type = "button";
+            useAllBtn.textContent = "All";
+            useAllBtn.disabled = !(player.potions[key] > 1);
+            useAllBtn.title = player.potions[key] > 1
+                ? `Use all ${Math.floor(player.potions[key]).toLocaleString()} stored ${def.name}s`
+                : "Store more than one to use all";
+            useAllBtn.addEventListener("click", () => useAllPotion(key));
+
             actions.appendChild(buyBtn);
+            actions.appendChild(maxBuyBtn);
             actions.appendChild(useBtn);
+            actions.appendChild(useAllBtn);
             shop.appendChild(card);
         }
     }
@@ -4343,6 +4438,21 @@ function updateAllUi(options = {}) {
         }, null);
     }
 
+    function isApexPull(shark) {
+        return shark?.mutation === "apex";
+    }
+
+    function getRollRevealShark(rolls, fallback) {
+        const apexRoll = [...(Array.isArray(rolls) ? rolls : [])]
+            .filter(isApexPull)
+            .sort((a, b) => {
+                const oddsDiff = (b.oneIn || 0) - (a.oneIn || 0);
+                if (oddsDiff !== 0) return oddsDiff;
+                return (b.coinReward || 0) - (a.coinReward || 0);
+            })[0];
+        return apexRoll || fallback;
+    }
+
     function getMultiRollResultSummary(rolls) {
         const topRolls = [...(Array.isArray(rolls) ? rolls : [])]
             .filter(Boolean)
@@ -4368,7 +4478,7 @@ function updateAllUi(options = {}) {
     }
 
     function ensureMultiRollGrid(stage, rollCount) {
-        if (!stage || rollCount <= 1 || hideEnabled) {
+        if (!stage || rollCount <= 1) {
             clearMultiRollGrid(stage);
             return null;
         }
@@ -4428,7 +4538,9 @@ function updateAllUi(options = {}) {
 
         GameFx.play("roll");
         stage?.classList.add("rng-rolling");
-        if (!hideEnabled) display.style.display = "block";
+        display.style.display = "block";
+        display.style.opacity = "1";
+        display.style.visibility = "visible";
         if (rollCount > 1) {
             display.dataset.multiRoll = `x${rollCount} rolls`;
             display.textContent = `Rolling x${rollCount}`;
@@ -4441,12 +4553,12 @@ function updateAllUi(options = {}) {
         const frameDelay = Math.max(35, Math.round(getRollCooldownMs() / 16));
 
         for (let i = 0; i < 14; i++) {
-            if (!hideEnabled && multiSlots.length) {
+            if (multiSlots.length) {
                 multiSlots.forEach((slot, index) => {
                     const randomShark = flashPool[Math.floor(Math.random() * flashPool.length)];
                     updateMultiRollSlot(slot, randomShark, index);
                 });
-            } else if (!hideEnabled) {
+            } else {
                 const randomShark = flashPool[Math.floor(Math.random() * flashPool.length)];
                 display.textContent = randomShark.name;
                 display.className = `rng-roll-display ${randomShark.className}`;
@@ -4454,17 +4566,15 @@ function updateAllUi(options = {}) {
             await new Promise((resolve) => setTimeout(resolve, frameDelay));
         }
 
-        if (!hideEnabled) {
-            display.textContent = rollCount > 1 ? `Best: ${finalShark.name}` : finalShark.name;
-            display.className = `rng-roll-display ${finalShark.className}${finalShark.mutation ? ' ' + finalShark.mutation : ''}`;
-            multiSlots.forEach((slot, index) => {
-                const shark = burstRolls[index];
-                updateMultiRollSlot(slot, shark, index, {
-                    final: true,
-                    best: shark === finalShark
-                });
+        display.textContent = rollCount > 1 ? `Best: ${finalShark.name}` : finalShark.name;
+        display.className = `rng-roll-display ${finalShark.className}${finalShark.mutation ? ' ' + finalShark.mutation : ''}`;
+        multiSlots.forEach((slot, index) => {
+            const shark = burstRolls[index];
+            updateMultiRollSlot(slot, shark, index, {
+                final: true,
+                best: shark === finalShark
             });
-        }
+        });
 
         stage?.classList.remove("rng-rolling");
 
@@ -4510,7 +4620,12 @@ function updateAllUi(options = {}) {
         GameFx.floatText(`+${formatCompactCoins(totalCoinGain)}`, "coin");
         GameFx.play("coin");
 
-        if (isUltraRarePull(shark)) {
+        if (isApexPull(shark)) {
+            GameFx.play("jackpot");
+            GameFx.shake("heavy");
+            document.querySelector(".rng-roll-stage")?.classList.add("rng-jackpot-flash");
+            setTimeout(() => document.querySelector(".rng-roll-stage")?.classList.remove("rng-jackpot-flash"), 700);
+        } else if (isUltraRarePull(shark)) {
             GameFx.play("jackpot");
             GameFx.shake("heavy");
             document.querySelector(".rng-roll-stage")?.classList.add("rng-jackpot-flash");
@@ -4574,7 +4689,9 @@ function updateAllUi(options = {}) {
     }
 
     async function showRollReveal(shark) {
-        if (shark.oneIn >= ULTRA_ONE_IN_THRESHOLD) {
+        if (isApexPull(shark)) {
+            await showUltraCutscene(shark);
+        } else if (shark.oneIn >= ULTRA_ONE_IN_THRESHOLD) {
             const oddsTier = getOddsTierName(shark);
             if (shouldSkipCutscene(shark)) {
                 showToast(`Skipped repeat ${oddsTier} cutscene`);
@@ -4587,16 +4704,19 @@ function updateAllUi(options = {}) {
     }
 
     function getUltraRevealConfig(shark) {
+        if (isApexPull(shark)) return APEX_REVEAL_CONFIG;
         return ULTRA_REVEAL_CONFIGS[getOddsTierName(shark)] || ULTRA_REVEAL_CONFIGS.Ultra;
     }
 
     function shouldSkipCutscene(shark) {
+        if (isApexPull(shark)) return false;
         const tier = getOddsTierName(shark);
         const settings = getSettings();
         return Boolean(settings.skipCutscenes?.[tier] && settings.seenCutscenes?.[tier]);
     }
 
     function markCutsceneSeen(shark) {
+        if (isApexPull(shark)) return;
         const tier = getOddsTierName(shark);
         if (!CUTSCENE_SKIP_TIERS.includes(tier)) return;
         getSettings().seenCutscenes[tier] = true;
@@ -4616,6 +4736,17 @@ function updateAllUi(options = {}) {
             const oddsTier = getOddsTierName(shark);
             const oddsClass = getRarityClass(oddsTier);
             const reveal = getUltraRevealConfig(shark);
+            const isApex = isApexPull(shark);
+            const tierLabel = reveal.tierLabel || oddsTier;
+            const metaLine = isApex
+                ? `${shark.depth || "Unknown"} \u00b7 ${shark.size || "?"} \u00b7 Apex predator sighted \u00b7 ${isNew ? "NEW species!" : "Added to collection"}`
+                : `${shark.depth || "Unknown"} \u00b7 ${shark.size || "?"} \u00b7 ${isNew ? "NEW species!" : "Added to collection"}${shark.mutation ? ' \u00b7 <span class="rng-mutation-tag ' + shark.mutation + '">' + MUTATION_TYPES[shark.mutation]?.icon + ' ' + shark.mutation.toUpperCase() + '</span>' : ''}`;
+            const apexLayers = isApex ? `
+                <div class="rng-cutscene-apex-sweep" aria-hidden="true"></div>
+                <div class="rng-cutscene-apex-jaws" aria-hidden="true"></div>
+                <div class="rng-cutscene-apex-slashes" aria-hidden="true"></div>
+                <div class="rng-cutscene-apex-mark" aria-hidden="true">APEX</div>
+            ` : "";
 
             cutscene.className = `rng-cutscene visible playing ${oddsClass}${shark.mutation ? ' ' + shark.mutation : ''}`;
             cutscene.innerHTML = `
@@ -4626,12 +4757,13 @@ function updateAllUi(options = {}) {
                 <div class="rng-cutscene-beams" aria-hidden="true"></div>
                 <div class="rng-cutscene-rings" aria-hidden="true"></div>
                 <div class="rng-cutscene-particles" aria-hidden="true"></div>
+                ${apexLayers}
                 <div class="rng-cutscene-content">
                     <p class="rng-cutscene-eyebrow">${reveal.eyebrow}</p>
-                    <p class="rng-cutscene-tier">${oddsTier}</p>
+                    <p class="rng-cutscene-tier">${tierLabel}</p>
                     <h2 class="rng-cutscene-name${shark.mutation ? ' ' + shark.mutation : ''}">${shark.name}</h2>
                     <p class="rng-cutscene-odds">1 in ${formatOneIn(shark.oneIn)}</p>
-                    <p class="rng-cutscene-meta">${shark.depth || "Unknown"} \u00b7 ${shark.size || "?"} \u00b7 ${isNew ? "NEW species!" : "Added to collection"}${shark.mutation ? ' \u00b7 <span class="rng-mutation-tag ' + shark.mutation + '">' + MUTATION_TYPES[shark.mutation]?.icon + ' ' + shark.mutation.toUpperCase() + '</span>' : ''}</p>
+                    <p class="rng-cutscene-meta">${metaLine}</p>
                     <button type="button" class="rng-cutscene-btn" id="rng-cutscene-close">Continue</button>
                 </div>
             `;
@@ -4640,7 +4772,9 @@ function updateAllUi(options = {}) {
             if (rings) {
                 for (let i = 0; i < reveal.ringCount; i++) {
                     const ring = document.createElement("span");
-                    const ringSize = oddsTier === "Singularity" ? 110 + (i * 62) : 140 + (i * 76);
+                    const ringSize = isApex
+                        ? 105 + (i * 54)
+                        : oddsTier === "Singularity" ? 110 + (i * 62) : 140 + (i * 76);
                     ring.style.setProperty("--i", String(i));
                     ring.style.setProperty("--ring-size", `${ringSize}px`);
                     ring.style.setProperty("--delay", `${(i * 0.18).toFixed(2)}s`);
@@ -4689,6 +4823,17 @@ function updateAllUi(options = {}) {
                 }
             }
 
+            const apexSlashes = cutscene.querySelector(".rng-cutscene-apex-slashes");
+            if (apexSlashes) {
+                for (let i = 0; i < 6; i++) {
+                    const slash = document.createElement("span");
+                    slash.style.setProperty("--top", `${18 + i * 11}%`);
+                    slash.style.setProperty("--delay", `${(0.24 + i * 0.08).toFixed(2)}s`);
+                    slash.style.setProperty("--rotate", `${-17 + i * 3}deg`);
+                    apexSlashes.appendChild(slash);
+                }
+            }
+
             requestAnimationFrame(() => {
                 requestAnimationFrame(() => cutscene.classList.add("revealed"));
             });
@@ -4721,9 +4866,10 @@ async function performRoll() {
              newFinds: burstRolls.filter((shark) => Boolean(shark.isNewFind)).length,
              rolls: burstRolls
          };
+         const revealShark = getRollRevealShark(burstRolls, finalShark);
          await animateRoll(finalShark, rollContext);
-         applyRollJuice(finalShark, rollContext);
-         await showRollReveal(finalShark);
+         applyRollJuice(revealShark, rollContext);
+         await showRollReveal(revealShark);
          persistPlayerState({ deferCollectionGridDuringRoll: true });
 
          rollLockedUntil = Date.now() + getRollCooldownMs();
@@ -4744,13 +4890,21 @@ async function performRoll() {
 
     function updateAutoButtonUi() {
         const autoButton = document.getElementById("rng-auto-btn");
+        const autoArrow = document.getElementById("rng-auto-arrow");
         if (!autoButton) return;
 
         const unlocked = isAutoRollUnlocked();
         autoButton.classList.toggle("locked", !unlocked);
         autoButton.classList.toggle("active", autoEnabled && unlocked);
+        autoButton.setAttribute("aria-pressed", autoEnabled && unlocked ? "true" : "false");
+        if (autoArrow) {
+            autoArrow.classList.toggle("hidden", !unlocked || autoArrowDismissed);
+            autoArrow.classList.toggle("active", autoEnabled && unlocked);
+        }
         autoButton.title = unlocked
-            ? `Auto roll every ${(getAutoIntervalMs() / 1000).toFixed(1)}s`
+            ? autoEnabled
+                ? `Auto Roll ACTIVE - rolling every ${(getAutoIntervalMs() / 1000).toFixed(1)}s`
+                : `Auto Roll off - rolls every ${(getAutoIntervalMs() / 1000).toFixed(1)}s when enabled`
             : "Unlock Auto Roll in the upgrade shop";
     }
 
@@ -4785,22 +4939,6 @@ async function performRoll() {
         }
     }
 
-    function setHideRoll(enabled) {
-        hideEnabled = enabled;
-        const hideButton = document.getElementById("rng-hide-btn");
-        const display = document.getElementById("rng-roll-display");
-        const multiGrid = document.querySelector(".rng-multi-roll-grid");
-        if (hideButton) hideButton.classList.toggle("active", hideEnabled);
-        if (display) {
-            display.style.opacity = hideEnabled ? "0" : "1";
-            display.style.visibility = hideEnabled ? "hidden" : "visible";
-        }
-        if (multiGrid) {
-            multiGrid.style.opacity = hideEnabled ? "0" : "1";
-            multiGrid.style.visibility = hideEnabled ? "hidden" : "visible";
-        }
-    }
-
     function openCollectionModal() {
         document.getElementById("rng-collection-modal")?.classList.remove("hidden");
         renderCollectionGrid({ force: true });
@@ -4820,9 +4958,9 @@ async function performRoll() {
         persistPlayerState();
     }
 
-    function buyPotion(key) {
+    function buyPotion(key, requestedQuantity = getSelectedPotionBuyAmount()) {
         const def = POTION_DEFS[key];
-        const quantity = getPotionBuyQuantity(key);
+        const quantity = getPotionBuyQuantity(key, requestedQuantity);
         const blockReason = getPotionPurchaseBlockReason(key, quantity);
         if (!def || blockReason || quantity <= 0) {
             if (blockReason) showToast(blockReason, "error");
@@ -4836,6 +4974,17 @@ async function performRoll() {
         persistPlayerState();
     }
 
+    function buyMaxPotion(key) {
+        const quantity = getPotionMaxBuyQuantity(key);
+        if (quantity <= 0) {
+            const blockReason = getPotionPurchaseBlockReason(key, getPotionBuyQuantity(key, 1)) || "Cannot buy any right now.";
+            showToast(blockReason, "error");
+            return;
+        }
+
+        buyPotion(key, quantity);
+    }
+
     function usePotion(key) {
         const def = POTION_DEFS[key];
         if (!def || !(player.potions[key] > 0)) return;
@@ -4843,6 +4992,17 @@ async function performRoll() {
         player.potions[key] -= 1;
         applyPotionEffect(key);
         persistPlayerState();
+    }
+
+    function useAllPotion(key) {
+        const def = POTION_DEFS[key];
+        const owned = Math.max(0, Math.floor(Number(player.potions[key]) || 0));
+        if (!def || owned <= 0) return;
+
+        const used = applyPotionEffect(key, owned);
+        player.potions[key] = Math.max(0, owned - used);
+        persistPlayerState();
+        showToast(`Used ${used.toLocaleString()} ${def.name}${used === 1 ? "" : "s"}.`);
     }
 
     function applyPotionEffect(key, quantity = 1) {
@@ -4864,6 +5024,8 @@ async function performRoll() {
             player.activeEffects.ultra.remaining += effectRolls;
         } else if (key === "omega") {
             player.activeEffects.omega.remaining += effectRolls;
+        } else if (key === "apexSurge") {
+            player.activeEffects.apexSurge.remaining += effectRolls;
         } else if (key === "randomMutation") {
             player.activeEffects.randomMutation.remaining += effectRolls;
         } else if (STANDARD_MUTATION_KEYS.includes(key)) {
@@ -5225,10 +5387,62 @@ async function performRoll() {
         };
     }
 
+    function isRngTypingTarget(target) {
+        return Boolean(target?.closest?.("input, textarea, select, button, [contenteditable='true']"));
+    }
+
+    function isAnyRngOverlayOpen() {
+        return Boolean(
+            document.querySelector(".rng-modal:not(.hidden)") ||
+            document.getElementById("rng-cutscene")?.classList.contains("visible") ||
+            document.getElementById("rng-celebration")?.classList.contains("visible")
+        );
+    }
+
+    function handleRngKeyboardShortcut(event) {
+        if (event.defaultPrevented || event.ctrlKey || event.metaKey || event.altKey) {
+            return;
+        }
+
+        const key = event.key.toLowerCase();
+
+        if (key === "escape") {
+            if (document.getElementById("rng-cutscene")?.classList.contains("visible")) {
+                closeUltraCutscene();
+            } else if (document.getElementById("rng-celebration")?.classList.contains("visible")) {
+                closeRarePopup();
+            } else if (!document.getElementById("rng-settings-modal")?.classList.contains("hidden")) {
+                closeSettingsModal();
+            } else if (isCollectionModalOpen()) {
+                closeCollectionModal();
+            }
+            return;
+        }
+
+        if (isRngTypingTarget(event.target)) return;
+        if (isAnyRngOverlayOpen()) return;
+
+        if (key === "r" || event.key === " ") {
+            event.preventDefault();
+            performRoll();
+        } else if (key === "a") {
+            event.preventDefault();
+            setAutoRoll(!autoEnabled);
+        } else if (key === "i") {
+            event.preventDefault();
+            openCollectionModal();
+        }
+    }
+
     function bindUi() {
         document.getElementById("rng-roll-btn")?.addEventListener("click", performRoll);
         document.getElementById("rng-auto-btn")?.addEventListener("click", () => setAutoRoll(!autoEnabled));
-        document.getElementById("rng-hide-btn")?.addEventListener("click", () => setHideRoll(!hideEnabled));
+        document.getElementById("rng-auto-arrow-dismiss")?.addEventListener("click", (event) => {
+            event.stopPropagation();
+            autoArrowDismissed = true;
+            localStorage.setItem(AUTO_ARROW_DISMISSED_KEY, "true");
+            updateAutoButtonUi();
+        });
         document.getElementById("rng-collection-open-btn")?.addEventListener("click", openCollectionModal);
         const topCollectionChip = document.getElementById("rng-top-collection");
         if (topCollectionChip) {
@@ -5289,15 +5503,7 @@ async function performRoll() {
             loadRngLeaderboard({ syncFirst: true });
         });
 
-        document.addEventListener("keydown", (event) => {
-            if (event.key === "Escape") {
-                if (document.getElementById("rng-cutscene")?.classList.contains("visible")) {
-                    closeUltraCutscene();
-                } else if (!document.getElementById("rng-settings-modal")?.classList.contains("hidden")) {
-                    closeSettingsModal();
-                }
-            }
-        });
+        document.addEventListener("keydown", handleRngKeyboardShortcut);
     }
 
     function startPotionUiTicker() {

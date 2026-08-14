@@ -15,7 +15,7 @@
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
     <script src="sharks.js"></script>
-    <link rel="stylesheet" href="mobile.css">
+    <script src="rays.js"></script>
 </head>
 <body class="rng-page shell-page">
 
@@ -51,7 +51,7 @@
             <div>
                 <span class="rng-label">Equipped Species</span>
                 <strong id="rng-equipped-name" class="rng-equipped-name common">—</strong>
-                <span id="rng-equipped-meta" class="rng-equipped-meta">Roll to discover your first shark</span>
+                <span id="rng-equipped-meta" class="rng-equipped-meta">Roll to discover your first species</span>
             </div>
             <button id="rng-collection-open-btn" class="rng-btn rng-btn-ghost" type="button" title="Collection">
                 <i class="fa-solid fa-book"></i>
@@ -68,14 +68,17 @@
         <div id="rng-active-effects" class="rng-buff-row" data-empty="true"></div>
 
         <div class="rng-action-row">
-            <button id="rng-auto-btn" class="rng-btn" type="button" title="Auto roll">
-                <i class="fa-solid fa-repeat"></i>
-            </button>
+            <div class="rng-auto-wrap">
+                <div id="rng-auto-arrow" class="rng-auto-arrow hidden" aria-hidden="true">
+                    <button id="rng-auto-arrow-dismiss" type="button" aria-label="Dismiss Auto Roll hint">&times;</button>
+                    <span>Auto Roll</span>
+                </div>
+                <button id="rng-auto-btn" class="rng-btn" type="button" title="Auto roll">
+                    <i class="fa-solid fa-repeat"></i>
+                </button>
+            </div>
             <button id="rng-roll-btn" class="rng-btn rng-btn-roll" type="button">
                 <i class="fa-solid fa-dice"></i> Roll
-            </button>
-            <button id="rng-hide-btn" class="rng-btn" type="button" title="Hide roll text">
-                <i class="fa-solid fa-eye-slash"></i>
             </button>
         </div>
 
@@ -211,7 +214,7 @@
         <label class="rng-setting-row">
             <input id="rng-setting-disable-popups" type="checkbox">
             <div>
-                <strong>Remove popup for rare sharks</strong>
+                <strong>Remove popup for rare species</strong>
                 <span>Skips Legendary–Secret cards. Ultra rare (1M+) cutscenes still play.</span>
             </div>
         </label>
