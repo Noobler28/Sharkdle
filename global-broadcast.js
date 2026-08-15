@@ -25,7 +25,7 @@
     const VISITOR_TRACKING_STARTED_KEY = "__sharkdleVisitorTrackingStarted";
     const VISITOR_DAILY_COLLECTION = "visitorDaily";
     const VISITOR_HEARTBEAT_MS = 45 * 1000;
-    const RNG_BROADCAST_MIN_ONE_IN = 1_000_000;
+    const RNG_BROADCAST_MIN_ONE_IN = 100_000_000;
     const RNG_BROADCAST_MAX_AGE_MS = 5 * 60 * 1000;
     const RNG_BROADCAST_DISPLAY_MS = 6500;
     const RNG_BROADCAST_QUERY_LIMIT = 8;
@@ -485,16 +485,18 @@
         const speciesName = sanitizeRngBroadcastText(data.speciesName, "something rare", 80);
         const mutationName = sanitizeRngBroadcastText(data.mutationName, "", 32);
         const rollCount = Math.max(1, Math.floor(Number(data.rollCount) || 1));
-        const displayName = mutationName && !isApex ? `${mutationName} ${speciesName}` : speciesName;
+        const namedApexMutation = isApex && mutationName && mutationName.toLowerCase() !== "apex";
+        const displayName = mutationName && (!isApex || namedApexMutation) ? `${mutationName} ${speciesName}` : speciesName;
         const rarityText = isApex ? "APEX" : tier;
-        const detailText = isApex ? `1 in ${formatRngOneIn(oneIn)}` : `${rarityText}, 1 in ${formatRngOneIn(oneIn)}`;
+        const detailText = isApex ? `${namedApexMutation ? "APEX path, " : ""}1 in ${formatRngOneIn(oneIn)}` : `${rarityText}, 1 in ${formatRngOneIn(oneIn)}`;
+        const apexPrefix = isApex && !namedApexMutation ? "APEX " : "";
         const rollText = rollCount > 1 ? ` in a ${rollCount}x roll` : "";
 
         return {
             id,
             type: isApex ? "apex" : "rng",
             label: "Global Message",
-            message: `${playerName} just rolled ${isApex ? "APEX " : ""}${displayName} (${detailText})${rollText}`
+            message: `${playerName} just rolled ${apexPrefix}${displayName} (${detailText})${rollText}`
         };
     }
 
