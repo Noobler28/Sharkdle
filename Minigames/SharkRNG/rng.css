@@ -419,6 +419,9 @@ body.rng-page {
 .rng-roll-display.void { color: #a78bfa; text-shadow: 0 0 20px rgba(167,139,250,0.7), 0 0 34px rgba(30,27,75,0.55); }
 .rng-roll-display.cosmic { color: #e879f9; text-shadow: 0 0 20px rgba(232,121,249,0.72), 0 0 34px rgba(88,28,135,0.48); }
 .rng-roll-display.apex { color: #fb923c; text-shadow: 0 0 20px rgba(251,146,60,0.75), 0 0 34px rgba(239,68,68,0.42); }
+.rng-roll-display.primordial { color: #f59e0b; text-shadow: 0 0 20px rgba(245,158,11,0.78), 0 0 36px rgba(120,53,15,0.48); }
+.rng-roll-display.leviathan { color: #38bdf8; text-shadow: 0 0 22px rgba(56,189,248,0.82), 0 0 40px rgba(14,116,144,0.52); }
+.rng-roll-display.eventhorizon { color: #f0abfc; text-shadow: 0 0 24px rgba(240,171,252,0.86), 0 0 48px rgba(76,29,149,0.62); }
 
 .rng-result {
     width: min(100%, 560px);
@@ -494,6 +497,9 @@ body.rng-page {
 .rng-mutation-tag.void { color: #a78bfa; }
 .rng-mutation-tag.cosmic { color: #e879f9; }
 .rng-mutation-tag.apex { color: #fb923c; }
+.rng-mutation-tag.primordial { color: #f59e0b; }
+.rng-mutation-tag.leviathan { color: #38bdf8; }
+.rng-mutation-tag.eventhorizon { color: #f0abfc; }
 
 .rng-buff-row {
     display: flex;
@@ -1965,6 +1971,9 @@ body.rng-page {
 .void { color: #a78bfa; text-shadow: 0 0 12px rgba(167, 139, 250, 0.66), 0 0 22px rgba(30, 27, 75, 0.48); }
 .cosmic { color: #e879f9; text-shadow: 0 0 12px rgba(232, 121, 249, 0.65), 0 0 22px rgba(88, 28, 135, 0.38); }
 .apex { color: #fb923c; text-shadow: 0 0 12px rgba(251, 146, 60, 0.65), 0 0 22px rgba(239, 68, 68, 0.38); }
+.primordial { color: #f59e0b; text-shadow: 0 0 12px rgba(245, 158, 11, 0.7), 0 0 24px rgba(120, 53, 15, 0.44); }
+.leviathan { color: #38bdf8; text-shadow: 0 0 13px rgba(56, 189, 248, 0.74), 0 0 26px rgba(14, 116, 144, 0.48); }
+.eventhorizon { color: #f0abfc; text-shadow: 0 0 14px rgba(240, 171, 252, 0.78), 0 0 30px rgba(76, 29, 149, 0.58); }
 
 .rng-tier-row.common { border-left-color: #e2e8f0; }
 .rng-tier-row.uncommon { border-left-color: #86efac; }
@@ -3221,6 +3230,24 @@ body.rng-page {
         0 0 22px rgba(251, 146, 60, 0.95),
         0 0 44px rgba(239, 68, 68, 0.6);
     animation: rng-apex-name-hunt 1.15s ease-in-out infinite;
+}
+.rng-cutscene-name.primordial {
+    color: #fde68a;
+    text-shadow:
+        0 0 24px rgba(245, 158, 11, 0.92),
+        0 0 46px rgba(120, 53, 15, 0.64);
+}
+.rng-cutscene-name.leviathan {
+    color: #bae6fd;
+    text-shadow:
+        0 0 26px rgba(56, 189, 248, 0.96),
+        0 0 52px rgba(14, 116, 144, 0.68);
+}
+.rng-cutscene-name.eventhorizon {
+    color: #fae8ff;
+    text-shadow:
+        0 0 28px rgba(240, 171, 252, 0.98),
+        0 0 58px rgba(76, 29, 149, 0.74);
 }
 
 .rng-cutscene-odds {
