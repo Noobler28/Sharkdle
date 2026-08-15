@@ -1,4 +1,4 @@
-﻿(function () {
+(function () {
     "use strict";
 
     const STORAGE_KEY = "sharkRngProfile";
@@ -1007,6 +1007,37 @@
             oneInMult: 120,  // species becomes 120\u00d7 rarer
             color: "#fb923c",
             scoreBonus: 45,
+            apexChanceMult: 1,
+            naturalOnly: true
+        },
+        primordial: {
+            name: "Primordial",
+            icon: "\u{1F9B4}",
+            oneInMult: 220,
+            color: "#f59e0b",
+            scoreBonus: 55,
+            apexChanceMult: 5,
+            cutsceneMark: "PRIME",
+            naturalOnly: true
+        },
+        leviathan: {
+            name: "Leviathan",
+            icon: "\u{1F30A}",
+            oneInMult: 360,
+            color: "#38bdf8",
+            scoreBonus: 65,
+            apexChanceMult: 12,
+            cutsceneMark: "LEVI",
+            naturalOnly: true
+        },
+        eventhorizon: {
+            name: "Event Horizon",
+            icon: "\u25CF",
+            oneInMult: 700,
+            color: "#f0abfc",
+            scoreBonus: 80,
+            apexChanceMult: 30,
+            cutsceneMark: "EVENT",
             naturalOnly: true
         }
     };
@@ -1030,8 +1061,13 @@
         "megatooth",
         "void",
         "cosmic",
-        "apex"
+        "apex",
+        "primordial",
+        "leviathan",
+        "eventhorizon"
     ];
+    const NATURAL_ONLY_MUTATION_KEYS = MUTATION_CHANCE_ORDER
+        .filter((key) => MUTATION_TYPES[key]?.naturalOnly);
 
     const TIER_ORDER = TIERS.map((tier) => tier.name);
     const TIER_RANK = Object.fromEntries(TIER_ORDER.map((name, index) => [name, index]));
@@ -3162,7 +3198,7 @@ let rollPool = [];
         return baseChance ? Math.max(1, Math.round(baseChance / getPrestigeMutationOddsMultiplier())) : null;
     }
 
-    function getApexMutationChance() {
+    function getApexMutationBaseChance() {
         const prestigeLevel = getPrestigeUpgradeLevel("apexMemory");
         const upgrade = player.apexLevel > 0
             ? APEX_LUCK_UPGRADES.find((entry) => entry.level === player.apexLevel)
@@ -3178,6 +3214,28 @@ let rollPool = [];
         if (naturalChance === null) return potionChance;
         if (potionChance === null) return naturalChance;
         return Math.min(naturalChance, potionChance);
+    }
+
+    function getApexMutationChance(key = "apex") {
+        const baseChance = getApexMutationBaseChance();
+        if (baseChance === null) return null;
+        const multiplier = Math.max(1, Number(MUTATION_TYPES[key]?.apexChanceMult) || 1);
+        return Math.max(1, Math.round(baseChance * multiplier));
+    }
+
+    function rollApexPathMutationKey() {
+        const keys = [...NATURAL_ONLY_MUTATION_KEYS]
+            .sort((a, b) => {
+                const aMult = Number(MUTATION_TYPES[a]?.apexChanceMult) || 1;
+                const bMult = Number(MUTATION_TYPES[b]?.apexChanceMult) || 1;
+                return bMult - aMult;
+            });
+
+        for (const key of keys) {
+            const chance = getApexMutationChance(key);
+            if (chance !== null && Math.random() < (1 / chance)) return key;
+        }
+        return null;
     }
 
     function getActiveGuaranteedPotionKey() {
@@ -3360,7 +3418,7 @@ let rollPool = [];
     }
 
     function getNaturalMutationChanceOneIn(key) {
-        if (key === "apex") return getApexMutationChance();
+        if (NATURAL_ONLY_MUTATION_KEYS.includes(key)) return getApexMutationChance(key);
         if (!STANDARD_MUTATION_KEYS.includes(key)) return null;
 
         const baseChance = getMutationChance();
@@ -3776,21 +3834,18 @@ function rollForShark(actionContext = createRollActionContext(1)) {
     }
 
     // =========================================
-    // RANDOM APEX MUTATION ROLL
+    // RANDOM APEX-PATH MUTATION ROLL
     // =========================================
 
     if (!rolled && !hasForcedMutation) {
 
-        const apexChance = getApexMutationChance();
+        const apexMutationKey = rollApexPathMutationKey();
 
-        if (
-            apexChance !== null &&
-            Math.random() < (1 / apexChance)
-        ) {
+        if (apexMutationKey) {
             const picked =
                 rollPool[Math.floor(Math.random() * rollPool.length)];
 
-            rolled = applyStableMutation(picked, "apex");
+            rolled = applyStableMutation(picked, apexMutationKey);
         }
     }
 
@@ -4954,7 +5009,7 @@ function updateAllUi(options = {}) {
                 ? Math.round(((mutation.rollWeight || 0) / standardWeightTotal) * 100)
                 : null;
             const chanceText = chance === null
-                ? (key === "apex" ? "Apex Instinct locked" : `${pickPercent}% of mutation rolls`)
+                ? (NATURAL_ONLY_MUTATION_KEYS.includes(key) ? "Apex Instinct locked" : `${pickPercent}% of mutation rolls`)
                 : `1 in ${formatOneIn(chance)}`;
             const pickText = chance !== null && pickPercent !== null ? ` · ${pickPercent}% pick` : "";
 
@@ -5395,7 +5450,32 @@ function updateAllUi(options = {}) {
     }
 
     function isApexPull(shark) {
-        return shark?.mutation === "apex";
+        return Boolean(shark?.mutation && MUTATION_TYPES[shark.mutation]?.naturalOnly);
+    }
+
+    function getApexPathMutationDef(shark) {
+        return MUTATION_TYPES[shark?.mutation] || MUTATION_TYPES.apex;
+    }
+
+    function getApexPathRevealConfig(shark) {
+        const mutation = getApexPathMutationDef(shark);
+        if (shark?.mutation === "apex") return APEX_REVEAL_CONFIG;
+
+        const rarityMult = Math.max(1, Number(mutation.apexChanceMult) || 1);
+        return {
+            ...APEX_REVEAL_CONFIG,
+            eyebrow: `${mutation.name} Mutation Detected`,
+            tierLabel: `${mutation.name} Mutation`,
+            particleCount: APEX_REVEAL_CONFIG.particleCount + Math.min(48, Math.round(rarityMult * 2)),
+            ringCount: APEX_REVEAL_CONFIG.ringCount + Math.min(3, Math.floor(rarityMult / 10)),
+            beamCount: APEX_REVEAL_CONFIG.beamCount + Math.min(6, Math.floor(rarityMult / 6)),
+            particleSymbols: [mutation.icon, "!", "A", "X"]
+        };
+    }
+
+    function getApexPathCutsceneMark(shark) {
+        const mutation = getApexPathMutationDef(shark);
+        return mutation.cutsceneMark || mutation.name || "APEX";
     }
 
     function getRollRevealShark(rolls, fallback) {
@@ -5705,7 +5785,7 @@ function updateAllUi(options = {}) {
     }
 
     function getUltraRevealConfig(shark) {
-        if (isApexPull(shark)) return APEX_REVEAL_CONFIG;
+        if (isApexPull(shark)) return getApexPathRevealConfig(shark);
         return ULTRA_REVEAL_CONFIGS[getOddsTierName(shark)] || ULTRA_REVEAL_CONFIGS.Ultra;
     }
 
@@ -5738,18 +5818,19 @@ function updateAllUi(options = {}) {
             const oddsClass = getRarityClass(oddsTier);
             const reveal = getUltraRevealConfig(shark);
             const isApex = isApexPull(shark);
+            const apexMutation = isApex ? getApexPathMutationDef(shark) : null;
             const tierLabel = reveal.tierLabel || oddsTier;
             const metaLine = isApex
-                ? `${shark.depth || "Unknown"} \u00b7 ${shark.size || "?"} \u00b7 Apex predator sighted \u00b7 ${isNew ? "NEW species!" : "Added to collection"}`
+                ? `${shark.depth || "Unknown"} \u00b7 ${shark.size || "?"} \u00b7 ${apexMutation.name} mutation sighted \u00b7 ${isNew ? "NEW species!" : "Added to collection"}`
                 : `${shark.depth || "Unknown"} \u00b7 ${shark.size || "?"} \u00b7 ${isNew ? "NEW species!" : "Added to collection"}${shark.mutation ? ' \u00b7 <span class="rng-mutation-tag ' + shark.mutation + '">' + MUTATION_TYPES[shark.mutation]?.icon + ' ' + shark.mutation.toUpperCase() + '</span>' : ''}`;
             const apexLayers = isApex ? `
                 <div class="rng-cutscene-apex-sweep" aria-hidden="true"></div>
                 <div class="rng-cutscene-apex-jaws" aria-hidden="true"></div>
                 <div class="rng-cutscene-apex-slashes" aria-hidden="true"></div>
-                <div class="rng-cutscene-apex-mark" aria-hidden="true">APEX</div>
+                <div class="rng-cutscene-apex-mark" aria-hidden="true">${getApexPathCutsceneMark(shark)}</div>
             ` : "";
 
-            cutscene.className = `rng-cutscene visible playing ${oddsClass}${shark.mutation ? ' ' + shark.mutation : ''}`;
+            cutscene.className = `rng-cutscene visible playing ${oddsClass}${isApex && shark.mutation !== "apex" ? ' apex' : ''}${shark.mutation ? ' ' + shark.mutation : ''}`;
             cutscene.innerHTML = `
                 <div class="rng-cutscene-vignette"></div>
                 <div class="rng-cutscene-aura"></div>
