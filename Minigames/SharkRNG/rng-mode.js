@@ -889,6 +889,14 @@
             scoreBonus: 30,
             rollWeight: 42
         },
+        piebald: {
+            name: "Piebald",
+            icon: "\u25FB",
+            oneInMult: 6,
+            color: "#e2e8f0",
+            scoreBonus: 24,
+            rollWeight: 36
+        },
         shiny: {
             name: "Shiny",
             icon: "\u2728",
@@ -896,6 +904,14 @@
             color: "#fde047",
             scoreBonus: 22,
             rollWeight: 28
+        },
+        leucistic: {
+            name: "Leucistic",
+            icon: "\u{1F54A}\uFE0F",
+            oneInMult: 9,
+            color: "#bfdbfe",
+            scoreBonus: 26,
+            rollWeight: 24
         },
         bioluminescent: {
             name: "Bioluminescent",
@@ -913,6 +929,14 @@
             scoreBonus: 20,
             rollWeight: 17
         },
+        emerald: {
+            name: "Emerald",
+            icon: "\u{1F7E2}",
+            oneInMult: 16,
+            color: "#34d399",
+            scoreBonus: 24,
+            rollWeight: 15
+        },
         golden: {
             name: "Golden",
             icon: "\u{1F3C6}",
@@ -920,6 +944,14 @@
             color: "#fbbf24",
             scoreBonus: 28,
             rollWeight: 12
+        },
+        frostbite: {
+            name: "Frostbite",
+            icon: "\u2744\uFE0F",
+            oneInMult: 24,
+            color: "#93c5fd",
+            scoreBonus: 32,
+            rollWeight: 10
         },
         spectral: {
             name: "Spectral",
@@ -937,6 +969,14 @@
             scoreBonus: 36,
             rollWeight: 6
         },
+        volcanic: {
+            name: "Volcanic",
+            icon: "\u{1F30B}",
+            oneInMult: 48,
+            color: "#fb7185",
+            scoreBonus: 37,
+            rollWeight: 5
+        },
         megatooth: {
             name: "Megatooth",
             icon: "\u{1F9B7}",
@@ -944,6 +984,14 @@
             color: "#f87171",
             scoreBonus: 38,
             rollWeight: 4
+        },
+        void: {
+            name: "Void",
+            icon: "\u{1F573}\uFE0F",
+            oneInMult: 70,
+            color: "#a78bfa",
+            scoreBonus: 41,
+            rollWeight: 3
         },
         cosmic: {
             name: "Cosmic",
@@ -968,13 +1016,19 @@
     const MUTATION_CHANCE_ORDER = [
         "melanistic",
         "albino",
+        "piebald",
         "shiny",
+        "leucistic",
         "bioluminescent",
         "copper",
+        "emerald",
         "golden",
+        "frostbite",
         "spectral",
         "abyssal",
+        "volcanic",
         "megatooth",
+        "void",
         "cosmic",
         "apex"
     ];

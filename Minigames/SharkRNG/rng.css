@@ -404,13 +404,19 @@ body.rng-page {
 
 .rng-roll-display.melanistic { color: #94a3b8; text-shadow: 0 0 18px rgba(148,163,184,0.55); }
 .rng-roll-display.albino    { color: #f1f5f9; text-shadow: 0 0 18px rgba(241,245,249,0.6); }
+.rng-roll-display.piebald { color: #e2e8f0; text-shadow: 0 0 18px rgba(226,232,240,0.58); }
 .rng-roll-display.shiny     { color: #fde047; text-shadow: 0 0 18px rgba(253,224,71,0.6); }
+.rng-roll-display.leucistic { color: #bfdbfe; text-shadow: 0 0 18px rgba(191,219,254,0.62); }
 .rng-roll-display.bioluminescent { color: #22d3ee; text-shadow: 0 0 18px rgba(34,211,238,0.6); }
 .rng-roll-display.copper { color: #fb923c; text-shadow: 0 0 18px rgba(251,146,60,0.62); }
+.rng-roll-display.emerald { color: #34d399; text-shadow: 0 0 18px rgba(52,211,153,0.62); }
 .rng-roll-display.golden { color: #fbbf24; text-shadow: 0 0 18px rgba(251,191,36,0.68); }
+.rng-roll-display.frostbite { color: #93c5fd; text-shadow: 0 0 18px rgba(147,197,253,0.66), 0 0 30px rgba(14,165,233,0.36); }
 .rng-roll-display.spectral { color: #c4b5fd; text-shadow: 0 0 18px rgba(196,181,253,0.66); }
 .rng-roll-display.abyssal { color: #818cf8; text-shadow: 0 0 18px rgba(129,140,248,0.65), 0 0 30px rgba(49,46,129,0.42); }
+.rng-roll-display.volcanic { color: #fb7185; text-shadow: 0 0 18px rgba(251,113,133,0.68), 0 0 30px rgba(127,29,29,0.42); }
 .rng-roll-display.megatooth { color: #f87171; text-shadow: 0 0 18px rgba(248,113,113,0.7), 0 0 30px rgba(127,29,29,0.45); }
+.rng-roll-display.void { color: #a78bfa; text-shadow: 0 0 20px rgba(167,139,250,0.7), 0 0 34px rgba(30,27,75,0.55); }
 .rng-roll-display.cosmic { color: #e879f9; text-shadow: 0 0 20px rgba(232,121,249,0.72), 0 0 34px rgba(88,28,135,0.48); }
 .rng-roll-display.apex { color: #fb923c; text-shadow: 0 0 20px rgba(251,146,60,0.75), 0 0 34px rgba(239,68,68,0.42); }
 
@@ -473,13 +479,19 @@ body.rng-page {
 }
 .rng-mutation-tag.melanistic { color: #94a3b8; }
 .rng-mutation-tag.albino { color: #f1f5f9; }
+.rng-mutation-tag.piebald { color: #e2e8f0; }
 .rng-mutation-tag.shiny  { color: #fde047; }
+.rng-mutation-tag.leucistic { color: #bfdbfe; }
 .rng-mutation-tag.bioluminescent { color: #22d3ee; }
 .rng-mutation-tag.copper { color: #fb923c; }
+.rng-mutation-tag.emerald { color: #34d399; }
 .rng-mutation-tag.golden { color: #fbbf24; }
+.rng-mutation-tag.frostbite { color: #93c5fd; }
 .rng-mutation-tag.spectral { color: #c4b5fd; }
 .rng-mutation-tag.abyssal { color: #818cf8; }
+.rng-mutation-tag.volcanic { color: #fb7185; }
 .rng-mutation-tag.megatooth { color: #f87171; }
+.rng-mutation-tag.void { color: #a78bfa; }
 .rng-mutation-tag.cosmic { color: #e879f9; }
 .rng-mutation-tag.apex { color: #fb923c; }
 
@@ -1938,13 +1950,19 @@ body.rng-page {
 .singularity { color: #fff; }
 .melanistic { color: #94a3b8; text-shadow: 0 0 8px rgba(148, 163, 184, 0.42); }
 .albino { color: #f1f5f9; text-shadow: 0 0 8px rgba(241, 245, 249, 0.45); }
+.piebald { color: #e2e8f0; text-shadow: 0 0 8px rgba(226, 232, 240, 0.46); }
 .shiny { color: #fde047; text-shadow: 0 0 10px rgba(253, 224, 71, 0.55); }
+.leucistic { color: #bfdbfe; text-shadow: 0 0 9px rgba(191, 219, 254, 0.52); }
 .bioluminescent { color: #22d3ee; text-shadow: 0 0 10px rgba(34, 211, 238, 0.55); }
 .copper { color: #fb923c; text-shadow: 0 0 9px rgba(251, 146, 60, 0.52); }
+.emerald { color: #34d399; text-shadow: 0 0 9px rgba(52, 211, 153, 0.55); }
 .golden { color: #fbbf24; text-shadow: 0 0 10px rgba(251, 191, 36, 0.58); }
+.frostbite { color: #93c5fd; text-shadow: 0 0 10px rgba(147, 197, 253, 0.6), 0 0 17px rgba(14, 165, 233, 0.34); }
 .spectral { color: #c4b5fd; text-shadow: 0 0 10px rgba(196, 181, 253, 0.58); }
 .abyssal { color: #818cf8; text-shadow: 0 0 10px rgba(129, 140, 248, 0.58), 0 0 17px rgba(49, 46, 129, 0.35); }
+.volcanic { color: #fb7185; text-shadow: 0 0 11px rgba(251, 113, 133, 0.62), 0 0 18px rgba(127, 29, 29, 0.35); }
 .megatooth { color: #f87171; text-shadow: 0 0 11px rgba(248, 113, 113, 0.62), 0 0 18px rgba(127, 29, 29, 0.35); }
+.void { color: #a78bfa; text-shadow: 0 0 12px rgba(167, 139, 250, 0.66), 0 0 22px rgba(30, 27, 75, 0.48); }
 .cosmic { color: #e879f9; text-shadow: 0 0 12px rgba(232, 121, 249, 0.65), 0 0 22px rgba(88, 28, 135, 0.38); }
 .apex { color: #fb923c; text-shadow: 0 0 12px rgba(251, 146, 60, 0.65), 0 0 22px rgba(239, 68, 68, 0.38); }
 
@@ -3158,10 +3176,14 @@ body.rng-page {
 }
 .rng-cutscene-name.melanistic { color: #cbd5e1; text-shadow: 0 0 20px rgba(148,163,184,0.7); }
 .rng-cutscene-name.albino    { color: #f1f5f9; text-shadow: 0 0 20px rgba(241,245,249,0.7); }
+.rng-cutscene-name.piebald { color: #e2e8f0; text-shadow: 0 0 20px rgba(226,232,240,0.72); }
 .rng-cutscene-name.shiny     { color: #fde047; text-shadow: 0 0 20px rgba(253,224,71,0.7); }
+.rng-cutscene-name.leucistic { color: #dbeafe; text-shadow: 0 0 20px rgba(191,219,254,0.76); }
 .rng-cutscene-name.bioluminescent { color: #22d3ee; text-shadow: 0 0 20px rgba(34,211,238,0.7); }
 .rng-cutscene-name.copper { color: #fed7aa; text-shadow: 0 0 20px rgba(251,146,60,0.78); }
+.rng-cutscene-name.emerald { color: #6ee7b7; text-shadow: 0 0 20px rgba(52,211,153,0.78); }
 .rng-cutscene-name.golden { color: #fef08a; text-shadow: 0 0 22px rgba(251,191,36,0.82); }
+.rng-cutscene-name.frostbite { color: #bfdbfe; text-shadow: 0 0 22px rgba(147,197,253,0.82), 0 0 32px rgba(14,165,233,0.48); }
 .rng-cutscene-name.spectral { color: #ddd6fe; text-shadow: 0 0 22px rgba(196,181,253,0.8); }
 .rng-cutscene-name.abyssal {
     color: #c7d2fe;
@@ -3169,11 +3191,23 @@ body.rng-page {
         0 0 22px rgba(129, 140, 248, 0.86),
         0 0 38px rgba(49, 46, 129, 0.58);
 }
+.rng-cutscene-name.volcanic {
+    color: #fecdd3;
+    text-shadow:
+        0 0 22px rgba(251, 113, 133, 0.86),
+        0 0 38px rgba(127, 29, 29, 0.58);
+}
 .rng-cutscene-name.megatooth {
     color: #fecaca;
     text-shadow:
         0 0 20px rgba(248, 113, 113, 0.9),
         0 0 38px rgba(127, 29, 29, 0.62);
+}
+.rng-cutscene-name.void {
+    color: #ddd6fe;
+    text-shadow:
+        0 0 24px rgba(167, 139, 250, 0.9),
+        0 0 44px rgba(30, 27, 75, 0.66);
 }
 .rng-cutscene-name.cosmic {
     color: #f5d0fe;
