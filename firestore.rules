@@ -9,6 +9,59 @@ service cloud.firestore {
         ];
     }
 
+    function isRngNextRollMutation(mutation) {
+      return mutation in [
+        "base",
+        "melanistic",
+        "albino",
+        "shiny",
+        "bioluminescent",
+        "copper",
+        "golden",
+        "spectral",
+        "abyssal",
+        "megatooth",
+        "cosmic",
+        "apex"
+      ];
+    }
+
+    function isValidRngNextRollCommand() {
+      return request.resource.data.keys().hasOnly([
+          "type",
+          "commandId",
+          "targetUid",
+          "targetLabel",
+          "sharkName",
+          "mutation",
+          "mutationName",
+          "createdBy",
+          "createdAtMs",
+          "expiresAtMs",
+          "updatedAt"
+        ])
+        && request.resource.data.type == "rngNextRoll"
+        && request.resource.data.commandId is string
+        && request.resource.data.commandId.size() > 0
+        && request.resource.data.commandId.size() <= 80
+        && request.resource.data.targetUid is string
+        && request.resource.data.targetUid.size() > 0
+        && request.resource.data.targetUid.size() <= 128
+        && request.resource.data.targetLabel is string
+        && request.resource.data.targetLabel.size() <= 80
+        && request.resource.data.sharkName is string
+        && request.resource.data.sharkName.size() > 0
+        && request.resource.data.sharkName.size() <= 120
+        && request.resource.data.mutation is string
+        && isRngNextRollMutation(request.resource.data.mutation)
+        && request.resource.data.mutationName is string
+        && request.resource.data.mutationName.size() <= 40
+        && request.resource.data.createdBy == request.auth.uid
+        && request.resource.data.createdAtMs is int
+        && request.resource.data.expiresAtMs is int
+        && request.resource.data.expiresAtMs > request.resource.data.createdAtMs;
+    }
+
     function isCommunityBossEvent(eventId) {
       return eventId in [
         "summer-megaladon-2026",
@@ -126,6 +179,47 @@ service cloud.firestore {
       allow create, update, delete: if request.auth != null && request.auth.uid == userId;
     }
 
+    // Temporary global messages for big Shark RNG rolls
+    match /rngBroadcasts/{broadcastId} {
+      allow read: if true;
+      allow create: if request.auth != null
+        && request.resource.data.keys().hasOnly([
+          "uid",
+          "playerName",
+          "speciesName",
+          "tier",
+          "mutation",
+          "mutationName",
+          "oneIn",
+          "rollCount",
+          "createdAt"
+        ])
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.playerName is string
+        && request.resource.data.playerName.size() > 0
+        && request.resource.data.playerName.size() <= 32
+        && request.resource.data.speciesName is string
+        && request.resource.data.speciesName.size() > 0
+        && request.resource.data.speciesName.size() <= 80
+        && request.resource.data.tier in ["Ultra", "Hyper", "Omega", "Singularity", "Apex"]
+        && request.resource.data.mutation is string
+        && request.resource.data.mutation.size() <= 24
+        && request.resource.data.mutationName is string
+        && request.resource.data.mutationName.size() <= 32
+        && request.resource.data.oneIn is int
+        && request.resource.data.oneIn >= 2
+        && (
+          request.resource.data.oneIn >= 1000000
+          || request.resource.data.tier == "Apex"
+        )
+        && request.resource.data.rollCount is int
+        && request.resource.data.rollCount >= 1
+        && request.resource.data.rollCount <= 100
+        && request.resource.data.createdAt == request.time;
+      allow update: if false;
+      allow delete: if isDeveloper();
+    }
+
     // Hidden one-time secret code reward
     match /rngSecretCodes/{codeId} {
       allow read: if request.auth != null;
@@ -141,7 +235,12 @@ service cloud.firestore {
     // Global runtime config
     match /globalConfig/{configId} {
       allow read: if true;
-      allow create, update, delete: if isDeveloper();
+      allow create, update: if isDeveloper()
+        && (
+          request.resource.data.type != "rngNextRoll"
+          || isValidRngNextRollCommand()
+        );
+      allow delete: if isDeveloper();
     }
 
     // Community boss events

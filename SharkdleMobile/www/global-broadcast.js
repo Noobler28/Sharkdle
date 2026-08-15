@@ -12,7 +12,9 @@
 
     const MESSAGE_CONFIG_PATH = { collection: "globalConfig", doc: "globalMessage" };
     const INDEX_THEME_CONFIG_PATH = { collection: "globalConfig", doc: "indexTheme" };
+    const RNG_BROADCAST_COLLECTION = "rngBroadcasts";
     const MESSAGE_CACHE_KEY = "globalBroadcastMessageCache";
+    const RNG_BROADCAST_SEEN_CACHE_KEY = "rngBroadcastSeenIds";
     const THEME_CACHE_KEY = "globalUiThemeCache";
     const THEME_DISABLE_KEY = "disableSeasonalTheme";
     const THEME_IDS = ["default", "summer", "birthday", "christmas", "halloween", "northpole"];
@@ -23,6 +25,12 @@
     const VISITOR_TRACKING_STARTED_KEY = "__sharkdleVisitorTrackingStarted";
     const VISITOR_DAILY_COLLECTION = "visitorDaily";
     const VISITOR_HEARTBEAT_MS = 45 * 1000;
+    const RNG_BROADCAST_MIN_ONE_IN = 1_000_000;
+    const RNG_BROADCAST_MAX_AGE_MS = 5 * 60 * 1000;
+    const RNG_BROADCAST_DISPLAY_MS = 6500;
+    const RNG_BROADCAST_QUERY_LIMIT = 8;
+    let currentGlobalMessagePayload = null;
+    let rngBroadcastRestoreTimer = null;
 
     function loadScript(src) {
         return new Promise((resolve, reject) => {
@@ -87,6 +95,19 @@
             .global-broadcast-banner.type-event {
                 background: linear-gradient(135deg, rgba(29, 16, 84, 0.96), rgba(28, 91, 146, 0.96));
                 border-color: rgba(203, 194, 255, 0.4);
+            }
+            .global-broadcast-banner.type-rng {
+                background: linear-gradient(135deg, rgba(4, 61, 67, 0.97), rgba(12, 83, 91, 0.96));
+                border-color: rgba(94, 234, 212, 0.45);
+            }
+            .global-broadcast-banner.type-apex {
+                background: linear-gradient(135deg, rgba(91, 24, 24, 0.98), rgba(123, 55, 16, 0.97));
+                border-color: rgba(253, 186, 116, 0.55);
+                box-shadow: 0 14px 36px rgba(127, 29, 29, 0.36);
+            }
+            .global-broadcast-banner.type-apex .global-broadcast-pill {
+                background: rgba(251, 146, 60, 0.22);
+                border-color: rgba(253, 186, 116, 0.42);
             }
             body.${THEME_CLASS_PREFIX}default {
                 --global-theme-body-bg: linear-gradient(135deg, #061a40, #0b3c5d);
@@ -378,7 +399,7 @@
 
     function normalizeMessageType(type) {
         const normalized = String(type || "").trim().toLowerCase();
-        if (normalized === "event" || normalized === "warning") return normalized;
+        if (["event", "warning", "rng", "apex"].includes(normalized)) return normalized;
         return "info";
     }
 
@@ -394,6 +415,102 @@
             message,
             type: normalizeMessageType(rawData.type || "info")
         };
+    }
+
+    function formatRngOneIn(value) {
+        const num = Math.max(0, Math.floor(Number(value) || 0));
+        if (num >= 1_000_000_000) return `${(num / 1_000_000_000).toFixed(num % 1_000_000_000 === 0 ? 0 : 2)}B`;
+        if (num >= 1_000_000) return `${(num / 1_000_000).toFixed(num % 1_000_000 === 0 ? 0 : 1)}M`;
+        return num.toLocaleString();
+    }
+
+    function sanitizeRngBroadcastText(value, fallback, maxLength) {
+        const text = String(value ?? fallback ?? "").replace(/\s+/g, " ").trim();
+        const fallbackText = String(fallback ?? "").replace(/\s+/g, " ").trim();
+        return (text || fallbackText).slice(0, maxLength);
+    }
+
+    function getTimestampMs(value) {
+        if (value && typeof value.toMillis === "function") return value.toMillis();
+        if (value instanceof Date) return value.getTime();
+        if (typeof value === "number") return value;
+        return 0;
+    }
+
+    function getCurrentGlobalBroadcastUid() {
+        try {
+            return firebase.auth?.().currentUser?.uid || "";
+        } catch (error) {
+            return "";
+        }
+    }
+
+    function readSeenRngBroadcastIds() {
+        try {
+            const parsed = JSON.parse(localStorage.getItem(RNG_BROADCAST_SEEN_CACHE_KEY) || "[]");
+            return Array.isArray(parsed)
+                ? parsed.filter(id => typeof id === "string").slice(-40)
+                : [];
+        } catch (error) {
+            return [];
+        }
+    }
+
+    function cacheSeenRngBroadcastId(id) {
+        const normalizedId = String(id || "").trim();
+        if (!normalizedId) return;
+        const ids = readSeenRngBroadcastIds().filter(seenId => seenId !== normalizedId);
+        ids.push(normalizedId);
+        localStorage.setItem(RNG_BROADCAST_SEEN_CACHE_KEY, JSON.stringify(ids.slice(-40)));
+    }
+
+    function parseRngBroadcastDoc(doc) {
+        if (!doc) return null;
+        const data = typeof doc.data === "function" ? doc.data() || {} : {};
+        const id = String(doc.id || "").trim();
+        const createdAtMs = getTimestampMs(data.createdAt);
+        if (!id || !createdAtMs || Date.now() - createdAtMs > RNG_BROADCAST_MAX_AGE_MS) return null;
+
+        const currentUid = getCurrentGlobalBroadcastUid();
+        const broadcastUid = String(data.uid || "").trim();
+        if (currentUid && broadcastUid && currentUid === broadcastUid) return null;
+
+        const oneIn = Math.max(0, Math.floor(Number(data.oneIn) || 0));
+        const tier = sanitizeRngBroadcastText(data.tier, "Ultra", 24);
+        const mutation = String(data.mutation || "").trim().toLowerCase();
+        const isApex = mutation === "apex" || tier.toLowerCase() === "apex";
+        if (!isApex && oneIn < RNG_BROADCAST_MIN_ONE_IN) return null;
+
+        const playerName = sanitizeRngBroadcastText(data.playerName, "Someone", 32);
+        const speciesName = sanitizeRngBroadcastText(data.speciesName, "something rare", 80);
+        const mutationName = sanitizeRngBroadcastText(data.mutationName, "", 32);
+        const rollCount = Math.max(1, Math.floor(Number(data.rollCount) || 1));
+        const displayName = mutationName && !isApex ? `${mutationName} ${speciesName}` : speciesName;
+        const rarityText = isApex ? "APEX" : tier;
+        const detailText = isApex ? `1 in ${formatRngOneIn(oneIn)}` : `${rarityText}, 1 in ${formatRngOneIn(oneIn)}`;
+        const rollText = rollCount > 1 ? ` in a ${rollCount}x roll` : "";
+
+        return {
+            id,
+            type: isApex ? "apex" : "rng",
+            label: "Global Message",
+            message: `${playerName} just rolled ${isApex ? "APEX " : ""}${displayName} (${detailText})${rollText}`
+        };
+    }
+
+    function showRngBroadcast(payload) {
+        if (!payload?.id || readSeenRngBroadcastIds().includes(payload.id)) return;
+        cacheSeenRngBroadcastId(payload.id);
+        renderBanner(payload, { cache: false });
+
+        if (rngBroadcastRestoreTimer) {
+            window.clearTimeout(rngBroadcastRestoreTimer);
+        }
+
+        rngBroadcastRestoreTimer = window.setTimeout(() => {
+            rngBroadcastRestoreTimer = null;
+            renderBanner(currentGlobalMessagePayload, { cache: true });
+        }, RNG_BROADCAST_DISPLAY_MS);
     }
 
     function normalizeThemeId(themeId) {
@@ -427,6 +544,7 @@
         localStorage.setItem(MESSAGE_CACHE_KEY, JSON.stringify({
             message: payload.message,
             type: payload.type,
+            label: payload.label || "",
             cachedAt: Date.now()
         }));
     }
@@ -439,7 +557,8 @@
             if (!message) return null;
             return {
                 message,
-                type: normalizeMessageType(parsed.type || "info")
+                type: normalizeMessageType(parsed.type || "info"),
+                label: String(parsed.label || "").trim()
             };
         } catch (error) {
             return null;
@@ -486,6 +605,11 @@
         if (path.includes("/minigames/sharkslots/") || path.includes("/slots.html")) return "Shark Slots";
         if (document.body?.classList.contains("home-page")) return "Home";
         return "Sharkdle";
+    }
+
+    function isCurrentSharkRngPage() {
+        const path = decodeURIComponent(window.location.pathname || "/").toLowerCase();
+        return path.includes("/minigames/sharkrng/") || path.includes("/rng.html");
     }
 
     function getCurrentActivityPayload(nowMs = Date.now()) {
@@ -563,23 +687,34 @@
         window.addEventListener("focus", recordCurrentVisitor);
     }
 
-    function renderBanner(payload) {
+    function renderBanner(payload, options = {}) {
         const banner = ensureBannerElement();
         const messageEl = banner.querySelector(".global-broadcast-message");
+        const pillEl = banner.querySelector(".global-broadcast-pill");
         if (!messageEl) return;
+        const shouldCache = options.cache !== false;
 
-        banner.classList.remove("type-info", "type-event", "type-warning");
+        banner.classList.remove("type-info", "type-event", "type-warning", "type-rng", "type-apex");
         if (!payload) {
             banner.classList.add("hidden");
             messageEl.textContent = "";
-            cacheMessagePayload(null);
+            if (pillEl) pillEl.textContent = "Global";
+            if (shouldCache) cacheMessagePayload(null);
             return;
         }
 
-        banner.classList.add(`type-${payload.type}`);
+        const bannerType = normalizeMessageType(payload.type || "info");
+        banner.classList.add(`type-${bannerType}`);
+        if (pillEl) pillEl.textContent = payload.label || "Global";
         messageEl.textContent = payload.message;
         banner.classList.remove("hidden");
-        cacheMessagePayload(payload);
+        if (shouldCache) {
+            cacheMessagePayload({
+                message: payload.message,
+                type: bannerType,
+                label: payload.label || ""
+            });
+        }
     }
 
     async function ensureFirebaseLoaded() {
@@ -616,7 +751,12 @@
                 .doc(MESSAGE_CONFIG_PATH.doc)
                 .onSnapshot(snapshot => {
                     const payload = parseMessagePayload(snapshot.exists ? snapshot.data() : null);
-                    renderBanner(payload);
+                    currentGlobalMessagePayload = payload;
+                    if (rngBroadcastRestoreTimer) {
+                        cacheMessagePayload(payload);
+                    } else {
+                        renderBanner(payload);
+                    }
                 }, error => {
                     console.warn("Global broadcast listener failed:", error);
                 });
@@ -630,6 +770,27 @@
                     console.warn("Global theme listener failed:", error);
                     applyGlobalTheme(readCachedThemeId());
                 });
+
+            let rngBroadcastListenerReady = false;
+            if (isCurrentSharkRngPage()) {
+                db.collection(RNG_BROADCAST_COLLECTION)
+                    .orderBy("createdAt", "desc")
+                    .limit(RNG_BROADCAST_QUERY_LIMIT)
+                    .onSnapshot(snapshot => {
+                        snapshot.docChanges().forEach(change => {
+                            if (change.type !== "added") return;
+                            if (!rngBroadcastListenerReady) {
+                                cacheSeenRngBroadcastId(change.doc.id);
+                                return;
+                            }
+                            const payload = parseRngBroadcastDoc(change.doc);
+                            if (payload) showRngBroadcast(payload);
+                        });
+                        rngBroadcastListenerReady = true;
+                    }, error => {
+                        console.warn("RNG global broadcast listener failed:", error);
+                    });
+            }
         } catch (error) {
             console.warn("Global broadcast bootstrap failed:", error);
         }
@@ -638,7 +799,8 @@
     function boot() {
         injectStyles();
         applyGlobalTheme(readCachedThemeId());
-        renderBanner(readCachedMessagePayload());
+        currentGlobalMessagePayload = readCachedMessagePayload();
+        renderBanner(currentGlobalMessagePayload);
         startFirestoreListener();
     }
 

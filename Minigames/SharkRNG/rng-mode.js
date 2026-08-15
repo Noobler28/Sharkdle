@@ -3,6 +3,9 @@
 
     const STORAGE_KEY = "sharkRngProfile";
     const AUTO_ARROW_DISMISSED_KEY = "sharkRngAutoArrowDismissed";
+    const RNG_TAB_LOCK_KEY = "sharkRngActiveTabLock";
+    const RNG_TAB_LOCK_HEARTBEAT_MS = 2500;
+    const RNG_TAB_LOCK_TIMEOUT_MS = 12000;
     const LOCAL_SAVE_INTERVAL_MS = 120000;
     const BASE_ROLL_COOLDOWN_MS = 1600;
     const BASE_AUTO_INTERVAL_MS = 1800;
@@ -14,6 +17,9 @@
         mutationPotion: 0.2
     };
     const RNG_LEADERBOARD_COLLECTION = "rngLeaderboard";
+    const RNG_BROADCAST_COLLECTION = "rngBroadcasts";
+    const RNG_BROADCAST_PLAYER_NAME_MAX = 32;
+    const RNG_BROADCAST_SPECIES_NAME_MAX = 80;
     const RNG_LEADERBOARD_FALLBACK_COLLECTION = "userStats";
     const RNG_PROFILE_COLLECTION = "rngProfiles";
     const RNG_PROFILE_CHUNK_COLLECTION = "chunks";
@@ -1014,6 +1020,171 @@ let rollPool = [];
     let localSaveDirty = false;
     let localSaveFlushBound = false;
     let selectedPotionBuyAmount = 1;
+    const rngTabId = createRngTabId();
+    let rngHasActiveTabLock = false;
+    let rngTabLockHeartbeatTimer = null;
+
+    function createRngTabId() {
+        if (window.crypto?.randomUUID) return window.crypto.randomUUID();
+        return `rng-tab-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    }
+
+    function readRngTabLock() {
+        try {
+            return JSON.parse(localStorage.getItem(RNG_TAB_LOCK_KEY) || "null");
+        } catch (error) {
+            return null;
+        }
+    }
+
+    function isRngTabLockStale(lock, now = Date.now()) {
+        return !lock?.id || now - (Number(lock.updatedAt) || 0) > RNG_TAB_LOCK_TIMEOUT_MS;
+    }
+
+    function writeRngTabLock() {
+        localStorage.setItem(RNG_TAB_LOCK_KEY, JSON.stringify({
+            id: rngTabId,
+            updatedAt: Date.now(),
+            path: location.pathname
+        }));
+    }
+
+    function ownsRngTabLock() {
+        const lock = readRngTabLock();
+        return Boolean(lock?.id === rngTabId && !isRngTabLockStale(lock));
+    }
+
+    function ensureRngTabLockOverlay() {
+        let overlay = document.getElementById("rng-tab-lock-overlay");
+        if (overlay) return overlay;
+
+        overlay = document.createElement("div");
+        overlay.id = "rng-tab-lock-overlay";
+        overlay.className = "rng-tab-lock-overlay hidden";
+        overlay.setAttribute("role", "alertdialog");
+        overlay.setAttribute("aria-modal", "true");
+        overlay.innerHTML = `
+            <div class="rng-tab-lock-card">
+                <span class="rng-tab-lock-icon"><i class="fa-solid fa-lock"></i></span>
+                <h2>Shark RNG is already open</h2>
+                <p>Close the other Shark RNG tab before rolling here.</p>
+                <button class="rng-btn rng-btn-roll" type="button" data-rng-tab-lock-retry>
+                    <i class="fa-solid fa-rotate-right"></i> Try Again
+                </button>
+            </div>
+        `;
+        overlay.querySelector("[data-rng-tab-lock-retry]")?.addEventListener("click", () => {
+            tryClaimRngTabLock({ notify: true });
+        });
+        document.body.appendChild(overlay);
+        return overlay;
+    }
+
+    function updateRngTabLockOverlay() {
+        const overlay = ensureRngTabLockOverlay();
+        overlay.classList.toggle("hidden", rngHasActiveTabLock);
+        overlay.setAttribute("aria-hidden", rngHasActiveTabLock ? "true" : "false");
+    }
+
+    function setRngTabLockOwned(owned, options = {}) {
+        const changed = rngHasActiveTabLock !== owned;
+        rngHasActiveTabLock = owned;
+        document.body?.classList.toggle("rng-tab-locked-out", !owned);
+        updateRngTabLockOverlay();
+
+        if (!owned && autoEnabled) {
+            autoEnabled = false;
+            if (autoInterval) {
+                clearInterval(autoInterval);
+                autoInterval = null;
+            }
+            flushDeferredCollectionGridRender();
+        }
+
+        if (changed || options.force) {
+            updateAutoButtonUi();
+            updateRollButtonState();
+        }
+
+        if (!owned && options.notify && changed) {
+            showToast("Close the other Shark RNG tab first.", "error");
+        }
+    }
+
+    function tryClaimRngTabLock(options = {}) {
+        const current = readRngTabLock();
+        if (current?.id && current.id !== rngTabId && !isRngTabLockStale(current)) {
+            setRngTabLockOwned(false, { notify: options.notify });
+            return false;
+        }
+
+        writeRngTabLock();
+        const owned = ownsRngTabLock();
+        setRngTabLockOwned(owned, { force: true, notify: options.notify && !owned });
+        return owned;
+    }
+
+    function refreshRngTabLock() {
+        if (!rngHasActiveTabLock) {
+            tryClaimRngTabLock();
+            return;
+        }
+
+        const current = readRngTabLock();
+        if (current?.id && current.id !== rngTabId && !isRngTabLockStale(current)) {
+            setRngTabLockOwned(false, { notify: true });
+            return;
+        }
+
+        writeRngTabLock();
+    }
+
+    function ensureRngTabCanRoll(options = {}) {
+        if (rngHasActiveTabLock && ownsRngTabLock()) return true;
+        return tryClaimRngTabLock({ notify: options.notify });
+    }
+
+    function releaseRngTabLock() {
+        if (ownsRngTabLock()) {
+            localStorage.removeItem(RNG_TAB_LOCK_KEY);
+        }
+        if (rngTabLockHeartbeatTimer) {
+            clearInterval(rngTabLockHeartbeatTimer);
+            rngTabLockHeartbeatTimer = null;
+        }
+    }
+
+    function handleRngTabLockStorage(event) {
+        if (event.key !== RNG_TAB_LOCK_KEY) return;
+        const current = readRngTabLock();
+        if (current?.id === rngTabId) {
+            setRngTabLockOwned(true);
+            return;
+        }
+        if (current?.id && !isRngTabLockStale(current)) {
+            setRngTabLockOwned(false, { notify: true });
+            return;
+        }
+        tryClaimRngTabLock();
+    }
+
+    function bindRngTabLock() {
+        tryClaimRngTabLock();
+        if (rngTabLockHeartbeatTimer) clearInterval(rngTabLockHeartbeatTimer);
+        rngTabLockHeartbeatTimer = setInterval(refreshRngTabLock, RNG_TAB_LOCK_HEARTBEAT_MS);
+        window.addEventListener("storage", handleRngTabLockStorage);
+        window.addEventListener("focus", () => tryClaimRngTabLock());
+        window.addEventListener("pageshow", () => tryClaimRngTabLock());
+        window.addEventListener("pagehide", releaseRngTabLock);
+        window.addEventListener("beforeunload", releaseRngTabLock);
+        document.addEventListener("visibilitychange", () => {
+            if (document.visibilityState === "visible") {
+                tryClaimRngTabLock();
+            } else {
+                refreshRngTabLock();
+            }
+        });
+    }
 
     const GameFx = {
         initAudio() {
@@ -1377,6 +1548,49 @@ let rollPool = [];
         } catch (error) {
             console.warn("Unable to prepare RNG leaderboard services:", error);
             return false;
+        }
+    }
+
+    function getRngBroadcastText(value, fallback, maxLength) {
+        const text = String(value ?? fallback ?? "").replace(/\s+/g, " ").trim();
+        const fallbackText = String(fallback ?? "").replace(/\s+/g, " ").trim();
+        return (text || fallbackText).slice(0, maxLength);
+    }
+
+    function shouldPublishRngGlobalRollBroadcast(shark) {
+        if (!shark || shark.adminCommandId) return false;
+        const oneIn = Math.max(0, Math.floor(Number(shark.oneIn) || 0));
+        return isApexPull(shark) || oneIn >= ULTRA_ONE_IN_THRESHOLD;
+    }
+
+    async function publishRngGlobalRollBroadcast(shark, rollContext = {}) {
+        if (!shouldPublishRngGlobalRollBroadcast(shark)) return;
+        if (!ensureRngLeaderboardServices()) return;
+
+        const user = getRngCurrentUser();
+        if (!user?.uid || !rngLeaderboardDb) return;
+
+        const mutationKey = typeof shark.mutation === "string" ? shark.mutation : "";
+        const mutationName = mutationKey && MUTATION_TYPES[mutationKey]?.name
+            ? MUTATION_TYPES[mutationKey].name
+            : "";
+        const oneIn = Math.max(0, Math.floor(Number(shark.oneIn) || 0));
+        const rollCount = Math.max(1, Math.min(100, Math.floor(Number(rollContext?.rollCount) || 1)));
+
+        try {
+            await rngLeaderboardDb.collection(RNG_BROADCAST_COLLECTION).add({
+                uid: user.uid,
+                playerName: getRngBroadcastText(getFallbackUsername(user), "Anonymous", RNG_BROADCAST_PLAYER_NAME_MAX),
+                speciesName: getRngBroadcastText(shark.name, "Unknown species", RNG_BROADCAST_SPECIES_NAME_MAX),
+                tier: isApexPull(shark) ? "Apex" : getOddsTierName(shark),
+                mutation: mutationKey.slice(0, 24),
+                mutationName: mutationName.slice(0, 32),
+                oneIn,
+                rollCount,
+                createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+        } catch (error) {
+            console.warn("Unable to publish RNG global broadcast:", error);
         }
     }
 
@@ -4389,22 +4603,26 @@ function updateActiveEffectsUi() {
          const now = Date.now();
          const remaining = Math.max(0, rollLockedUntil - now);
          const isOnCooldown = remaining > 0;
+         const isTabLocked = !rngHasActiveTabLock;
          const multiRollCount = getPrestigeMultiRollCount();
          const rollText = multiRollCount > 1 ? `Roll x${multiRollCount}` : "Roll";
          if (rollBtn.dataset.rollText !== rollText) {
              rollBtn.dataset.rollText = rollText;
              rollBtn.innerHTML = `<i class="fa-solid fa-dice"></i> ${rollText}`;
          }
-         rollBtn.title = multiRollCount > 1
-             ? `Roll ${multiRollCount} times at once`
-             : "Roll";
+         rollBtn.title = isTabLocked
+             ? "Close the other Shark RNG tab before rolling here"
+             : multiRollCount > 1
+                 ? `Roll ${multiRollCount} times at once`
+                 : "Roll";
 
-         rollBtn.disabled = isOnCooldown || isRolling;
+         rollBtn.disabled = isTabLocked || isOnCooldown || isRolling;
          if (isOnCooldown) {
              rollBtn.classList.add("rng-btn-cooldown");
          } else {
              rollBtn.classList.remove("rng-btn-cooldown");
          }
+         rollBtn.classList.toggle("rng-btn-tab-locked", isTabLocked);
      }
  
      function startCooldownTimer() {
@@ -5749,6 +5967,7 @@ function updateAllUi(options = {}) {
     }
 
 async function performRoll() {
+         if (!ensureRngTabCanRoll({ notify: true })) return;
          if (isRolling || Date.now() < rollLockedUntil) return;
          if (document.getElementById("rng-cutscene")?.classList.contains("visible")) return;
          isRolling = true;
@@ -5770,6 +5989,7 @@ async function performRoll() {
          const revealShark = getRollRevealShark(burstRolls, finalShark);
          await animateRoll(finalShark, rollContext);
          applyRollJuice(revealShark, rollContext);
+         publishRngGlobalRollBroadcast(revealShark, rollContext);
          await showRollReveal(revealShark);
          persistPlayerState({ deferCollectionGridDuringRoll: true, lightUi: true });
 
@@ -5795,14 +6015,18 @@ async function performRoll() {
         if (!autoButton) return;
 
         const unlocked = isAutoRollUnlocked();
-        autoButton.classList.toggle("locked", !unlocked);
-        autoButton.classList.toggle("active", autoEnabled && unlocked);
-        autoButton.setAttribute("aria-pressed", autoEnabled && unlocked ? "true" : "false");
+        const isTabLocked = !rngHasActiveTabLock;
+        autoButton.disabled = isTabLocked;
+        autoButton.classList.toggle("locked", !unlocked || isTabLocked);
+        autoButton.classList.toggle("active", autoEnabled && unlocked && !isTabLocked);
+        autoButton.setAttribute("aria-pressed", autoEnabled && unlocked && !isTabLocked ? "true" : "false");
         if (autoArrow) {
-            autoArrow.classList.toggle("hidden", !unlocked || autoArrowDismissed);
-            autoArrow.classList.toggle("active", autoEnabled && unlocked);
+            autoArrow.classList.toggle("hidden", isTabLocked || !unlocked || autoArrowDismissed);
+            autoArrow.classList.toggle("active", autoEnabled && unlocked && !isTabLocked);
         }
-        autoButton.title = unlocked
+        autoButton.title = isTabLocked
+            ? "Close the other Shark RNG tab before using Auto Roll"
+            : unlocked
             ? autoEnabled
                 ? `Auto Roll ACTIVE - rolling every ${(getAutoIntervalMs() / 1000).toFixed(1)}s`
                 : `Auto Roll off - rolls every ${(getAutoIntervalMs() / 1000).toFixed(1)}s when enabled`
@@ -5810,6 +6034,16 @@ async function performRoll() {
     }
 
     function setAutoRoll(enabled) {
+        if (enabled && !ensureRngTabCanRoll({ notify: true })) {
+            if (autoInterval) {
+                clearInterval(autoInterval);
+                autoInterval = null;
+            }
+            autoEnabled = false;
+            updateAutoButtonUi();
+            return;
+        }
+
         if (enabled && !isAutoRollUnlocked()) {
             if (autoInterval) {
                 clearInterval(autoInterval);
@@ -6621,6 +6855,7 @@ async function initRngMode() {
          installRngDevCommands();
          bindLocalProfileSaveFlush();
          bindUi();
+          bindRngTabLock();
           updateAllUi();
           updateSettingsUi();
           initRngLeaderboard();
