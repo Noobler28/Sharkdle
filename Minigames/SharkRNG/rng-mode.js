@@ -26,6 +26,7 @@
     const RNG_ADMIN_NEXT_ROLL_CONFIG_PREFIX = "rngNextRoll_";
     const RNG_ADMIN_NEXT_ROLL_EXPIRY_MS = 7 * 24 * 60 * 60 * 1000;
     const RNG_ADMIN_NEXT_ROLL_CONSUMED_LIMIT = 30;
+    const RNG_DAILY_QUEST_COUNT = 3;
     const RNG_DEV_UIDS = [
         "ETPtQC0VA2NiSnX67rS2P2ma2tC2",
         "gOcPqOuyPJRWisE4dxvFkGTOl5g2"
@@ -174,7 +175,7 @@
     const PRESTIGE_LUCK_PER_POINT = 0.035;
     const PRESTIGE_COIN_PER_POINT = 0.025;
     const PRESTIGE_XP_PER_POINT = 0.015;
-    const PRESTIGE_MULTI_ROLL_COUNTS = [1, 2, 3, 5, 8];
+    const PRESTIGE_MULTI_ROLL_COUNTS = [1, 2, 3, 5, 8, 16, 32];
     const POTION_BUY_AMOUNT_MAX = 999_999;
     const INDEX_BUILD_BATCH_SIZE = 80;
     const INDEX_RENDER_BATCH_SIZE = 48;
@@ -264,7 +265,7 @@
             name: "Multi Roll",
             icon: "fa-layer-group",
             desc: "Roll several species per click or Auto Roll burst.",
-            costs: [4, 9, 18, 32],
+            costs: [4, 9, 18, 32, 55, 90],
             format: (level) => `${getPrestigeMultiRollCount(level)} roll${getPrestigeMultiRollCount(level) === 1 ? "" : "s"} per action`
         },
         {
@@ -1112,6 +1113,8 @@ let rollPool = [];
             collection: {},
             claimedIndexRewards: [],
             adminNextRollConsumedIds: [],
+            dailyQuests: createDefaultDailyQuestState(),
+            quests: createDefaultQuestState(),
             equipped: null,
             bestOneIn: 0,
             runBestOneIn: 0,
@@ -1473,6 +1476,12 @@ let rollPool = [];
             ...(Array.isArray(localProfile.claimedIndexRewards) ? localProfile.claimedIndexRewards : []),
             ...(Array.isArray(remoteProfile.claimedIndexRewards) ? remoteProfile.claimedIndexRewards : [])
         ])];
+        merged.dailyQuests = mergeRngDailyQuestStates(
+            localProfile.dailyQuests || localProfile.dailyMissions,
+            remoteProfile.dailyQuests || remoteProfile.dailyMissions
+        );
+        merged.quests = mergeRngQuestStates(localProfile.quests, remoteProfile.quests);
+        delete merged.dailyMissions;
         merged.bestOneIn = Math.max(Number(localProfile.bestOneIn) || 0, Number(remoteProfile.bestOneIn) || 0);
         merged.runBestOneIn = Math.max(Number(localProfile.runBestOneIn) || 0, Number(remoteProfile.runBestOneIn) || 0);
         merged.rngCloudUpdatedAtMs = Math.max(Number(localProfile.rngCloudUpdatedAtMs) || 0, Number(remoteProfile.rngCloudUpdatedAtMs) || 0);
@@ -2073,6 +2082,294 @@ let rollPool = [];
             hash |= 0;
         }
         return Math.abs(hash);
+    }
+
+    function getRngTodayKey(date = new Date()) {
+        return date.toISOString().slice(0, 10);
+    }
+
+    function createDefaultDailyQuestState(dateKey = getRngTodayKey()) {
+        return {
+            date: dateKey,
+            progress: {},
+            claimed: []
+        };
+    }
+
+    function createDefaultQuestState() {
+        return {
+            allTime: {}
+        };
+    }
+
+    function normalizeRngDailyQuestState(state = {}, dateKey = getRngTodayKey()) {
+        if (!state || typeof state !== "object" || state.date !== dateKey) {
+            return createDefaultDailyQuestState(dateKey);
+        }
+
+        return {
+            date: dateKey,
+            progress: state.progress && typeof state.progress === "object"
+                ? Object.fromEntries(Object.entries(state.progress).map(([key, value]) => [
+                    key,
+                    Math.max(0, Math.floor(Number(value) || 0))
+                ]))
+                : {},
+            claimed: Array.isArray(state.claimed)
+                ? [...new Set(state.claimed.map(String).filter(Boolean))].slice(0, RNG_DAILY_QUEST_COUNT)
+                : []
+        };
+    }
+
+    function mergeRngDailyQuestStates(localState = {}, remoteState = {}) {
+        const dateKey = getRngTodayKey();
+        const local = normalizeRngDailyQuestState(localState, dateKey);
+        const remote = normalizeRngDailyQuestState(remoteState, dateKey);
+        const progress = { ...local.progress };
+
+        Object.entries(remote.progress || {}).forEach(([key, value]) => {
+            progress[key] = Math.max(progress[key] || 0, Math.max(0, Math.floor(Number(value) || 0)));
+        });
+
+        return {
+            date: dateKey,
+            progress,
+            claimed: [...new Set([...(local.claimed || []), ...(remote.claimed || [])])].slice(0, RNG_DAILY_QUEST_COUNT)
+        };
+    }
+
+    function pickRngQuestOption(options, seed, offset = 0) {
+        return options[Math.abs(seed + offset) % options.length];
+    }
+
+    function formatRngQuestRewardText(effects = []) {
+        return effects.map((effect) => {
+            if (effect.type === "coins") return formatCompactCoins(effect.amount);
+            if (effect.type === "potion" && POTION_DEFS[effect.key]) {
+                const amount = Math.max(1, Math.floor(Number(effect.amount) || 1));
+                return `${amount} ${POTION_DEFS[effect.key].name}${amount === 1 ? "" : "s"}`;
+            }
+            return "Reward";
+        }).join(" + ");
+    }
+
+    function buildRngDailyQuestDefs(dateKey = getRngTodayKey()) {
+        const seed = hashString(`rng-daily:${dateKey}`);
+        const rollGoal = pickRngQuestOption([45, 60, 75, 90], seed, 11);
+        const rareQuest = pickRngQuestOption([
+            { threshold: 35, goal: 5, title: "Rare Sweep", reward: [{ type: "coins", amount: 45000 }, { type: "potion", key: "luckMinor", amount: 1 }] },
+            { threshold: 200, goal: 2, title: "Epic Current", reward: [{ type: "coins", amount: 85000 }, { type: "potion", key: "luck", amount: 1 }] },
+            { threshold: 2500, goal: 1, title: "Legend Signal", reward: [{ type: "coins", amount: 150000 }, { type: "potion", key: "luckStrong", amount: 1 }] }
+        ], seed, 29);
+        const coinGoal = pickRngQuestOption([25000, 60000, 120000, 250000], seed, 47);
+
+        const quests = [
+            {
+                id: `rolls_${rollGoal}`,
+                icon: "fa-dice",
+                title: "Daily Dive",
+                desc: `Roll ${rollGoal.toLocaleString()} times.`,
+                type: "rolls",
+                goal: rollGoal,
+                reward: [{ type: "coins", amount: rollGoal * 900 }, { type: "potion", key: "speed", amount: 1 }]
+            },
+            {
+                id: `odds_${rareQuest.threshold}_${rareQuest.goal}`,
+                icon: "fa-ranking-star",
+                title: rareQuest.title,
+                desc: `Pull ${rareQuest.goal.toLocaleString()} species at 1 in ${formatOneIn(rareQuest.threshold)} or rarer.`,
+                type: "odds",
+                threshold: rareQuest.threshold,
+                goal: rareQuest.goal,
+                reward: rareQuest.reward
+            },
+            {
+                id: `coins_${coinGoal}`,
+                icon: "fa-coins",
+                title: "Treasure Tow",
+                desc: `Earn ${formatCompactCoins(coinGoal)} coins from rolls.`,
+                type: "coins",
+                goal: coinGoal,
+                reward: [{ type: "coins", amount: Math.round(coinGoal * 0.65) }, { type: "potion", key: "coin", amount: 1 }]
+            }
+        ].slice(0, RNG_DAILY_QUEST_COUNT);
+
+        return quests.map((quest) => ({
+            ...quest,
+            section: "daily",
+            rewardText: formatRngQuestRewardText(quest.reward)
+        }));
+    }
+
+    function getRngDailyQuestState() {
+        player.dailyQuests = normalizeRngDailyQuestState(player.dailyQuests || player.dailyMissions);
+        if (player.dailyMissions) delete player.dailyMissions;
+        return player.dailyQuests;
+    }
+
+    function getRngDailyQuestProgress(quest) {
+        const state = getRngDailyQuestState();
+        return Math.min(quest.goal, Math.max(0, Math.floor(Number(state.progress[quest.id]) || 0)));
+    }
+
+    function isRngDailyQuestClaimed(quest) {
+        const state = getRngDailyQuestState();
+        return Array.isArray(state.claimed) && state.claimed.includes(quest.id);
+    }
+
+    function addRngDailyQuestProgress(quest, amount) {
+        const state = getRngDailyQuestState();
+        const before = getRngDailyQuestProgress(quest);
+        const next = Math.min(quest.goal, before + Math.max(0, Math.floor(Number(amount) || 0)));
+        if (next === before) return false;
+        state.progress[quest.id] = next;
+        return true;
+    }
+
+    function updateRngDailyQuestsForRoll(rolled) {
+        if (!rolled) return false;
+
+        let changed = false;
+        buildRngDailyQuestDefs().forEach((quest) => {
+            if (isRngDailyQuestClaimed(quest)) return;
+            if (quest.type === "rolls") {
+                changed = addRngDailyQuestProgress(quest, 1) || changed;
+            } else if (quest.type === "odds" && (rolled.oneIn || 0) >= quest.threshold) {
+                changed = addRngDailyQuestProgress(quest, 1) || changed;
+            } else if (quest.type === "coins") {
+                changed = addRngDailyQuestProgress(quest, rolled.coinReward || 0) || changed;
+            }
+        });
+
+        return changed;
+    }
+
+    function buildRngAllTimeQuestChains() {
+        return {
+            rollMilestone: {
+                icon: "fa-rotate",
+                title: "Roll Milestone",
+                progress: () => Math.max(0, Math.floor(Number(player.rolls) || 0)),
+                formatProgress: (value) => value.toLocaleString(),
+                describe: (goal) => `Roll ${goal.toLocaleString()} times.`,
+                steps: [
+                    { goal: 500, reward: [{ type: "coins", amount: 100000 }, { type: "potion", key: "speed", amount: 1 }] },
+                    { goal: 1000, reward: [{ type: "coins", amount: 220000 }, { type: "potion", key: "luck", amount: 1 }] },
+                    { goal: 2500, reward: [{ type: "coins", amount: 550000 }, { type: "potion", key: "luckStrong", amount: 1 }] },
+                    { goal: 5000, reward: [{ type: "coins", amount: 1250000 }, { type: "potion", key: "luckMega", amount: 1 }] },
+                    { goal: 10000, reward: [{ type: "coins", amount: 3000000 }, { type: "potion", key: "coin", amount: 2 }] },
+                    { goal: 25000, reward: [{ type: "coins", amount: 8500000 }, { type: "potion", key: "luckVoid", amount: 1 }] },
+                    { goal: 50000, reward: [{ type: "coins", amount: 20000000 }, { type: "potion", key: "omega", amount: 1 }] },
+                    { goal: 100000, reward: [{ type: "coins", amount: 50000000 }, { type: "potion", key: "apexSurge", amount: 1 }] }
+                ]
+            },
+            collectionMilestone: {
+                icon: "fa-book-open",
+                title: "Index Expedition",
+                progress: () => getCollectionCount(),
+                formatProgress: (value) => value.toLocaleString(),
+                describe: (goal) => `Discover ${goal.toLocaleString()} index entries.`,
+                steps: [
+                    { goal: 25, reward: [{ type: "coins", amount: 75000 }, { type: "potion", key: "luckMinor", amount: 1 }] },
+                    { goal: 50, reward: [{ type: "coins", amount: 180000 }, { type: "potion", key: "luck", amount: 1 }] },
+                    { goal: 100, reward: [{ type: "coins", amount: 450000 }, { type: "potion", key: "luckStrong", amount: 1 }] },
+                    { goal: 250, reward: [{ type: "coins", amount: 1250000 }, { type: "potion", key: "luckMega", amount: 1 }] },
+                    { goal: 500, reward: [{ type: "coins", amount: 4000000 }, { type: "potion", key: "ultra", amount: 1 }] },
+                    { goal: 1000, reward: [{ type: "coins", amount: 12000000 }, { type: "potion", key: "omega", amount: 1 }] }
+                ]
+            },
+            rarityMilestone: {
+                icon: "fa-gem",
+                title: "Deep Find",
+                progress: () => Math.max(0, Number(player.bestOneIn) || 0),
+                formatProgress: (value) => value > 0 ? `1 in ${formatOneIn(value)}` : "None yet",
+                describe: (goal) => `Roll a species at 1 in ${formatOneIn(goal)} or rarer.`,
+                steps: [
+                    { goal: 1000, reward: [{ type: "coins", amount: 125000 }, { type: "potion", key: "luck", amount: 1 }] },
+                    { goal: 10000, reward: [{ type: "coins", amount: 500000 }, { type: "potion", key: "luckStrong", amount: 1 }] },
+                    { goal: 100000, reward: [{ type: "coins", amount: 1800000 }, { type: "potion", key: "luckMega", amount: 1 }] },
+                    { goal: 1000000, reward: [{ type: "coins", amount: 6000000 }, { type: "potion", key: "ultra", amount: 1 }] },
+                    { goal: 10000000, reward: [{ type: "coins", amount: 18000000 }, { type: "potion", key: "omega", amount: 1 }] },
+                    { goal: 100000000, reward: [{ type: "coins", amount: 65000000 }, { type: "potion", key: "apexSurge", amount: 1 }] }
+                ]
+            }
+        };
+    }
+
+    function normalizeRngQuestState(state = {}) {
+        const allTime = {};
+        const source = state && typeof state === "object" && state.allTime && typeof state.allTime === "object"
+            ? state.allTime
+            : {};
+        const chains = buildRngAllTimeQuestChains();
+
+        Object.entries(chains).forEach(([chainId, chain]) => {
+            allTime[chainId] = Math.min(
+                chain.steps.length,
+                Math.max(0, Math.floor(Number(source[chainId]) || 0))
+            );
+        });
+
+        return { allTime };
+    }
+
+    function mergeRngQuestStates(localState = {}, remoteState = {}) {
+        const local = normalizeRngQuestState(localState);
+        const remote = normalizeRngQuestState(remoteState);
+        const allTime = {};
+
+        Object.keys(buildRngAllTimeQuestChains()).forEach((chainId) => {
+            allTime[chainId] = Math.max(local.allTime[chainId] || 0, remote.allTime[chainId] || 0);
+        });
+
+        return { allTime };
+    }
+
+    function getRngQuestState() {
+        player.quests = normalizeRngQuestState(player.quests);
+        return player.quests;
+    }
+
+    function buildRngAllTimeQuestDefs() {
+        const state = getRngQuestState();
+        return Object.entries(buildRngAllTimeQuestChains()).map(([chainId, chain]) => {
+            const tierIndex = Math.min(chain.steps.length, Math.max(0, Math.floor(Number(state.allTime[chainId]) || 0)));
+            if (tierIndex >= chain.steps.length) {
+                return {
+                    id: `all_time_${chainId}_complete`,
+                    section: "allTime",
+                    chainId,
+                    icon: chain.icon,
+                    title: `${chain.title} Complete`,
+                    desc: "Every stage has been claimed.",
+                    goal: 1,
+                    progress: 1,
+                    progressText: "Complete",
+                    goalText: "Complete",
+                    rewardText: "All claimed",
+                    reward: [],
+                    completedChain: true
+                };
+            }
+
+            const step = chain.steps[tierIndex];
+            const progress = Math.max(0, Number(chain.progress()) || 0);
+            return {
+                id: `all_time_${chainId}_${tierIndex}`,
+                section: "allTime",
+                chainId,
+                tierIndex,
+                icon: chain.icon,
+                title: `${chain.title} ${tierIndex + 1}`,
+                desc: chain.describe(step.goal),
+                goal: step.goal,
+                progress,
+                progressText: chain.formatProgress(progress),
+                goalText: chain.formatProgress(step.goal),
+                reward: step.reward,
+                rewardText: formatRngQuestRewardText(step.reward)
+            };
+        });
     }
 
     function computeRarityScore(shark) {
@@ -3176,10 +3473,12 @@ let rollPool = [];
         }
 
         grantRollXp(rolled);
-        return {
+        const finalizedRoll = {
             ...rolled,
             isNewFind
         };
+        updateRngDailyQuestsForRoll(finalizedRoll);
+        return finalizedRoll;
     }
 
     function mergeCollectionEntry(target, key, entry) {
@@ -3541,6 +3840,8 @@ function rollForShark(actionContext = createRollActionContext(1)) {
                 },
                 collection: parsed.collection && typeof parsed.collection === "object" ? parsed.collection : {},
                 claimedIndexRewards: Array.isArray(parsed.claimedIndexRewards) ? parsed.claimedIndexRewards : [],
+                dailyQuests: normalizeRngDailyQuestState(parsed.dailyQuests || parsed.dailyMissions),
+                quests: normalizeRngQuestState(parsed.quests),
                 adminNextRollConsumedIds: Array.isArray(parsed.adminNextRollConsumedIds)
                     ? parsed.adminNextRollConsumedIds.map(String).filter(Boolean).slice(-RNG_ADMIN_NEXT_ROLL_CONSUMED_LIMIT)
                     : [],
@@ -3852,6 +4153,165 @@ function rollForShark(actionContext = createRollActionContext(1)) {
         persistPlayerState();
         showToast(`Claimed ${readyRewards.length.toLocaleString()} index reward${readyRewards.length === 1 ? "" : "s"}.`);
         GameFx.play("upgrade");
+    }
+
+    function applyRngQuestReward(effect) {
+        if (effect.type === "coins") {
+            player.coins += Math.max(0, Math.floor(Number(effect.amount) || 0));
+        } else if (effect.type === "potion" && POTION_DEFS[effect.key]) {
+            player.potions[effect.key] = (player.potions[effect.key] || 0) + Math.max(1, Math.floor(Number(effect.amount) || 1));
+        }
+    }
+
+    function getRngQuestProgress(quest) {
+        if (quest.section === "daily") return getRngDailyQuestProgress(quest);
+        if (quest.section === "allTime") return Math.min(quest.goal, Math.max(0, Number(quest.progress) || 0));
+        return 0;
+    }
+
+    function isRngQuestClaimed(quest) {
+        if (quest.section === "daily") return isRngDailyQuestClaimed(quest);
+        return Boolean(quest.completedChain);
+    }
+
+    function isRngQuestReady(quest) {
+        return !isRngQuestClaimed(quest) && getRngQuestProgress(quest) >= quest.goal;
+    }
+
+    function getVisibleRngQuestDefs() {
+        return [
+            ...buildRngDailyQuestDefs(),
+            ...buildRngAllTimeQuestDefs()
+        ];
+    }
+
+    function markRngQuestClaimed(quest) {
+        if (quest.section === "daily") {
+            const state = getRngDailyQuestState();
+            state.claimed = [...new Set([...(state.claimed || []), quest.id])].slice(0, RNG_DAILY_QUEST_COUNT);
+        } else if (quest.section === "allTime" && !quest.completedChain) {
+            const state = getRngQuestState();
+            state.allTime[quest.chainId] = Math.max(
+                Math.floor(Number(state.allTime[quest.chainId]) || 0),
+                quest.tierIndex + 1
+            );
+        }
+    }
+
+    function claimRngQuest(questId) {
+        const quest = getVisibleRngQuestDefs().find((entry) => entry.id === questId);
+        if (!quest || isRngQuestClaimed(quest)) return;
+
+        if (!isRngQuestReady(quest)) {
+            showToast("Quest is not ready yet.", "error");
+            return;
+        }
+
+        quest.reward.forEach(applyRngQuestReward);
+        markRngQuestClaimed(quest);
+        persistPlayerState();
+        showToast(`${quest.title} claimed: ${quest.rewardText}`);
+        GameFx.play("upgrade");
+    }
+
+    function claimAllRngQuests() {
+        const ready = getVisibleRngQuestDefs().filter(isRngQuestReady);
+
+        if (!ready.length) {
+            showToast("No quests ready.", "error");
+            return;
+        }
+
+        ready.forEach((quest) => {
+            quest.reward.forEach(applyRngQuestReward);
+            markRngQuestClaimed(quest);
+        });
+
+        persistPlayerState();
+        showToast(`Claimed ${ready.length.toLocaleString()} quest${ready.length === 1 ? "" : "s"}.`);
+        GameFx.play("upgrade");
+    }
+
+    function getRngDailyResetText() {
+        const now = new Date();
+        const tomorrow = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1));
+        const ms = Math.max(0, tomorrow.getTime() - now.getTime());
+        const hours = Math.floor(ms / 3600000);
+        const minutes = Math.floor((ms % 3600000) / 60000);
+        return `${hours}h ${minutes}m`;
+    }
+
+    function renderRngQuestsPanel() {
+        const panel = document.getElementById("rng-quests-panel");
+        if (!panel) return;
+
+        const dailyQuests = buildRngDailyQuestDefs();
+        const allTimeQuests = buildRngAllTimeQuestDefs();
+        const ready = [...dailyQuests, ...allTimeQuests].filter(isRngQuestReady);
+        const claimedDaily = dailyQuests.filter(isRngQuestClaimed).length;
+        const activeAllTime = allTimeQuests.filter((quest) => !quest.completedChain).length;
+        const renderCard = (quest) => {
+            const progress = getRngQuestProgress(quest);
+            const percent = quest.goal > 0 ? Math.min(100, Math.round((progress / quest.goal) * 100)) : 0;
+            const claimed = isRngQuestClaimed(quest);
+            const readyToClaim = isRngQuestReady(quest);
+            const stateClass = claimed ? "claimed" : readyToClaim ? "ready" : "active";
+            const progressText = quest.progressText || progress.toLocaleString();
+            const goalText = quest.goalText || quest.goal.toLocaleString();
+
+            return `
+                <article class="rng-quest-card ${stateClass}">
+                    <div class="rng-quest-card-top">
+                        <i class="fa-solid ${quest.icon}" aria-hidden="true"></i>
+                        <div>
+                            <strong>${quest.title}</strong>
+                            <span>${quest.desc}</span>
+                        </div>
+                    </div>
+                    <div class="rng-quest-progress">
+                        <span style="width:${percent}%"></span>
+                    </div>
+                    <div class="rng-quest-card-bottom">
+                        <span>${progressText} / ${goalText}</span>
+                        <em>${quest.rewardText}</em>
+                        <button class="rng-btn rng-quest-claim-btn" type="button" data-rng-quest="${quest.id}" ${readyToClaim ? "" : "disabled"}>${claimed ? "Complete" : readyToClaim ? "Claim" : "In Progress"}</button>
+                    </div>
+                </article>
+            `;
+        };
+
+        panel.innerHTML = `
+            <div class="rng-quest-head">
+                <div>
+                    <span>Quests</span>
+                    <strong>${ready.length ? `${ready.length} ready` : "No quests ready"}</strong>
+                </div>
+                <button id="rng-quest-claim-all" class="rng-btn rng-btn-ghost" type="button" ${ready.length ? "" : "disabled"}>Claim Ready${ready.length ? ` (${ready.length})` : ""}</button>
+            </div>
+            <section class="rng-quest-section">
+                <div class="rng-quest-section-head">
+                    <span>Daily Quests</span>
+                    <em>${claimedDaily}/${dailyQuests.length} claimed · resets in ${getRngDailyResetText()}</em>
+                </div>
+                ${dailyQuests.map(renderCard).join("")}
+            </section>
+            <section class="rng-quest-section">
+                <div class="rng-quest-section-head">
+                    <span>All-Time Goals</span>
+                    <em>${activeAllTime} active chains</em>
+                </div>
+                ${allTimeQuests.map(renderCard).join("")}
+            </section>
+        `;
+
+        panel.querySelector("#rng-quest-claim-all")?.addEventListener("click", claimAllRngQuests);
+        panel.querySelectorAll("[data-rng-quest]").forEach((button) => {
+            button.addEventListener("click", () => claimRngQuest(button.dataset.rngQuest));
+        });
+    }
+
+    function isRngQuestsPanelActive() {
+        return Boolean(document.getElementById("rng-tab-quests")?.classList.contains("active"));
     }
 
 function updateActiveEffectsUi() {
@@ -4343,12 +4803,14 @@ function updateAllUi(options = {}) {
                  collectionGridDirty = true;
              }
              renderRngLeaderboardSelf();
+             if (isRngQuestsPanelActive()) renderRngQuestsPanel();
              updateAutoButtonUi();
              updateRollButtonState();
              return;
          }
          renderPrestigePanel();
          renderUpgradeShop();
+         if (isRngQuestsPanelActive()) renderRngQuestsPanel();
          renderPotionShop();
          renderCollectionGrid({
              deferDuringActiveRoll: options.deferCollectionGridDuringRoll !== false,
@@ -4543,6 +5005,30 @@ function updateAllUi(options = {}) {
         });
     }
 
+    function getIndexOddsSearchText(...values) {
+        const parts = new Set();
+
+        values.forEach((value) => {
+            const number = Math.max(0, Math.floor(Number(value) || 0));
+            if (!number) return;
+
+            const raw = String(number);
+            const comma = number.toLocaleString();
+            const compact = formatOneIn(number).toLowerCase();
+            const shorthand = formatCompactCoins(number).toLowerCase();
+            [raw, comma, compact, shorthand].forEach((odds) => {
+                parts.add(odds);
+                parts.add(odds.replace(/,/g, ""));
+                parts.add(`1 in ${odds}`);
+                parts.add(`1in${odds}`);
+                parts.add(`1/${odds}`);
+                parts.add(`one in ${odds}`);
+            });
+        });
+
+        return [...parts].join(" ").toLowerCase();
+    }
+
     function getIndexCandidateForSection(section, baseShark, filters) {
         const { baseOnlyFilter, mutationFilter, tierFilter, ownedOnly, searchTokens } = filters;
         const canonical = section.mutation ? applyStableMutation(baseShark, section.mutation) : baseShark;
@@ -4552,7 +5038,13 @@ function updateAllUi(options = {}) {
         const displayName = section.mutation ? baseShark.name : canonical.name;
         const baseTier = getBaseTierName(source);
         const oddsTier = getOddsTierName(source);
-        const searchHaystack = `${displayName} ${section.title} ${baseTier} ${oddsTier}`.toLowerCase();
+        const searchHaystack = [
+            displayName,
+            section.title,
+            baseTier,
+            oddsTier,
+            getIndexOddsSearchText(canonical.oneIn, entry?.oneIn)
+        ].join(" ").toLowerCase();
 
         if (!baseOnlyFilter && !mutationFilter && tierFilter !== "all" && baseTier !== tierFilter) {
             return null;
@@ -5486,6 +5978,8 @@ async function performRoll() {
         });
         if (tabId === "leaderboard") {
             loadRngLeaderboard({ syncFirst: true });
+        } else if (tabId === "quests") {
+            renderRngQuestsPanel();
         }
     }
 
