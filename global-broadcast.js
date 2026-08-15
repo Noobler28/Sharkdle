@@ -25,7 +25,7 @@
     const VISITOR_TRACKING_STARTED_KEY = "__sharkdleVisitorTrackingStarted";
     const VISITOR_DAILY_COLLECTION = "visitorDaily";
     const VISITOR_HEARTBEAT_MS = 45 * 1000;
-    const RNG_BROADCAST_MIN_ONE_IN = 100_000_000;
+    const RNG_BROADCAST_MIN_ONE_IN = 1_000_000_000;
     const RNG_BROADCAST_MAX_AGE_MS = 5 * 60 * 1000;
     const RNG_BROADCAST_DISPLAY_MS = 6500;
     const RNG_BROADCAST_QUERY_LIMIT = 8;
