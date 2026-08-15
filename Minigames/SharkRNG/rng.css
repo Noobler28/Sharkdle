@@ -3324,68 +3324,6 @@ body.rng-page {
     50% { transform: scale(1.03) skewX(-1deg); filter: brightness(1.28); }
 }
 
-/* Single-tab lock */
-.rng-tab-lock-overlay {
-    position: fixed;
-    inset: 0;
-    z-index: 190;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 20px;
-    background:
-        radial-gradient(circle at 50% 36%, rgba(0, 180, 216, 0.16), transparent 34%),
-        rgba(2, 8, 16, 0.88);
-    backdrop-filter: blur(8px);
-}
-
-.rng-tab-lock-card {
-    width: min(420px, 100%);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 10px;
-    padding: 24px;
-    text-align: center;
-    border-radius: var(--rng-radius);
-    border: 1px solid rgba(77, 208, 225, 0.28);
-    background: linear-gradient(180deg, rgba(12, 31, 51, 0.98), rgba(5, 15, 28, 0.98));
-    box-shadow: 0 24px 70px rgba(0, 0, 0, 0.42);
-}
-
-.rng-tab-lock-icon {
-    width: 54px;
-    height: 54px;
-    display: grid;
-    place-items: center;
-    border-radius: 999px;
-    color: #04202d;
-    background: linear-gradient(135deg, #86efac, #22d3ee);
-    font-size: 1.35rem;
-}
-
-.rng-tab-lock-card h2 {
-    margin: 4px 0 0;
-    font-size: 1.2rem;
-}
-
-.rng-tab-lock-card p {
-    margin: 0;
-    color: var(--rng-muted);
-    font-size: 0.84rem;
-    line-height: 1.4;
-}
-
-.rng-tab-lock-card .rng-btn {
-    width: 100%;
-    max-width: 220px;
-    margin-top: 6px;
-}
-
-.rng-btn-tab-locked {
-    filter: grayscale(0.6);
-}
-
 /* Toast & dev */
 .rng-toast {
     position: fixed;
