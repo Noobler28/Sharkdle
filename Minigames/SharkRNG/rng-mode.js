@@ -1619,7 +1619,34 @@ let rollPool = [];
         merged.quests = mergeRngQuestStates(localProfile.quests, remoteProfile.quests);
         delete merged.dailyMissions;
         merged.bestOneIn = Math.max(Number(localProfile.bestOneIn) || 0, Number(remoteProfile.bestOneIn) || 0);
-        merged.runBestOneIn = Math.max(Number(localProfile.runBestOneIn) || 0, Number(remoteProfile.runBestOneIn) || 0);
+
+        // Run-only stats must never leak backwards across a prestige boundary.
+        // If one profile is from a newer prestige, its run stats are authoritative.
+        // Only merge with Math.max when both copies belong to the same prestige run.
+        const localPrestigeLevel = Math.max(0, Math.floor(Number(localProfile.prestigeLevel) || 0));
+        const remotePrestigeLevel = Math.max(0, Math.floor(Number(remoteProfile.prestigeLevel) || 0));
+        if (localPrestigeLevel > remotePrestigeLevel) {
+            merged.runBestOneIn = Math.max(0, Number(localProfile.runBestOneIn) || 0);
+            merged.runCollectionFinds = Math.max(0, Math.floor(Number(localProfile.runCollectionFinds) || 0));
+        } else if (remotePrestigeLevel > localPrestigeLevel) {
+            merged.runBestOneIn = Math.max(0, Number(remoteProfile.runBestOneIn) || 0);
+            merged.runCollectionFinds = Math.max(0, Math.floor(Number(remoteProfile.runCollectionFinds) || 0));
+        } else {
+            merged.runBestOneIn = Math.max(Number(localProfile.runBestOneIn) || 0, Number(remoteProfile.runBestOneIn) || 0);
+            merged.runCollectionFinds = Math.max(
+                Math.floor(Number(localProfile.runCollectionFinds) || 0),
+                Math.floor(Number(remoteProfile.runCollectionFinds) || 0)
+            );
+        }
+
+        // These IDs are replay-protection metadata, not resettable progression.
+        // Keep the union so an already-consumed admin next-roll command cannot
+        // become live again after prestige/reset/cloud hydration.
+        merged.adminNextRollConsumedIds = [...new Set([
+            ...(Array.isArray(localProfile.adminNextRollConsumedIds) ? localProfile.adminNextRollConsumedIds : []),
+            ...(Array.isArray(remoteProfile.adminNextRollConsumedIds) ? remoteProfile.adminNextRollConsumedIds : [])
+        ].map(String).filter(Boolean))].slice(-RNG_ADMIN_NEXT_ROLL_CONSUMED_LIMIT);
+
         merged.rngCloudUpdatedAtMs = Math.max(Number(localProfile.rngCloudUpdatedAtMs) || 0, Number(remoteProfile.rngCloudUpdatedAtMs) || 0);
 
         const history = [
@@ -1904,6 +1931,7 @@ let rollPool = [];
             bestTier: best?.tier || "",
             bestShark: best?.name || "",
             level: rankInfo.level,
+            prestigeLevel: Math.max(0, Math.floor(Number(player.prestigeLevel) || 0)),
             collectionCount: getCollectionCount(),
             updatedAt: Date.now()
         };
@@ -1923,6 +1951,7 @@ let rollPool = [];
             rngBestTier: payload.bestTier,
             rngBestShark: payload.bestShark,
             rngLevel: payload.level,
+            rngPrestigeLevel: payload.prestigeLevel,
             rngCollectionCount: payload.collectionCount,
             rngUpdatedAt: payload.updatedAt
         };
@@ -1942,6 +1971,7 @@ let rollPool = [];
             bestTier,
             bestShark: (fallbackSource ? data.rngBestShark : data.bestShark) || "Unknown species",
             level: toSafeNumber(fallbackSource ? data.rngLevel : data.level),
+            prestigeLevel: Math.max(0, Math.floor(toSafeNumber(fallbackSource ? data.rngPrestigeLevel : data.prestigeLevel))),
             collectionCount: toSafeNumber(fallbackSource ? data.rngCollectionCount : data.collectionCount),
             updatedAt: (fallbackSource ? data.rngUpdatedAt : data.updatedAt) || 0
         };
@@ -1977,7 +2007,7 @@ let rollPool = [];
         self.innerHTML = `
             <strong>
                 <span>Your RNG Card</span>
-                <span>${(player.rolls || 0).toLocaleString()} rolls</span>
+                <span>${(player.rolls || 0).toLocaleString()} rolls · Prestige ${Math.max(0, Math.floor(Number(player.prestigeLevel) || 0))}</span>
             </strong>
             <span>${escapeHtml(bestText)}${best?.name ? ` - ${escapeHtml(best.name)}` : ""}</span>
             <span>${syncText}</span>
@@ -2009,6 +2039,7 @@ let rollPool = [];
                         <div class="rng-leaderboard-name-line">
                             <strong class="rng-leaderboard-name">${escapeHtml(row.username)}</strong>
                             <span class="rng-leaderboard-tier ${tierClass}">${escapeHtml(tier)}</span>
+                            <span class="rng-leaderboard-prestige"><i class="fa-solid fa-water"></i> Prestige ${row.prestigeLevel || 0}</span>
                         </div>
                         <span class="rng-leaderboard-best">1 in ${formatOneIn(row.bestOneIn)}</span>
                         <span class="rng-leaderboard-shark">${escapeHtml(row.bestShark)}</span>
@@ -6236,6 +6267,11 @@ async function performRoll() {
             ...fresh,
             collection: previous.collection && typeof previous.collection === "object" ? previous.collection : {},
             claimedIndexRewards: Array.isArray(previous.claimedIndexRewards) ? previous.claimedIndexRewards : [],
+            // Replay-protection metadata must survive prestige. Otherwise an old
+            // queued admin roll can become valid again and fire on roll #1.
+            adminNextRollConsumedIds: Array.isArray(previous.adminNextRollConsumedIds)
+                ? previous.adminNextRollConsumedIds.map(String).filter(Boolean).slice(-RNG_ADMIN_NEXT_ROLL_CONSUMED_LIMIT)
+                : [],
             equipped: previous.equipped || null,
             bestOneIn: previous.bestOneIn || 0,
             settings: previous.settings || fresh.settings,
@@ -6265,7 +6301,13 @@ async function performRoll() {
             return;
         }
 
+        const consumedAdminRollIds = Array.isArray(player.adminNextRollConsumedIds)
+            ? player.adminNextRollConsumedIds.map(String).filter(Boolean).slice(-RNG_ADMIN_NEXT_ROLL_CONSUMED_LIMIT)
+            : [];
+
         player = createDefaultPlayer();
+        // A full progress reset should not reset security/replay bookkeeping.
+        player.adminNextRollConsumedIds = consumedAdminRollIds;
         persistPlayerState();
         updateSettingsUi();
         closeSettingsModal();
