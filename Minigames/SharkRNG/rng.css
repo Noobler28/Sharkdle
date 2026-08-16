@@ -3545,3 +3545,42 @@ body.rng-page {
     .rng-potion-grid { grid-template-columns: 1fr; }
     .rng-multi-roll-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
+
+/* Leaderboard prestige badge */
+.rng-leaderboard-prestige {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    flex-shrink: 0;
+    padding: 2px 6px;
+    border-radius: 999px;
+    color: #fde047;
+    background: linear-gradient(135deg, rgba(250, 204, 21, 0.14), rgba(94, 234, 212, 0.10));
+    border: 1px solid rgba(250, 204, 21, 0.28);
+    font-size: 0.54rem;
+    font-weight: 900;
+    line-height: 1.15;
+    letter-spacing: 0.035em;
+    white-space: nowrap;
+    text-transform: uppercase;
+}
+
+.rng-leaderboard-prestige i {
+    color: #a7f3d0;
+    font-size: 0.52rem;
+}
+
+.rng-leaderboard-row.current-user .rng-leaderboard-prestige {
+    background: linear-gradient(135deg, rgba(250, 204, 21, 0.22), rgba(94, 234, 212, 0.14));
+    border-color: rgba(250, 204, 21, 0.48);
+    box-shadow: 0 0 10px rgba(250, 204, 21, 0.08);
+}
+
+/* Keep name + tier + prestige neat even on narrow leaderboard widths. */
+.rng-leaderboard-name-line {
+    flex-wrap: wrap;
+}
+
+.rng-leaderboard-name {
+    flex: 1 1 100px;
+}
