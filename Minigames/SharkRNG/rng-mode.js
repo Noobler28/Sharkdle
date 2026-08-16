@@ -2039,7 +2039,7 @@ let rollPool = [];
                         <div class="rng-leaderboard-name-line">
                             <strong class="rng-leaderboard-name">${escapeHtml(row.username)}</strong>
                             <span class="rng-leaderboard-tier ${tierClass}">${escapeHtml(tier)}</span>
-                            <span class="rng-leaderboard-prestige"><i class="fa-solid fa-water"></i> Prestige ${row.prestigeLevel || 0}</span>
+                            <span class="rng-leaderboard-prestige">Prestige ${row.prestigeLevel || 0}</span>
                         </div>
                         <span class="rng-leaderboard-best">1 in ${formatOneIn(row.bestOneIn)}</span>
                         <span class="rng-leaderboard-shark">${escapeHtml(row.bestShark)}</span>
