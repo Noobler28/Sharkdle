@@ -19,6 +19,8 @@ HTML, CSS, JavaScript
 
 Firebase is used for storing Player Data
 
+CODEX IS USED, BUT PURELY AS A TOOL TO HELP ME PUSH ALL FILES INTO THE GITHUB AT ONCE AND I DO NOT USE AI FOR ANYTHING ELSE IN THIS PROJECT, I AM FULLY AGAINST IT.
+
 Hosted via GitHub Pages
 
 Ongoing updates and improvements are planned
