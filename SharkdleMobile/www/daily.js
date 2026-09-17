@@ -461,6 +461,7 @@ if(shark.name === targetShark.name){
     profileData.wins = (profileData.wins || 0) + 1;
     profileData.currentStreak = (profileData.currentStreak || 0) + 1;
     profileData.highestStreak = Math.max(profileData.highestStreak || 0, profileData.currentStreak);
+    profileData.currentLossStreak = 0;
     if (typeof incrementProfilePeriodWins === 'function') {
         incrementProfilePeriodWins(profileData);
     }
@@ -544,11 +545,23 @@ if(attempts===0){
         // Update stats
         profileData.gamesPlayed = (profileData.gamesPlayed || 0) + 1;
         profileData.losses = (profileData.losses || 0) + 1;
+        profileData.currentLossStreak = (profileData.currentLossStreak || 0) + 1;
+        const previousWinStreak = Math.max(0, Number(profileData.currentStreak) || 0);
         const streakShieldUsed = typeof window.applyStreakShieldOnLoss === 'function'
             ? window.applyStreakShieldOnLoss(profileData, { mode: "Daily" })
             : false;
         if (!streakShieldUsed) {
             profileData.currentStreak = 0; // Reset streak on loss when no shield is available
+            if (previousWinStreak > 0) {
+                if (window.unlockProfileBadge?.("lost-win-streak", "arrow-to-the-knee")) {
+                    profileData.unlockedBadges = [...new Set([...(Array.isArray(profileData.unlockedBadges) ? profileData.unlockedBadges : ["starter"]), "arrow-to-the-knee"])];
+                }
+            }
+        }
+        if (profileData.currentLossStreak >= 6) {
+            if (window.unlockProfileBadge?.("loss-streak", "im-not-okay")) {
+                profileData.unlockedBadges = [...new Set([...(Array.isArray(profileData.unlockedBadges) ? profileData.unlockedBadges : ["starter"]), "im-not-okay"])];
+            }
         }
         
         // Calculate and save average guesses

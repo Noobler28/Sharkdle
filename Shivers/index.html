@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<link rel="icon" type="image/png" href="images/favicon.png">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<base href="../">
+<title>Shivers - Sharkdle</title>
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="Shivers/shivers.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800;900&family=Barlow:wght@400;500;600;700&family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+
+    <link rel="stylesheet" href="../mobile.css" media="(max-width: 820px)">
+</head>
+<body class="shell-page shivers-page">
+<header class="navbar">
+    <div class="logo">Sharkdle</div>
+    <nav>
+        <button onclick="navigate('index.html')" class="nav-btn" title="Home"><i class="fas fa-home"></i><span>Home</span></button>
+        <button onclick="navigate('sharkpass.html')" class="nav-btn" title="Shark Pass"><i class="fas fa-ticket"></i><span>Pass</span></button>
+        <button onclick="navigate('leaderboards.html')" class="nav-btn" title="Leaderboards"><i class="fas fa-ranking-star"></i><span>Board</span></button>
+        <button onclick="navigate('achievements.html')" class="nav-btn" title="Achievements"><i class="fas fa-trophy"></i><span>Achieve</span></button>
+        <button onclick="navigate('library.html')" class="nav-btn" title="Library"><i class="fas fa-book-open"></i><span>Archive</span></button>
+    </nav>
+</header>
+
+<main class="shivers-shell">
+    <section class="shivers-hero">
+        <div class="shivers-hero-copy">
+            <span class="shivers-kicker">Shivers</span>
+            <h1>Hunt Together</h1>
+            <p>Join a Shiver, turn wins into teeth, and climb the Tide Clash board with your crew.</p>
+            <div class="shivers-hero-actions">
+                <a href="Daily/index.html"><i class="fas fa-play"></i><span>Daily</span></a>
+                <a href="Infinite/index.html"><i class="fas fa-infinity"></i><span>Infinite</span></a>
+            </div>
+        </div>
+        <div class="shivers-hero-stats" aria-label="Shiver overview">
+            <article>
+                <i class="fas fa-people-group" aria-hidden="true"></i>
+                <span>Your Shiver</span>
+                <strong id="hero-shiver-name">None</strong>
+            </article>
+            <article>
+                <i class="fas fa-bullseye" aria-hidden="true"></i>
+                <span id="hero-battle-goal">Most Teeth</span>
+                <strong id="hero-season-points">0</strong>
+            </article>
+            <article>
+                <i class="fas fa-user-group" aria-hidden="true"></i>
+                <span>Members</span>
+                <strong id="hero-member-count">0/25</strong>
+            </article>
+        </div>
+    </section>
+
+    <div id="shiver-auth-state" class="shivers-auth-state">Checking login...</div>
+
+    <section class="shivers-layout">
+        <div class="shivers-primary">
+            <section class="shivers-panel shiver-current-panel" id="current-shiver-panel">
+                <div class="shivers-panel-heading">
+                    <div>
+                        <span class="shivers-kicker">Current Crew</span>
+                        <h2 id="current-shiver-name">No Shiver Joined</h2>
+                    </div>
+                    <span class="shiver-tag" id="current-shiver-tag">----</span>
+                </div>
+                <div class="shiver-current-grid">
+                    <article>
+                        <span id="current-shiver-points-label">Teeth</span>
+                        <strong id="current-shiver-points">0</strong>
+                    </article>
+                    <article>
+                        <span>Wins</span>
+                        <strong id="current-shiver-wins">0</strong>
+                    </article>
+                    <article>
+                        <span>Your Role</span>
+                        <strong id="current-shiver-role">None</strong>
+                    </article>
+                </div>
+                <p id="current-shiver-description" class="shiver-description">Create or join a Shiver to start earning group points.</p>
+                <div class="shiver-actions">
+                    <button type="button" id="play-daily-btn"><i class="fas fa-play"></i><span>Daily</span></button>
+                    <button type="button" id="play-infinite-btn"><i class="fas fa-infinity"></i><span>Infinite</span></button>
+                    <button type="button" id="leave-shiver-btn" class="danger"><i class="fas fa-right-from-bracket"></i><span>Leave</span></button>
+                </div>
+            </section>
+
+            <section class="shivers-panel">
+                <div class="shivers-panel-heading">
+                    <div>
+                        <span class="shivers-kicker">Found A Shiver</span>
+                        <h2>Create</h2>
+                    </div>
+                </div>
+                <form id="create-shiver-form" class="shiver-form">
+                    <label>
+                        <span>Name</span>
+                        <input id="shiver-name-input" type="text" maxlength="28" placeholder="Reef Runners" autocomplete="off">
+                    </label>
+                    <label>
+                        <span>Tag</span>
+                        <input id="shiver-tag-input" type="text" maxlength="5" placeholder="REEF" autocomplete="off">
+                    </label>
+                    <label class="full">
+                        <span>Motto</span>
+                        <input id="shiver-description-input" type="text" maxlength="120" placeholder="Fast guesses, sharp fins." autocomplete="off">
+                    </label>
+                    <input id="shiver-color-input" type="hidden" value="reef">
+                    <div class="shiver-color-row" aria-label="Shiver color">
+                        <button type="button" class="selected" data-shiver-color="reef"><span class="swatch reef"></span>Reef</button>
+                        <button type="button" data-shiver-color="current"><span class="swatch current"></span>Current</button>
+                        <button type="button" data-shiver-color="ember"><span class="swatch ember"></span>Ember</button>
+                        <button type="button" data-shiver-color="glacier"><span class="swatch glacier"></span>Glacier</button>
+                    </div>
+                    <button type="submit" class="primary wide"><i class="fas fa-plus"></i><span>Create Shiver</span></button>
+                </form>
+            </section>
+
+            <section class="shivers-panel">
+                <div class="shivers-panel-heading">
+                    <div>
+                        <span class="shivers-kicker">Members</span>
+                        <h2>Roster</h2>
+                    </div>
+                    <span id="roster-count" class="shiver-count">0</span>
+                </div>
+                <div id="roster-list" class="shiver-roster-list">
+                    <p class="shiver-empty">No roster yet.</p>
+                </div>
+            </section>
+        </div>
+
+        <aside class="shivers-secondary">
+            <section class="shivers-panel shivers-battle-panel">
+                <div class="shivers-panel-heading">
+                    <div>
+                        <span class="shivers-kicker">Tide Clash</span>
+                        <h2>Clan Battle</h2>
+                    </div>
+                    <span class="shiver-season-pill">Season</span>
+                </div>
+                <div class="battle-goal-card">
+                    <div>
+                        <span class="shivers-kicker">Active Goal</span>
+                        <strong id="battle-goal-title">Most Teeth</strong>
+                        <p id="battle-goal-copy">Daily and Infinite wins add teeth for your Shiver.</p>
+                    </div>
+                    <div id="battle-goal-admin" class="battle-goal-admin" hidden>
+                        <div id="battle-goal-options" class="battle-goal-options" role="group" aria-label="Battle goal"></div>
+                        <button id="save-battle-goal-btn" type="button"><i class="fas fa-check"></i><span>Set Goal</span></button>
+                    </div>
+                </div>
+                <div id="battle-list" class="shiver-battle-list">
+                    <p class="shiver-empty">Loading battle ranks...</p>
+                </div>
+            </section>
+
+            <section class="shivers-panel">
+                <div class="shivers-panel-heading">
+                    <div>
+                        <span class="shivers-kicker">Best Shivers</span>
+                        <h2>Leaderboard</h2>
+                    </div>
+                    <button type="button" id="refresh-shivers-btn" class="icon-btn" aria-label="Refresh Shivers"><i class="fas fa-rotate"></i></button>
+                </div>
+                <div id="leaderboard-list" class="shiver-leaderboard-list">
+                    <p class="shiver-empty">Loading leaderboard...</p>
+                </div>
+            </section>
+
+            <section class="shivers-panel">
+                <div class="shivers-panel-heading">
+                    <div>
+                        <span class="shivers-kicker">Find</span>
+                        <h2>Join</h2>
+                    </div>
+                </div>
+                <label class="shiver-search">
+                    <i class="fas fa-search"></i>
+                    <input id="shiver-search-input" type="search" placeholder="Search name or tag" autocomplete="off">
+                </label>
+                <div id="discover-list" class="shiver-discover-list">
+                    <p class="shiver-empty">Loading open Shivers...</p>
+                </div>
+            </section>
+        </aside>
+    </section>
+</main>
+
+<script src="script.js"></script>
+<script src="Shivers/shivers.js"></script>
+<script src="global-broadcast.js"></script>
+</body>
+</html>

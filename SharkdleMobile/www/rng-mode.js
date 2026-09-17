@@ -2136,6 +2136,10 @@ let rollPool = [];
 function rollForShark() {
     player.rolls += 1;
 
+    if (typeof unlockProfileBadge === "function" && Math.random() < 0.0001) {
+        unlockProfileBadge("rng-mode", "rollin");
+    }
+
     let rolled = null;
     const forcedMutation = getQueuedForcedMutation();
     const devForcedMutationType = consumeQueuedDevForcedMutationType();

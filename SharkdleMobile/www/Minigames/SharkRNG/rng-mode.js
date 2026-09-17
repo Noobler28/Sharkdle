@@ -46,17 +46,31 @@
     };
 
     const TIERS = [
-        { name: "Common", baseOneIn: 2, coinReward: 12, className: "common" },
-        { name: "Uncommon", baseOneIn: 8, coinReward: 30, className: "uncommon" },
-        { name: "Rare", baseOneIn: 35, coinReward: 90, className: "rare" },
-        { name: "Epic", baseOneIn: 200, coinReward: 300, className: "epic" },
+        { name: "Common", baseOneIn: 3, coinReward: 12, className: "common" },
+        { name: "Uncommon", baseOneIn: 12, coinReward: 32, className: "uncommon" },
+        { name: "Rare", baseOneIn: 50, coinReward: 95, className: "rare" },
+        { name: "Epic", baseOneIn: 250, coinReward: 320, className: "epic" },
         { name: "Legendary", baseOneIn: 2500, coinReward: 2500, className: "legendary" },
         { name: "Mythical", baseOneIn: 50000, coinReward: 18000, className: "mythical" },
-        { name: "Secret", baseOneIn: 500000, coinReward: 90000, className: "secret" },
-        { name: "Ultra", baseOneIn: 2_000_000, coinReward: 2500000, className: "ultra" },
-        { name: "Hyper", baseOneIn: 25_000_000, coinReward: 4000000, className: "hyper" },
-        { name: "Omega", baseOneIn: 250_000_000, coinReward: 10000000, className: "omega" },
-        { name: "Singularity", baseOneIn: 1_000_000_000, coinReward: 7000000, className: "singularity" }
+        { name: "Secret", baseOneIn: 250000, coinReward: 90000, className: "secret" },
+        { name: "Ultra", baseOneIn: 1_000_000, coinReward: 1800000, className: "ultra" },
+        { name: "Exotic", baseOneIn: 2_500_000, coinReward: 2400000, className: "exotic" },
+        { name: "Hyper", baseOneIn: 6_000_000, coinReward: 3300000, className: "hyper" },
+        { name: "Celestial", baseOneIn: 12_000_000, coinReward: 4400000, className: "celestial" },
+        { name: "Astral", baseOneIn: 22_000_000, coinReward: 5600000, className: "astral" },
+        { name: "Nebula", baseOneIn: 38_000_000, coinReward: 7000000, className: "nebula" },
+        { name: "Omega", baseOneIn: 60_000_000, coinReward: 8600000, className: "omega" },
+        { name: "Quantum", baseOneIn: 90_000_000, coinReward: 10500000, className: "quantum" },
+        { name: "Eclipse", baseOneIn: 130_000_000, coinReward: 12800000, className: "eclipse" },
+        { name: "Paradox", baseOneIn: 180_000_000, coinReward: 15400000, className: "paradox" },
+        { name: "Singularity", baseOneIn: 240_000_000, coinReward: 18500000, className: "singularity" },
+        { name: "Abyssal Rift", baseOneIn: 320_000_000, coinReward: 21000000, className: "abyssal-rift" },
+        { name: "Event Horizon", baseOneIn: 425_000_000, coinReward: 24000000, className: "event-horizon" },
+        { name: "Eternity", baseOneIn: 600_000_000, coinReward: 28500000, className: "eternity" },
+        { name: "Transcendent", baseOneIn: 800_000_000, coinReward: 33000000, className: "transcendent" },
+        { name: "Infinity", baseOneIn: 1_000_000_000, coinReward: 39000000, className: "infinity" },
+        { name: "Ascendant", baseOneIn: 1_500_000_000, coinReward: 47000000, className: "ascendant" },
+        { name: "Omniversal", baseOneIn: 2_250_000_000, coinReward: 58000000, className: "omniversal" }
     ];
 
     const INDEX_REWARD_DEFS = buildIndexRewardDefs();
@@ -70,9 +84,23 @@
         Mythical: 0.075,
         Secret: 0.1,
         Ultra: 0.14,
+        Exotic: 0.16,
         Hyper: 0.18,
-        Omega: 0.23,
-        Singularity: 0.3
+        Celestial: 0.2,
+        Astral: 0.22,
+        Nebula: 0.24,
+        Omega: 0.26,
+        Quantum: 0.28,
+        Eclipse: 0.3,
+        Paradox: 0.32,
+        Singularity: 0.35,
+        "Abyssal Rift": 0.37,
+        "Event Horizon": 0.39,
+        Eternity: 0.42,
+        Transcendent: 0.45,
+        Infinity: 0.49,
+        Ascendant: 0.53,
+        Omniversal: 0.58
     };
 
     const MIN_LUCK_ODDS_BY_TIER = {
@@ -84,9 +112,23 @@
         Mythical: 3_000,
         Secret: 15_000,
         Ultra: 60_000,
-        Hyper: 150_000,
-        Omega: 300_000,
-        Singularity: 750_000
+        Exotic: 80_000,
+        Hyper: 120_000,
+        Celestial: 160_000,
+        Astral: 210_000,
+        Nebula: 260_000,
+        Omega: 320_000,
+        Quantum: 400_000,
+        Eclipse: 500_000,
+        Paradox: 620_000,
+        Singularity: 750_000,
+        "Abyssal Rift": 850_000,
+        "Event Horizon": 950_000,
+        Eternity: 1_100_000,
+        Transcendent: 1_300_000,
+        Infinity: 1_600_000,
+        Ascendant: 2_000_000,
+        Omniversal: 2_500_000
     };
 
     const LUCK_BALANCE_REFERENCE = 450;
@@ -100,9 +142,23 @@
         Mythical: 18,
         Secret: 35,
         Ultra: 45,
-        Hyper: 30,
-        Omega: 12,
-        Singularity: 3
+        Exotic: 42,
+        Hyper: 36,
+        Celestial: 30,
+        Astral: 24,
+        Nebula: 19,
+        Omega: 15,
+        Quantum: 11,
+        Eclipse: 8,
+        Paradox: 6,
+        Singularity: 4,
+        "Abyssal Rift": 3.4,
+        "Event Horizon": 2.8,
+        Eternity: 2.2,
+        Transcendent: 1.75,
+        Infinity: 1.35,
+        Ascendant: 1.05,
+        Omniversal: 0.85
     };
     const OVERCHARGED_LUCK_TIER_WEIGHT_MULTIPLIERS = {
         Common: 1,
@@ -113,9 +169,23 @@
         Mythical: 1.8,
         Secret: 3,
         Ultra: 5,
+        Exotic: 6,
         Hyper: 8,
-        Omega: 14,
-        Singularity: 18
+        Celestial: 9,
+        Astral: 10,
+        Nebula: 11,
+        Omega: 12,
+        Quantum: 14,
+        Eclipse: 15,
+        Paradox: 16,
+        Singularity: 18,
+        "Abyssal Rift": 19,
+        "Event Horizon": 21,
+        Eternity: 23,
+        Transcendent: 25,
+        Infinity: 28,
+        Ascendant: 31,
+        Omniversal: 35
     };
 
     const ULTRA_REVEAL_CONFIGS = {
@@ -126,12 +196,40 @@
             beamCount: 0,
             particleSymbols: ["*", ".", "o"]
         },
+        Exotic: {
+            eyebrow: "Exotic Rarity Detected",
+            particleCount: 28,
+            ringCount: 2,
+            beamCount: 2,
+            particleSymbols: ["*", "+", "o"]
+        },
         Hyper: {
             eyebrow: "Hyper Rarity Detected",
             particleCount: 34,
             ringCount: 2,
             beamCount: 3,
             particleSymbols: ["*", "+", "."]
+        },
+        Celestial: {
+            eyebrow: "Celestial Rarity Detected",
+            particleCount: 38,
+            ringCount: 3,
+            beamCount: 4,
+            particleSymbols: ["*", "+", "."]
+        },
+        Astral: {
+            eyebrow: "Astral Rarity Detected",
+            particleCount: 42,
+            ringCount: 3,
+            beamCount: 4,
+            particleSymbols: ["*", "+", "x"]
+        },
+        Nebula: {
+            eyebrow: "Nebula Rarity Detected",
+            particleCount: 44,
+            ringCount: 3,
+            beamCount: 5,
+            particleSymbols: ["*", "+", "x"]
         },
         Omega: {
             eyebrow: "Omega Rarity Detected",
@@ -140,11 +238,81 @@
             beamCount: 5,
             particleSymbols: ["*", "+", "x"]
         },
+        Quantum: {
+            eyebrow: "Quantum Rarity Detected",
+            particleCount: 52,
+            ringCount: 4,
+            beamCount: 6,
+            particleSymbols: ["*", "+", ".", "x"]
+        },
+        Eclipse: {
+            eyebrow: "Eclipse Rarity Detected",
+            particleCount: 58,
+            ringCount: 4,
+            beamCount: 6,
+            particleSymbols: ["*", "+", ".", "x"]
+        },
+        Paradox: {
+            eyebrow: "Paradox Rarity Detected",
+            particleCount: 64,
+            ringCount: 5,
+            beamCount: 7,
+            particleSymbols: ["*", "+", ".", "x"]
+        },
         Singularity: {
             eyebrow: "Singularity Rarity Detected",
             particleCount: 70,
             ringCount: 5,
             beamCount: 8,
+            particleSymbols: ["*", "+", ".", "x"]
+        },
+        "Event Horizon": {
+            eyebrow: "Event Horizon Rarity Detected",
+            particleCount: 78,
+            ringCount: 6,
+            beamCount: 9,
+            particleSymbols: ["*", "+", ".", "x"]
+        },
+        Eternity: {
+            eyebrow: "Eternity Rarity Detected",
+            particleCount: 88,
+            ringCount: 7,
+            beamCount: 10,
+            particleSymbols: ["*", "+", ".", "x"]
+        },
+        "Abyssal Rift": {
+            eyebrow: "Abyssal Rift Rarity Detected",
+            particleCount: 82,
+            ringCount: 6,
+            beamCount: 10,
+            particleSymbols: ["*", "+", ".", "x"]
+        },
+        Transcendent: {
+            eyebrow: "Transcendent Rarity Detected",
+            particleCount: 96,
+            ringCount: 8,
+            beamCount: 11,
+            particleSymbols: ["*", "+", ".", "x"]
+        },
+        Infinity: {
+            eyebrow: "Infinity Rarity Detected",
+            particleCount: 108,
+            ringCount: 9,
+            beamCount: 12,
+            particleSymbols: ["*", "+", ".", "x"]
+        },
+        Ascendant: {
+            eyebrow: "Ascendant Rarity Detected",
+            particleCount: 122,
+            ringCount: 10,
+            beamCount: 14,
+            particleSymbols: ["*", "+", ".", "x"]
+        },
+        Omniversal: {
+            eyebrow: "Omniversal Rarity Detected",
+            particleCount: 140,
+            ringCount: 12,
+            beamCount: 16,
             particleSymbols: ["*", "+", ".", "x"]
         }
     };
@@ -160,7 +328,11 @@
 
     const STREAK_LUCK_INTERVAL = 10;
     const STREAK_LUCK_BASE = 2;
-    const CUTSCENE_SKIP_TIERS = ["Ultra", "Hyper", "Omega", "Singularity"];
+    const CUTSCENE_SKIP_TIERS = [
+        "Ultra", "Exotic", "Hyper", "Celestial", "Astral", "Nebula",
+        "Omega", "Quantum", "Eclipse", "Paradox", "Singularity", "Abyssal Rift",
+        "Event Horizon", "Eternity", "Transcendent", "Infinity", "Ascendant", "Omniversal"
+    ];
 
     const SHOP_TIER_NAMES = [
         "Bronze", "Silver", "Gold", "Platinum", "Diamond",
@@ -512,23 +684,24 @@
         return `shop-tier-${tierIndex}`;
     }
 
+    function getSmoothUpgradeCost(baseCost, growthRate, level) {
+        const rawCost = baseCost * Math.pow(growthRate, Math.max(0, level - 1));
+        if (rawCost >= 1_000_000) return Math.round(rawCost / 25_000) * 25_000;
+        if (rawCost >= 100_000) return Math.round(rawCost / 2_500) * 2_500;
+        if (rawCost >= 10_000) return Math.round(rawCost / 250) * 250;
+        return Math.max(1, Math.round(rawCost));
+    }
+
     function buildLuckUpgrades() {
         const list = [];
-        for (let i = 1; i <= 50; i++) {
+        for (let i = 1; i <= 85; i++) {
+            const bonus = i <= 50
+                ? 0.2 + i * 0.28 + Math.floor(i / 10) * 0.8
+                : 18.2 + ((i - 50) * 0.55);
             list.push({
                 level: i,
-                bonus: Math.round((0.2 + i * 0.28 + Math.floor(i / 10) * 0.8) * 100) / 100,
-                cost: Math.floor(350 * Math.pow(1.19, i - 1)),
-                shopTier: getShopTierName(i),
-                tierClass: getShopTierClass(i)
-            });
-        }
-        for (let i = 51; i <= 70; i++) {
-            const extraLevel = i - 51;
-            list.push({
-                level: i,
-                bonus: Math.round((8 + extraLevel * 0.45) * 100) / 100,
-                cost: Math.floor(120_000_000 * Math.pow(1.37, extraLevel)),
+                bonus: Math.round(bonus * 100) / 100,
+                cost: getSmoothUpgradeCost(350, 1.22, i),
                 shopTier: getShopTierName(i),
                 tierClass: getShopTierClass(i)
             });
@@ -538,82 +711,62 @@
 
     function buildCoinUpgrades() {
         const list = [];
-        for (let i = 1; i <= 40; i++) {
+        for (let i = 1; i <= 80; i++) {
+            const bonus = i <= 40
+                ? 0.1 + i * 0.035
+                : 1.5 + ((i - 40) * 0.06);
             list.push({
                 level: i,
-                bonus: Math.round((0.1 + i * 0.035) * 100) / 100,
-                cost: Math.floor(500 * Math.pow(1.2, i - 1)),
+                bonus: Math.round(bonus * 100) / 100,
+                cost: getSmoothUpgradeCost(500, 1.23, i),
                 shopTier: getShopTierName(i),
                 tierClass: getShopTierClass(i)
-            });
-        }
-        for (let i = 41; i <= 60; i++) {
-            const extraLevel = i - 41;
-            list.push({
-                level: i,
-                bonus: Math.round((0.8 + extraLevel * 0.05) * 100) / 100,
-                cost: Math.floor(90_000_000 * Math.pow(1.35, extraLevel)),
-                shopTier: getShopTierName(i + 10),
-                tierClass: getShopTierClass(i + 10)
             });
         }
         return list;
     }
 
     function buildRollSpeedUpgrades() {
-        const reductions = [80, 90, 100, 105, 110, 115, 120, 125, 130, 135, 145, 155, 15];
+        const reductions = [80, 90, 100, 105, 110, 115, 120, 125, 130, 135, 145, 155, 70];
         return reductions.map((reduction, index) => {
             const level = index + 1;
-            const eliteLevel = level > 12;
             return {
                 level,
                 reduction,
-                cost: eliteLevel ? 750_000_000 : Math.floor(650 * Math.pow(1.42, index)),
-                shopTier: getShopTierName(eliteLevel ? 51 : level),
-                tierClass: getShopTierClass(eliteLevel ? 51 : level)
+                cost: getSmoothUpgradeCost(650, 1.75, level),
+                shopTier: getShopTierName(level),
+                tierClass: getShopTierClass(level)
             };
         });
     }
 
     function buildAutoRollUpgrades() {
-        const intervals = [2800, 2400, 2100, 1850, 1600, 1400, 1250, 1100, 980, 880, 780, 700, 640, 600];
-        const costs = [
-            25000, 75000, 200000, 650000, 1800000, 5000000, 14000000, 40000000,
-            250_000_000, 650_000_000, 1_500_000_000, 3_500_000_000, 8_000_000_000, 20_000_000_000
-        ];
+        const intervals = [2800, 2400, 2100, 1850, 1600, 1400, 1250, 1100, 980, 880, 780, 700, 640, 600, 570, 540, 515, 490, 470, 450];
 
         return intervals.map((interval, index) => {
             const level = index + 1;
-            const shopLevel = level <= 8 ? level : level + 42;
             return {
                 level,
                 interval,
-                cost: costs[index],
-                shopTier: getShopTierName(shopLevel),
-                tierClass: getShopTierClass(shopLevel)
+                cost: getSmoothUpgradeCost(25_000, 2.25, level),
+                shopTier: getShopTierName(level + 10),
+                tierClass: getShopTierClass(level + 10)
             };
         });
     }
 
     function buildXpUpgrades() {
         const list = [];
-        for (let i = 1; i <= 25; i++) {
+        for (let i = 1; i <= 60; i++) {
+            const bonus = i <= 25
+                ? 0.08 + i * 0.025
+                : 0.75 + ((i - 26) * 0.045);
             list.push({
                 level: i,
-                bonus: Math.round((0.08 + i * 0.025) * 1000) / 1000,
-                cost: Math.floor(2500 * Math.pow(1.24, i - 1)),
+                bonus: Math.round(bonus * 1000) / 1000,
+                cost: getSmoothUpgradeCost(2500, 1.28, i),
                 shopTier: getShopTierName(i),
                 tierClass: getShopTierClass(i)
-            });
-        }
-        for (let i = 26; i <= 40; i++) {
-            const extraLevel = i - 26;
-            list.push({
-                level: i,
-                bonus: Math.round((0.75 + extraLevel * 0.045) * 1000) / 1000,
-                cost: Math.floor(80_000_000 * Math.pow(1.34, extraLevel)),
-                shopTier: getShopTierName(i + 25),
-                tierClass: getShopTierClass(i + 25)
             });
         }
         return list;
@@ -621,23 +774,16 @@
 
     function buildStreakUpgrades() {
         const list = [];
-        for (let i = 1; i <= 15; i++) {
+        for (let i = 1; i <= 45; i++) {
+            const mult = i <= 15
+                ? 2.5 + (i - 1) * 0.5 + Math.floor(i / 5) * 0.5
+                : 11.5 + ((i - 16) * 0.6);
             list.push({
                 level: i,
-                mult: Math.round((2.5 + (i - 1) * 0.5 + Math.floor(i / 5) * 0.5) * 10) / 10,
-                cost: Math.floor(6000 * Math.pow(1.28, i - 1)),
+                mult: Math.round(mult * 10) / 10,
+                cost: getSmoothUpgradeCost(6000, 1.32, i),
                 shopTier: getShopTierName(i),
                 tierClass: getShopTierClass(i)
-            });
-        }
-        for (let i = 16; i <= 30; i++) {
-            const extraLevel = i - 16;
-            list.push({
-                level: i,
-                mult: Math.round((11.5 + extraLevel * 0.6) * 10) / 10,
-                cost: Math.floor(150_000_000 * Math.pow(1.33, extraLevel)),
-                shopTier: getShopTierName(i + 35),
-                tierClass: getShopTierClass(i + 35)
             });
         }
         return list;
@@ -645,45 +791,35 @@
 
     function buildMutationUpgrades() {
         const list = [];
-        for (let i = 1; i <= 50; i++) {
-            // Approx 1.13\u00d7 per level; Lv1 = 1 in 50 000, Lv50 = 1 in ~295
-            const chanceOneIn = Math.round(50_000 / Math.pow(1.13, i - 1));
+        for (let i = 1; i <= 85; i++) {
+            const chanceOneIn = i <= 50
+                ? Math.round(50_000 / Math.pow(1.13, i - 1))
+                : Math.round(100 / Math.pow(1.06, i - 50));
             list.push({
                 level: i,
-                chance: Math.max(100, chanceOneIn),
-                cost: Math.floor(8000 * Math.pow(1.18, i - 1)),
-                shopTier: getShopTierName(i + 14),   // mutation tier offset from luck upgrades
+                chance: Math.max(10, chanceOneIn),
+                cost: getSmoothUpgradeCost(8000, 1.205, i),
+                shopTier: getShopTierName(i + 14),
                 tierClass: getShopTierClass(i + 14)
-            });
-        }
-        for (let i = 51; i <= 70; i++) {
-            const extraLevel = i - 51;
-            const chanceOneIn = Math.round(100 / Math.pow(1.075, extraLevel + 1));
-            list.push({
-                level: i,
-                chance: Math.max(25, chanceOneIn),
-                cost: Math.floor(160_000_000 * Math.pow(1.38, extraLevel)),
-                shopTier: getShopTierName(i),
-                tierClass: getShopTierClass(i)
             });
         }
         return list;
     }
 
-    const APEX_UPGRADE_BASE_ONE_IN = 4_000_000;
-    const APEX_UPGRADE_MIN_ONE_IN = 60_000;
-    const APEX_PRESTIGE_UNLOCK_ONE_IN = 2_500_000;
-    const APEX_SURGE_POTION_ONE_IN = 5000;
+    const APEX_UPGRADE_BASE_ONE_IN = 12_000_000;
+    const APEX_UPGRADE_MIN_ONE_IN = 150_000;
+    const APEX_PRESTIGE_UNLOCK_ONE_IN = 7_500_000;
+    const APEX_SURGE_POTION_ONE_IN = 100_000;
 
     function buildApexUpgrades() {
         const list = [];
-        for (let i = 1; i <= 30; i++) {
+        for (let i = 1; i <= 45; i++) {
             // Apex is natural-only, so even max level keeps it rarer than normal mutations.
             const chanceOneIn = Math.round(APEX_UPGRADE_BASE_ONE_IN / Math.pow(1.15, i - 1));
             list.push({
                 level: i,
                 chance: Math.max(APEX_UPGRADE_MIN_ONE_IN, chanceOneIn),
-                cost: Math.floor(250_000 * Math.pow(1.26, i - 1)),
+                cost: getSmoothUpgradeCost(250_000, 1.28, i),
                 shopTier: getShopTierName(i + 20),
                 tierClass: getShopTierClass(i + 20)
             });
@@ -693,12 +829,12 @@
 
     function buildMutationBountyUpgrades() {
         const list = [];
-        for (let i = 1; i <= 30; i++) {
+        for (let i = 1; i <= 45; i++) {
             const extraLevel = i - 1;
             list.push({
                 level: i,
                 bonus: Math.round((0.12 + extraLevel * 0.035) * 1000) / 1000,
-                cost: Math.floor(250_000_000 * Math.pow(1.42, extraLevel)),
+                cost: getSmoothUpgradeCost(2_000_000, 1.32, i),
                 shopTier: getShopTierName(i + 45),
                 tierClass: getShopTierClass(i + 45)
             });
@@ -708,13 +844,13 @@
 
     function buildPotionRestockUpgrades() {
         const list = [];
-        for (let i = 1; i <= 15; i++) {
-            const progress = i / 15;
+        for (let i = 1; i <= 25; i++) {
+            const progress = i / 25;
             list.push({
                 level: i,
                 ultraRestock: Math.max(5, Math.round(20 - (15 * progress))),
                 omegaRestock: Math.max(20, Math.round(80 - (60 * progress))),
-                cost: Math.floor(200_000_000 * Math.pow(1.6, i - 1)),
+                cost: getSmoothUpgradeCost(3_000_000, 1.34, i),
                 shopTier: getShopTierName(i + 50),
                 tierClass: getShopTierClass(i + 50)
             });
@@ -831,7 +967,7 @@
         apexSurge: {
             name: "Apex Surge Potion",
             icon: "\u{1F988}",
-            desc: "Apex rolls become 1 in 5,000 for your next roll, not guaranteed",
+            desc: "Apex rolls become 1 in 100,000 for your next roll, not guaranteed",
             cost: 1000000000,
             rolls: 1,
             maxOwned: 1,
@@ -887,6 +1023,14 @@
             scoreBonus: 18,
             rollWeight: 50
         },
+        obsidian: {
+            name: "Obsidian",
+            icon: "\u25C6",
+            oneInMult: 4,
+            color: "#111827",
+            scoreBonus: 20,
+            rollWeight: 46
+        },
         albino: {
             name: "Albino",
             icon: "\u{1F90D}",
@@ -911,6 +1055,14 @@
             scoreBonus: 22,
             rollWeight: 28
         },
+        pearl: {
+            name: "Pearl",
+            icon: "\u25CE",
+            oneInMult: 8,
+            color: "#f8fafc",
+            scoreBonus: 25,
+            rollWeight: 26
+        },
         leucistic: {
             name: "Leucistic",
             icon: "\u{1F54A}\uFE0F",
@@ -926,6 +1078,14 @@
             color: "#22d3ee",
             scoreBonus: 16,
             rollWeight: 22
+        },
+        sapphire: {
+            name: "Sapphire",
+            icon: "\u{1F535}",
+            oneInMult: 12,
+            color: "#60a5fa",
+            scoreBonus: 28,
+            rollWeight: 20
         },
         copper: {
             name: "Copper",
@@ -943,6 +1103,14 @@
             scoreBonus: 24,
             rollWeight: 15
         },
+        ruby: {
+            name: "Ruby",
+            icon: "\u{1F534}",
+            oneInMult: 18,
+            color: "#fb7185",
+            scoreBonus: 30,
+            rollWeight: 14
+        },
         golden: {
             name: "Golden",
             icon: "\u{1F3C6}",
@@ -950,6 +1118,14 @@
             color: "#fbbf24",
             scoreBonus: 28,
             rollWeight: 12
+        },
+        amethyst: {
+            name: "Amethyst",
+            icon: "\u{1F7E3}",
+            oneInMult: 22,
+            color: "#a78bfa",
+            scoreBonus: 31,
+            rollWeight: 11
         },
         frostbite: {
             name: "Frostbite",
@@ -959,6 +1135,14 @@
             scoreBonus: 32,
             rollWeight: 10
         },
+        neon: {
+            name: "Neon",
+            icon: "\u26A1",
+            oneInMult: 28,
+            color: "#67e8f9",
+            scoreBonus: 33,
+            rollWeight: 9
+        },
         spectral: {
             name: "Spectral",
             icon: "\u{1F47B}",
@@ -967,6 +1151,22 @@
             scoreBonus: 34,
             rollWeight: 8
         },
+        tideborn: {
+            name: "Tideborn",
+            icon: "\u{1F30A}",
+            oneInMult: 34,
+            color: "#2dd4bf",
+            scoreBonus: 35,
+            rollWeight: 7
+        },
+        coral: {
+            name: "Coral",
+            icon: "\u25D2",
+            oneInMult: 38,
+            color: "#fb7185",
+            scoreBonus: 35,
+            rollWeight: 6
+        },
         abyssal: {
             name: "Abyssal",
             icon: "\u{1F311}",
@@ -974,6 +1174,14 @@
             color: "#818cf8",
             scoreBonus: 36,
             rollWeight: 6
+        },
+        prism: {
+            name: "Prism",
+            icon: "\u25C8",
+            oneInMult: 45,
+            color: "#f0abfc",
+            scoreBonus: 38,
+            rollWeight: 5
         },
         volcanic: {
             name: "Volcanic",
@@ -991,6 +1199,22 @@
             scoreBonus: 38,
             rollWeight: 4
         },
+        stormcharged: {
+            name: "Stormcharged",
+            icon: "\u26C8",
+            oneInMult: 58,
+            color: "#38bdf8",
+            scoreBonus: 40,
+            rollWeight: 4
+        },
+        chrome: {
+            name: "Chrome",
+            icon: "\u25C7",
+            oneInMult: 64,
+            color: "#d1d5db",
+            scoreBonus: 41,
+            rollWeight: 3
+        },
         void: {
             name: "Void",
             icon: "\u{1F573}\uFE0F",
@@ -1007,12 +1231,110 @@
             scoreBonus: 42,
             rollWeight: 2
         },
+        radioactive: {
+            name: "Radioactive",
+            icon: "\u2622\uFE0F",
+            oneInMult: 90,
+            color: "#bef264",
+            scoreBonus: 44,
+            rollWeight: 2
+        },
+        phantom: {
+            name: "Phantom",
+            icon: "\u25CC",
+            oneInMult: 115,
+            color: "#ddd6fe",
+            scoreBonus: 47,
+            rollWeight: 1
+        },
+        glitch: {
+            name: "Glitch",
+            icon: "\u{1F4A0}",
+            oneInMult: 150,
+            color: "#f472b6",
+            scoreBonus: 50,
+            rollWeight: 1
+        },
+        primordial: {
+            name: "Primordial",
+            icon: "\u{1F9B4}",
+            oneInMult: 220,
+            color: "#f59e0b",
+            scoreBonus: 55,
+            rollWeight: 0.8
+        },
+        leviathan: {
+            name: "Leviathan",
+            icon: "\u{1F30A}",
+            oneInMult: 360,
+            color: "#38bdf8",
+            scoreBonus: 65,
+            rollWeight: 0.56
+        },
+        abyssbreaker: {
+            name: "Abyssbreaker",
+            icon: "\u2693",
+            oneInMult: 430,
+            color: "#60a5fa",
+            scoreBonus: 68,
+            rollWeight: 0.44
+        },
+        maelstrom: {
+            name: "Maelstrom",
+            icon: "\u{1F300}",
+            oneInMult: 510,
+            color: "#22d3ee",
+            scoreBonus: 72,
+            rollWeight: 0.34
+        },
+        riftborn: {
+            name: "Riftborn",
+            icon: "\u25C9",
+            oneInMult: 610,
+            color: "#c084fc",
+            scoreBonus: 76,
+            rollWeight: 0.26
+        },
+        eventhorizon: {
+            name: "Eventide",
+            icon: "\u25CF",
+            oneInMult: 700,
+            color: "#f0abfc",
+            scoreBonus: 80,
+            rollWeight: 0.18
+        },
+        vortex: {
+            name: "Vortex",
+            icon: "\u27F3",
+            oneInMult: 820,
+            color: "#67e8f9",
+            scoreBonus: 86,
+            rollWeight: 0.13
+        },
+        oblivion: {
+            name: "Oblivion",
+            icon: "\u25C6",
+            oneInMult: 980,
+            color: "#a78bfa",
+            scoreBonus: 94,
+            rollWeight: 0.09
+        },
+        cataclysm: {
+            name: "Cataclysm",
+            icon: "\u26A0",
+            oneInMult: 1120,
+            color: "#fb7185",
+            scoreBonus: 102,
+            rollWeight: 0.06
+        },
         apex: {
             name: "Apex",
             icon: "\u{1F988}",
-            oneInMult: 120,  // species becomes 120\u00d7 rarer
+            oneInMult: 1250,
             color: "#fb923c",
-            scoreBonus: 45,
+            scoreBonus: 110,
+            apexChanceMult: 1,
+            cutsceneMark: "APEX",
             naturalOnly: true
         }
     };
@@ -1021,23 +1343,48 @@
         .filter((key) => !MUTATION_TYPES[key].naturalOnly);
     const MUTATION_CHANCE_ORDER = [
         "melanistic",
+        "obsidian",
         "albino",
         "piebald",
         "shiny",
+        "pearl",
         "leucistic",
         "bioluminescent",
+        "sapphire",
         "copper",
         "emerald",
+        "ruby",
         "golden",
+        "amethyst",
         "frostbite",
+        "neon",
         "spectral",
+        "tideborn",
+        "coral",
         "abyssal",
+        "prism",
         "volcanic",
         "megatooth",
+        "stormcharged",
+        "chrome",
         "void",
         "cosmic",
+        "radioactive",
+        "phantom",
+        "glitch",
+        "primordial",
+        "leviathan",
+        "abyssbreaker",
+        "maelstrom",
+        "riftborn",
+        "eventhorizon",
+        "vortex",
+        "oblivion",
+        "cataclysm",
         "apex"
     ];
+    const NATURAL_ONLY_MUTATION_KEYS = MUTATION_CHANCE_ORDER
+        .filter((key) => MUTATION_TYPES[key]?.naturalOnly);
 
     const TIER_ORDER = TIERS.map((tier) => tier.name);
     const TIER_RANK = Object.fromEntries(TIER_ORDER.map((name, index) => [name, index]));
@@ -1259,6 +1606,9 @@ let rollPool = [];
             },
             settings: {
                 disableRarePopups: false,
+                disableCutscenes: false,
+                onlyBetterCutscenes: false,
+                hideExtraMultiRolls: false,
                 soundEnabled: true,
                 skipCutscenes: Object.fromEntries(CUTSCENE_SKIP_TIERS.map((tier) => [tier, false])),
                 seenCutscenes: Object.fromEntries(CUTSCENE_SKIP_TIERS.map((tier) => [tier, false]))
@@ -1597,6 +1947,11 @@ let rollPool = [];
         return 0;
     }
 
+    function rngQuestStateDiffers(left = {}, right = {}) {
+        return JSON.stringify(left?.dailyQuests || left?.dailyMissions || {}) !== JSON.stringify(right?.dailyQuests || right?.dailyMissions || {})
+            || JSON.stringify(left?.quests || {}) !== JSON.stringify(right?.quests || {});
+    }
+
     function mergeRngCollectionForCloud(...collections) {
         const merged = {};
         collections.forEach(collection => {
@@ -1787,7 +2142,8 @@ let rollPool = [];
             applyRngProfileData(mergedProfile);
 
             if (JSON.stringify(mergedProfile.collection || {}) !== JSON.stringify(remoteProfile.collection || {})
-                || compareRngProfileProgress(mergedProfile, remoteProfile) > 0) {
+                || compareRngProfileProgress(mergedProfile, remoteProfile) > 0
+                || rngQuestStateDiffers(mergedProfile, remoteProfile)) {
                 scheduleRngCloudProfileSync(1000);
             }
 
@@ -2004,7 +2360,7 @@ let rollPool = [];
         self.innerHTML = `
             <strong>
                 <span>Your RNG Card</span>
-                <span>${(player.rolls || 0).toLocaleString()} rolls</span>
+                <span>${formatCompactNumber(player.rolls || 0)} rolls</span>
             </strong>
             <span>${escapeHtml(bestText)}${best?.name ? ` - ${escapeHtml(best.name)}` : ""}</span>
             <span>${syncText}</span>
@@ -2040,8 +2396,8 @@ let rollPool = [];
                         <span class="rng-leaderboard-best">1 in ${formatOneIn(row.bestOneIn)}</span>
                         <span class="rng-leaderboard-shark">${escapeHtml(row.bestShark)}</span>
                         <div class="rng-leaderboard-metrics">
-                            <span>${row.rolls.toLocaleString()} global rolls</span>
-                            <span>Lv.${row.level || 1}</span>
+                            <span>${formatCompactNumber(row.rolls)} global rolls</span>
+                            <span>Lv.${formatCompactNumber(row.level || 1)}</span>
                         </div>
                     </div>
                 </article>
@@ -2255,7 +2611,11 @@ let rollPool = [];
         return {
             date: dateKey,
             progress: {},
-            claimed: []
+            claimed: [],
+            rolls: 0,
+            coins: 0,
+            odds: {},
+            rollsBase: null
         };
     }
 
@@ -2270,17 +2630,31 @@ let rollPool = [];
             return createDefaultDailyQuestState(dateKey);
         }
 
+        const validQuestIds = new Set(buildRngDailyQuestDefs(dateKey).map((quest) => quest.id));
         return {
             date: dateKey,
             progress: state.progress && typeof state.progress === "object"
-                ? Object.fromEntries(Object.entries(state.progress).map(([key, value]) => [
+                ? Object.fromEntries(Object.entries(state.progress)
+                    .filter(([key]) => validQuestIds.has(key))
+                    .map(([key, value]) => [
+                        key,
+                        Math.max(0, Math.floor(Number(value) || 0))
+                    ]))
+                : {},
+            claimed: Array.isArray(state.claimed)
+                ? [...new Set(state.claimed.map(String).filter((id) => validQuestIds.has(id)))]
+                : [],
+            rolls: Math.max(0, Math.floor(Number(state.rolls) || 0)),
+            coins: Math.max(0, Math.floor(Number(state.coins) || 0)),
+            odds: state.odds && typeof state.odds === "object"
+                ? Object.fromEntries(Object.entries(state.odds).map(([key, value]) => [
                     key,
                     Math.max(0, Math.floor(Number(value) || 0))
                 ]))
                 : {},
-            claimed: Array.isArray(state.claimed)
-                ? [...new Set(state.claimed.map(String).filter(Boolean))].slice(0, RNG_DAILY_QUEST_COUNT)
-                : []
+            rollsBase: state.rollsBase !== null && state.rollsBase !== undefined && Number.isFinite(Number(state.rollsBase))
+                ? Math.floor(Number(state.rollsBase))
+                : null
         };
     }
 
@@ -2294,10 +2668,22 @@ let rollPool = [];
             progress[key] = Math.max(progress[key] || 0, Math.max(0, Math.floor(Number(value) || 0)));
         });
 
+        const odds = { ...(local.odds || {}) };
+        Object.entries(remote.odds || {}).forEach(([key, value]) => {
+            odds[key] = Math.max(odds[key] || 0, Math.max(0, Math.floor(Number(value) || 0)));
+        });
+        const finiteRollBases = [local.rollsBase, remote.rollsBase]
+            .map(Number)
+            .filter(Number.isFinite);
+
         return {
             date: dateKey,
             progress,
-            claimed: [...new Set([...(local.claimed || []), ...(remote.claimed || [])])].slice(0, RNG_DAILY_QUEST_COUNT)
+            claimed: [...new Set([...(local.claimed || []), ...(remote.claimed || [])])],
+            rolls: Math.max(local.rolls || 0, remote.rolls || 0),
+            coins: Math.max(local.coins || 0, remote.coins || 0),
+            odds,
+            rollsBase: finiteRollBases.length ? Math.min(...finiteRollBases) : null
         };
     }
 
@@ -2331,7 +2717,7 @@ let rollPool = [];
                 id: `rolls_${rollGoal}`,
                 icon: "fa-dice",
                 title: "Daily Dive",
-                desc: `Roll ${rollGoal.toLocaleString()} times.`,
+                desc: `Roll ${formatCompactNumber(rollGoal)} times.`,
                 type: "rolls",
                 goal: rollGoal,
                 reward: [{ type: "coins", amount: rollGoal * 900 }, { type: "potion", key: "speed", amount: 1 }]
@@ -2340,7 +2726,7 @@ let rollPool = [];
                 id: `odds_${rareQuest.threshold}_${rareQuest.goal}`,
                 icon: "fa-ranking-star",
                 title: rareQuest.title,
-                desc: `Pull ${rareQuest.goal.toLocaleString()} species at 1 in ${formatOneIn(rareQuest.threshold)} or rarer.`,
+                desc: `Pull ${formatCompactNumber(rareQuest.goal)} species at 1 in ${formatOneIn(rareQuest.threshold)} or rarer.`,
                 type: "odds",
                 threshold: rareQuest.threshold,
                 goal: rareQuest.goal,
@@ -2367,12 +2753,31 @@ let rollPool = [];
     function getRngDailyQuestState() {
         player.dailyQuests = normalizeRngDailyQuestState(player.dailyQuests || player.dailyMissions);
         if (player.dailyMissions) delete player.dailyMissions;
+        if (player.dailyQuests.rollsBase === null || player.dailyQuests.rollsBase === undefined || !Number.isFinite(Number(player.dailyQuests.rollsBase))) {
+            const dailyRollQuest = buildRngDailyQuestDefs().find((quest) => quest.type === "rolls");
+            const recordedRolls = Math.max(
+                Math.max(0, Math.floor(Number(player.dailyQuests.rolls) || 0)),
+                dailyRollQuest ? Math.max(0, Math.floor(Number(player.dailyQuests.progress?.[dailyRollQuest.id]) || 0)) : 0
+            );
+            player.dailyQuests.rollsBase = Math.floor(Number(player.rolls) || 0) - recordedRolls;
+        }
         return player.dailyQuests;
     }
 
     function getRngDailyQuestProgress(quest) {
         const state = getRngDailyQuestState();
-        return Math.min(quest.goal, Math.max(0, Math.floor(Number(state.progress[quest.id]) || 0)));
+        const storedProgress = Math.max(0, Math.floor(Number(state.progress[quest.id]) || 0));
+        let progress = storedProgress;
+        if (quest.type === "rolls") {
+            const rollsBase = state.rollsBase === null || state.rollsBase === undefined ? Math.floor(Number(player.rolls) || 0) : Math.floor(Number(state.rollsBase) || 0);
+            const derivedRolls = Math.max(0, Math.floor(Number(player.rolls) || 0) - rollsBase);
+            progress = Math.max(progress, Math.floor(Number(state.rolls) || 0), derivedRolls);
+        } else if (quest.type === "coins") {
+            progress = Math.max(progress, Math.floor(Number(state.coins) || 0));
+        } else if (quest.type === "odds") {
+            progress = Math.max(progress, Math.floor(Number(state.odds?.[String(quest.threshold)]) || 0));
+        }
+        return Math.min(quest.goal, progress);
     }
 
     function isRngDailyQuestClaimed(quest) {
@@ -2383,7 +2788,16 @@ let rollPool = [];
     function addRngDailyQuestProgress(quest, amount) {
         const state = getRngDailyQuestState();
         const before = getRngDailyQuestProgress(quest);
-        const next = Math.min(quest.goal, before + Math.max(0, Math.floor(Number(amount) || 0)));
+        const increment = Math.max(0, Math.floor(Number(amount) || 0));
+        if (quest.type === "rolls") {
+            state.rolls = Math.min(quest.goal, Math.max(state.rolls || 0, state.progress[quest.id] || 0) + increment);
+        } else if (quest.type === "coins") {
+            state.coins = Math.min(quest.goal, Math.max(state.coins || 0, state.progress[quest.id] || 0) + increment);
+        } else if (quest.type === "odds") {
+            const key = String(quest.threshold);
+            state.odds[key] = Math.min(quest.goal, Math.max(state.odds?.[key] || 0, state.progress[quest.id] || 0) + increment);
+        }
+        const next = getRngDailyQuestProgress(quest);
         if (next === before) return false;
         state.progress[quest.id] = next;
         return true;
@@ -2407,14 +2821,19 @@ let rollPool = [];
         return changed;
     }
 
+    function updateRngDailyQuestsForRolls(rolls = []) {
+        const list = Array.isArray(rolls) ? rolls : [rolls];
+        return list.reduce((changed, rolled) => updateRngDailyQuestsForRoll(rolled) || changed, false);
+    }
+
     function buildRngAllTimeQuestChains() {
         return {
             rollMilestone: {
                 icon: "fa-rotate",
                 title: "Roll Milestone",
                 progress: () => Math.max(0, Math.floor(Number(player.rolls) || 0)),
-                formatProgress: (value) => value.toLocaleString(),
-                describe: (goal) => `Roll ${goal.toLocaleString()} times.`,
+                formatProgress: (value) => formatCompactNumber(value),
+                describe: (goal) => `Roll ${formatCompactNumber(goal)} times.`,
                 steps: [
                     { goal: 500, reward: [{ type: "coins", amount: 100000 }, { type: "potion", key: "speed", amount: 1 }] },
                     { goal: 1000, reward: [{ type: "coins", amount: 220000 }, { type: "potion", key: "luck", amount: 1 }] },
@@ -2430,8 +2849,8 @@ let rollPool = [];
                 icon: "fa-book-open",
                 title: "Index Expedition",
                 progress: () => getCollectionCount(),
-                formatProgress: (value) => value.toLocaleString(),
-                describe: (goal) => `Discover ${goal.toLocaleString()} index entries.`,
+                formatProgress: (value) => formatCompactNumber(value),
+                describe: (goal) => `Discover ${formatCompactNumber(goal)} index entries.`,
                 steps: [
                     { goal: 25, reward: [{ type: "coins", amount: 75000 }, { type: "potion", key: "luckMinor", amount: 1 }] },
                     { goal: 50, reward: [{ type: "coins", amount: 180000 }, { type: "potion", key: "luck", amount: 1 }] },
@@ -2558,11 +2977,22 @@ let rollPool = [];
     }
 
     function scoreToTierName(score) {
-        if (score >= 80) return "Singularity";
-        if (score >= 72) return "Omega";
-        if (score >= 64) return "Hyper";
-        if (score >= 56) return "Ultra";
-        if (score >= 52) return "Legendary";
+        if (score >= 86) return "Infinity";
+        if (score >= 84) return "Transcendent";
+        if (score >= 82) return "Eternity";
+        if (score >= 80) return "Event Horizon";
+        if (score >= 78) return "Abyssal Rift";
+        if (score >= 76) return "Singularity";
+        if (score >= 74) return "Paradox";
+        if (score >= 72) return "Eclipse";
+        if (score >= 70) return "Quantum";
+        if (score >= 68) return "Omega";
+        if (score >= 66) return "Nebula";
+        if (score >= 64) return "Astral";
+        if (score >= 62) return "Celestial";
+        if (score >= 60) return "Hyper";
+        if (score >= 56) return "Exotic";
+        if (score >= 52) return "Ultra";
         if (score >= 48) return "Secret";
         if (score >= 40) return "Mythical";
         if (score >= 24) return "Epic";
@@ -2580,19 +3010,22 @@ let rollPool = [];
         const score = computeRarityScore(shark);
         const hash = hashString(shark.name);
 
-        if (score >= 80) {
-            const variants = [1_000_000_000, 750_000_000, 500_000_000];
-            return variants[hash % variants.length];
-        }
-        if (score >= 72) {
-            return 120_000_000 + (hash % 20) * 8_000_000;
-        }
-        if (score >= 64) {
-            return 10_000_000 + (hash % 30) * 750_000;
-        }
-        if (score >= 56) {
-            return 1_200_000 + (hash % 40) * 120_000;
-        }
+        if (score >= 86) return 1_000_000_000 + (hash % 7) * 125_000_000;
+        if (score >= 84) return 800_000_000 + (hash % 5) * 50_000_000;
+        if (score >= 82) return 600_000_000 + (hash % 5) * 45_000_000;
+        if (score >= 80) return 425_000_000 + (hash % 6) * 30_000_000;
+        if (score >= 78) return 320_000_000 + (hash % 6) * 20_000_000;
+        if (score >= 76) return 240_000_000 + (hash % 6) * 15_000_000;
+        if (score >= 74) return 180_000_000 + (hash % 6) * 12_000_000;
+        if (score >= 72) return 130_000_000 + (hash % 5) * 10_000_000;
+        if (score >= 70) return 90_000_000 + (hash % 5) * 8_000_000;
+        if (score >= 68) return 60_000_000 + (hash % 5) * 6_000_000;
+        if (score >= 66) return 38_000_000 + (hash % 5) * 4_000_000;
+        if (score >= 64) return 22_000_000 + (hash % 5) * 3_000_000;
+        if (score >= 62) return 12_000_000 + (hash % 5) * 2_000_000;
+        if (score >= 60) return 6_000_000 + (hash % 5) * 1_250_000;
+        if (score >= 56) return 2_500_000 + (hash % 7) * 500_000;
+        if (score >= 52) return 1_000_000 + (hash % 6) * 250_000;
 
         const variance = 0.82 + ((hash % 36) / 100);
         return Math.max(getTierOneInFloor(tierName), Math.round(tierMeta.baseOneIn * variance));
@@ -2775,9 +3208,11 @@ let rollPool = [];
     function buildRollPool() {
         const source = getRngSourceSpecies();
         rollPool = source.map((species) => {
-            const tierName = scoreToTierName(computeRarityScore(species));
+            const scoreTierName = scoreToTierName(computeRarityScore(species));
+            const scoreTierMeta = getTierMeta(scoreTierName);
+            const oneIn = buildOneIn(species, scoreTierName, scoreTierMeta);
+            const tierName = tierNameFromOneIn(oneIn);
             const tierMeta = getTierMeta(tierName);
-            const oneIn = buildOneIn(species, tierName, tierMeta);
 
             return {
                 name: species.name,
@@ -3119,13 +3554,13 @@ let rollPool = [];
             },
             {
                 label: "Run rolls",
-                value: rolls.toLocaleString(),
+                value: formatCompactNumber(rolls),
                 progress: Math.min(1, rolls / PRESTIGE_ROLL_STEP),
-                target: `${PRESTIGE_ROLL_STEP.toLocaleString()} per point`
+                target: `${formatCompactNumber(PRESTIGE_ROLL_STEP)} per point`
             },
             {
                 label: "New finds",
-                value: collection.toLocaleString(),
+                value: formatCompactNumber(collection),
                 progress: Math.min(1, collection / PRESTIGE_COLLECTION_STEP),
                 target: `${PRESTIGE_COLLECTION_STEP} per point`
             }
@@ -3225,7 +3660,7 @@ let rollPool = [];
         return baseChance ? Math.max(1, Math.round(baseChance / getPrestigeMutationOddsMultiplier())) : null;
     }
 
-    function getApexMutationChance() {
+    function getApexMutationBaseChance() {
         const prestigeLevel = getPrestigeUpgradeLevel("apexMemory");
         const upgrade = player.apexLevel > 0
             ? APEX_LUCK_UPGRADES.find((entry) => entry.level === player.apexLevel)
@@ -3241,6 +3676,28 @@ let rollPool = [];
         if (naturalChance === null) return potionChance;
         if (potionChance === null) return naturalChance;
         return Math.min(naturalChance, potionChance);
+    }
+
+    function getApexMutationChance(key = "apex") {
+        const baseChance = getApexMutationBaseChance();
+        if (baseChance === null) return null;
+        const multiplier = Math.max(1, Number(MUTATION_TYPES[key]?.apexChanceMult) || 1);
+        return Math.max(1, Math.round(baseChance * multiplier));
+    }
+
+    function rollApexPathMutationKey() {
+        const keys = [...NATURAL_ONLY_MUTATION_KEYS]
+            .sort((a, b) => {
+                const aMult = Number(MUTATION_TYPES[a]?.apexChanceMult) || 1;
+                const bMult = Number(MUTATION_TYPES[b]?.apexChanceMult) || 1;
+                return bMult - aMult;
+            });
+
+        for (const key of keys) {
+            const chance = getApexMutationChance(key);
+            if (chance !== null && Math.random() < (1 / chance)) return key;
+        }
+        return null;
     }
 
     function getActiveGuaranteedPotionKey() {
@@ -3409,6 +3866,14 @@ let rollPool = [];
         return keys.reduce((sum, key) => sum + Math.max(0, MUTATION_TYPES[key]?.rollWeight || 0), 0);
     }
 
+    function formatMutationPickPercent(weight, total) {
+        if (!(weight > 0) || !(total > 0)) return "0%";
+        const percent = (weight / total) * 100;
+        if (percent < 1) return `${Math.max(0.1, Math.round(percent * 10) / 10)}%`;
+        if (percent < 10) return `${Math.round(percent * 10) / 10}%`;
+        return `${Math.round(percent)}%`;
+    }
+
     function pickWeightedMutationKey(keys = STANDARD_MUTATION_KEYS) {
         const weightedKeys = keys.filter((key) => (MUTATION_TYPES[key]?.rollWeight || 0) > 0);
         const totalWeight = getMutationRollWeightTotal(weightedKeys);
@@ -3423,7 +3888,7 @@ let rollPool = [];
     }
 
     function getNaturalMutationChanceOneIn(key) {
-        if (key === "apex") return getApexMutationChance();
+        if (NATURAL_ONLY_MUTATION_KEYS.includes(key)) return getApexMutationChance(key);
         if (!STANDARD_MUTATION_KEYS.includes(key)) return null;
 
         const baseChance = getMutationChance();
@@ -3438,29 +3903,36 @@ let rollPool = [];
         return list[currentLevel] || null;
     }
 
-    function formatOneIn(value) {
-        const num = Number(value);
-        if (num >= 1_000_000_000) return `${(num / 1_000_000_000).toFixed(num % 1_000_000_000 === 0 ? 0 : 2)}B`;
-        if (num >= 1_000_000) return `${(num / 1_000_000).toFixed(num % 1_000_000 === 0 ? 0 : 1)}M`;
-        return num.toLocaleString();
-    }
-
-    function formatCompactCoins(value) {
+    function formatCompactNumber(value, minimum = 1000) {
         const num = Math.max(0, Math.floor(Number(value) || 0));
         const units = [
-            { value: 1_000_000_000_000_000, suffix: "qa" },
-            { value: 1_000_000_000_000, suffix: "t" },
-            { value: 1_000_000_000, suffix: "b" },
-            { value: 1_000_000, suffix: "m" },
-            { value: 1_000, suffix: "k" }
+            { value: 1_000_000_000_000_000_000_000_000_000_000_000, suffix: "Dc" },
+            { value: 1_000_000_000_000_000_000_000_000_000_000, suffix: "No" },
+            { value: 1_000_000_000_000_000_000_000_000_000, suffix: "Oc" },
+            { value: 1_000_000_000_000_000_000_000_000, suffix: "Sp" },
+            { value: 1_000_000_000_000_000_000_000, suffix: "Sx" },
+            { value: 1_000_000_000_000_000_000, suffix: "Qi" },
+            { value: 1_000_000_000_000_000, suffix: "Qa" },
+            { value: 1_000_000_000_000, suffix: "T" },
+            { value: 1_000_000_000, suffix: "B" },
+            { value: 1_000_000, suffix: "M" },
+            { value: 1_000, suffix: "K" }
         ];
-        const unit = units.find((entry) => num >= entry.value);
+        const unit = units.find((entry) => num >= Math.max(minimum, entry.value));
         if (unit) {
             const scaled = num / unit.value;
             const precision = scaled >= 100 || Number.isInteger(scaled) ? 0 : scaled >= 10 ? 1 : 2;
             return `${scaled.toFixed(precision).replace(/\.0+$|(\.\d*[1-9])0+$/, "$1")}${unit.suffix}`;
         }
-        return String(num);
+        return num.toLocaleString();
+    }
+
+    function formatOneIn(value) {
+        return formatCompactNumber(value);
+    }
+
+    function formatCompactCoins(value) {
+        return formatCompactNumber(value);
     }
 
     function getLuckAdjustedTierOdds(tierName, luck) {
@@ -3522,16 +3994,30 @@ let rollPool = [];
     }
 
     function tierNameFromOneIn(oneIn) {
-        if (oneIn >= 500_000_000) return "Singularity";
-        if (oneIn >= 100_000_000) return "Omega";
-        if (oneIn >= 10_000_000) return "Hyper";
+        if (oneIn >= 2_250_000_000) return "Omniversal";
+        if (oneIn >= 1_500_000_000) return "Ascendant";
+        if (oneIn >= 1_000_000_000) return "Infinity";
+        if (oneIn >= 800_000_000) return "Transcendent";
+        if (oneIn >= 600_000_000) return "Eternity";
+        if (oneIn >= 425_000_000) return "Event Horizon";
+        if (oneIn >= 320_000_000) return "Abyssal Rift";
+        if (oneIn >= 240_000_000) return "Singularity";
+        if (oneIn >= 180_000_000) return "Paradox";
+        if (oneIn >= 130_000_000) return "Eclipse";
+        if (oneIn >= 90_000_000) return "Quantum";
+        if (oneIn >= 60_000_000) return "Omega";
+        if (oneIn >= 38_000_000) return "Nebula";
+        if (oneIn >= 22_000_000) return "Astral";
+        if (oneIn >= 12_000_000) return "Celestial";
+        if (oneIn >= 6_000_000) return "Hyper";
+        if (oneIn >= 2_500_000) return "Exotic";
         if (oneIn >= 1_000_000) return "Ultra";
-        if (oneIn >= 500_000) return "Secret";
+        if (oneIn >= 250_000) return "Secret";
         if (oneIn >= 50_000) return "Mythical";
         if (oneIn >= 2500) return "Legendary";
-        if (oneIn >= 200) return "Epic";
-        if (oneIn >= 35) return "Rare";
-        if (oneIn >= 8) return "Uncommon";
+        if (oneIn >= 250) return "Epic";
+        if (oneIn >= 50) return "Rare";
+        if (oneIn >= 12) return "Uncommon";
         return "Common";
     }
 
@@ -3581,6 +4067,7 @@ let rollPool = [];
     }
 
     function finalizeRoll(rolled) {
+        const previousBestOneIn = Math.max(0, Number(player.bestOneIn) || 0);
         const rewardRate = getRewardRate(rolled);
         const coinMultiplier = getRewardCoinMultiplier(rolled);
         const coinGain = Math.round(rolled.coinReward * coinMultiplier * rewardRate);
@@ -3589,7 +4076,9 @@ let rollPool = [];
             ...rolled,
             coinReward: coinGain,
             rewardRate,
-            rewardCoinMultiplier: coinMultiplier
+            rewardCoinMultiplier: coinMultiplier,
+            previousBestOneIn,
+            beatsPreviousBest: rolled.oneIn > previousBestOneIn
         };
 
         const key = getCollectionKey(rolled);
@@ -3640,7 +4129,6 @@ let rollPool = [];
             ...rolled,
             isNewFind
         };
-        updateRngDailyQuestsForRoll(finalizedRoll);
         return finalizedRoll;
     }
 
@@ -3803,12 +4291,17 @@ let rollPool = [];
         if (rankIcon) rankIcon.textContent = info.current.icon;
         if (xpFill) xpFill.style.width = `${Math.round(info.progress * 100)}%`;
         if (xpText) {
-            xpText.textContent = `${info.xp.toLocaleString()} / ${info.next.xp.toLocaleString()} XP`;
+            xpText.textContent = `${formatCompactNumber(info.xp)} / ${formatCompactNumber(info.next.xp)} XP`;
         }
     }
 
 function rollForShark(actionContext = createRollActionContext(1)) {
     player.rolls += 1;
+
+    if (typeof unlockProfileBadge === "function" && Math.random() < 0.0001) {
+        unlockProfileBadge("rng-mode", "rollin");
+    }
+
     const streakLuckActive = isStreakLuckRoll();
 
     let rolled = null;
@@ -3839,21 +4332,18 @@ function rollForShark(actionContext = createRollActionContext(1)) {
     }
 
     // =========================================
-    // RANDOM APEX MUTATION ROLL
+    // RANDOM APEX-PATH MUTATION ROLL
     // =========================================
 
     if (!rolled && !hasForcedMutation) {
 
-        const apexChance = getApexMutationChance();
+        const apexMutationKey = rollApexPathMutationKey();
 
-        if (
-            apexChance !== null &&
-            Math.random() < (1 / apexChance)
-        ) {
+        if (apexMutationKey) {
             const picked =
                 rollPool[Math.floor(Math.random() * rollPool.length)];
 
-            rolled = applyStableMutation(picked, "apex");
+            rolled = applyStableMutation(picked, apexMutationKey);
         }
     }
 
@@ -4217,7 +4707,7 @@ function rollForShark(actionContext = createRollActionContext(1)) {
         button.textContent = restock > 0
             ? `${restock} rolls`
             : buyQuantity > 1
-                ? `x${buyQuantity.toLocaleString()} ${formatCompactCoins(batchCost)}`
+                ? `x${formatCompactNumber(buyQuantity)} ${formatCompactCoins(batchCost)}`
                 : formatCompactCoins(batchCost || getPotionCost(key));
         button.title = blockReason || `Buy ${buyQuantity.toLocaleString()} for ${batchCost.toLocaleString()} coins`;
         button.disabled = Boolean(blockReason);
@@ -4238,7 +4728,7 @@ function rollForShark(actionContext = createRollActionContext(1)) {
             : getPotionPurchaseBlockReason(key, getPotionBuyQuantity(key, 1)) || "Cannot buy";
         button.disabled = quantity <= 0;
         button.title = quantity > 0
-            ? `Buy max (${quantity.toLocaleString()}) for ${getPotionBatchCost(key, quantity).toLocaleString()} coins`
+            ? `Buy max (${formatCompactNumber(quantity)}) for ${formatCompactCoins(getPotionBatchCost(key, quantity))} coins`
             : blockReason;
     }
 
@@ -4314,7 +4804,7 @@ function rollForShark(actionContext = createRollActionContext(1)) {
         readyRewards.forEach((reward) => applyIndexRewardClaim(reward, claimed));
         player.claimedIndexRewards = [...claimed];
         persistPlayerState();
-        showToast(`Claimed ${readyRewards.length.toLocaleString()} index reward${readyRewards.length === 1 ? "" : "s"}.`);
+        showToast(`Claimed ${formatCompactNumber(readyRewards.length)} index reward${readyRewards.length === 1 ? "" : "s"}.`);
         GameFx.play("upgrade");
     }
 
@@ -4351,7 +4841,7 @@ function rollForShark(actionContext = createRollActionContext(1)) {
     function markRngQuestClaimed(quest) {
         if (quest.section === "daily") {
             const state = getRngDailyQuestState();
-            state.claimed = [...new Set([...(state.claimed || []), quest.id])].slice(0, RNG_DAILY_QUEST_COUNT);
+            state.claimed = [...new Set([...(state.claimed || []), quest.id])];
         } else if (quest.section === "allTime" && !quest.completedChain) {
             const state = getRngQuestState();
             state.allTime[quest.chainId] = Math.max(
@@ -4391,7 +4881,7 @@ function rollForShark(actionContext = createRollActionContext(1)) {
         });
 
         persistPlayerState();
-        showToast(`Claimed ${ready.length.toLocaleString()} quest${ready.length === 1 ? "" : "s"}.`);
+        showToast(`Claimed ${formatCompactNumber(ready.length)} quest${ready.length === 1 ? "" : "s"}.`);
         GameFx.play("upgrade");
     }
 
@@ -4419,8 +4909,8 @@ function rollForShark(actionContext = createRollActionContext(1)) {
             const claimed = isRngQuestClaimed(quest);
             const readyToClaim = isRngQuestReady(quest);
             const stateClass = claimed ? "claimed" : readyToClaim ? "ready" : "active";
-            const progressText = quest.progressText || progress.toLocaleString();
-            const goalText = quest.goalText || quest.goal.toLocaleString();
+            const progressText = quest.progressText || formatCompactNumber(progress);
+            const goalText = quest.goalText || formatCompactNumber(quest.goal);
 
             return `
                 <article class="rng-quest-card ${stateClass}">
@@ -4513,11 +5003,11 @@ function updateActiveEffectsUi() {
          }
          const mChance = getMutationChance();
          if (mChance !== null) {
-             parts.push(`\u{1F9EC} Mutation: 1 in ${mChance.toLocaleString()}`);
+             parts.push(`\u{1F9EC} Mutation: 1 in ${formatOneIn(mChance)}`);
          }
          const apexChance = getApexMutationChance();
          if (apexChance !== null) {
-             parts.push(`\u{1F988} Apex: 1 in ${apexChance.toLocaleString()}`);
+             parts.push(`\u{1F988} Apex: 1 in ${formatOneIn(apexChance)}`);
          }
 
          if (parts.length) {
@@ -4597,12 +5087,15 @@ function updateActiveEffectsUi() {
              topCoins.title = `${player.coins.toLocaleString()} coins`;
          }
          if (topPrestige) {
-             topPrestige.textContent = `${getPrestigePoints()} (${player.prestigeLevel || 0})`;
+             topPrestige.textContent = `${formatCompactNumber(getPrestigePoints())} (${formatCompactNumber(player.prestigeLevel || 0)})`;
              topPrestige.title = `${getPrestigePoints().toLocaleString()} unspent prestige points \u00b7 ${getTotalPrestigePoints().toLocaleString()} earned \u00b7 ${player.prestigeLevel || 0} prestiges`;
          }
          if (topLuck) topLuck.textContent = `x${getLuckMultiplier().toFixed(2)}`;
          if (topCollection) topCollection.textContent = `${getCollectionCount()}/${getCollectionTargetCount()}`;
-         if (rollsEl) rollsEl.textContent = player.rolls.toLocaleString();
+         if (rollsEl) {
+             rollsEl.textContent = formatCompactNumber(player.rolls);
+             rollsEl.title = `${player.rolls.toLocaleString()} rolls`;
+         }
          if (bestEl) {
              bestEl.textContent = player.bestOneIn
                  ? `1/${formatOneIn(player.bestOneIn)}`
@@ -4658,10 +5151,10 @@ function updateActiveEffectsUi() {
                 : `Lv.${next.level} \u00b7 auto every ${(next.interval / 1000).toFixed(1)}s`;
         }
         if (def.listKey === "mutation") {
-            return `Lv.${next.level} \u00b7 1 in ${next.chance.toLocaleString()} chance`;
+            return `Lv.${next.level} \u00b7 1 in ${formatOneIn(next.chance)} chance`;
         }
         if (def.listKey === "apex") {
-            return `Lv.${next.level} \u00b7 Apex 1 in ${next.chance.toLocaleString()}`;
+            return `Lv.${next.level} \u00b7 Apex 1 in ${formatOneIn(next.chance)}`;
         }
         if (def.listKey === "mutationBounty") {
             return `Lv.${next.level} \u00b7 +${Math.round(next.bonus * 100)}% mutated roll coins`;
@@ -4709,7 +5202,7 @@ function updateActiveEffectsUi() {
         panel.innerHTML = `
             <div class="rng-prestige-shell-head">
                 <span>Permanent Progression</span>
-                <strong>${points.toLocaleString()} spendable point${points === 1 ? "" : "s"}</strong>
+                <strong>${formatCompactNumber(points)} spendable point${points === 1 ? "" : "s"}</strong>
             </div>
             <div class="rng-prestige-banner">
                 <div>
@@ -4732,8 +5225,8 @@ function updateActiveEffectsUi() {
                 </div>
             </div>
             <div class="rng-prestige-metrics">
-                <div><span>Unspent</span><strong>${points.toLocaleString()}</strong></div>
-                <div><span>Earned</span><strong>${totalPoints.toLocaleString()}</strong></div>
+                <div><span>Unspent</span><strong>${formatCompactNumber(points)}</strong></div>
+                <div><span>Earned</span><strong>${formatCompactNumber(totalPoints)}</strong></div>
                 <div><span>Luck</span><strong>+${Math.round((getPrestigeLuckMultiplier() - 1) * 100)}%</strong></div>
                 <div><span>Coins</span><strong>+${Math.round((getPrestigeCoinMultiplier() - 1) * 100)}%</strong></div>
                 <div><span>XP</span><strong>+${Math.round((getPrestigeXpMultiplier() - 1) * 100)}%</strong></div>
@@ -4769,7 +5262,7 @@ function updateActiveEffectsUi() {
         btn.innerHTML = `<i class="fa-solid fa-arrows-rotate"></i> Prestige`;
         btn.disabled = !ready;
         btn.title = ready
-            ? `Prestige for ${gain.toLocaleString()} point${gain === 1 ? "" : "s"}`
+            ? `Prestige for ${formatCompactNumber(gain)} point${gain === 1 ? "" : "s"}`
             : `Reach a 1/${formatOneIn(PRESTIGE_MIN_BEST_ONE_IN)} best pull, ${PRESTIGE_ROLL_STEP} run rolls, or more collection progress.`;
         btn.addEventListener("click", prestigeRngRun);
         panel.appendChild(btn);
@@ -4866,8 +5359,8 @@ function updateActiveEffectsUi() {
         summary.className = "rng-potion-summary";
         summary.innerHTML = `
             <div class="rng-potion-summary-copy">
-                <strong>${getPotionTotalCount().toLocaleString()} total potions</strong>
-                <span>${getStoredPotionCount().toLocaleString()} stored \u00b7 ${getActivePotionChargeCount().toLocaleString()} active charges</span>
+                <strong>${formatCompactNumber(getPotionTotalCount())} total potions</strong>
+                <span>${formatCompactNumber(getStoredPotionCount())} stored \u00b7 ${formatCompactNumber(getActivePotionChargeCount())} active charges</span>
             </div>
         `;
         const consumeAllBtn = document.createElement("button");
@@ -4913,7 +5406,7 @@ function updateActiveEffectsUi() {
                 </div>
                 <p class="rng-potion-desc">${def.desc}</p>
                 <div class="rng-potion-actions">
-                    <span class="rng-potion-owned">Owned: ${player.potions[key] || 0}</span>
+                    <span class="rng-potion-owned" title="${(player.potions[key] || 0).toLocaleString()} owned">Owned: ${formatCompactNumber(player.potions[key] || 0)}</span>
                 </div>
             `;
 
@@ -4946,7 +5439,7 @@ function updateActiveEffectsUi() {
             useAllBtn.textContent = "All";
             useAllBtn.disabled = !(player.potions[key] > 1);
             useAllBtn.title = player.potions[key] > 1
-                ? `Use all ${Math.floor(player.potions[key]).toLocaleString()} stored ${def.name}s`
+                ? `Use all ${formatCompactNumber(Math.floor(player.potions[key]))} stored ${def.name}s`
                 : "Store more than one to use all";
             useAllBtn.addEventListener("click", () => useAllPotion(key));
 
@@ -4990,19 +5483,7 @@ function updateAllUi(options = {}) {
         const legend = document.getElementById("rng-tier-legend");
         if (!legend) return;
 
-        const examples = [
-            ["Common", "1 in 2"],
-            ["Uncommon", "1 in 8"],
-            ["Rare", "1 in 35"],
-            ["Epic", "1 in 200"],
-            ["Legendary", "1 in 2.5K"],
-            ["Mythical", "1 in 50K"],
-            ["Secret", "1 in 500K"],
-            ["Ultra", "1 in 1M+"],
-            ["Hyper", "1 in 8M+"],
-            ["Omega", "1 in 120M+"],
-            ["Singularity", "1 in 500M+"]
-        ];
+        const examples = TIERS.map((tier) => [tier.name, `1 in ${formatOneIn(tier.baseOneIn)}+`]);
 
         const rarityRows = examples.map(([name, odds]) => {
             const meta = getTierMeta(name);
@@ -5015,10 +5496,10 @@ function updateAllUi(options = {}) {
             const chance = getNaturalMutationChanceOneIn(key);
             const standardWeightTotal = getMutationRollWeightTotal();
             const pickPercent = STANDARD_MUTATION_KEYS.includes(key) && standardWeightTotal > 0
-                ? Math.round(((mutation.rollWeight || 0) / standardWeightTotal) * 100)
+                ? formatMutationPickPercent(mutation.rollWeight || 0, standardWeightTotal)
                 : null;
             const chanceText = chance === null
-                ? (key === "apex" ? "Apex Instinct locked" : `${pickPercent}% of mutation rolls`)
+                ? (NATURAL_ONLY_MUTATION_KEYS.includes(key) ? "Apex Instinct locked" : `${pickPercent}% of mutation rolls`)
                 : `1 in ${formatOneIn(chance)}`;
             const pickText = chance !== null && pickPercent !== null ? ` · ${pickPercent}% pick` : "";
 
@@ -5030,12 +5511,59 @@ function updateAllUi(options = {}) {
             `;
         });
 
-        legend.innerHTML = [
-            `<div class="rng-tier-section-title">Rarities</div>`,
-            ...rarityRows,
-            `<div class="rng-tier-section-title">Mutation chances</div>`,
-            ...mutationRows
-        ].join("");
+        legend.innerHTML = `
+            <section class="rng-tier-section rng-rarity-section" aria-label="Rarity odds">
+                <div class="rng-tier-section-title">Rarities</div>
+                <div class="rng-tier-list rng-rarity-list">
+                    ${rarityRows.join("")}
+                </div>
+            </section>
+            <section class="rng-tier-section rng-mutation-section" aria-label="Mutation chances">
+                <div class="rng-tier-section-title">Mutation Chances</div>
+                <div class="rng-tier-list rng-mutation-list">
+                    ${mutationRows.join("")}
+                </div>
+            </section>
+        `;
+    }
+
+    function appendIndexFilterOption(parent, value, label) {
+        const option = document.createElement("option");
+        option.value = value;
+        option.textContent = label;
+        parent.appendChild(option);
+    }
+
+    function populateIndexFilterDropdown() {
+        const filter = document.getElementById("rng-collection-filter");
+        if (!filter) return;
+
+        const previousValue = filter.value || "all";
+        const validValues = new Set(["all", "base"]);
+        filter.replaceChildren();
+
+        appendIndexFilterOption(filter, "all", "All index entries");
+        appendIndexFilterOption(filter, "base", "Base species");
+
+        const rarityGroup = document.createElement("optgroup");
+        rarityGroup.label = "Rarities";
+        TIERS.forEach((tier) => {
+            validValues.add(tier.name);
+            appendIndexFilterOption(rarityGroup, tier.name, tier.name);
+        });
+        filter.appendChild(rarityGroup);
+
+        const mutationGroup = document.createElement("optgroup");
+        mutationGroup.label = "Mutations";
+        MUTATION_CHANCE_ORDER.forEach((key) => {
+            const mutation = MUTATION_TYPES[key];
+            if (!mutation) return;
+            validValues.add(key);
+            appendIndexFilterOption(mutationGroup, key, `${mutation.icon} ${mutation.name}`);
+        });
+        filter.appendChild(mutationGroup);
+
+        filter.value = validValues.has(previousValue) ? previousValue : "all";
     }
 
     function renderIndexSummary() {
@@ -5050,7 +5578,7 @@ function updateAllUi(options = {}) {
         summary.innerHTML = `
             <div>
                 <span class="rng-index-kicker">Index Progress</span>
-                <strong>${collected.toLocaleString()} / ${target.toLocaleString()}</strong>
+                <strong>${formatCompactNumber(collected)} / ${formatCompactNumber(target)}</strong>
             </div>
             <div class="rng-index-summary-track"><span style="width:${Math.min(100, progress)}%"></span></div>
             <div class="rng-index-summary-actions">
@@ -5072,11 +5600,11 @@ function updateAllUi(options = {}) {
             const isClaimed = claimed.has(reward.id);
             const isReady = collected >= goal && !isClaimed;
             const stateClass = isClaimed ? "claimed" : isReady ? "ready" : "locked";
-            const buttonText = isClaimed ? "Claimed" : isReady ? "Claim" : `${Math.min(collected, goal)}/${goal}`;
+            const buttonText = isClaimed ? "Claimed" : isReady ? "Claim" : `${formatCompactNumber(Math.min(collected, goal))}/${formatCompactNumber(goal)}`;
 
             return `
                 <article class="rng-index-reward ${stateClass}">
-                    <span>${goal.toLocaleString()}</span>
+                    <span>${formatCompactNumber(goal)}</span>
                     <strong>${reward.title}</strong>
                     <em>${reward.rewardText}</em>
                     <button class="rng-btn rng-index-claim-btn" type="button" data-index-reward="${reward.id}" ${isReady ? "" : "disabled"}>${buttonText}</button>
@@ -5473,15 +6001,52 @@ function updateAllUi(options = {}) {
     }
 
     function isApexPull(shark) {
-        return shark?.mutation === "apex";
+        return Boolean(shark?.mutation && MUTATION_TYPES[shark.mutation]?.naturalOnly);
+    }
+
+    function getApexPathMutationDef(shark) {
+        return MUTATION_TYPES[shark?.mutation] || MUTATION_TYPES.apex;
+    }
+
+    function getApexPathRevealConfig(shark) {
+        const mutation = getApexPathMutationDef(shark);
+        if (shark?.mutation === "apex") return APEX_REVEAL_CONFIG;
+
+        const rarityMult = Math.max(1, Number(mutation.apexChanceMult) || 1);
+        return {
+            ...APEX_REVEAL_CONFIG,
+            eyebrow: `${mutation.name} Mutation Detected`,
+            tierLabel: `${mutation.name} Mutation`,
+            particleCount: APEX_REVEAL_CONFIG.particleCount + Math.min(48, Math.round(rarityMult * 2)),
+            ringCount: APEX_REVEAL_CONFIG.ringCount + Math.min(3, Math.floor(rarityMult / 10)),
+            beamCount: APEX_REVEAL_CONFIG.beamCount + Math.min(6, Math.floor(rarityMult / 6)),
+            particleSymbols: [mutation.icon, "!", "A", "X"]
+        };
+    }
+
+    function getApexPathCutsceneMark(shark) {
+        const mutation = getApexPathMutationDef(shark);
+        return mutation.cutsceneMark || mutation.name || "APEX";
     }
 
     function getRollRevealShark(rolls, fallback) {
-        const adminForcedRoll = [...(Array.isArray(rolls) ? rolls : [])]
+        const rollList = [...(Array.isArray(rolls) ? rolls : [])].filter(Boolean);
+        if (getSettings().onlyBetterCutscenes) {
+            const bestPersonalBestRoll = [...rollList]
+                .filter((shark) => shark?.beatsPreviousBest)
+                .sort((a, b) => {
+                    const oddsDiff = (b.oneIn || 0) - (a.oneIn || 0);
+                    if (oddsDiff !== 0) return oddsDiff;
+                    return (b.coinReward || 0) - (a.coinReward || 0);
+                })[0];
+            if (bestPersonalBestRoll) return bestPersonalBestRoll;
+        }
+
+        const adminForcedRoll = rollList
             .find((shark) => shark?.adminCommandId);
         if (adminForcedRoll) return adminForcedRoll;
 
-        const apexRoll = [...(Array.isArray(rolls) ? rolls : [])]
+        const apexRoll = rollList
             .filter(isApexPull)
             .sort((a, b) => {
                 const oddsDiff = (b.oneIn || 0) - (a.oneIn || 0);
@@ -5641,10 +6206,11 @@ function updateAllUi(options = {}) {
         const stage = document.querySelector(".rng-roll-stage");
         if (!display) return;
         const rollCount = Math.max(1, Math.floor(Number(rollContext.rollCount) || 1));
+        const hideExtraMultiRolls = rollCount > 1 && Boolean(getSettings().hideExtraMultiRolls);
         const totalCoinGain = Math.max(0, Math.round(Number(rollContext.totalCoinGain) || finalShark.coinReward || 0));
         const newFinds = Math.max(0, Math.floor(Number(rollContext.newFinds) || 0));
         const burstRolls = Array.isArray(rollContext.rolls) ? rollContext.rolls : [];
-        const multiGrid = ensureMultiRollGrid(stage, rollCount);
+        const multiGrid = hideExtraMultiRolls ? null : ensureMultiRollGrid(stage, rollCount);
         const multiSlots = multiGrid ? Array.from(multiGrid.querySelectorAll(".rng-multi-roll-slot")) : [];
 
         GameFx.play("roll");
@@ -5652,7 +6218,7 @@ function updateAllUi(options = {}) {
         display.style.display = "block";
         display.style.opacity = "1";
         display.style.visibility = "visible";
-        if (rollCount > 1) {
+        if (rollCount > 1 && !hideExtraMultiRolls) {
             display.dataset.multiRoll = `x${rollCount} rolls`;
             display.textContent = `Rolling x${rollCount}`;
         } else {
@@ -5712,11 +6278,11 @@ function updateAllUi(options = {}) {
             const newFindNote = newFinds > 0
                 ? ` \u00b7 ${newFinds === 1 ? "NEW!" : `${newFinds} NEW!`}`
                 : "";
-            const multiRollSummary = rollCount > 1 ? getMultiRollResultSummary(burstRolls) : "";
+            const multiRollSummary = rollCount > 1 && !hideExtraMultiRolls ? getMultiRollResultSummary(burstRolls) : "";
             const multiRollLine = multiRollSummary
                 ? `<span class="rng-result-burst">Top rolls: ${multiRollSummary}</span>`
                 : "";
-            result.classList.toggle("rng-result-multi", rollCount > 1);
+            result.classList.toggle("rng-result-multi", rollCount > 1 && !hideExtraMultiRolls);
             result.innerHTML = `
                 <span class="${finalShark.className}${finalShark.mutation ? ' ' + finalShark.mutation : ''}">You rolled: ${finalShark.name}</span>
                 <span class="rng-result-meta">${burstNote}${baseTier}${oddsNote} \u00b7 1 in ${formatOneIn(finalShark.oneIn)} \u00b7 ${coinNote}${newFindNote}${streakNote}${mutationNote}${payoutNote}</span>
@@ -5802,6 +6368,10 @@ function updateAllUi(options = {}) {
     }
 
     async function showRollReveal(shark) {
+        const settings = getSettings();
+        if (settings.disableCutscenes) return;
+        if (settings.onlyBetterCutscenes && !shark?.beatsPreviousBest) return;
+
         if (isApexPull(shark)) {
             await showUltraCutscene(shark);
         } else if (shark.oneIn >= ULTRA_ONE_IN_THRESHOLD) {
@@ -5817,8 +6387,21 @@ function updateAllUi(options = {}) {
     }
 
     function getUltraRevealConfig(shark) {
-        if (isApexPull(shark)) return APEX_REVEAL_CONFIG;
-        return ULTRA_REVEAL_CONFIGS[getOddsTierName(shark)] || ULTRA_REVEAL_CONFIGS.Ultra;
+        if (isApexPull(shark)) return getApexPathRevealConfig(shark);
+        const baseReveal = ULTRA_REVEAL_CONFIGS[getOddsTierName(shark)] || ULTRA_REVEAL_CONFIGS.Ultra;
+        const mutation = MUTATION_TYPES[shark?.mutation];
+        if (!mutation) return baseReveal;
+
+        const intensity = Math.min(3, Math.max(1, Math.log10(Math.max(10, mutation.oneInMult))));
+        return {
+            ...baseReveal,
+            eyebrow: `${mutation.name} Mutation Detected`,
+            tierLabel: `${mutation.icon} ${mutation.name} Mutation`,
+            particleCount: baseReveal.particleCount + Math.round(10 * intensity),
+            ringCount: baseReveal.ringCount + 1,
+            beamCount: baseReveal.beamCount + Math.round(2 * intensity),
+            particleSymbols: [mutation.icon, ...baseReveal.particleSymbols, "+", "*"]
+        };
     }
 
     function shouldSkipCutscene(shark) {
@@ -5850,18 +6433,34 @@ function updateAllUi(options = {}) {
             const oddsClass = getRarityClass(oddsTier);
             const reveal = getUltraRevealConfig(shark);
             const isApex = isApexPull(shark);
-            const tierLabel = reveal.tierLabel || oddsTier;
+            const mutationDef = shark.mutation ? MUTATION_TYPES[shark.mutation] : null;
+            const isMutated = Boolean(mutationDef);
+            const apexMutation = isApex ? getApexPathMutationDef(shark) : null;
+            const tierLabel = isMutated && !isApex
+                ? `${mutationDef.icon} ${mutationDef.name} Mutation`
+                : reveal.tierLabel || oddsTier;
             const metaLine = isApex
-                ? `${shark.depth || "Unknown"} \u00b7 ${shark.size || "?"} \u00b7 Apex predator sighted \u00b7 ${isNew ? "NEW species!" : "Added to collection"}`
-                : `${shark.depth || "Unknown"} \u00b7 ${shark.size || "?"} \u00b7 ${isNew ? "NEW species!" : "Added to collection"}${shark.mutation ? ' \u00b7 <span class="rng-mutation-tag ' + shark.mutation + '">' + MUTATION_TYPES[shark.mutation]?.icon + ' ' + shark.mutation.toUpperCase() + '</span>' : ''}`;
+                ? `${shark.depth || "Unknown"} \u00b7 ${shark.size || "?"} \u00b7 ${apexMutation.name} mutation sighted \u00b7 ${isNew ? "NEW species!" : "Added to collection"}`
+                : `${shark.depth || "Unknown"} \u00b7 ${shark.size || "?"} \u00b7 ${isNew ? "NEW species!" : "Added to collection"}${shark.mutation ? ' \u00b7 <span class="rng-mutation-tag ' + shark.mutation + '">' + MUTATION_TYPES[shark.mutation]?.icon + ' ' + (MUTATION_TYPES[shark.mutation]?.name || shark.mutation).toUpperCase() + '</span>' : ''}`;
+            const mutationLayers = isMutated && !isApex ? `
+                <div class="rng-cutscene-mutation-ripple" aria-hidden="true"></div>
+                <div class="rng-cutscene-mutation-shards" aria-hidden="true"></div>
+                <div class="rng-cutscene-mutation-sigil" aria-hidden="true">${mutationDef.icon}</div>
+            ` : "";
             const apexLayers = isApex ? `
                 <div class="rng-cutscene-apex-sweep" aria-hidden="true"></div>
                 <div class="rng-cutscene-apex-jaws" aria-hidden="true"></div>
                 <div class="rng-cutscene-apex-slashes" aria-hidden="true"></div>
-                <div class="rng-cutscene-apex-mark" aria-hidden="true">APEX</div>
+                <div class="rng-cutscene-apex-mark" aria-hidden="true">${getApexPathCutsceneMark(shark)}</div>
             ` : "";
 
-            cutscene.className = `rng-cutscene visible playing ${oddsClass}${shark.mutation ? ' ' + shark.mutation : ''}`;
+            cutscene.className = `rng-cutscene visible playing ${oddsClass}${isMutated ? ' mutated' : ''}${isApex && shark.mutation !== "apex" ? ' apex' : ''}${shark.mutation ? ' ' + shark.mutation : ''}`;
+            cutscene.style.removeProperty("--mutation-primary");
+            cutscene.style.removeProperty("--mutation-secondary");
+            if (mutationDef) {
+                cutscene.style.setProperty("--mutation-primary", mutationDef.color);
+                cutscene.style.setProperty("--mutation-secondary", reveal.particleSymbols?.[1] ? "var(--cutscene-secondary)" : mutationDef.color);
+            }
             cutscene.innerHTML = `
                 <div class="rng-cutscene-vignette"></div>
                 <div class="rng-cutscene-aura"></div>
@@ -5870,6 +6469,7 @@ function updateAllUi(options = {}) {
                 <div class="rng-cutscene-beams" aria-hidden="true"></div>
                 <div class="rng-cutscene-rings" aria-hidden="true"></div>
                 <div class="rng-cutscene-particles" aria-hidden="true"></div>
+                ${mutationLayers}
                 ${apexLayers}
                 <div class="rng-cutscene-content">
                     <p class="rng-cutscene-eyebrow">${reveal.eyebrow}</p>
@@ -5925,14 +6525,29 @@ function updateAllUi(options = {}) {
                 // Mutation visual flare
                 if (shark.mutation && MUTATION_TYPES[shark.mutation]) {
                     const mutDef = MUTATION_TYPES[shark.mutation];
-                    for (let i = 0; i < 6; i++) {
+                    for (let i = 0; i < 10; i++) {
                         const ms = document.createElement("span");
                         ms.textContent = mutDef.icon;
                         ms.style.setProperty("--x", `${(5 + (hashString(shark.name + 'mut' + i) % 90))}%`);
-                        ms.style.setProperty("--delay", `${(1.2 + i * 0.15).toFixed(2)}s`);
+                        ms.style.setProperty("--y", `${(12 + (hashString(mutDef.name + shark.name + i) % 74))}%`);
+                        ms.style.setProperty("--delay", `${(0.72 + i * 0.11).toFixed(2)}s`);
+                        ms.style.setProperty("--dur", `${(2.15 + (i % 4) * 0.18).toFixed(2)}s`);
                         ms.style.fontSize = '1.5rem';
                         particles.appendChild(ms);
                     }
+                }
+            }
+
+            const mutationShards = cutscene.querySelector(".rng-cutscene-mutation-shards");
+            if (mutationShards && mutationDef) {
+                for (let i = 0; i < 14; i++) {
+                    const shard = document.createElement("span");
+                    shard.textContent = mutationDef.icon;
+                    shard.style.setProperty("--i", String(i));
+                    shard.style.setProperty("--x", `${(8 + (hashString(mutationDef.name + shark.name + i) % 84))}%`);
+                    shard.style.setProperty("--y", `${(10 + (hashString(shark.name + mutationDef.name + i) % 80))}%`);
+                    shard.style.setProperty("--delay", `${(0.18 + i * 0.055).toFixed(2)}s`);
+                    mutationShards.appendChild(shard);
                 }
             }
 
@@ -5971,6 +6586,7 @@ async function performRoll() {
          const rollCount = getPrestigeMultiRollCount();
          const rollActionContext = createRollActionContext(rollCount);
          const burstRolls = Array.from({ length: rollCount }, () => rollForShark(rollActionContext));
+         updateRngDailyQuestsForRolls(burstRolls);
          consumeRollActionEffects(rollActionContext);
          const finalShark = getBestBurstRoll(burstRolls);
          const rollContext = {
@@ -6086,7 +6702,7 @@ async function performRoll() {
         const cost = getPotionBatchCost(key, quantity);
         player.coins -= cost;
         player.potions[key] = (player.potions[key] || 0) + quantity;
-        showToast(`Bought ${quantity.toLocaleString()} ${def.name}${quantity === 1 ? "" : "s"}.`);
+        showToast(`Bought ${formatCompactNumber(quantity)} ${def.name}${quantity === 1 ? "" : "s"}.`);
         persistPlayerState();
     }
 
@@ -6104,9 +6720,9 @@ async function performRoll() {
         const remaining = Math.max(0, coins - cost);
         const balanceWarning = cost >= coins
             ? "You are about to spend all your money."
-            : `You are about to spend ${cost.toLocaleString()} coins and leave ${remaining.toLocaleString()} coins.`;
+            : `You are about to spend ${formatCompactCoins(cost)} coins and leave ${formatCompactCoins(remaining)} coins.`;
 
-        if (!confirm(`Buy max ${def?.name || "potion"}?\n\n${balanceWarning}\n\nBuy ${quantity.toLocaleString()} for ${cost.toLocaleString()} coins?`)) {
+        if (!confirm(`Buy max ${def?.name || "potion"}?\n\n${balanceWarning}\n\nBuy ${formatCompactNumber(quantity)} for ${formatCompactCoins(cost)} coins?`)) {
             return;
         }
 
@@ -6130,7 +6746,7 @@ async function performRoll() {
         const used = applyPotionEffect(key, owned);
         player.potions[key] = Math.max(0, owned - used);
         persistPlayerState();
-        showToast(`Used ${used.toLocaleString()} ${def.name}${used === 1 ? "" : "s"}.`);
+        showToast(`Used ${formatCompactNumber(used)} ${def.name}${used === 1 ? "" : "s"}.`);
     }
 
     function applyPotionEffect(key, quantity = 1) {
@@ -6180,7 +6796,7 @@ async function performRoll() {
         }
 
         persistPlayerState();
-        showToast(`Consumed ${consumed.toLocaleString()} potion${consumed === 1 ? "" : "s"}.`);
+        showToast(`Consumed ${formatCompactNumber(consumed)} potion${consumed === 1 ? "" : "s"}.`);
     }
 
     function switchTab(tabId) {
@@ -6232,10 +6848,10 @@ async function performRoll() {
         }
 
         const message = [
-            `Prestige now for ${gain.toLocaleString()} point${gain === 1 ? "" : "s"}?`,
+            `Prestige now for ${formatCompactNumber(gain)} point${gain === 1 ? "" : "s"}?`,
             "",
             "This resets coins, rolls, upgrades, potions, active boosts, and RNG level.",
-            "Collection, best pull, equipped species, settings, and claimed index rewards stay."
+            "Collection, best pull, equipped species, settings, and quest progress stay."
         ].join("\n");
 
         if (!confirm(message)) return;
@@ -6267,6 +6883,8 @@ async function performRoll() {
             ...fresh,
             collection: previous.collection && typeof previous.collection === "object" ? previous.collection : {},
             claimedIndexRewards: Array.isArray(previous.claimedIndexRewards) ? previous.claimedIndexRewards : [],
+            dailyQuests: normalizeRngDailyQuestState(previous.dailyQuests || previous.dailyMissions),
+            quests: normalizeRngQuestState(previous.quests),
             equipped: previous.equipped || null,
             bestOneIn: previous.bestOneIn || 0,
             settings: previous.settings || fresh.settings,
@@ -6287,7 +6905,7 @@ async function performRoll() {
 
         persistPlayerState();
         updateSettingsUi();
-        showToast(`Prestiged! +${gain.toLocaleString()} permanent point${gain === 1 ? "" : "s"}.`);
+        showToast(`Prestiged! +${formatCompactNumber(gain)} permanent point${gain === 1 ? "" : "s"}.`);
         GameFx.play("upgrade");
     }
 
@@ -6305,9 +6923,15 @@ async function performRoll() {
 
     function updateSettingsUi() {
         const popups = document.getElementById("rng-setting-disable-popups");
+        const cutscenes = document.getElementById("rng-setting-disable-cutscenes");
+        const onlyBetterCutscenes = document.getElementById("rng-setting-only-better-cutscenes");
+        const hideMultiRolls = document.getElementById("rng-setting-hide-multi-rolls");
         const sound = document.getElementById("rng-setting-sound");
         const settings = getSettings();
         if (popups) popups.checked = Boolean(settings.disableRarePopups);
+        if (cutscenes) cutscenes.checked = Boolean(settings.disableCutscenes);
+        if (onlyBetterCutscenes) onlyBetterCutscenes.checked = Boolean(settings.onlyBetterCutscenes);
+        if (hideMultiRolls) hideMultiRolls.checked = Boolean(settings.hideExtraMultiRolls);
         if (sound) sound.checked = settings.soundEnabled !== false;
         document.querySelectorAll("[data-cutscene-skip]").forEach((input) => {
             input.checked = Boolean(settings.skipCutscenes?.[input.dataset.cutsceneSkip]);
@@ -6564,7 +7188,7 @@ async function performRoll() {
             player.rngXp = getXpForLevel(targetLevel);
             persistPlayerState();
             console.log(`Set RNG level to ${targetLevel.toLocaleString()} (${player.rngXp.toLocaleString()} XP).`);
-            showToast(`RNG level set: ${targetLevel.toLocaleString()}`);
+            showToast(`RNG level set: ${formatCompactNumber(targetLevel)}`);
         };
 
         window.addRngRolls = function addRngRolls(amount = 100) {
@@ -6575,7 +7199,7 @@ async function performRoll() {
             player.rolls = Math.max(0, (Number(player.rolls) || 0) + rollsToAdd);
             persistPlayerState();
             console.log(`Added ${rollsToAdd.toLocaleString()} RNG rolls. Total: ${player.rolls.toLocaleString()}`);
-            showToast(`+${rollsToAdd.toLocaleString()} RNG rolls`);
+            showToast(`+${formatCompactNumber(rollsToAdd)} RNG rolls`);
         };
 
         window.addRngRebirthTokens = function addRngRebirthTokens(amount = 10) {
@@ -6587,7 +7211,7 @@ async function performRoll() {
             player.totalPrestigePoints = getTotalPrestigePoints() + tokensToAdd;
             persistPlayerState();
             console.log(`Added ${tokensToAdd.toLocaleString()} rebirth token${tokensToAdd === 1 ? "" : "s"}. Unspent: ${getPrestigePoints().toLocaleString()}.`);
-            showToast(`+${tokensToAdd.toLocaleString()} rebirth token${tokensToAdd === 1 ? "" : "s"}`);
+            showToast(`+${formatCompactNumber(tokensToAdd)} rebirth token${tokensToAdd === 1 ? "" : "s"}`);
         };
 
         window.addRngPrestigePoints = window.addRngRebirthTokens;
@@ -6796,6 +7420,21 @@ async function performRoll() {
             persistPlayerState();
             showToast(event.target.checked ? "Rare popups disabled" : "Rare popups enabled");
         });
+        document.getElementById("rng-setting-disable-cutscenes")?.addEventListener("change", (event) => {
+            getSettings().disableCutscenes = event.target.checked;
+            persistPlayerState();
+            showToast(event.target.checked ? "Full-screen cutscenes disabled" : "Full-screen cutscenes enabled");
+        });
+        document.getElementById("rng-setting-only-better-cutscenes")?.addEventListener("change", (event) => {
+            getSettings().onlyBetterCutscenes = event.target.checked;
+            persistPlayerState();
+            showToast(event.target.checked ? "Only better cutscenes enabled" : "All cutscenes enabled");
+        });
+        document.getElementById("rng-setting-hide-multi-rolls")?.addEventListener("change", (event) => {
+            getSettings().hideExtraMultiRolls = event.target.checked;
+            persistPlayerState();
+            showToast(event.target.checked ? "Extra multi rolls hidden" : "Extra multi rolls shown");
+        });
         document.getElementById("rng-setting-sound")?.addEventListener("change", (event) => {
             getSettings().soundEnabled = event.target.checked;
             if (event.target.checked) GameFx.initAudio();
@@ -6835,6 +7474,7 @@ async function initRngMode() {
          initAmbientBubbles();
          installRngDevCommands();
          bindLocalProfileSaveFlush();
+         populateIndexFilterDropdown();
          bindUi();
           updateAllUi();
           updateSettingsUi();

@@ -1,4 +1,4 @@
-// This file contains the shared ray list for all Sharkdle Rays - Currently 700+ species
+// This file contains the shared ray list for all Sharkdle Rays - Currently 750+ species
 // This file is used to populate the ray list.
 // Added sizes (tiny: 0-3FT small: 3-6FT, medium: 6-10FT, large: 10-20FT. GIANT: 20FT+)
 // and depth (epipelagic zone: 0-200M, mesopelagic zone: 200-1000M, bathypelagic zone: 1000-4000M.)
@@ -19,7 +19,6 @@ const rays = [
             { "name": "Dwarf Whipray", "family": "Dasyatidae", "order": "Myliobatiformes", "genus": "Brevitrygon", "size": "Tiny","depth": "Epipelagic", "yod": 1852, "OneIn": 95},
             { "name": "Coromandel Whipray", "family": "Dasyatidae", "order": "Myliobatiformes", "genus": "Brevitrygon", "size": "Tiny","depth": "Epipelagic", "yod": 1801, "OneIn": 29},
             { "name": "Javan Whipray", "family": "Dasyatidae", "order": "Myliobatiformes", "genus": "Brevitrygon", "size": "Tiny","depth": "Epipelagic", "yod": 2013, "OneIn": 60000000},
-            { "name": "Sandwich Whipray", "family": "Dasyatidae", "order": "Myliobatiformes", "genus": "Brevitrygon", "size": "Unknown","depth": "Epipelagic", "yod": 2023, "OneIn": 49800000},
             { "name": "Bengal Whipray", "family": "Dasyatidae", "order": "Myliobatiformes", "genus": "Brevitrygon", "size": "Tiny","depth": "Epipelagic", "yod": 1841, "OneIn": 77},
             // Dasyatidae | Myliobatiformes | Dasyatis | 9 species
             { "name": "Whiptail Stingray", "family": "Dasyatidae", "order": "Myliobatiformes", "genus": "Dasyatis", "size": "Medium","depth": "Epipelagic", "yod": 1880, "OneIn": 150},
@@ -28,7 +27,6 @@ const rays = [
             { "name": "Whip Stingray (Dasyatis hastata)", "family": "Dasyatidae", "order": "Myliobatiformes", "genus": "Dasyatis", "size": "Small","depth": "Epipelagic", "yod": 1842, "OneIn": 84},
             { "name": "Dasyatis hypostigma", "family": "Dasyatidae", "order": "Myliobatiformes", "genus": "Dasyatis", "size": "Tiny","depth": "Epipelagic", "yod": 2004, "OneIn": 624000},
             { "name": "Marbled Stingray", "family": "Dasyatidae", "order": "Myliobatiformes", "genus": "Dasyatis", "size": "Tiny","depth": "Epipelagic", "yod": 1892, "OneIn": 2699},
-            { "name": "Multispine Giant Stingray", "family": "Dasyatidae", "order": "Myliobatiformes", "genus": "Dasyatis", "size": "Unknown","depth": "Epipelagic", "yod": 1959, "OneIn": 836},
             { "name": "Common Stingray", "family": "Dasyatidae", "order": "Myliobatiformes", "genus": "Dasyatis", "size": "Tiny","depth": "Epipelagic", "yod": 1758, "OneIn": 11},
             { "name": "Tortonese's Stingray", "family": "Dasyatidae", "order": "Myliobatiformes", "genus": "Dasyatis", "size": "Tiny","depth": "Epipelagic", "yod": 1975, "OneIn": 24200},
             // Dasyatidae | Myliobatiformes | Fluvitrygon | 3 species
@@ -52,19 +50,12 @@ const rays = [
             { "name": "Merauke Stingray", "family": "Dasyatidae", "order": "Myliobatiformes", "genus": "Hemitrygon", "size": "Tiny","depth": "Epipelagic", "yod": 2013, "OneIn": 41200000},
             { "name": "Blackish Stingray", "family": "Dasyatidae", "order": "Myliobatiformes", "genus": "Hemitrygon", "size": "Tiny","depth": "Epipelagic", "yod": 1892, "OneIn": 308},
             { "name": "Dwarf Black Stingray", "family": "Dasyatidae", "order": "Myliobatiformes", "genus": "Hemitrygon", "size": "Tiny","depth": "Epipelagic", "yod": 2008, "OneIn": 848000},
-            { "name": "Chinese Stingray", "family": "Dasyatidae", "order": "Myliobatiformes", "genus": "Hemitrygon", "size": "Unknown","depth": "Epipelagic", "yod": 1892, "OneIn": 285},
             { "name": "Hein's Stingray", "family": "Dasyatidae", "order": "Myliobatiformes", "genus": "Hemitrygon", "size": "Tiny","depth": "Epipelagic", "yod": 2020, "OneIn": 123000000},
             // Dasyatidae | Myliobatiformes | Himantura | 12 species
-            { "name": "Pale-Spot Whipray", "family": "Dasyatidae", "order": "Myliobatiformes", "genus": "Himantura", "size": "Unknown","depth": "Epipelagic", "yod": 1909, "OneIn": 393},
-            { "name": "Australian Whipray", "family": "Dasyatidae", "order": "Myliobatiformes", "genus": "Himantura", "size": "Unknown","depth": "Epipelagic", "yod": 2016, "OneIn": 11100000},
             { "name": "Honeycomb Whipray", "family": "Dasyatidae", "order": "Myliobatiformes", "genus": "Himantura", "size": "Small","depth": "Epipelagic", "yod": 1909, "OneIn": 405},
             { "name": "Ganges Stingray", "family": "Dasyatidae", "order": "Myliobatiformes", "genus": "Himantura", "size": "Small","depth": "Epipelagic", "yod": 1822, "OneIn": 47},
             { "name": "Marbled Freshwater Whipray", "family": "Dasyatidae", "order": "Myliobatiformes", "genus": "Himantura", "size": "Tiny","depth": "Epipelagic", "yod": 1923, "OneIn": 536},
-            { "name": "Leopard Whipray (Himantura leoparda)", "family": "Dasyatidae", "order": "Myliobatiformes", "genus": "Himantura", "size": "Unknown","depth": "Epipelagic", "yod": 2008, "OneIn": 282000},
             { "name": "Blackedge Whipray", "family": "Dasyatidae", "order": "Myliobatiformes", "genus": "Himantura", "size": "Small","depth": "Epipelagic", "yod": 1860, "OneIn": 111},
-            { "name": "Smalleye Whipray", "family": "Dasyatidae", "order": "Myliobatiformes", "genus": "Himantura", "size": "Unknown","depth": "Epipelagic", "yod": 1948, "OneIn": 753},
-            { "name": "Himantura pareh", "family": "Dasyatidae", "order": "Myliobatiformes", "genus": "Himantura", "size": "Unknown","depth": "Epipelagic", "yod": 1852, "OneIn": 100},
-            { "name": "Fine-Spotted Leopard Whipray", "family": "Dasyatidae", "order": "Myliobatiformes", "genus": "Himantura", "size": "Unknown","depth": "Epipelagic", "yod": 2013, "OneIn": 1530000},
             { "name": "Honeycomb Stingray", "family": "Dasyatidae", "order": "Myliobatiformes", "genus": "Himantura", "size": "Medium","depth": "Epipelagic", "yod": 1789, "OneIn": 17},
             { "name": "Leopard Whipray (Himantura undulata)", "family": "Dasyatidae", "order": "Myliobatiformes", "genus": "Himantura", "size": "Large","depth": "Epipelagic", "yod": 1852, "OneIn": 2180},
             // Dasyatidae | Myliobatiformes | Hypanus | 9 species
@@ -99,14 +90,11 @@ const rays = [
             { "name": "Neotrygon indica", "family": "Dasyatidae", "order": "Myliobatiformes", "genus": "Neotrygon", "size": "Tiny","depth": "Epipelagic", "yod": 2018, "OneIn": 86200000},
             { "name": "Blue-Spotted Stingray", "family": "Dasyatidae", "order": "Myliobatiformes", "genus": "Neotrygon", "size": "Tiny","depth": "Epipelagic", "yod": 1841, "OneIn": 72},
             { "name": "Painted Maskray", "family": "Dasyatidae", "order": "Myliobatiformes", "genus": "Neotrygon", "size": "Tiny","depth": "Epipelagic", "yod": 1987, "OneIn": 3020000},
-            { "name": "Malacca Strait Bluespotted Maskray", "family": "Dasyatidae", "order": "Myliobatiformes", "genus": "Neotrygon", "size": "Unknown","depth": "Epipelagic", "yod": 2017, "OneIn": 19700000},
-            { "name": "Moluccan Bluespotted Maskray", "family": "Dasyatidae", "order": "Myliobatiformes", "genus": "Neotrygon", "size": "Unknown","depth": "Epipelagic", "yod": 2017, "OneIn": 21800000},
             { "name": "Neotrygon ningalooensis", "family": "Dasyatidae", "order": "Myliobatiformes", "genus": "Neotrygon", "size": "Tiny","depth": "Epipelagic", "yod": 2010, "OneIn": 36400000},
             { "name": "Oriental Bluespotted Maskray", "family": "Dasyatidae", "order": "Myliobatiformes", "genus": "Neotrygon", "size": "Tiny","depth": "Epipelagic", "yod": 2016, "OneIn": 84200000},
             { "name": "Peppered Maskray", "family": "Dasyatidae", "order": "Myliobatiformes", "genus": "Neotrygon", "size": "Tiny","depth": "Epipelagic", "yod": 2008, "OneIn": 372000},
             { "name": "Coral Sea Maskray", "family": "Dasyatidae", "order": "Myliobatiformes", "genus": "Neotrygon", "size": "Tiny","depth": "Epipelagic", "yod": 1873, "OneIn": 2340},
             { "name": "Neotrygon varidens", "family": "Dasyatidae", "order": "Myliobatiformes", "genus": "Neotrygon", "size": "Tiny","depth": "Epipelagic", "yod": 1885, "OneIn": 235},
-            { "name": "West Papuan Blue-Spotted Maskray", "family": "Dasyatidae", "order": "Myliobatiformes", "genus": "Neotrygon", "size": "Unknown","depth": "Epipelagic", "yod": 2017, "OneIn": 14300000},
             // Dasyatidae | Myliobatiformes | Pastinachus | 5 species
             { "name": "Broad Cowtail Ray", "family": "Dasyatidae", "order": "Myliobatiformes", "genus": "Pastinachus", "size": "Medium","depth": "Epipelagic", "yod": 1883, "OneIn": 213},
             { "name": "Narrowtail Stingray", "family": "Dasyatidae", "order": "Myliobatiformes", "genus": "Pastinachus", "size": "Tiny","depth": "Epipelagic", "yod": 2010, "OneIn": 38000000},
@@ -140,12 +128,10 @@ const rays = [
             { "name": "Tubemouth Whipray", "family": "Dasyatidae", "order": "Myliobatiformes", "genus": "Urogymnus", "size": "Tiny","depth": "Epipelagic", "yod": 2006, "OneIn": 526000},
             { "name": "Giant Freshwater Whipray", "family": "Dasyatidae", "order": "Myliobatiformes", "genus": "Urogymnus", "size": "Medium","depth": "Epipelagic", "yod": 1852, "OneIn": 102},
             // Gymnuridae | Myliobatiformes | Gymnura | 16 species
-            { "name": "Gymnura afuerae", "family": "Gymnuridae", "order": "Myliobatiformes", "genus": "Gymnura", "size": "Unknown","depth": "Epipelagic", "yod": 1946, "OneIn": 732},
             { "name": "Spiny Butterfly Ray", "family": "Gymnuridae", "order": "Myliobatiformes", "genus": "Gymnura", "size": "Large","depth": "Epipelagic", "yod": 1758, "OneIn": 8},
             { "name": "Australian Butterfly Ray", "family": "Gymnuridae", "order": "Myliobatiformes", "genus": "Gymnura", "size": "Small","depth": "Mesopelagic", "yod": 1886, "OneIn": 246},
             { "name": "Twin-Spot Butterfly Ray", "family": "Gymnuridae", "order": "Myliobatiformes", "genus": "Gymnura", "size": "Tiny","depth": "Epipelagic", "yod": 1925, "OneIn": 3920},
             { "name": "Longsnout Butterfly Ray", "family": "Gymnuridae", "order": "Myliobatiformes", "genus": "Gymnura", "size": "Tiny","depth": "Epipelagic", "yod": 1869, "OneIn": 123},
-            { "name": "Gymnura crooki", "family": "Gymnuridae", "order": "Myliobatiformes", "genus": "Gymnura", "size": "Unknown","depth": "Epipelagic", "yod": 1934, "OneIn": 643},
             { "name": "Madeira Butterfly Ray", "family": "Gymnuridae", "order": "Myliobatiformes", "genus": "Gymnura", "size": "Small","depth": "Epipelagic", "yod": 1843, "OneIn": 85},
             { "name": "Japanese Butterflyray", "family": "Gymnuridae", "order": "Myliobatiformes", "genus": "Gymnura", "size": "Small","depth": "Epipelagic", "yod": 1850, "OneIn": 93},
             { "name": "Gymnura lessae", "family": "Gymnuridae", "order": "Myliobatiformes", "genus": "Gymnura", "size": "Tiny","depth": "Epipelagic", "yod": 2017, "OneIn": 91100000},
@@ -153,7 +139,6 @@ const rays = [
             { "name": "Smooth Butterfly Ray", "family": "Gymnuridae", "order": "Myliobatiformes", "genus": "Gymnura", "size": "Small","depth": "Epipelagic", "yod": 1801, "OneIn": 27},
             { "name": "Butterfly Ray", "family": "Gymnuridae", "order": "Myliobatiformes", "genus": "Gymnura", "size": "Medium","depth": "Epipelagic", "yod": 1911, "OneIn": 440},
             { "name": "Long-Tailed Butterfly Ray", "family": "Gymnuridae", "order": "Myliobatiformes", "genus": "Gymnura", "size": "Medium","depth": "Epipelagic", "yod": 1804, "OneIn": 36},
-            { "name": "Gymnura sereti", "family": "Gymnuridae", "order": "Myliobatiformes", "genus": "Gymnura", "size": "Unknown","depth": "Epipelagic", "yod": 2017, "OneIn": 20900000},
             { "name": "Tentacled Butterfly Ray", "family": "Gymnuridae", "order": "Myliobatiformes", "genus": "Gymnura", "size": "Tiny","depth": "Epipelagic", "yod": 1841, "OneIn": 65},
             { "name": "Zonetail Butterfly Ray", "family": "Gymnuridae", "order": "Myliobatiformes", "genus": "Gymnura", "size": "Small","depth": "Epipelagic", "yod": 1852, "OneIn": 101},
             // Hexatrygonidae | Myliobatiformes | Hexatrygon | 1 species
@@ -170,18 +155,15 @@ const rays = [
             { "name": "Bentfin Devil Ray", "family": "Mobulidae", "order": "Myliobatiformes", "genus": "Mobula", "size": "Medium","depth": "Epipelagic", "yod": 1908, "OneIn": 380},
             // Myliobatidae | Myliobatiformes | Aetomylaeus | 8 species
             { "name": "Rough Eagle Ray", "family": "Myliobatidae", "order": "Myliobatiformes", "genus": "Aetomylaeus", "size": "Tiny","depth": "Epipelagic", "yod": 1898, "OneIn": 320},
-            { "name": "Bull Ray", "family": "Myliobatidae", "order": "Myliobatiformes", "genus": "Aetomylaeus", "size": "Unknown","depth": "Epipelagic", "yod": 1817, "OneIn": 44},
             { "name": "Blue-Banded Eagle Ray", "family": "Myliobatidae", "order": "Myliobatiformes", "genus": "Aetomylaeus", "size": "Tiny","depth": "Epipelagic", "yod": 2015, "OneIn": 122000000},
             { "name": "Mottled Eagle Ray", "family": "Myliobatidae", "order": "Myliobatiformes", "genus": "Aetomylaeus", "size": "Medium","depth": "Epipelagic", "yod": 1834, "OneIn": 58},
             { "name": "Eagle Ray (Aetomylaeus milvus)", "family": "Myliobatidae", "order": "Myliobatiformes", "genus": "Aetomylaeus", "size": "Tiny","depth": "Epipelagic", "yod": 1841, "OneIn": 69},
             { "name": "Banded Eagle Ray", "family": "Myliobatidae", "order": "Myliobatiformes", "genus": "Aetomylaeus", "size": "Tiny","depth": "Epipelagic", "yod": 1801, "OneIn": 31},
             { "name": "Ornate Eagle Ray", "family": "Myliobatidae", "order": "Myliobatiformes", "genus": "Aetomylaeus", "size": "Medium","depth": "Epipelagic", "yod": 1852, "OneIn": 97},
-            { "name": "Wafic's Eagle Ray", "family": "Myliobatidae", "order": "Myliobatiformes", "genus": "Aetomylaeus", "size": "Unknown","depth": "Epipelagic", "yod": 2022, "OneIn": 46200000},
             // Myliobatidae | Myliobatiformes | Myliobatis | 12 species
             { "name": "Common Eagle Ray", "family": "Myliobatidae", "order": "Myliobatiformes", "genus": "Myliobatis", "size": "Medium","depth": "Mesopelagic", "yod": 1758, "OneIn": 9},
             { "name": "Australian Bull Ray", "family": "Myliobatidae", "order": "Myliobatiformes", "genus": "Myliobatis", "size": "Small","depth": "Epipelagic", "yod": 1881, "OneIn": 190},
             { "name": "Bat Eagle Ray", "family": "Myliobatidae", "order": "Myliobatiformes", "genus": "Myliobatis", "size": "Small","depth": "Epipelagic", "yod": 1865, "OneIn": 118},
-            { "name": "Chilean Eagle Ray", "family": "Myliobatidae", "order": "Myliobatiformes", "genus": "Myliobatis", "size": "Unknown","depth": "Epipelagic", "yod": 1892, "OneIn": 294},
             { "name": "Bullnose Eagle Ray", "family": "Myliobatidae", "order": "Myliobatiformes", "genus": "Myliobatis", "size": "Small","depth": "Epipelagic", "yod": 1824, "OneIn": 49},
             { "name": "Southern Eagle Ray", "family": "Myliobatidae", "order": "Myliobatiformes", "genus": "Myliobatis", "size": "Small","depth": "Epipelagic", "yod": 1885, "OneIn": 230},
             { "name": "Purple Eagle Ray", "family": "Myliobatidae", "order": "Myliobatiformes", "genus": "Myliobatis", "size": "Tiny","depth": "Epipelagic", "yod": 1911, "OneIn": 446},
@@ -203,24 +185,17 @@ const rays = [
             { "name": "Long-Tailed River Stingray", "family": "Potamotrygonidae", "order": "Myliobatiformes", "genus": "Plesiotrygon", "size": "Tiny","depth": "Epipelagic", "yod": 1987, "OneIn": 2330000},
             { "name": "Plesiotrygon nana", "family": "Potamotrygonidae", "order": "Myliobatiformes", "genus": "Plesiotrygon", "size": "Tiny","depth": "Epipelagic", "yod": 2011, "OneIn": 48100000},
             // Potamotrygonidae | Myliobatiformes | Potamotrygon | 31 species
-            { "name": "Potamotrygon adamastor", "family": "Potamotrygonidae", "order": "Myliobatiformes", "genus": "Potamotrygon", "size": "Unknown","depth": "Epipelagic", "yod": 2017, "OneIn": 24500000},
-            { "name": "Potamotrygon albimaculata", "family": "Potamotrygonidae", "order": "Myliobatiformes", "genus": "Potamotrygon", "size": "Unknown","depth": "Epipelagic", "yod": 2016, "OneIn": 12400000},
             { "name": "Potamotrygon amandae", "family": "Potamotrygonidae", "order": "Myliobatiformes", "genus": "Potamotrygon", "size": "Tiny","depth": "Epipelagic", "yod": 2013, "OneIn": 51700000},
             { "name": "Potamotrygon amazona", "family": "Potamotrygonidae", "order": "Myliobatiformes", "genus": "Potamotrygon", "size": "Tiny","depth": "Epipelagic", "yod": 2017, "OneIn": 205000000},
             { "name": "Potamotrygon boesemani", "family": "Potamotrygonidae", "order": "Myliobatiformes", "genus": "Potamotrygon", "size": "Tiny","depth": "Epipelagic", "yod": 2008, "OneIn": 301000},
             { "name": "Short-Tailed River Stingray", "family": "Potamotrygonidae", "order": "Myliobatiformes", "genus": "Potamotrygon", "size": "Small","depth": "Epipelagic", "yod": 1880, "OneIn": 160},
             { "name": "Thorny River Stingray", "family": "Potamotrygonidae", "order": "Myliobatiformes", "genus": "Potamotrygon", "size": "Tiny","depth": "Epipelagic", "yod": 1880, "OneIn": 2440},
             { "name": "Largespot River Stingray", "family": "Potamotrygonidae", "order": "Myliobatiformes", "genus": "Potamotrygon", "size": "Tiny","depth": "Epipelagic", "yod": 1963, "OneIn": 871},
-            { "name": "Potamotrygon garmani", "family": "Potamotrygonidae", "order": "Myliobatiformes", "genus": "Potamotrygon", "size": "Unknown","depth": "Epipelagic", "yod": 2017, "OneIn": 13800000},
             { "name": "Bigtooth River Stingray", "family": "Potamotrygonidae", "order": "Myliobatiformes", "genus": "Potamotrygon", "size": "Tiny","depth": "Epipelagic", "yod": 1855, "OneIn": 107},
             { "name": "Porcupine River Stingray", "family": "Potamotrygonidae", "order": "Myliobatiformes", "genus": "Potamotrygon", "size": "Tiny","depth": "Epipelagic", "yod": 1839, "OneIn": 1840},
-            { "name": "Potamotrygon humerosa", "family": "Potamotrygonidae", "order": "Myliobatiformes", "genus": "Potamotrygon", "size": "Unknown","depth": "Epipelagic", "yod": 1913, "OneIn": 491},
-            { "name": "Potamotrygon jabuti", "family": "Potamotrygonidae", "order": "Myliobatiformes", "genus": "Potamotrygon", "size": "Unknown","depth": "Epipelagic", "yod": 2016, "OneIn": 29900000},
             { "name": "White-Blotched River Stingray", "family": "Potamotrygonidae", "order": "Myliobatiformes", "genus": "Potamotrygon", "size": "Small","depth": "Epipelagic", "yod": 1970, "OneIn": 995},
             { "name": "Potamotrygon limai", "family": "Potamotrygonidae", "order": "Myliobatiformes", "genus": "Potamotrygon", "size": "Tiny","depth": "Epipelagic", "yod": 2014, "OneIn": 42700000},
             { "name": "Magdalena River Stingray", "family": "Potamotrygonidae", "order": "Myliobatiformes", "genus": "Potamotrygon", "size": "Tiny","depth": "Epipelagic", "yod": 1865, "OneIn": 120},
-            { "name": "Potamotrygon marinae", "family": "Potamotrygonidae", "order": "Myliobatiformes", "genus": "Potamotrygon", "size": "Unknown","depth": "Epipelagic", "yod": 2006, "OneIn": 402000},
-            { "name": "Potamotrygon marquesi", "family": "Potamotrygonidae", "order": "Myliobatiformes", "genus": "Potamotrygon", "size": "Unknown","depth": "Epipelagic", "yod": 2019, "OneIn": 43500000},
             { "name": "South American Freshwater Stingray", "family": "Potamotrygonidae", "order": "Myliobatiformes", "genus": "Potamotrygon", "size": "Tiny","depth": "Epipelagic", "yod": 1841, "OneIn": 66},
             { "name": "Red-Blotched River Stingray", "family": "Potamotrygonidae", "order": "Myliobatiformes", "genus": "Potamotrygon", "size": "Tiny","depth": "Epipelagic", "yod": 1912, "OneIn": 455},
             { "name": "Smooth Back River Stingray", "family": "Potamotrygonidae", "order": "Myliobatiformes", "genus": "Potamotrygon", "size": "Tiny","depth": "Epipelagic", "yod": 1855, "OneIn": 106},
@@ -231,7 +206,6 @@ const rays = [
             { "name": "Raspy River Stingray", "family": "Potamotrygonidae", "order": "Myliobatiformes", "genus": "Potamotrygon", "size": "Tiny","depth": "Epipelagic", "yod": 1913, "OneIn": 460},
             { "name": "Parnaiba River Stingray", "family": "Potamotrygonidae", "order": "Myliobatiformes", "genus": "Potamotrygon", "size": "Tiny","depth": "Epipelagic", "yod": 1913, "OneIn": 470},
             { "name": "Potamotrygon tatianae", "family": "Potamotrygonidae", "order": "Myliobatiformes", "genus": "Potamotrygon", "size": "Tiny","depth": "Epipelagic", "yod": 2011, "OneIn": 55000000},
-            { "name": "Potamotrygon tigrina", "family": "Potamotrygonidae", "order": "Myliobatiformes", "genus": "Potamotrygon", "size": "Unknown","depth": "Epipelagic", "yod": 2011, "OneIn": 390000},
             { "name": "Potamotrygon wallacei", "family": "Potamotrygonidae", "order": "Myliobatiformes", "genus": "Potamotrygon", "size": "Tiny","depth": "Epipelagic", "yod": 2016, "OneIn": 135000000},
             { "name": "Maracaibo River Stingray", "family": "Potamotrygonidae", "order": "Myliobatiformes", "genus": "Potamotrygon", "size": "Tiny","depth": "Epipelagic", "yod": 1970, "OneIn": 9570},
             // Potamotrygonidae | Myliobatiformes | Styracura | 2 species
@@ -263,7 +237,6 @@ const rays = [
             { "name": "Wide Stingaree", "family": "Urolophidae", "order": "Myliobatiformes", "genus": "Urolophus", "size": "Tiny","depth": "Mesopelagic", "yod": 1916, "OneIn": 16300},
             { "name": "Patchwork Stingaree", "family": "Urolophidae", "order": "Myliobatiformes", "genus": "Urolophus", "size": "Tiny","depth": "Mesopelagic", "yod": 1987, "OneIn": 97900},
             { "name": "Spotted Stingaree", "family": "Urolophidae", "order": "Myliobatiformes", "genus": "Urolophus", "size": "Tiny","depth": "Epipelagic", "yod": 1954, "OneIn": 4640},
-            { "name": "Java Stingaree", "family": "Urolophidae", "order": "Myliobatiformes", "genus": "Urolophus", "size": "Unknown","depth": "Mesopelagic", "yod": 1864, "OneIn": 117},
             { "name": "Kai Stingaree", "family": "Urolophidae", "order": "Myliobatiformes", "genus": "Urolophus", "size": "Tiny","depth": "Mesopelagic", "yod": 1880, "OneIn": 44000},
             { "name": "Kapala Stingaree", "family": "Urolophidae", "order": "Myliobatiformes", "genus": "Urolophus", "size": "Tiny","depth": "Epipelagic", "yod": 2006, "OneIn": 240000},
             { "name": "Lobed Stingaree", "family": "Urolophidae", "order": "Myliobatiformes", "genus": "Urolophus", "size": "Tiny","depth": "Epipelagic", "yod": 1966, "OneIn": 936},
@@ -286,13 +259,11 @@ const rays = [
             { "name": "Tumbes Round Stingray", "family": "Urotrygonidae", "order": "Myliobatiformes", "genus": "Urobatis", "size": "Tiny","depth": "Epipelagic", "yod": 1979, "OneIn": 40400},
             // Urotrygonidae | Myliobatiformes | Urotrygon | 13 species
             { "name": "Panamic Stingray", "family": "Urotrygonidae", "order": "Myliobatiformes", "genus": "Urotrygon", "size": "Tiny","depth": "Epipelagic", "yod": 1882, "OneIn": 200},
-            { "name": "Stingray (Urotrygon caudispinosus)", "family": "Urotrygonidae", "order": "Myliobatiformes", "genus": "Urotrygon", "size": "Unknown","depth": "Epipelagic", "yod": 1946, "OneIn": 713},
             { "name": "Blotched Stingray", "family": "Urotrygonidae", "order": "Myliobatiformes", "genus": "Urotrygon", "size": "Tiny","depth": "Epipelagic", "yod": 1872, "OneIn": 128},
             { "name": "Urotrygon cimar", "family": "Urotrygonidae", "order": "Myliobatiformes", "genus": "Urotrygon", "size": "Tiny","depth": "Epipelagic", "yod": 1998, "OneIn": 3400000},
             { "name": "Smalleyed Round Stingray", "family": "Urotrygonidae", "order": "Myliobatiformes", "genus": "Urotrygon", "size": "Tiny","depth": "Epipelagic", "yod": 1941, "OneIn": 4380},
             { "name": "Munda Round Ray", "family": "Urotrygonidae", "order": "Myliobatiformes", "genus": "Urotrygon", "size": "Tiny","depth": "Epipelagic", "yod": 1863, "OneIn": 114},
             { "name": "Dwarf Stingray", "family": "Urotrygonidae", "order": "Myliobatiformes", "genus": "Urotrygon", "size": "Tiny","depth": "Epipelagic", "yod": 1988, "OneIn": 129000},
-            { "name": "Peruvian Stingray", "family": "Urotrygonidae", "order": "Myliobatiformes", "genus": "Urotrygon", "size": "Unknown","depth": "Epipelagic", "yod": 1946, "OneIn": 723},
             { "name": "Reticulate Round Ray", "family": "Urotrygonidae", "order": "Myliobatiformes", "genus": "Urotrygon", "size": "Tiny","depth": "Epipelagic", "yod": 1988, "OneIn": 816000},
             { "name": "Thorny Stingray", "family": "Urotrygonidae", "order": "Myliobatiformes", "genus": "Urotrygon", "size": "Tiny","depth": "Epipelagic", "yod": 1895, "OneIn": 2860},
             { "name": "Stingray (Urotrygon serrula)", "family": "Urotrygonidae", "order": "Myliobatiformes", "genus": "Urotrygon", "size": "Tiny","depth": "Epipelagic", "yod": 1946, "OneIn": 740},
@@ -305,7 +276,6 @@ const rays = [
             // Anacanthobatidae | Rajiformes | Anacanthobatis | 3 species
             { "name": "East China Leg Skate", "family": "Anacanthobatidae", "order": "Rajiformes", "genus": "Anacanthobatis", "size": "Tiny","depth": "Mesopelagic", "yod": 1983, "OneIn": 783000},
             { "name": "Spotted Legskate", "family": "Anacanthobatidae", "order": "Rajiformes", "genus": "Anacanthobatis", "size": "Tiny","depth": "Mesopelagic", "yod": 1923, "OneIn": 36000},
-            { "name": "South China Leg Skate", "family": "Anacanthobatidae", "order": "Rajiformes", "genus": "Anacanthobatis", "size": "Unknown","depth": "Mesopelagic", "yod": 1981, "OneIn": 9810},
             // Anacanthobatidae | Rajiformes | Indobatis | 1 species
             { "name": "Black Legskate", "family": "Anacanthobatidae", "order": "Rajiformes", "genus": "Indobatis", "size": "Tiny","depth": "Bathypelagic", "yod": 1967, "OneIn": 591000},
             // Anacanthobatidae | Rajiformes | Schroederobatis | 1 species
@@ -313,13 +283,11 @@ const rays = [
             // Anacanthobatidae | Rajiformes | Sinobatis | 9 species
             { "name": "Andaman Legskate", "family": "Anacanthobatidae", "order": "Rajiformes", "genus": "Sinobatis", "size": "Tiny","depth": "Mesopelagic", "yod": 2016, "OneIn": 327000000},
             { "name": "Borneo Leg Skate", "family": "Anacanthobatidae", "order": "Rajiformes", "genus": "Sinobatis", "size": "Tiny","depth": "Bathypelagic", "yod": 1965, "OneIn": 60400},
-            { "name": "Shorttail Legskate", "family": "Anacanthobatidae", "order": "Rajiformes", "genus": "Sinobatis", "size": "Unknown","depth": "Bathypelagic", "yod": 2016, "OneIn": 140000000},
             { "name": "Western Australian Legskate", "family": "Anacanthobatidae", "order": "Rajiformes", "genus": "Sinobatis", "size": "Tiny","depth": "Bathypelagic", "yod": 2008, "OneIn": 61000000},
             { "name": "Blue Legskate", "family": "Anacanthobatidae", "order": "Rajiformes", "genus": "Sinobatis", "size": "Tiny","depth": "Bathypelagic", "yod": 2008, "OneIn": 65800000},
             { "name": "Eastern Australian Legskate", "family": "Anacanthobatidae", "order": "Rajiformes", "genus": "Sinobatis", "size": "Tiny","depth": "Mesopelagic", "yod": 2008, "OneIn": 33500000},
             { "name": "Sinobatis kotlyari", "family": "Anacanthobatidae", "order": "Rajiformes", "genus": "Sinobatis", "size": "Tiny","depth": "Bathypelagic", "yod": 2016, "OneIn": 398000000},
             { "name": "Blackbodied Leg Skate", "family": "Anacanthobatidae", "order": "Rajiformes", "genus": "Sinobatis", "size": "Tiny","depth": "Bathypelagic", "yod": 1965, "OneIn": 61500},
-            { "name": "Narrow Leg Skate", "family": "Anacanthobatidae", "order": "Rajiformes", "genus": "Sinobatis", "size": "Unknown","depth": "Mesopelagic", "yod": 1982, "OneIn": 10300},
             // Anacanthobatidae | Rajiformes | Springeria | 2 species
             { "name": "Leaf-Nose Leg Skate", "family": "Anacanthobatidae", "order": "Rajiformes", "genus": "Springeria", "size": "Tiny","depth": "Mesopelagic", "yod": 1951, "OneIn": 8550},
             { "name": "Longnose Leg Skate", "family": "Anacanthobatidae", "order": "Rajiformes", "genus": "Springeria", "size": "Tiny","depth": "Bathypelagic", "yod": 1962, "OneIn": 59000},
@@ -357,7 +325,6 @@ const rays = [
             { "name": "Sandpaper Skate", "family": "Arhynchobatidae", "order": "Rajiformes", "genus": "Bathyraja", "size": "Tiny","depth": "Bathypelagic", "yod": 1908, "OneIn": 53000},
             { "name": "Domino Skate", "family": "Arhynchobatidae", "order": "Rajiformes", "genus": "Bathyraja", "size": "Tiny","depth": "Bathypelagic", "yod": 2012, "OneIn": 59500000},
             { "name": "Commander Skate", "family": "Arhynchobatidae", "order": "Rajiformes", "genus": "Bathyraja", "size": "Tiny","depth": "Bathypelagic", "yod": 1977, "OneIn": 69100},
-            { "name": "Slimtail Skate", "family": "Arhynchobatidae", "order": "Rajiformes", "genus": "Bathyraja", "size": "Unknown","depth": "Mesopelagic", "yod": 1959, "OneIn": 840},
             { "name": "Mccain's Skate", "family": "Arhynchobatidae", "order": "Rajiformes", "genus": "Bathyraja", "size": "Small","depth": "Mesopelagic", "yod": 1971, "OneIn": 1000},
             { "name": "Patagonian Skate", "family": "Arhynchobatidae", "order": "Rajiformes", "genus": "Bathyraja", "size": "Tiny","depth": "Bathypelagic", "yod": 1937, "OneIn": 650},
             { "name": "White-Blotched Skate", "family": "Arhynchobatidae", "order": "Rajiformes", "genus": "Bathyraja", "size": "Small","depth": "Bathypelagic", "yod": 1977, "OneIn": 69900},
@@ -387,8 +354,6 @@ const rays = [
             { "name": "Mud Skate", "family": "Arhynchobatidae", "order": "Rajiformes", "genus": "Bathyraja", "size": "Tiny","depth": "Bathypelagic", "yod": 1983, "OneIn": 29000000},
             { "name": "Eremo Skate", "family": "Arhynchobatidae", "order": "Rajiformes", "genus": "Bathyraja", "size": "Tiny","depth": "Mesopelagic", "yod": 1958, "OneIn": 8800},
             { "name": "Roughtail Skate", "family": "Arhynchobatidae", "order": "Rajiformes", "genus": "Bathyraja", "size": "Tiny","depth": "Bathypelagic", "yod": 1892, "OneIn": 49100},
-            { "name": "Bathyraja tunae", "family": "Arhynchobatidae", "order": "Rajiformes", "genus": "Bathyraja", "size": "Unknown","depth": "Bathypelagic", "yod": 2005, "OneIn": 5180000},
-            { "name": "Creamback Skate", "family": "Arhynchobatidae", "order": "Rajiformes", "genus": "Bathyraja", "size": "Unknown","depth": "Bathypelagic", "yod": 1983, "OneIn": 436000},
             { "name": "Okhotsk Skate", "family": "Arhynchobatidae", "order": "Rajiformes", "genus": "Bathyraja", "size": "Small","depth": "Bathypelagic", "yod": 1935, "OneIn": 7990},
             // Arhynchobatidae | Rajiformes | Brochiraja | 8 species
             { "name": "Brochiraja aenigma", "family": "Arhynchobatidae", "order": "Rajiformes", "genus": "Brochiraja", "size": "Tiny","depth": "Mesopelagic", "yod": 2006, "OneIn": 26000000},
@@ -401,7 +366,6 @@ const rays = [
             { "name": "Brochiraja vittacauda", "family": "Arhynchobatidae", "order": "Rajiformes", "genus": "Brochiraja", "size": "Tiny","depth": "Mesopelagic", "yod": 2012, "OneIn": 116000000},
             // Arhynchobatidae | Rajiformes | Insentiraja | 2 species
             { "name": "Eastern Looseskin Skate", "family": "Arhynchobatidae", "order": "Rajiformes", "genus": "Insentiraja", "size": "Tiny","depth": "Mesopelagic", "yod": 1992, "OneIn": 159000},
-            { "name": "Velvet Skate", "family": "Arhynchobatidae", "order": "Rajiformes", "genus": "Insentiraja", "size": "Unknown","depth": "Bathypelagic", "yod": 1989, "OneIn": 133000},
             // Arhynchobatidae | Rajiformes | Irolita | 2 species
             { "name": "Southern Round Skate", "family": "Arhynchobatidae", "order": "Rajiformes", "genus": "Irolita", "size": "Tiny","depth": "Epipelagic", "yod": 1911, "OneIn": 3490},
             { "name": "Western Round Skate", "family": "Arhynchobatidae", "order": "Rajiformes", "genus": "Irolita", "size": "Tiny","depth": "Mesopelagic", "yod": 2008, "OneIn": 7280000},
@@ -417,7 +381,6 @@ const rays = [
             { "name": "Barbedwire-Tailed Skate", "family": "Arhynchobatidae", "order": "Rajiformes", "genus": "Notoraja", "size": "Tiny","depth": "Bathypelagic", "yod": 2016, "OneIn": 418000000},
             { "name": "Pale Skate", "family": "Arhynchobatidae", "order": "Rajiformes", "genus": "Notoraja", "size": "Tiny","depth": "Mesopelagic", "yod": 1994, "OneIn": 169000},
             { "name": "Sapphire Skate", "family": "Arhynchobatidae", "order": "Rajiformes", "genus": "Notoraja", "size": "Tiny","depth": "Bathypelagic", "yod": 2009, "OneIn": 246000000},
-            { "name": "Papuan Velvet Skate", "family": "Arhynchobatidae", "order": "Rajiformes", "genus": "Notoraja", "size": "Unknown","depth": "Mesopelagic", "yod": 2017, "OneIn": 49000000},
             { "name": "Blotched Skate", "family": "Arhynchobatidae", "order": "Rajiformes", "genus": "Notoraja", "size": "Tiny","depth": "Bathypelagic", "yod": 2008, "OneIn": 78600000},
             { "name": "Leadhued Skate", "family": "Arhynchobatidae", "order": "Rajiformes", "genus": "Notoraja", "size": "Tiny","depth": "Bathypelagic", "yod": 1940, "OneIn": 2530000},
             { "name": "Notoraja yurii", "family": "Arhynchobatidae", "order": "Rajiformes", "genus": "Notoraja", "size": "Tiny","depth": "Bathypelagic", "yod": 2021, "OneIn": 453000000},
@@ -438,7 +401,6 @@ const rays = [
             { "name": "Spade Sand Skate", "family": "Arhynchobatidae", "order": "Rajiformes", "genus": "Psammobatis", "size": "Tiny","depth": "Epipelagic", "yod": 1891, "OneIn": 260},
             { "name": "Raspthorn Sand Skate", "family": "Arhynchobatidae", "order": "Rajiformes", "genus": "Psammobatis", "size": "Tiny","depth": "Mesopelagic", "yod": 1857, "OneIn": 6260},
             // Arhynchobatidae | Rajiformes | Pseudoraja | 1 species
-            { "name": "Fanfin Skate", "family": "Arhynchobatidae", "order": "Rajiformes", "genus": "Pseudoraja", "size": "Unknown","depth": "Mesopelagic", "yod": 1954, "OneIn": 4600},
             // Arhynchobatidae | Rajiformes | Rhinoraja | 3 species
             { "name": "Dapple-Bellied Softnose Skate", "family": "Arhynchobatidae", "order": "Rajiformes", "genus": "Rhinoraja", "size": "Tiny","depth": "Mesopelagic", "yod": 1916, "OneIn": 10600},
             { "name": "White-Bellied Softnose Skate", "family": "Arhynchobatidae", "order": "Rajiformes", "genus": "Rhinoraja", "size": "Tiny","depth": "Mesopelagic", "yod": 1952, "OneIn": 8700},
@@ -451,21 +413,12 @@ const rays = [
             { "name": "Shorttail Fanskate", "family": "Arhynchobatidae", "order": "Rajiformes", "genus": "Sympterygia", "size": "Tiny","depth": "Epipelagic", "yod": 1877, "OneIn": 134},
             { "name": "Filetail Fanskate", "family": "Arhynchobatidae", "order": "Rajiformes", "genus": "Sympterygia", "size": "Tiny","depth": "Epipelagic", "yod": 1835, "OneIn": 60},
             // Gurgesiellidae | Rajiformes | Cruriraja | 8 species
-            { "name": "Andaman Leg Skate", "family": "Gurgesiellidae", "order": "Rajiformes", "genus": "Cruriraja", "size": "Unknown","depth": "Mesopelagic", "yod": 1909, "OneIn": 3350},
-            { "name": "Cuban Legskate", "family": "Gurgesiellidae", "order": "Rajiformes", "genus": "Cruriraja", "size": "Unknown","depth": "Mesopelagic", "yod": 1948, "OneIn": 763},
-            { "name": "Broadfoot Leg Skate", "family": "Gurgesiellidae", "order": "Rajiformes", "genus": "Cruriraja", "size": "Unknown","depth": "Mesopelagic", "yod": 1962, "OneIn": 862},
             { "name": "Smoothnose Legskate", "family": "Gurgesiellidae", "order": "Rajiformes", "genus": "Cruriraja", "size": "Tiny","depth": "Mesopelagic", "yod": 1923, "OneIn": 26500},
             { "name": "Roughnose Legskate (Cruriraja hulleyi)", "family": "Gurgesiellidae", "order": "Rajiformes", "genus": "Cruriraja", "size": "Tiny","depth": "Mesopelagic", "yod": 2010, "OneIn": 85200000},
             { "name": "Roughnose Legskate (Cruriraja parcomaculata)", "family": "Gurgesiellidae", "order": "Rajiformes", "genus": "Cruriraja", "size": "Tiny","depth": "Mesopelagic", "yod": 1923, "OneIn": 7590},
             { "name": "Cuban Leg Skate", "family": "Gurgesiellidae", "order": "Rajiformes", "genus": "Cruriraja", "size": "Tiny","depth": "Mesopelagic", "yod": 1948, "OneIn": 46300},
-            { "name": "Rough Leg Skate", "family": "Gurgesiellidae", "order": "Rajiformes", "genus": "Cruriraja", "size": "Unknown","depth": "Bathypelagic", "yod": 1958, "OneIn": 27500},
             // Gurgesiellidae | Rajiformes | Fenestraja | 8 species
-            { "name": "Blackfin Pygmy Skate", "family": "Gurgesiellidae", "order": "Rajiformes", "genus": "Fenestraja", "size": "Unknown","depth": "Mesopelagic", "yod": 1950, "OneIn": 786},
-            { "name": "Cuban Pygmy Skate", "family": "Gurgesiellidae", "order": "Rajiformes", "genus": "Fenestraja", "size": "Unknown","depth": "Mesopelagic", "yod": 1950, "OneIn": 765},
-            { "name": "Plain Pygmy Skate", "family": "Gurgesiellidae", "order": "Rajiformes", "genus": "Fenestraja", "size": "Unknown","depth": "Mesopelagic", "yod": 1962, "OneIn": 5060},
             { "name": "Madagascar Pygmy Skate", "family": "Gurgesiellidae", "order": "Rajiformes", "genus": "Fenestraja", "size": "Tiny","depth": "Mesopelagic", "yod": 1989, "OneIn": 822000},
-            { "name": "Prickly Skate", "family": "Gurgesiellidae", "order": "Rajiformes", "genus": "Fenestraja", "size": "Unknown","depth": "Bathypelagic", "yod": 1889, "OneIn": 6820},
-            { "name": "Pluto Skate", "family": "Gurgesiellidae", "order": "Rajiformes", "genus": "Fenestraja", "size": "Unknown","depth": "Mesopelagic", "yod": 1881, "OneIn": 2600},
             { "name": "Siboga Skate", "family": "Gurgesiellidae", "order": "Rajiformes", "genus": "Fenestraja", "size": "Tiny","depth": "Mesopelagic", "yod": 1913, "OneIn": 35600},
             { "name": "Gulf Skate", "family": "Gurgesiellidae", "order": "Rajiformes", "genus": "Fenestraja", "size": "Tiny","depth": "Mesopelagic", "yod": 1950, "OneIn": 8360},
             // Gurgesiellidae | Rajiformes | Gurgesiella | 3 species
@@ -507,11 +460,9 @@ const rays = [
             { "name": "Pygmy Thornback Skate", "family": "Rajidae", "order": "Rajiformes", "genus": "Dentiraja", "size": "Tiny","depth": "Epipelagic", "yod": 2008, "OneIn": 307000},
             { "name": "Heald's Skate", "family": "Rajidae", "order": "Rajiformes", "genus": "Dentiraja", "size": "Tiny","depth": "Mesopelagic", "yod": 2008, "OneIn": 22500000},
             { "name": "Thornback Skate", "family": "Rajidae", "order": "Rajiformes", "genus": "Dentiraja", "size": "Tiny","depth": "Epipelagic", "yod": 1845, "OneIn": 86},
-            { "name": "Ocellate Skate (Dentiraja oculus)", "family": "Rajidae", "order": "Rajiformes", "genus": "Dentiraja", "size": "Unknown","depth": "Mesopelagic", "yod": 2008, "OneIn": 633000},
             { "name": "Argus Skate", "family": "Rajidae", "order": "Rajiformes", "genus": "Dentiraja", "size": "Tiny","depth": "Mesopelagic", "yod": 1910, "OneIn": 45000},
             // Rajidae | Rajiformes | Dipturus | 42 species
             { "name": "Deepwater Skate", "family": "Rajidae", "order": "Rajiformes", "genus": "Dipturus", "size": "Small","depth": "Bathypelagic", "yod": 2008, "OneIn": 6250000},
-            { "name": "Ridgeback Skate", "family": "Rajidae", "order": "Rajiformes", "genus": "Dipturus", "size": "Unknown","depth": "Mesopelagic", "yod": 2013, "OneIn": 325000},
             { "name": "Pale Tropical Skate", "family": "Rajidae", "order": "Rajiformes", "genus": "Dipturus", "size": "Tiny","depth": "Mesopelagic", "yod": 2008, "OneIn": 19000000},
             { "name": "Argentine Skate", "family": "Rajidae", "order": "Rajiformes", "genus": "Dipturus", "size": "Small","depth": "Epipelagic", "yod": 2008, "OneIn": 769000},
             { "name": "Blue Skate (Dipturus batis)", "family": "Rajidae", "order": "Rajiformes", "genus": "Dipturus", "size": "Medium","depth": "Mesopelagic", "yod": 1758, "OneIn": 10},
@@ -557,7 +508,6 @@ const rays = [
             // Rajidae | Rajiformes | Leucoraja | 15 species
             { "name": "Sandy Ray", "family": "Rajidae", "order": "Rajiformes", "genus": "Leucoraja", "size": "Small","depth": "Mesopelagic", "yod": 1838, "OneIn": 1800},
             { "name": "Tigertail Skate", "family": "Rajidae", "order": "Rajiformes", "genus": "Leucoraja", "size": "Tiny","depth": "Mesopelagic", "yod": 1995, "OneIn": 612000},
-            { "name": "Elaine's Skate", "family": "Rajidae", "order": "Rajiformes", "genus": "Leucoraja", "size": "Unknown","depth": "Mesopelagic", "yod": 2019, "OneIn": 253000000},
             { "name": "Little Skate", "family": "Rajidae", "order": "Rajiformes", "genus": "Leucoraja", "size": "Tiny","depth": "Mesopelagic", "yod": 1825, "OneIn": 24500},
             { "name": "Shagreen Ray", "family": "Rajidae", "order": "Rajiformes", "genus": "Leucoraja", "size": "Small","depth": "Mesopelagic", "yod": 1758, "OneIn": 1130},
             { "name": "Rosette Skate", "family": "Rajidae", "order": "Rajiformes", "genus": "Leucoraja", "size": "Tiny","depth": "Mesopelagic", "yod": 1939, "OneIn": 8200},
@@ -591,27 +541,22 @@ const rays = [
             { "name": "Ocellate Spot Skate", "family": "Rajidae", "order": "Rajiformes", "genus": "Okamejei", "size": "Tiny","depth": "Mesopelagic", "yod": 1841, "OneIn": 5990},
             { "name": "Thintail Skate (Okamejei leptoura)", "family": "Rajidae", "order": "Rajiformes", "genus": "Okamejei", "size": "Tiny","depth": "Mesopelagic", "yod": 2008, "OneIn": 9970000},
             { "name": "Bigeye Skate", "family": "Rajidae", "order": "Rajiformes", "genus": "Okamejei", "size": "Tiny","depth": "Epipelagic", "yod": 1860, "OneIn": 109},
-            { "name": "Okamejei mengae", "family": "Rajidae", "order": "Rajiformes", "genus": "Okamejei", "size": "Unknown","depth": "Epipelagic", "yod": 2007, "OneIn": 414000},
             { "name": "Ornate Skate", "family": "Rajidae", "order": "Rajiformes", "genus": "Okamejei", "size": "Tiny","depth": "Mesopelagic", "yod": 2015, "OneIn": 313000000},
             { "name": "Philippine Skate", "family": "Rajidae", "order": "Rajiformes", "genus": "Okamejei", "size": "Tiny","depth": "Epipelagic", "yod": 2022, "OneIn": 258000000},
             { "name": "Okamejei picta", "family": "Rajidae", "order": "Rajiformes", "genus": "Okamejei", "size": "Tiny","depth": "Mesopelagic", "yod": 2023, "OneIn": 318000000},
-            { "name": "Browneye Skate", "family": "Rajidae", "order": "Rajiformes", "genus": "Okamejei", "size": "Unknown","depth": "Epipelagic", "yod": 1958, "OneIn": 804},
             // Rajidae | Rajiformes | Orbiraja | 3 species
             { "name": "Sulu Sea Skate", "family": "Rajidae", "order": "Rajiformes", "genus": "Orbiraja", "size": "Tiny","depth": "Epipelagic", "yod": 2010, "OneIn": 51000000},
-            { "name": "Orbiraja philipi", "family": "Rajidae", "order": "Rajiformes", "genus": "Orbiraja", "size": "Unknown","depth": "Epipelagic", "yod": 1906, "OneIn": 353},
             { "name": "Indian Ring Skate", "family": "Rajidae", "order": "Rajiformes", "genus": "Orbiraja", "size": "Tiny","depth": "Mesopelagic", "yod": 1898, "OneIn": 7000},
             // Rajidae | Rajiformes | Raja | 19 species
             { "name": "Mediterranean Starry Ray", "family": "Rajidae", "order": "Rajiformes", "genus": "Raja", "size": "Tiny","depth": "Mesopelagic", "yod": 1809, "OneIn": 30200},
             { "name": "Blonde Ray", "family": "Rajidae", "order": "Rajiformes", "genus": "Raja", "size": "Small","depth": "Mesopelagic", "yod": 1873, "OneIn": 129},
             { "name": "Thornback Ray", "family": "Rajidae", "order": "Rajiformes", "genus": "Raja", "size": "Small","depth": "Bathypelagic", "yod": 1758, "OneIn": 5490},
-            { "name": "Raja cyanoplax", "family": "Rajidae", "order": "Rajiformes", "genus": "Raja", "size": "Unknown","depth": "Mesopelagic", "yod": 2023, "OneIn": 47400000},
             { "name": "Cape Verde Skate", "family": "Rajidae", "order": "Rajiformes", "genus": "Raja", "size": "Tiny","depth": "Epipelagic", "yod": 1965, "OneIn": 917},
             { "name": "Madeiran Ray", "family": "Rajidae", "order": "Rajiformes", "genus": "Raja", "size": "Tiny","depth": "Mesopelagic", "yod": 1838, "OneIn": 31700},
             { "name": "African Ray", "family": "Rajidae", "order": "Rajiformes", "genus": "Raja", "size": "Tiny","depth": "Mesopelagic", "yod": 2021, "OneIn": 292000000},
             { "name": "Small-Eyed Ray", "family": "Rajidae", "order": "Rajiformes", "genus": "Raja", "size": "Tiny","depth": "Epipelagic", "yod": 1818, "OneIn": 1500},
             { "name": "Brown Ray", "family": "Rajidae", "order": "Rajiformes", "genus": "Raja", "size": "Tiny","depth": "Mesopelagic", "yod": 1758, "OneIn": 13400},
             { "name": "Spotted Ray", "family": "Rajidae", "order": "Rajiformes", "genus": "Raja", "size": "Small","depth": "Mesopelagic", "yod": 1910, "OneIn": 3400},
-            { "name": "Raja ocellifera", "family": "Rajidae", "order": "Rajiformes", "genus": "Raja", "size": "Unknown","depth": "Mesopelagic", "yod": 1906, "OneIn": 350},
             { "name": "African Brown Skate", "family": "Rajidae", "order": "Rajiformes", "genus": "Raja", "size": "Tiny","depth": "Epipelagic", "yod": 2016, "OneIn": 113000000},
             { "name": "Pita Skate", "family": "Rajidae", "order": "Rajiformes", "genus": "Raja", "size": "Tiny","depth": "Epipelagic", "yod": 1995, "OneIn": 173000},
             { "name": "Speckled Ray", "family": "Rajidae", "order": "Rajiformes", "genus": "Raja", "size": "Tiny","depth": "Mesopelagic", "yod": 1923, "OneIn": 7680},
@@ -642,7 +587,6 @@ const rays = [
             // Rajidae | Rajiformes | Rostroraja | 8 species
             { "name": "Ocellate Skate (Rostroraja ackleyi)", "family": "Rajidae", "order": "Rajiformes", "genus": "Rostroraja", "size": "Tiny","depth": "Mesopelagic", "yod": 1881, "OneIn": 33600},
             { "name": "White Skate", "family": "Rajidae", "order": "Rajiformes", "genus": "Rostroraja", "size": "Medium","depth": "Mesopelagic", "yod": 1803, "OneIn": 1330},
-            { "name": "Bahama Skate", "family": "Rajidae", "order": "Rajiformes", "genus": "Rostroraja", "size": "Unknown","depth": "Mesopelagic", "yod": 1965, "OneIn": 921},
             { "name": "Finspot Ray", "family": "Rajidae", "order": "Rajiformes", "genus": "Rostroraja", "size": "Tiny","depth": "Epipelagic", "yod": 1964, "OneIn": 898},
             { "name": "Clearnose Skate", "family": "Rajidae", "order": "Rajiformes", "genus": "Rostroraja", "size": "Tiny","depth": "Mesopelagic", "yod": 1800, "OneIn": 5820},
             { "name": "Equatorial Skate", "family": "Rajidae", "order": "Rajiformes", "genus": "Rostroraja", "size": "Tiny","depth": "Epipelagic", "yod": 1890, "OneIn": 2700},
@@ -660,9 +604,7 @@ const rays = [
             { "name": "Blackchin Guitarfish", "family": "Glaucostegidae", "order": "Rhinopristiformes", "genus": "Glaucostegus", "size": "Medium","depth": "Epipelagic", "yod": 1817, "OneIn": 45},
             { "name": "Granulated Guitarfish", "family": "Glaucostegidae", "order": "Rhinopristiformes", "genus": "Glaucostegus", "size": "Medium","depth": "Epipelagic", "yod": 1829, "OneIn": 51},
             { "name": "Halavi Ray", "family": "Glaucostegidae", "order": "Rhinopristiformes", "genus": "Glaucostegus", "size": "Small","depth": "Epipelagic", "yod": 1775, "OneIn": 16},
-            { "name": "Smalleyed Guitarfish", "family": "Glaucostegidae", "order": "Rhinopristiformes", "genus": "Glaucostegus", "size": "Unknown","depth": "Epipelagic", "yod": 1959, "OneIn": 827},
             { "name": "Widenose Guitarfish", "family": "Glaucostegidae", "order": "Rhinopristiformes", "genus": "Glaucostegus", "size": "Small","depth": "Epipelagic", "yod": 1841, "OneIn": 64},
-            { "name": "Madagascar Guitarfish", "family": "Glaucostegidae", "order": "Rhinopristiformes", "genus": "Glaucostegus", "size": "Unknown","depth": "Epipelagic", "yod": 1929, "OneIn": 605},
             { "name": "Spiny Guitarfish", "family": "Glaucostegidae", "order": "Rhinopristiformes", "genus": "Glaucostegus", "size": "Tiny","depth": "Epipelagic", "yod": 1870, "OneIn": 127},
             { "name": "Thouin Ray", "family": "Glaucostegidae", "order": "Rhinopristiformes", "genus": "Glaucostegus", "size": "Medium","depth": "Epipelagic", "yod": 1798, "OneIn": 22},
             { "name": "Giant Shovelnose Ray", "family": "Glaucostegidae", "order": "Rhinopristiformes", "genus": "Glaucostegus", "size": "Medium","depth": "Epipelagic", "yod": 1830, "OneIn": 52},
@@ -702,7 +644,6 @@ const rays = [
             { "name": "Stripenose Guitarfish", "family": "Rhinobatidae", "order": "Rhinopristiformes", "genus": "Acroteriobatus", "size": "Tiny","depth": "Epipelagic", "yod": 1973, "OneIn": 9620},
             { "name": "Zanzibar Guitarfish", "family": "Rhinobatidae", "order": "Rhinopristiformes", "genus": "Acroteriobatus", "size": "Tiny","depth": "Epipelagic", "yod": 1926, "OneIn": 571},
             // Rhinobatidae | Rhinopristiformes | Pseudobatos | 9 species
-            { "name": "Spadenose Guitarfish", "family": "Rhinobatidae", "order": "Rhinopristiformes", "genus": "Pseudobatos", "size": "Unknown","depth": "Epipelagic", "yod": 2019, "OneIn": 56700000},
             { "name": "Speckled Guitarfish (Pseudobatos glaucostigma)", "family": "Rhinobatidae", "order": "Rhinopristiformes", "genus": "Pseudobatos", "size": "Tiny","depth": "Epipelagic", "yod": 1883, "OneIn": 2690},
             { "name": "Brazilian Guitarfish", "family": "Rhinobatidae", "order": "Rhinopristiformes", "genus": "Pseudobatos", "size": "Small","depth": "Epipelagic", "yod": 1841, "OneIn": 79},
             { "name": "Atlantic Guitarfish", "family": "Rhinobatidae", "order": "Rhinopristiformes", "genus": "Pseudobatos", "size": "Tiny","depth": "Epipelagic", "yod": 1880, "OneIn": 135},
@@ -714,7 +655,6 @@ const rays = [
             // Rhinobatidae | Rhinopristiformes | Rhinobatos | 20 species
             { "name": "Whitespotted Guitarfish", "family": "Rhinobatidae", "order": "Rhinopristiformes", "genus": "Rhinobatos", "size": "Tiny","depth": "Epipelagic", "yod": 1930, "OneIn": 4120},
             { "name": "Annandale's Guitarfish", "family": "Rhinobatidae", "order": "Rhinopristiformes", "genus": "Rhinobatos", "size": "Tiny","depth": "Epipelagic", "yod": 1926, "OneIn": 4080},
-            { "name": "Austin's Guitarfish", "family": "Rhinobatidae", "order": "Rhinopristiformes", "genus": "Rhinobatos", "size": "Unknown","depth": "Epipelagic", "yod": 2017, "OneIn": 15000000},
             { "name": "Borneo Guitarfish", "family": "Rhinobatidae", "order": "Rhinopristiformes", "genus": "Rhinobatos", "size": "Tiny","depth": "Epipelagic", "yod": 2016, "OneIn": 94500000},
             { "name": "Taiwan Guitarfish", "family": "Rhinobatidae", "order": "Rhinopristiformes", "genus": "Rhinobatos", "size": "Tiny","depth": "Epipelagic", "yod": 1926, "OneIn": 557},
             { "name": "Slender Guitarfish", "family": "Rhinobatidae", "order": "Rhinopristiformes", "genus": "Rhinobatos", "size": "Small","depth": "Mesopelagic", "yod": 1922, "OneIn": 527},
@@ -733,7 +673,6 @@ const rays = [
             { "name": "Shaw's Shovelnose Guitar Fish", "family": "Rhinobatidae", "order": "Rhinopristiformes", "genus": "Rhinobatos", "size": "Small","depth": "Epipelagic", "yod": 1804, "OneIn": 33},
             { "name": "Philippine Guitarfish", "family": "Rhinobatidae", "order": "Rhinopristiformes", "genus": "Rhinobatos", "size": "Tiny","depth": "Epipelagic", "yod": 2014, "OneIn": 41600000},
             // Rhinobatidae | Rhinopristiformes | Tarsistes | 1 species
-            { "name": "Tarsistes philippii", "family": "Rhinobatidae", "order": "Rhinopristiformes", "genus": "Tarsistes", "size": "Unknown","depth": "Epipelagic", "yod": 1919, "OneIn": 523},
             // Trygonorrhinidae | Rhinopristiformes | Aptychotrema | 3 species
             { "name": "Eastern Shovelnose Ray", "family": "Trygonorrhinidae", "order": "Rhinopristiformes", "genus": "Aptychotrema", "size": "Small","depth": "Mesopelagic", "yod": 1794, "OneIn": 21},
             { "name": "Spotted Shovelnose Ray", "family": "Trygonorrhinidae", "order": "Rhinopristiformes", "genus": "Aptychotrema", "size": "Tiny","depth": "Epipelagic", "yod": 2004, "OneIn": 217000},
@@ -757,9 +696,7 @@ const rays = [
             { "name": "Colombian Dwarf Numbfish", "family": "Narcinidae", "order": "Torpediniformes", "genus": "Diplobatis", "size": "Tiny","depth": "Epipelagic", "yod": 1984, "OneIn": 78900},
             { "name": "Venezuelan Dwarf Numbfish", "family": "Narcinidae", "order": "Torpediniformes", "genus": "Diplobatis", "size": "Tiny","depth": "Epipelagic", "yod": 1957, "OneIn": 800},
             { "name": "Ocellated Electric Ray", "family": "Narcinidae", "order": "Torpediniformes", "genus": "Diplobatis", "size": "Tiny","depth": "Epipelagic", "yod": 1890, "OneIn": 252},
-            { "name": "Painted Electric Ray", "family": "Narcinidae", "order": "Torpediniformes", "genus": "Diplobatis", "size": "Unknown","depth": "Epipelagic", "yod": 1950, "OneIn": 777},
             // Narcinidae | Torpediniformes | Discopyge | 2 species
-            { "name": "Castello's Apron Numbfish", "family": "Narcinidae", "order": "Torpediniformes", "genus": "Discopyge", "size": "Unknown","depth": "Epipelagic", "yod": 2008, "OneIn": 385000},
             { "name": "Apron Ray", "family": "Narcinidae", "order": "Torpediniformes", "genus": "Discopyge", "size": "Tiny","depth": "Epipelagic", "yod": 1846, "OneIn": 89},
             // Narcinidae | Torpediniformes | Narcine | 16 species
             { "name": "Oman Numbfish", "family": "Narcinidae", "order": "Torpediniformes", "genus": "Narcine", "size": "Tiny","depth": "Epipelagic", "yod": 2003, "OneIn": 212000},
@@ -769,7 +706,6 @@ const rays = [
             { "name": "Shortlip Electric Ray", "family": "Narcinidae", "order": "Torpediniformes", "genus": "Narcine", "size": "Tiny","depth": "Epipelagic", "yod": 1966, "OneIn": 5100},
             { "name": "Brown Numbfish", "family": "Narcinidae", "order": "Torpediniformes", "genus": "Narcine", "size": "Tiny","depth": "Epipelagic", "yod": 1909, "OneIn": 410},
             { "name": "Giant Electric Ray", "family": "Narcinidae", "order": "Torpediniformes", "genus": "Narcine", "size": "Small","depth": "Epipelagic", "yod": 1895, "OneIn": 314},
-            { "name": "Madagascar Numbfish", "family": "Narcinidae", "order": "Torpediniformes", "genus": "Narcine", "size": "Unknown","depth": "Epipelagic", "yod": 2002, "OneIn": 394000},
             { "name": "Leopard Numbfish", "family": "Narcinidae", "order": "Torpediniformes", "genus": "Narcine", "size": "Tiny","depth": "Epipelagic", "yod": 2001, "OneIn": 3510000},
             { "name": "Chinese Numbfish", "family": "Narcinidae", "order": "Torpediniformes", "genus": "Narcine", "size": "Tiny","depth": "Epipelagic", "yod": 1846, "OneIn": 87},
             { "name": "Darkfinned Numbfish", "family": "Narcinidae", "order": "Torpediniformes", "genus": "Narcine", "size": "Tiny","depth": "Epipelagic", "yod": 1804, "OneIn": 34},
@@ -781,7 +717,6 @@ const rays = [
             // Narcinidae | Torpediniformes | Narcinops | 5 species
             { "name": "Western Numbfish", "family": "Narcinidae", "order": "Torpediniformes", "genus": "Narcinops", "size": "Tiny","depth": "Mesopelagic", "yod": 2002, "OneIn": 4550000},
             { "name": "Eastern Numbfish", "family": "Narcinidae", "order": "Torpediniformes", "genus": "Narcinops", "size": "Tiny","depth": "Mesopelagic", "yod": 2008, "OneIn": 6740000},
-            { "name": "Narcinops ornatus", "family": "Narcinidae", "order": "Torpediniformes", "genus": "Narcinops", "size": "Unknown","depth": "Epipelagic", "yod": 2008, "OneIn": 293000},
             { "name": "Tasmanian Numbfish", "family": "Narcinidae", "order": "Torpediniformes", "genus": "Narcinops", "size": "Tiny","depth": "Mesopelagic", "yod": 1841, "OneIn": 42800},
             { "name": "Banded Numbfish", "family": "Narcinidae", "order": "Torpediniformes", "genus": "Narcinops", "size": "Tiny","depth": "Epipelagic", "yod": 1966, "OneIn": 958},
             // Narkidae | Torpediniformes | Crassinarke | 1 species
@@ -792,7 +727,6 @@ const rays = [
             { "name": "Elat Electric Ray", "family": "Narkidae", "order": "Torpediniformes", "genus": "Heteronarce", "size": "Tiny","depth": "Epipelagic", "yod": 1989, "OneIn": 885000},
             { "name": "Natal Electric Ray", "family": "Narkidae", "order": "Torpediniformes", "genus": "Heteronarce", "size": "Tiny","depth": "Mesopelagic", "yod": 1921, "OneIn": 7500},
             { "name": "Soft Electric Ray", "family": "Narkidae", "order": "Torpediniformes", "genus": "Heteronarce", "size": "Tiny","depth": "Mesopelagic", "yod": 1907, "OneIn": 7220},
-            { "name": "Quilon Electric Ray", "family": "Narkidae", "order": "Torpediniformes", "genus": "Heteronarce", "size": "Unknown","depth": "Mesopelagic", "yod": 1981, "OneIn": 9780},
             // Narkidae | Torpediniformes | Narke | 3 species
             { "name": "Onefin Electric Ray", "family": "Narkidae", "order": "Torpediniformes", "genus": "Narke", "size": "Tiny","depth": "Epipelagic", "yod": 1789, "OneIn": 1200},
             { "name": "Numbray", "family": "Narkidae", "order": "Torpediniformes", "genus": "Narke", "size": "Tiny","depth": "Epipelagic", "yod": 1801, "OneIn": 1260},
@@ -803,7 +737,6 @@ const rays = [
             { "name": "Blind Electric Ray", "family": "Narkidae", "order": "Torpediniformes", "genus": "Typhlonarke", "size": "Tiny","depth": "Mesopelagic", "yod": 1902, "OneIn": 7170},
             { "name": "Oval Electric Ray", "family": "Narkidae", "order": "Torpediniformes", "genus": "Typhlonarke", "size": "Tiny","depth": "Mesopelagic", "yod": 1929, "OneIn": 598},
             // Platyrhinidae | Torpediniformes | Platyrhina | 4 species
-            { "name": "Hyuga Fanray", "family": "Platyrhinidae", "order": "Torpediniformes", "genus": "Platyrhina", "size": "Unknown","depth": "Epipelagic", "yod": 2011, "OneIn": 312000},
             { "name": "Indian Fanray", "family": "Platyrhinidae", "order": "Torpediniformes", "genus": "Platyrhina", "size": "Tiny","depth": "Epipelagic", "yod": 2016, "OneIn": 144000000},
             { "name": "Chinese Fanray", "family": "Platyrhinidae", "order": "Torpediniformes", "genus": "Platyrhina", "size": "Tiny","depth": "Epipelagic", "yod": 1801, "OneIn": 23},
             { "name": "Yellow-Spotted Fanray", "family": "Platyrhinidae", "order": "Torpediniformes", "genus": "Platyrhina", "size": "Tiny","depth": "Epipelagic", "yod": 2011, "OneIn": 50600000},
@@ -813,7 +746,6 @@ const rays = [
             { "name": "Pacific Electric Ray", "family": "Torpedinidae", "order": "Torpediniformes", "genus": "Tetronarce", "size": "Small","depth": "Mesopelagic", "yod": 1855, "OneIn": 105},
             { "name": "Cowley's Torpedo Ray", "family": "Torpedinidae", "order": "Torpediniformes", "genus": "Tetronarce", "size": "Tiny","depth": "Mesopelagic", "yod": 2015, "OneIn": 389000000},
             { "name": "New Zealand Torpedo", "family": "Torpedinidae", "order": "Torpediniformes", "genus": "Tetronarce", "size": "Small","depth": "Bathypelagic", "yod": 1872, "OneIn": 33200},
-            { "name": "Taiwan Torpedo Ray", "family": "Torpedinidae", "order": "Torpediniformes", "genus": "Tetronarce", "size": "Unknown","depth": "Mesopelagic", "yod": 2006, "OneIn": 469000},
             { "name": "Shorttail Torpedo", "family": "Torpedinidae", "order": "Torpediniformes", "genus": "Tetronarce", "size": "Small","depth": "Mesopelagic", "yod": 1932, "OneIn": 4220},
             { "name": "Smalldisk Torpedo", "family": "Torpedinidae", "order": "Torpediniformes", "genus": "Tetronarce", "size": "Tiny","depth": "Mesopelagic", "yod": 1985, "OneIn": 80100},
             { "name": "Electric Ray", "family": "Torpedinidae", "order": "Torpediniformes", "genus": "Tetronarce", "size": "Small","depth": "Mesopelagic", "yod": 1835, "OneIn": 59},
@@ -825,7 +757,6 @@ const rays = [
             { "name": "Chilean Torpedo", "family": "Torpedinidae", "order": "Torpediniformes", "genus": "Tetronarce", "size": "Tiny","depth": "Mesopelagic", "yod": 1959, "OneIn": 9100},
             // Torpedinidae | Torpediniformes | Torpedo | 11 species
             { "name": "Aden Torpedo", "family": "Torpedinidae", "order": "Torpediniformes", "genus": "Torpedo", "size": "Tiny","depth": "Mesopelagic", "yod": 2002, "OneIn": 15800000},
-            { "name": "Alexandrine Torpedo", "family": "Torpedinidae", "order": "Torpediniformes", "genus": "Torpedo", "size": "Unknown","depth": "Mesopelagic", "yod": 1987, "OneIn": 5300},
             { "name": "Florida Torpedo", "family": "Torpedinidae", "order": "Torpediniformes", "genus": "Torpedo", "size": "Tiny","depth": "Mesopelagic", "yod": 1962, "OneIn": 9370},
             { "name": "Rosette Torpedo", "family": "Torpedinidae", "order": "Torpediniformes", "genus": "Torpedo", "size": "Tiny","depth": "Epipelagic", "yod": 1978, "OneIn": 20400},
             { "name": "Black-Spotted Torpedo", "family": "Torpedinidae", "order": "Torpediniformes", "genus": "Torpedo", "size": "Tiny","depth": "Mesopelagic", "yod": 1855, "OneIn": 25300},
@@ -835,8 +766,72 @@ const rays = [
             { "name": "Variable Torpedo Ray", "family": "Torpedinidae", "order": "Torpediniformes", "genus": "Torpedo", "size": "Small","depth": "Epipelagic", "yod": 1831, "OneIn": 56},
             { "name": "Red Sea Torpedo", "family": "Torpedinidae", "order": "Torpediniformes", "genus": "Torpedo", "size": "Tiny","depth": "Mesopelagic", "yod": 1898, "OneIn": 3000},
             { "name": "Common Torpedo", "family": "Torpedinidae", "order": "Torpediniformes", "genus": "Torpedo", "size": "Tiny","depth": "Mesopelagic", "yod": 1758, "OneIn": 5340},
+            // Chimaeras, Ghost Sharks, and Ratfishes | Chimaeriformes | 58 species
+            // Callorhinchidae | Chimaeriformes | Callorhinchus | 3 species
+            { "name": "Plownose Chimaera", "family": "Callorhinchidae", "order": "Chimaeriformes", "genus": "Callorhinchus", "size": "Small","depth": "Epipelagic", "yod": 1758, "OneIn": 600000001},
+            { "name": "Cape Elephantfish", "family": "Callorhinchidae", "order": "Chimaeriformes", "genus": "Callorhinchus", "size": "Small","depth": "Epipelagic", "yod": 1823, "OneIn": 600000002},
+            { "name": "Ghost Shark", "family": "Callorhinchidae", "order": "Chimaeriformes", "genus": "Callorhinchus", "size": "Medium","depth": "Epipelagic", "yod": 1865, "OneIn": 600000003},
+            // Chimaeridae | Chimaeriformes | Chimaera | 23 species
+            { "name": "Whitefin Chimaera", "family": "Chimaeridae", "order": "Chimaeriformes", "genus": "Chimaera", "size": "Small","depth": "Mesopelagic", "yod": 2008, "OneIn": 600000004},
+            { "name": "Bahamas Ghost Shark", "family": "Chimaeridae", "order": "Chimaeriformes", "genus": "Chimaera", "size": "Small","depth": "Mesopelagic", "yod": 2010, "OneIn": 600000005},
+            { "name": "Dark-mouth Chimaera", "family": "Chimaeridae", "order": "Chimaeriformes", "genus": "Chimaera", "size": "Small","depth": "Mesopelagic", "yod": 2017, "OneIn": 600000006},
+            { "name": "Brown Chimaera", "family": "Chimaeridae", "order": "Chimaeriformes", "genus": "Chimaera", "size": "Small","depth": "Mesopelagic", "yod": 2014, "OneIn": 600000007},
+            { "name": "Stubby Chimaera", "family": "Chimaeridae", "order": "Chimaeriformes", "genus": "Chimaera", "size": "Small","depth": "Mesopelagic", "yod": 2021, "OneIn": 600000008},
+            { "name": "Cuban Chimaera", "family": "Chimaeridae", "order": "Chimaeriformes", "genus": "Chimaera", "size": "Small","depth": "Mesopelagic", "yod": 1936, "OneIn": 600000009},
+            { "name": "Falkor Chimaera", "family": "Chimaeridae", "order": "Chimaeriformes", "genus": "Chimaera", "size": "Tiny","depth": "Mesopelagic", "yod": 2017, "OneIn": 600000010},
+            { "name": "Southern Chimaera", "family": "Chimaeridae", "order": "Chimaeriformes", "genus": "Chimaera", "size": "Small","depth": "Mesopelagic", "yod": 2008, "OneIn": 600000011},
+            { "name": "Jordans Chimaera", "family": "Chimaeridae", "order": "Chimaeriformes", "genus": "Chimaera", "size": "Small","depth": "Mesopelagic", "yod": 1905, "OneIn": 600000012},
+            { "name": "Carpenters Chimaera", "family": "Chimaeridae", "order": "Chimaeriformes", "genus": "Chimaera", "size": "Small","depth": "Mesopelagic", "yod": 2002, "OneIn": 600000013},
+            { "name": "Longspine Chimaera", "family": "Chimaeridae", "order": "Chimaeriformes", "genus": "Chimaera", "size": "Small","depth": "Mesopelagic", "yod": 2008, "OneIn": 600000014},
+            { "name": "Rabbit Fish", "family": "Chimaeridae", "order": "Chimaeriformes", "genus": "Chimaera", "size": "Small","depth": "Mesopelagic", "yod": 1758, "OneIn": 600000015},
+            { "name": "Cape Chimaera", "family": "Chimaeridae", "order": "Chimaeriformes", "genus": "Chimaera", "size": "Small","depth": "Mesopelagic", "yod": 2010, "OneIn": 600000016},
+            { "name": "Shortspine Chimaera", "family": "Chimaeridae", "order": "Chimaeriformes", "genus": "Chimaera", "size": "Small","depth": "Mesopelagic", "yod": 2008, "OneIn": 600000017},
+            { "name": "Ogilbys Ghostshark", "family": "Chimaeridae", "order": "Chimaeriformes", "genus": "Chimaera", "size": "Small","depth": "Mesopelagic", "yod": 1898, "OneIn": 600000018},
+            { "name": "Opal Chimaera", "family": "Chimaeridae", "order": "Chimaeriformes", "genus": "Chimaera", "size": "Small","depth": "Mesopelagic", "yod": 2011, "OneIn": 600000019},
+            { "name": "Eastern Pacific Black Chimaera", "family": "Chimaeridae", "order": "Chimaeriformes", "genus": "Chimaera", "size": "Tiny","depth": "Mesopelagic", "yod": 2014, "OneIn": 600000020},
+            { "name": "Leopard Chimaera", "family": "Chimaeridae", "order": "Chimaeriformes", "genus": "Chimaera", "size": "Small","depth": "Mesopelagic", "yod": 1998, "OneIn": 600000022},
+            { "name": "Silver Chimaera", "family": "Chimaeridae", "order": "Chimaeriformes", "genus": "Chimaera", "size": "Small","depth": "Mesopelagic", "yod": 1900, "OneIn": 600000023},
+            { "name": "Andaman Shortnose Chimaera", "family": "Chimaeridae", "order": "Chimaeriformes", "genus": "Chimaera", "size": "Tiny","depth": "Mesopelagic", "yod": 2024, "OneIn": 600000025},
+            { "name": "Seafarers Ghost Shark", "family": "Chimaeridae", "order": "Chimaeriformes", "genus": "Chimaera", "size": "Small","depth": "Mesopelagic", "yod": 2017, "OneIn": 600000026},
+            // Chimaeridae | Chimaeriformes | Hydrolagus | 23 species
+            { "name": "Smalleyed Rabbitfish", "family": "Chimaeridae", "order": "Chimaeriformes", "genus": "Hydrolagus", "size": "Small","depth": "Mesopelagic", "yod": 1868, "OneIn": 600000027},
+            { "name": "African Chimaera", "family": "Chimaeridae", "order": "Chimaeriformes", "genus": "Hydrolagus", "size": "Small","depth": "Mesopelagic", "yod": 1922, "OneIn": 600000028},
+            { "name": "Hydrolagus alberti", "family": "Chimaeridae", "order": "Chimaeriformes", "genus": "Hydrolagus", "size": "Tiny","depth": "Mesopelagic", "yod": 1951, "OneIn": 600000029},
+            { "name": "Hydrolagus alphus", "family": "Chimaeridae", "order": "Chimaeriformes", "genus": "Hydrolagus", "size": "Tiny","depth": "Mesopelagic", "yod": 2006, "OneIn": 600000030},
+            { "name": "Hydrolagus bemisi", "family": "Chimaeridae", "order": "Chimaeriformes", "genus": "Hydrolagus", "size": "Small","depth": "Mesopelagic", "yod": 2002, "OneIn": 600000032},
+            { "name": "Spotted Ratfish", "family": "Chimaeridae", "order": "Chimaeriformes", "genus": "Hydrolagus", "size": "Small","depth": "Mesopelagic", "yod": 1839, "OneIn": 600000033},
+            { "name": "Philippine Chimaera", "family": "Chimaeridae", "order": "Chimaeriformes", "genus": "Hydrolagus", "size": "Small","depth": "Mesopelagic", "yod": 1912, "OneIn": 600000034},
+            { "name": "Robins Ghostshark", "family": "Chimaeridae", "order": "Chimaeriformes", "genus": "Hydrolagus", "size": "Small","depth": "Mesopelagic", "yod": 2017, "OneIn": 600000036},
+            { "name": "Black Ghostshark", "family": "Chimaeridae", "order": "Chimaeriformes", "genus": "Hydrolagus", "size": "Small","depth": "Mesopelagic", "yod": 2008, "OneIn": 600000037},
+            { "name": "Hydrolagus lusitanicus", "family": "Chimaeridae", "order": "Chimaeriformes", "genus": "Hydrolagus", "size": "Small","depth": "Mesopelagic", "yod": 2005, "OneIn": 600000038},
+            { "name": "Big Eye Chimaera", "family": "Chimaeridae", "order": "Chimaeriformes", "genus": "Hydrolagus", "size": "Small","depth": "Mesopelagic", "yod": 1959, "OneIn": 600000039},
+            { "name": "Hydrolagus marmoratus", "family": "Chimaeridae", "order": "Chimaeriformes", "genus": "Hydrolagus", "size": "Small","depth": "Mesopelagic", "yod": 2008, "OneIn": 600000040},
+            { "name": "Striped Rabbitfish", "family": "Chimaeridae", "order": "Chimaeriformes", "genus": "Hydrolagus", "size": "Small","depth": "Mesopelagic", "yod": 2004, "OneIn": 600000041},
+            { "name": "Galapagos Ghost Shark", "family": "Chimaeridae", "order": "Chimaeriformes", "genus": "Hydrolagus", "size": "Tiny","depth": "Mesopelagic", "yod": 2006, "OneIn": 600000042},
+            { "name": "Eastern Pacific Black Ghostshark", "family": "Chimaeridae", "order": "Chimaeriformes", "genus": "Hydrolagus", "size": "Small","depth": "Mesopelagic", "yod": 2009, "OneIn": 600000043},
+            { "name": "Large-eyed Rabbitfish", "family": "Chimaeridae", "order": "Chimaeriformes", "genus": "Hydrolagus", "size": "Tiny","depth": "Mesopelagic", "yod": 1904, "OneIn": 600000044},
+            { "name": "Spookfish", "family": "Chimaeridae", "order": "Chimaeriformes", "genus": "Hydrolagus", "size": "Small","depth": "Mesopelagic", "yod": 1904, "OneIn": 600000045},
+            { "name": "Dark Ghost Shark", "family": "Chimaeridae", "order": "Chimaeriformes", "genus": "Hydrolagus", "size": "Small","depth": "Mesopelagic", "yod": 1911, "OneIn": 600000046},
+            { "name": "Hydrolagus pallidus", "family": "Chimaeridae", "order": "Chimaeriformes", "genus": "Hydrolagus", "size": "Small","depth": "Mesopelagic", "yod": 1990, "OneIn": 600000047},
+            { "name": "Pointy-nosed Blue Chimaera", "family": "Chimaeridae", "order": "Chimaeriformes", "genus": "Hydrolagus", "size": "Small","depth": "Mesopelagic", "yod": 2002, "OneIn": 600000049},
+            // Rhinochimaeridae | Chimaeriformes | Harriotta, Neoharriotta, Rhinochimaera | 9 species
+            { "name": "Smallspine Spookfish", "family": "Rhinochimaeridae", "order": "Chimaeriformes", "genus": "Harriotta", "size": "Small","depth": "Bathypelagic", "yod": 1895, "OneIn": 600000050},
+            { "name": "Pacific Longnose Chimaera", "family": "Rhinochimaeridae", "order": "Chimaeriformes", "genus": "Harriotta", "size": "Small","depth": "Bathypelagic", "yod": 1909, "OneIn": 600000051},
+            { "name": "Aunties Longnose Chimaera", "family": "Rhinochimaeridae", "order": "Chimaeriformes", "genus": "Harriotta", "size": "Small","depth": "Bathypelagic", "yod": 2024, "OneIn": 600000052},
+            { "name": "Sicklefin Chimaera", "family": "Rhinochimaeridae", "order": "Chimaeriformes", "genus": "Neoharriotta", "size": "Small","depth": "Bathypelagic", "yod": 1931, "OneIn": 600000053},
+            { "name": "Dwarf Sicklefin Chimaera", "family": "Rhinochimaeridae", "order": "Chimaeriformes", "genus": "Neoharriotta", "size": "Small","depth": "Bathypelagic", "yod": 1966, "OneIn": 600000054},
+            { "name": "Pygmy Sicklefin Chimaera", "family": "Rhinochimaeridae", "order": "Chimaeriformes", "genus": "Neoharriotta", "size": "Tiny","depth": "Bathypelagic", "yod": 1996, "OneIn": 600000055},
+            { "name": "Straightnose Rabbitfish", "family": "Rhinochimaeridae", "order": "Chimaeriformes", "genus": "Rhinochimaera", "size": "Small","depth": "Bathypelagic", "yod": 1895, "OneIn": 600000056},
+            { "name": "Narrownose Chimaera", "family": "Rhinochimaeridae", "order": "Chimaeriformes", "genus": "Rhinochimaera", "size": "Small","depth": "Bathypelagic", "yod": 1909, "OneIn": 600000057},
+            { "name": "Paddlenose Chimaera", "family": "Rhinochimaeridae", "order": "Chimaeriformes", "genus": "Rhinochimaera", "size": "Small","depth": "Bathypelagic", "yod": 1990, "OneIn": 600000058},
         ];
 
+function hasRequiredClassification(species) {
+    return ["name", "family", "order", "genus"].every(field => {
+        const value = species?.[field];
+        return typeof value === "string" && value.trim() && value.trim().toLowerCase() !== "unknown";
+    });
+}
+
 // Make available globally
-window.rays = rays;
-console.log("rays.js loaded, window.rays length:", window.rays ? window.rays.length : undefined);
+window.rays = rays.filter(hasRequiredClassification);

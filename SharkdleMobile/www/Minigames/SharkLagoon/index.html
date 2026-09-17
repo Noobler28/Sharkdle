@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <base href="../../">
+    <title>Sharkdle - Shark Lagoon</title>
+    <link rel="icon" type="image/png" href="images/favicon.png">
+    <link rel="stylesheet" href="Minigames/SharkLagoon/shark-lagoon.css?v=24">
+</head>
+<body class="lagoon-page">
+    <main class="lagoon-stage">
+        <div id="lagoon-ocean" class="lagoon-ocean" tabindex="0" aria-label="Open ocean exploration">
+            <div class="lagoon-ocean-water" aria-hidden="true"></div>
+            <div id="lagoon-player" class="lagoon-player" aria-hidden="true"></div>
+            <div class="lagoon-hud" aria-hidden="true">
+                <div class="lagoon-boost-gauge">
+                    <svg viewBox="0 0 120 42" role="img" aria-label="Boost">
+                        <path class="lagoon-boost-rim" d="M15 34 A45 45 0 0 1 105 34"></path>
+                        <path class="lagoon-boost-brass" d="M20 34 A40 40 0 0 1 100 34"></path>
+                        <path class="lagoon-boost-track" d="M27 34 A33 33 0 0 1 93 34"></path>
+                        <path class="lagoon-boost-fill" pathLength="100" d="M27 34 A33 33 0 0 1 93 34"></path>
+                    </svg>
+                </div>
+                <div class="lagoon-sonar">
+                    <span class="lagoon-compass-letter north">N</span>
+                    <span class="lagoon-compass-letter east">E</span>
+                    <span class="lagoon-compass-letter south">S</span>
+                    <span class="lagoon-compass-letter west">W</span>
+                    <div class="lagoon-sonar-screen"></div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="Minigames/SharkLagoon/shark-lagoon.js?v=24"></script>
+    <script src="global-broadcast.js"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            if (typeof initSharkLagoon === "function") initSharkLagoon();
+        });
+    </script>
+</body>
+</html>

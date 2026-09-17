@@ -8,6 +8,26 @@
         { id: "tester", name: "Tester", emoji: "🎮" },
         { id: "anniversary", name: "Anniversary", emoji: "🎉" },
         { id: "lucky-fin", name: "Lucky Fin", emoji: "🍀" },
+        { id: "extinction", name: "Extinction", emoji: "☄️" },
+        { id: "spiral-hunter", name: "Spiral Hunter", emoji: "🌀" },
+        { id: "frost-anvil", name: "Frost Anvil", emoji: "❄️" },
+        { id: "treasure-keeper", name: "Treasure Keeper", emoji: "🗺️" },
+        { id: "rollin", name: "Rollin'", emoji: "🎲" },
+        { id: "arrow-to-the-knee", name: "Arrow to the Knee", emoji: "🏹" },
+        { id: "im-not-okay", name: "I'm Not Okay (I Promise)", emoji: "💔" },
+        { id: "one-shot-oracle", name: "One-Shot Oracle", emoji: "🎯" },
+        { id: "crate-connoisseur", name: "Crate Connoisseur", emoji: "🧰" },
+        { id: "rival-breaker", name: "Rival Breaker", emoji: "🥇" },
+        { id: "deep-cartographer", name: "Deep Cartographer", emoji: "🗺️" },
+        { id: "social-current", name: "Social Current", emoji: "🌐" },
+        { id: "abyssal-legend", name: "Abyssal Legend", emoji: "🌌" },
+        { id: "marathon-fin", name: "Marathon Fin", emoji: "🏁" },
+        { id: "shallow-scout", name: "Shallow Scout", emoji: "🧭" },
+        { id: "reef-roamer", name: "Reef Roamer", emoji: "🪸" },
+        { id: "bluewater-bold", name: "Bluewater Bold", emoji: "🌊" },
+        { id: "tide-turner", name: "Tide Turner", emoji: "🌀" },
+        { id: "current-rider", name: "Current Rider", emoji: "🌊" },
+        { id: "tidebreaker", name: "Tidebreaker", emoji: "💫" },
         { id: "reef-scout", name: "Shiver", emoji: "🐟" },
         { id: "bronze-fin", name: "Pup", emoji: "🪸" },
         { id: "night-diver", name: "Juvenile", emoji: "🌙" },
@@ -19,6 +39,10 @@
         { id: "kelp-warden", name: "Smelly Boot", emoji: "🥾" },
         { id: "trench-myth", name: "Message Bottle", emoji: "🍾" },
         { id: "aurora-fin", name: "Doubloon", emoji: "🪙" },
+        { id: "tide-glass", name: "Tide Glass", emoji: "🫧" },
+        { id: "fossil-tooth", name: "Fossil Tooth", emoji: "🦷" },
+        { id: "deep-anchor", name: "Deep Anchor", emoji: "⚓" },
+        { id: "royal-pearl", name: "Royal Pearl", emoji: "🦪" },
         { id: "Tidepool", name: "Tidepool", emoji: "🌀" },
         { id: "Ice Cream", name: "Ice Cream", emoji: "🍦" },
         { id: "Horizon", name: "Horizon", emoji: "🌅" },
@@ -41,26 +65,50 @@
         dev: "special",
         anniversary: "special",
         "lucky-fin": "epic",
+        extinction: "legendary",
+        "spiral-hunter": "legendary",
+        "frost-anvil": "legendary",
+        "treasure-keeper": "legendary",
+        rollin: "special",
+        "arrow-to-the-knee": "special",
+        "im-not-okay": "special",
+        "one-shot-oracle": "rare",
+        "crate-connoisseur": "rare",
+        "rival-breaker": "epic",
+        "deep-cartographer": "legendary",
+        "social-current": "legendary",
+        "abyssal-legend": "legendary",
+        "marathon-fin": "legendary",
+        "shallow-scout": "common",
+        "reef-roamer": "common",
+        "bluewater-bold": "rare",
+        "tide-turner": "epic",
+        "current-rider": "epic",
+        tidebreaker: "legendary",
         "reef-scout": "common",
         "bronze-fin": "common",
         "reef-glint": "common",
+        "tide-glass": "common",
         Tidepool: "common",
         Christmas: "common",
         Pumpkin: "common",
         "night-diver": "rare",
         "kelp-warden": "rare",
+        "fossil-tooth": "rare",
         "Ice Cream": "rare",
         Present: "rare",
         Bat: "rare",
         "abyss-explorer": "epic",
         "open-water-ace": "epic",
         "trench-myth": "epic",
+        "deep-anchor": "epic",
         Horizon: "epic",
         Snowflake: "epic",
         Ghost: "epic",
         "storm-tracker": "legendary",
         "apex-voyager": "legendary",
         "aurora-fin": "legendary",
+        "royal-pearl": "legendary",
         Paradise: "legendary",
         Santa: "legendary",
         Vampire: "legendary"
@@ -140,14 +188,18 @@
     };
 
     function resolveProfilePicturePath(storedProfilePic) {
+        const storedPath = String(storedProfilePic || "").replace(/\\/g, "/").replace(/^\.?\//, "").trim();
+        if (/^(?:images\/)?profileThemes\//i.test(storedPath)) {
+            return "images/pfp/shark1.png";
+        }
         let profilePicPath = "images/pfp/shark1.png";
-        if (storedProfilePic) {
-            if (storedProfilePic.startsWith("images/")) {
-                profilePicPath = storedProfilePic;
-            } else if (storedProfilePic.includes("/")) {
-                profilePicPath = `images/${storedProfilePic}`;
+        if (storedPath) {
+            if (storedPath.startsWith("images/")) {
+                profilePicPath = storedPath;
+            } else if (storedPath.includes("/")) {
+                profilePicPath = `images/${storedPath}`;
             } else {
-                profilePicPath = `images/pfp/${storedProfilePic}`;
+                profilePicPath = `images/pfp/${storedPath}`;
             }
         }
         return profilePicPath
@@ -206,12 +258,37 @@
         return PFP_OBTAINMENT_MAP[profilePicPath] || "Profile Icon";
     }
 
+    function normalizeBadgeId(badgeId) {
+        return String(badgeId || "starter").trim() === "rollin'" ? "rollin" : String(badgeId || "starter").trim();
+    }
+
+    function titleCaseBadgeId(badgeId) {
+        return normalizeBadgeId(badgeId)
+            .replace(/[-_]+/g, " ")
+            .replace(/\b\w/g, letter => letter.toUpperCase());
+    }
+
+    function escapeHtml(value) {
+        return String(value ?? "").replace(/[&<>"']/g, char => ({
+            "&": "&amp;",
+            "<": "&lt;",
+            ">": "&gt;",
+            '"': "&quot;",
+            "'": "&#39;"
+        }[char]));
+    }
+
     function getBadgeMeta(badgeId) {
-        return BADGE_BY_ID[badgeId] || BADGE_BY_ID.starter;
+        const normalizedBadgeId = normalizeBadgeId(badgeId);
+        return BADGE_BY_ID[normalizedBadgeId] || {
+            id: normalizedBadgeId,
+            name: titleCaseBadgeId(normalizedBadgeId),
+            emoji: "🦈"
+        };
     }
 
     function getBadgePalette(badgeId) {
-        const rarity = BADGE_RARITY_BY_ID[badgeId] || "common";
+        const rarity = BADGE_RARITY_BY_ID[normalizeBadgeId(badgeId)] || "common";
         return BADGE_PALETTE_BY_RARITY[rarity] || BADGE_PALETTE_BY_RARITY.common;
     }
 
@@ -245,8 +322,8 @@
         const badge = getBadgeMeta(badgeId);
         const palette = getBadgePalette(badge.id);
         return `<div style='margin-top:2px; display: flex; align-items: center; justify-content: center; gap: 6px;'>
-            <span style="display:inline-block;font-size:1.1em;background:${palette.bg};border-radius:7px;padding:1px 7px 1px 7px;border:1.5px solid ${palette.border};vertical-align:middle;">${badge.emoji}</span>
-            <span style="font-size:0.85em;color:${palette.text};font-weight:600;">${badge.name}</span>
+            <span style="display:inline-block;font-size:1.1em;background:${palette.bg};border-radius:7px;padding:1px 7px 1px 7px;border:1.5px solid ${palette.border};vertical-align:middle;">${escapeHtml(badge.emoji)}</span>
+            <span style="font-size:0.85em;color:${palette.text};font-weight:600;">${escapeHtml(badge.name)}</span>
         </div>`;
     }
 

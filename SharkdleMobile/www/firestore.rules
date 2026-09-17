@@ -28,12 +28,15 @@ service cloud.firestore {
         "megatooth",
         "void",
         "cosmic",
-        "apex"
+        "apex",
+        "primordial",
+        "leviathan",
+        "eventhorizon"
       ];
     }
 
     function isValidRngNextRollCommand() {
-      return request.resource.data.keys().hasOnly([
+      return request.resource.data.keys().hasAll([
           "type",
           "commandId",
           "targetUid",
@@ -68,6 +71,120 @@ service cloud.firestore {
         && request.resource.data.expiresAtMs > request.resource.data.createdAtMs;
     }
 
+    function isValidIndexThemeConfig() {
+      return request.resource.data.keys().hasAll([
+          "themeId",
+          "themeName",
+          "enabled",
+          "updatedAt",
+          "updatedBy"
+        ])
+        && request.resource.data.themeId in [
+          "default",
+          "summer",
+          "birthday",
+          "christmas",
+          "halloween"
+        ]
+        && request.resource.data.themeName is string
+        && request.resource.data.themeName.size() > 0
+        && request.resource.data.themeName.size() <= 80
+        && request.resource.data.enabled is bool
+        && request.resource.data.updatedAt is int
+        && request.resource.data.updatedBy == request.auth.uid;
+    }
+
+    function isValidGlobalMessageConfig() {
+      return request.resource.data.keys().hasOnly([
+          "enabled",
+          "message",
+          "type",
+          "updatedAt",
+          "updatedBy"
+        ])
+        && request.resource.data.enabled is bool
+        && request.resource.data.message is string
+        && request.resource.data.message.size() <= 220
+        && request.resource.data.type in ["info", "event", "warning"]
+        && request.resource.data.updatedAt is int
+        && request.resource.data.updatedBy == request.auth.uid;
+    }
+
+    function isValidXpEventConfig() {
+      return request.resource.data.keys().hasOnly([
+          "id",
+          "label",
+          "multiplier",
+          "enabled",
+          "startMs",
+          "endMs",
+          "startedBy",
+          "stoppedBy",
+          "updatedAt"
+        ])
+        && request.resource.data.enabled is bool
+        && request.resource.data.endMs is int
+        && request.resource.data.updatedAt is int
+        && (
+          request.resource.data.enabled == false
+          || (
+            request.resource.data.id is string
+            && request.resource.data.id.size() > 0
+            && request.resource.data.id.size() <= 80
+            && request.resource.data.label is string
+            && request.resource.data.label.size() > 0
+            && request.resource.data.label.size() <= 80
+            && request.resource.data.multiplier is number
+            && request.resource.data.multiplier >= 1
+            && request.resource.data.multiplier <= 5
+            && request.resource.data.startMs is int
+            && request.resource.data.endMs > request.resource.data.startMs
+            && request.resource.data.startedBy == request.auth.uid
+          )
+        );
+    }
+
+    function isValidLeaderboardWinner() {
+      return request.resource.data.keys().hasOnly([
+          "id",
+          "rangeType",
+          "periodKey",
+          "periodLabel",
+          "uid",
+          "displayName",
+          "profilePicture",
+          "metricValue",
+          "rewardName",
+          "rewardImagePath",
+          "endedAtMs",
+          "createdBy"
+        ])
+        && request.resource.data.id is string
+        && request.resource.data.id.size() > 0
+        && request.resource.data.id.size() <= 80
+        && request.resource.data.rangeType in ["daily", "monthly"]
+        && request.resource.data.periodKey is string
+        && request.resource.data.periodKey.size() > 0
+        && request.resource.data.periodKey.size() <= 16
+        && request.resource.data.periodLabel is string
+        && request.resource.data.periodLabel.size() <= 40
+        && request.resource.data.uid is string
+        && request.resource.data.uid.size() > 0
+        && request.resource.data.uid.size() <= 128
+        && request.resource.data.displayName is string
+        && request.resource.data.displayName.size() <= 80
+        && request.resource.data.profilePicture is string
+        && request.resource.data.profilePicture.size() <= 180
+        && request.resource.data.metricValue is number
+        && request.resource.data.metricValue >= 0
+        && request.resource.data.rewardName is string
+        && request.resource.data.rewardName.size() <= 80
+        && request.resource.data.rewardImagePath is string
+        && request.resource.data.rewardImagePath.size() <= 180
+        && request.resource.data.endedAtMs is int
+        && request.resource.data.createdBy == request.auth.uid;
+    }
+
     function isCommunityBossEvent(eventId) {
       return eventId in [
         "summer-megaladon-2026",
@@ -79,6 +196,18 @@ service cloud.firestore {
 
     function communityBossContributionValue(eventId) {
       return eventId == "summer-megaladon-2026" ? 2 : 1;
+    }
+
+    function isShiverMember(shiverId) {
+      return request.auth != null
+        && exists(/databases/$(database)/documents/userShivers/$(request.auth.uid))
+        && get(/databases/$(database)/documents/userShivers/$(request.auth.uid)).data.shiverId == shiverId;
+    }
+
+    function isShiverLeader(shiverId) {
+      return isShiverMember(shiverId)
+        && exists(/databases/$(database)/documents/shivers/$(shiverId)/members/$(request.auth.uid))
+        && get(/databases/$(database)/documents/shivers/$(shiverId)/members/$(request.auth.uid)).data.role == "leader";
     }
     
     // Purchases: only server-side code (Cloud Functions using Admin SDK) should create purchase records.
@@ -112,6 +241,21 @@ service cloud.firestore {
     match /userStats/{userId} {
       allow read: if true;
       allow write: if request.auth != null && (request.auth.uid == userId || isDeveloper());
+    }
+
+    // Full Sharkdle profile saves. Kept private and chunked separately from public leaderboard stats.
+    match /sharkdleProfiles/{userId} {
+      allow read, write: if request.auth != null && (request.auth.uid == userId || isDeveloper());
+
+      match /chunks/{chunkId} {
+        allow read, write: if request.auth != null && (request.auth.uid == userId || isDeveloper());
+      }
+    }
+
+    match /leaderboardWinners/{winnerId} {
+      allow read: if true;
+      allow create, update: if request.auth != null && isValidLeaderboardWinner();
+      allow delete: if isDeveloper();
     }
 
     // Full Shark RNG saves. Collection data is chunked under each player doc.
@@ -243,7 +387,9 @@ service cloud.firestore {
       allow read: if true;
       allow create, update: if isDeveloper()
         && (
-          request.resource.data.type != "rngNextRoll"
+          (configId == "indexTheme" && isValidIndexThemeConfig())
+          || (configId == "globalMessage" && isValidGlobalMessageConfig())
+          || (configId == "xpEvent" && isValidXpEventConfig())
           || isValidRngNextRollCommand()
         );
       allow delete: if isDeveloper();
@@ -314,6 +460,248 @@ service cloud.firestore {
           && request.resource.data.lastContributionMode in ["daily", "infinite"];
 
         allow delete: if isDeveloper();
+      }
+    }
+
+    // Shivers: Sharkdle clans/guilds.
+    match /shivers/{shiverId} {
+      allow read: if true;
+
+      allow create: if request.auth != null
+        && request.resource.data.keys().hasOnly([
+          "id",
+          "name",
+          "nameLower",
+          "tag",
+          "tagUpper",
+          "description",
+          "color",
+          "ownerUid",
+          "ownerName",
+          "status",
+          "visibility",
+          "memberCount",
+          "maxMembers",
+          "totalPoints",
+          "seasonPoints",
+          "battlePoints",
+          "wins",
+          "dailyWins",
+          "infiniteWins",
+          "dailyPoints",
+          "infinitePoints",
+          "seasonId",
+          "createdAt",
+          "updatedAt"
+        ])
+        && request.resource.data.ownerUid == request.auth.uid
+        && request.resource.data.status == "active"
+        && request.resource.data.visibility in ["open", "closed"]
+        && request.resource.data.memberCount == 1
+        && request.resource.data.maxMembers <= 25
+        && request.resource.data.totalPoints == 0
+        && request.resource.data.seasonPoints == 0
+        && request.resource.data.battlePoints == 0
+        && request.resource.data.wins == 0
+        && request.resource.data.dailyWins == 0
+        && request.resource.data.infiniteWins == 0
+        && request.resource.data.dailyPoints == 0
+        && request.resource.data.infinitePoints == 0;
+
+      allow update: if isDeveloper()
+        || (
+          isShiverMember(shiverId)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            "memberCount",
+            "totalPoints",
+            "seasonPoints",
+            "battlePoints",
+            "wins",
+            "dailyWins",
+            "infiniteWins",
+            "dailyPoints",
+            "infinitePoints",
+            "seasonId",
+            "updatedAt",
+            "lastContributionAt",
+            "lastContributionMode",
+            "lastContributionUid"
+          ])
+        )
+        || (
+          isShiverLeader(shiverId)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            "status",
+            "visibility",
+            "memberCount",
+            "updatedAt"
+          ])
+        );
+
+      allow delete: if isDeveloper();
+
+      match /members/{userId} {
+        allow read: if true;
+
+        allow create: if request.auth != null
+          && request.auth.uid == userId
+          && request.resource.data.keys().hasOnly([
+            "uid",
+            "username",
+            "profilePicture",
+            "role",
+            "shiverId",
+            "shiverName",
+            "shiverTag",
+            "shiverColor",
+            "points",
+            "wins",
+            "dailyWins",
+            "infiniteWins",
+            "joinedAt",
+            "updatedAt"
+          ])
+          && request.resource.data.uid == request.auth.uid
+          && request.resource.data.shiverId == shiverId
+          && request.resource.data.role in ["leader", "member"]
+          && request.resource.data.points == 0
+          && request.resource.data.wins == 0
+          && request.resource.data.dailyWins == 0
+          && request.resource.data.infiniteWins == 0;
+
+        allow update: if request.auth != null
+          && request.auth.uid == userId
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            "username",
+            "profilePicture",
+            "points",
+            "wins",
+            "dailyWins",
+            "infiniteWins",
+            "updatedAt",
+            "lastContributionMode"
+          ]);
+
+        allow delete: if request.auth != null && request.auth.uid == userId || isDeveloper();
+      }
+    }
+
+    match /userShivers/{userId} {
+      allow read: if true;
+
+      allow create: if request.auth != null
+        && request.auth.uid == userId
+        && request.resource.data.keys().hasOnly([
+          "uid",
+          "username",
+          "profilePicture",
+          "role",
+          "shiverId",
+          "shiverName",
+          "shiverTag",
+          "shiverColor",
+          "points",
+          "wins",
+          "dailyWins",
+          "infiniteWins",
+          "joinedAt",
+          "updatedAt"
+        ])
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.role in ["leader", "member"]
+        && request.resource.data.points == 0
+        && request.resource.data.wins == 0
+        && request.resource.data.dailyWins == 0
+        && request.resource.data.infiniteWins == 0;
+
+      allow update: if request.auth != null
+        && request.auth.uid == userId
+        && request.resource.data.shiverId == resource.data.shiverId
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          "username",
+          "profilePicture",
+          "shiverName",
+          "shiverTag",
+          "shiverColor",
+          "points",
+          "wins",
+          "dailyWins",
+          "infiniteWins",
+          "updatedAt",
+          "lastContributionMode"
+        ]);
+
+      allow delete: if request.auth != null && request.auth.uid == userId || isDeveloper();
+    }
+
+    match /shiverSeasons/{seasonId} {
+      allow read: if true;
+      allow create, update, delete: if isDeveloper();
+
+      match /entries/{shiverId} {
+        allow read: if true;
+
+        allow create: if isShiverMember(shiverId)
+          && request.resource.data.keys().hasOnly([
+            "shiverId",
+            "name",
+            "tag",
+            "color",
+            "memberCount",
+            "points",
+            "wins",
+            "dailyWins",
+            "infiniteWins",
+            "seasonId",
+            "updatedAt",
+            "lastContributionMode",
+            "lastContributionUid"
+          ])
+          && request.resource.data.shiverId == shiverId
+          && request.resource.data.seasonId == seasonId
+          && request.resource.data.lastContributionUid == request.auth.uid;
+
+        allow update: if isShiverMember(shiverId)
+          && request.resource.data.shiverId == resource.data.shiverId
+          && request.resource.data.seasonId == resource.data.seasonId
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            "name",
+            "tag",
+            "color",
+            "memberCount",
+            "points",
+            "wins",
+            "dailyWins",
+            "infiniteWins",
+            "updatedAt",
+            "lastContributionMode",
+            "lastContributionUid"
+          ])
+          && request.resource.data.lastContributionUid == request.auth.uid;
+
+        allow delete: if isDeveloper();
+
+        match /members/{userId} {
+          allow read: if true;
+
+          allow create, update: if request.auth != null
+            && request.auth.uid == userId
+            && isShiverMember(shiverId)
+            && request.resource.data.keys().hasOnly([
+              "uid",
+              "username",
+              "profilePicture",
+              "points",
+              "wins",
+              "dailyWins",
+              "infiniteWins",
+              "updatedAt",
+              "lastContributionMode"
+            ])
+            && request.resource.data.uid == request.auth.uid;
+
+          allow delete: if isDeveloper();
+        }
       }
     }
 

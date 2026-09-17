@@ -466,24 +466,16 @@ radial-gradient(circle at 80% 30%, rgba(34,139,34,0.12), transparent 28%),
 linear-gradient(140deg, rgba(34,139,34,0.24), rgba(50,205,50,0.16) 50%, rgba(0,80,0,0.92));
 }
 
-.leaderboard-table tr.lb-theme-north-pole{
+body.leaderboards-page .leaderboard-table tr.lb-theme-north-pole{
 background:
-radial-gradient(circle at 20% 30%, rgba(255,255,255,0.24) 1.4px, transparent 2.5px),
-radial-gradient(circle at 80% 20%, rgba(255,255,255,0.2) 1.1px, transparent 2.2px),
-radial-gradient(circle at 50% 20%, rgba(230,247,255,0.18), transparent 28%),
-linear-gradient(140deg, rgba(230,247,255,0.26), rgba(179,224,255,0.16) 50%, rgba(128,208,255,0.2));
+linear-gradient(90deg, rgba(255,255,255,0.24), rgba(72,139,171,0.24)),
+url("images/profileThemes/Northpole.png") center center / cover no-repeat;
 }
 
-.leaderboard-table tr.lb-theme-pumpkin-patch{
+body.leaderboards-page .leaderboard-table tr.lb-theme-pumpkin-patch{
 background:
-radial-gradient(36px 22px at 10% 4px, rgba(138,255,112,0.74) 0 68%, transparent 72%),
-radial-gradient(30px 36px at 23% -9px, rgba(122,242,96,0.72) 0 66%, transparent 70%),
-radial-gradient(38px 24px at 42% 6px, rgba(144,255,120,0.72) 0 68%, transparent 72%),
-radial-gradient(30px 40px at 58% -10px, rgba(113,233,89,0.72) 0 66%, transparent 70%),
-radial-gradient(34px 22px at 75% 5px, rgba(132,250,108,0.72) 0 68%, transparent 72%),
-radial-gradient(30px 38px at 90% -8px, rgba(120,236,94,0.72) 0 66%, transparent 70%),
-linear-gradient(180deg, rgba(142,255,113,0.26) 0 18%, transparent 34%),
-linear-gradient(180deg, rgba(102,44,174,0.58), rgba(39,15,72,0.98) 62%, rgba(16,7,31,1));
+linear-gradient(90deg, rgba(8,22,14,0.08), rgba(20,8,36,0.48)),
+url("images/profileThemes/Goo.png") center top / cover no-repeat;
 }
 
 .leaderboard-table tr.lb-theme-haunted-abyss{
@@ -1154,8 +1146,176 @@ body.leaderboards-page .loading {
     font-weight: 700;
 }
 
+body.leaderboards-page .leaderboard-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 320px;
+    gap: 18px;
+    padding: 22px 28px 0;
+}
+
+body.leaderboards-page .leaderboard-board-panel,
+body.leaderboards-page .leaderboard-side-panel {
+    min-width: 0;
+}
+
+body.leaderboards-page .leaderboard-board-panel .loading {
+    margin: 0 0 12px;
+}
+
+body.leaderboards-page .leaderboard-side-panel {
+    display: grid;
+    align-content: start;
+    gap: 14px;
+}
+
+body.leaderboards-page .personal-rank-card,
+body.leaderboards-page .previous-winners-panel {
+    border-radius: 12px;
+    border: 1px solid rgba(104, 226, 240, 0.16);
+    background:
+        radial-gradient(circle at 100% 0%, rgba(49, 190, 214, 0.12), transparent 42%),
+        linear-gradient(180deg, rgba(11, 44, 62, 0.82), rgba(2, 17, 29, 0.92));
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.05);
+    padding: 16px;
+}
+
+body.leaderboards-page .leaderboard-side-kicker {
+    color: #7ef0ff;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 12px;
+    font-weight: 900;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+}
+
+body.leaderboards-page .personal-rank-player {
+    display: grid;
+    grid-template-columns: 52px minmax(0, 1fr);
+    align-items: center;
+    gap: 12px;
+}
+
+body.leaderboards-page .personal-rank-player img {
+    width: 52px;
+    height: 52px;
+    border-radius: 14px;
+    border: 2px solid rgba(126, 240, 255, 0.48);
+    object-fit: cover;
+    background: rgba(1, 12, 20, 0.62);
+}
+
+body.leaderboards-page .personal-rank-player strong {
+    display: block;
+    color: #fff;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 22px;
+    font-weight: 900;
+    line-height: 1;
+    text-transform: uppercase;
+    overflow-wrap: anywhere;
+}
+
+body.leaderboards-page .personal-rank-player span {
+    display: block;
+    margin-top: 4px;
+    color: rgba(225, 246, 250, 0.68);
+    font-size: 12px;
+    font-weight: 700;
+}
+
+body.leaderboards-page .personal-rank-number {
+    margin: 16px 0 8px;
+    color: #ffffff;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 56px;
+    font-weight: 900;
+    line-height: .9;
+    letter-spacing: 0;
+}
+
+body.leaderboards-page .personal-rank-metric {
+    width: fit-content;
+    padding: 7px 10px;
+    border-radius: 999px;
+    border: 1px solid rgba(232, 168, 34, 0.28);
+    background: rgba(232, 168, 34, 0.12);
+    color: #ffd47a;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 14px;
+    font-weight: 900;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}
+
+body.leaderboards-page .personal-rank-card p {
+    margin: 12px 0 0;
+    color: rgba(225, 246, 250, 0.68);
+    font-size: 13px;
+    line-height: 1.45;
+}
+
+body.leaderboards-page .winner-history-group + .winner-history-group {
+    margin-top: 16px;
+    padding-top: 14px;
+    border-top: 1px solid rgba(104, 226, 240, 0.12);
+}
+
+body.leaderboards-page .winner-history-group h2 {
+    margin: 0 0 10px;
+    color: #fff;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 22px;
+    font-weight: 900;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}
+
+body.leaderboards-page .winner-history-list {
+    display: grid;
+    gap: 9px;
+}
+
+body.leaderboards-page .winner-history-item,
+body.leaderboards-page .winner-history-empty {
+    border-radius: 10px;
+    border: 1px solid rgba(255,255,255,0.08);
+    background: rgba(1, 12, 20, 0.42);
+    padding: 11px;
+}
+
+body.leaderboards-page .winner-history-item {
+    display: grid;
+    grid-template-columns: 42px minmax(0, 1fr);
+    gap: 10px;
+    align-items: center;
+}
+
+body.leaderboards-page .winner-history-item img {
+    width: 42px;
+    height: 42px;
+    border-radius: 12px;
+    border: 2px solid rgba(232, 168, 34, 0.38);
+    object-fit: cover;
+    background: rgba(1, 12, 20, 0.62);
+}
+
+body.leaderboards-page .winner-history-item strong {
+    display: block;
+    color: #fff;
+    font-weight: 900;
+    overflow-wrap: anywhere;
+}
+
+body.leaderboards-page .winner-history-item span,
+body.leaderboards-page .winner-history-empty {
+    color: rgba(225, 246, 250, 0.64);
+    font-size: 12px;
+    line-height: 1.35;
+}
+
 body.leaderboards-page .leaderboard-table-shell {
-    margin: 18px 28px 0;
+    margin: 0;
     padding: 10px;
     border-radius: 12px;
     border: 1px solid rgba(44, 196, 196, 0.14);
@@ -1209,6 +1369,109 @@ body.leaderboards-page .leaderboard-table img {
     height: 44px;
     border: 2px solid rgba(126, 240, 255, 0.5);
     box-shadow: 0 8px 22px rgba(0,0,0,0.24);
+}
+
+body.leaderboards-page .leaderboard-row-cell {
+    padding: 0 !important;
+    border: 0;
+    border-radius: 10px !important;
+    overflow: hidden;
+    background: transparent !important;
+}
+
+body.leaderboards-page .leaderboard-row-card {
+    position: relative;
+    display: grid;
+    grid-template-columns: minmax(54px, .72fr) minmax(58px, .78fr) minmax(170px, 2.2fr) repeat(4, minmax(58px, 1fr));
+    align-items: stretch;
+    min-height: 70px;
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+body.leaderboards-page .leaderboard-row-card::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    background: linear-gradient(90deg, rgba(1, 8, 15, 0.72), rgba(1, 8, 15, 0.34) 46%, rgba(1, 8, 15, 0.72));
+}
+
+body.leaderboards-page .leaderboard-row-segment {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 0;
+    padding: 13px 12px;
+}
+
+body.leaderboards-page .leaderboard-row-player {
+    flex-direction: column;
+    gap: 2px;
+}
+
+body.leaderboards-page .leaderboard-table tr.lb-theme-volcanic-ember .leaderboard-row-card {
+    background: url("images/profileThemes/VolcanicEmber.png") center center / cover no-repeat;
+}
+
+body.leaderboards-page .leaderboard-table tr.lb-theme-kelp-canopy .leaderboard-row-card {
+    background: url("images/profileThemes/KelpCanopy.png") center center / cover no-repeat;
+}
+
+body.leaderboards-page .leaderboard-table tr.lb-theme-glacier-shine .leaderboard-row-card {
+    background: url("images/profileThemes/GlacierShine.png") center center / cover no-repeat;
+}
+
+body.leaderboards-page .leaderboard-table tr.lb-theme-elf .leaderboard-row-card {
+    background: url("images/profileThemes/Elf.png") center center / cover no-repeat;
+}
+
+body.leaderboards-page .leaderboard-table tr.lb-theme-north-pole .leaderboard-row-card {
+    background: url("images/profileThemes/Northpole.png") center 58% / cover no-repeat;
+}
+
+body.leaderboards-page .leaderboard-table tr.lb-theme-pumpkin-patch .leaderboard-row-card {
+    background: url("images/profileThemes/Goo.png") center top / cover no-repeat;
+}
+
+body.leaderboards-page .leaderboard-table tr.lb-theme-haunted-abyss .leaderboard-row-card {
+    background: url("images/profileThemes/Witchlight.png") center center / cover no-repeat;
+}
+
+body.leaderboards-page .leaderboard-table tr.lb-theme-nightmare-reef .leaderboard-row-card {
+    background: url("images/profileThemes/PhantomFog.png") center center / cover no-repeat;
+}
+
+body.leaderboards-page .leaderboard-table tr.lb-theme-volcanic-ember .leaderboard-row-card::before,
+body.leaderboards-page .leaderboard-table tr.lb-theme-kelp-canopy .leaderboard-row-card::before,
+body.leaderboards-page .leaderboard-table tr.lb-theme-elf .leaderboard-row-card::before,
+body.leaderboards-page .leaderboard-table tr.lb-theme-pumpkin-patch .leaderboard-row-card::before,
+body.leaderboards-page .leaderboard-table tr.lb-theme-haunted-abyss .leaderboard-row-card::before,
+body.leaderboards-page .leaderboard-table tr.lb-theme-nightmare-reef .leaderboard-row-card::before {
+    background:
+        linear-gradient(90deg, rgba(1, 8, 15, 0.82), rgba(1, 8, 15, 0.34) 46%, rgba(1, 8, 15, 0.82)),
+        linear-gradient(180deg, rgba(0, 0, 0, 0.08), rgba(0, 0, 0, 0.48));
+}
+
+body.leaderboards-page .leaderboard-table tr.lb-theme-glacier-shine .leaderboard-row-card::before {
+    background:
+        linear-gradient(90deg, rgba(12, 46, 66, 0.64), rgba(12, 46, 66, 0.18) 48%, rgba(12, 46, 66, 0.64)),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.16), rgba(13, 60, 88, 0.34));
+}
+
+body.leaderboards-page .leaderboard-table tr.lb-theme-north-pole .leaderboard-row-card::before {
+    background:
+        linear-gradient(90deg, rgba(235, 250, 255, 0.68), rgba(235, 250, 255, 0.2) 48%, rgba(235, 250, 255, 0.68)),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.22), rgba(46, 113, 146, 0.34));
+}
+
+body.leaderboards-page .leaderboard-table tr.lb-theme-north-pole .leaderboard-player-name,
+body.leaderboards-page .leaderboard-table tr.lb-theme-north-pole .leaderboard-metric {
+    color: #07314b;
+    text-shadow: 0 1px 2px rgba(255, 255, 255, 0.7);
 }
 
 body.leaderboards-page .rank-pill {
@@ -1320,7 +1583,16 @@ body.leaderboards-page #friendProfileModal .profile-modal-content .stat-value {
     }
 
     body.leaderboards-page .leaderboard-table-shell {
-        margin: 14px 12px 0;
+        margin: 0;
+    }
+
+    body.leaderboards-page .leaderboard-layout {
+        grid-template-columns: 1fr;
+        padding: 14px 12px 0;
+    }
+
+    body.leaderboards-page .leaderboard-side-panel {
+        order: -1;
     }
 
     body.leaderboards-page .back-btn {
@@ -1330,7 +1602,7 @@ body.leaderboards-page #friendProfileModal .profile-modal-content .stat-value {
 }
 
     </style>
-    <link rel="stylesheet" href="mobile.css">
+    <link rel="stylesheet" href="../mobile.css">
 </head>
 <body class="leaderboards-page shell-page">
     <header class="navbar">
@@ -1372,24 +1644,54 @@ body.leaderboards-page #friendProfileModal .profile-modal-content .stat-value {
             </div>
         </div>
         <h1>🦈 Sharkdle Global Leaderboards</h1>
-        <div id="leaderboard-loading" class="loading">Loading leaderboard...</div>
-        <div class="leaderboard-table-shell">
-        <table class="leaderboard-table" id="leaderboard-table" style="display:none;">
-            <thead>
-                <tr>
-                    <th>Rank</th>
-                    <th>Profile</th>
-                    <th>Username</th>
-                    <th id="wins-header">Wins</th>
-                    <th id="level-header">Level</th>
-                    <th id="streak-header">Streak</th>
-                    <th id="games-header">Games</th>
-                </tr>
-            </thead>
-            <tbody id="leaderboard-body">
-                <!-- Leaderboard rows will be inserted here -->
-            </tbody>
-        </table>
+        <div class="leaderboard-layout">
+            <main class="leaderboard-board-panel">
+                <div id="leaderboard-loading" class="loading">Loading leaderboard...</div>
+                <div class="leaderboard-table-shell">
+                <table class="leaderboard-table" id="leaderboard-table" style="display:none;">
+                    <thead>
+                        <tr>
+                            <th>Rank</th>
+                            <th>Profile</th>
+                            <th>Username</th>
+                            <th id="wins-header">Wins</th>
+                            <th id="level-header">Level</th>
+                            <th id="streak-header">Streak</th>
+                            <th id="games-header">Games</th>
+                        </tr>
+                    </thead>
+                    <tbody id="leaderboard-body">
+                        <!-- Leaderboard rows will be inserted here -->
+                    </tbody>
+                </table>
+                </div>
+            </main>
+            <aside class="leaderboard-side-panel">
+                <section class="personal-rank-card" id="personal-rank-card">
+                    <div class="leaderboard-side-kicker">Your Position</div>
+                    <div class="personal-rank-player">
+                        <img id="personal-rank-avatar" src="images/pfp/shark1.png" alt="">
+                        <div>
+                            <strong id="personal-rank-name">Login to track</strong>
+                            <span id="personal-rank-state">Not signed in</span>
+                        </div>
+                    </div>
+                    <div class="personal-rank-number" id="personal-rank-position">--</div>
+                    <div class="personal-rank-metric" id="personal-rank-metric">Wins: --</div>
+                    <p id="personal-rank-copy">Your position appears here even when you are outside the visible Top 25.</p>
+                </section>
+                <section class="previous-winners-panel">
+                    <div class="leaderboard-side-kicker">Previous Winners</div>
+                    <div class="winner-history-group">
+                        <h2>Daily Winners</h2>
+                        <div class="winner-history-list" id="previous-daily-winners"></div>
+                    </div>
+                    <div class="winner-history-group">
+                        <h2>Monthly Winners</h2>
+                        <div class="winner-history-list" id="previous-monthly-winners"></div>
+                    </div>
+                </section>
+            </aside>
         </div>
         <button class="back-btn" onclick="window.location.href=resolveAppPath('index.html')">
             ⬅️ Back to Main Menu
@@ -1507,6 +1809,9 @@ body.leaderboards-page #friendProfileModal .profile-modal-content .stat-value {
         }
         const LEADERBOARD_LIMIT = 25;
         const LEADERBOARD_QUERY_LIMIT = 200;
+        const LEADERBOARD_SCAN_LIMIT = 1000;
+        const LEADERBOARD_WINNERS_COLLECTION = "leaderboardWinners";
+        const PREVIOUS_WINNER_LIMIT = 4;
         const leaderboardRangeConfig = {
             daily: {
                 id: "daily",
@@ -1641,6 +1946,49 @@ body.leaderboards-page #friendProfileModal .profile-modal-content .stat-value {
 
         function getRangeConfig(rangeKey = selectedLeaderboardRange) {
             return leaderboardRangeConfig[rangeKey] || leaderboardRangeConfig.all_time;
+        }
+
+        function escapeLeaderboardHtml(value) {
+            return String(value ?? "").replace(/[&<>"']/g, char => ({
+                "&": "&amp;",
+                "<": "&lt;",
+                ">": "&gt;",
+                '"': "&quot;",
+                "'": "&#39;"
+            }[char]));
+        }
+
+        function formatLeaderboardPeriodLabel(rangeType, periodKey) {
+            if (!periodKey) return "Previous period";
+            if (rangeType === "monthly") {
+                const [year, month] = String(periodKey).split("-");
+                const date = new Date(Date.UTC(Number(year), Number(month) - 1, 1));
+                return Number.isNaN(date.getTime())
+                    ? periodKey
+                    : date.toLocaleDateString(undefined, { month: "long", year: "numeric", timeZone: "UTC" });
+            }
+            const date = new Date(`${periodKey}T00:00:00Z`);
+            return Number.isNaN(date.getTime())
+                ? periodKey
+                : date.toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
+        }
+
+        function getLeaderboardProfilePicPath(data = {}) {
+            const cosmetics = window.SharkdleCosmeticsDisplay;
+            return cosmetics
+                ? cosmetics.resolveProfilePicturePath(data.profilePicture || data.profilePic)
+                : (data.profilePicture || data.profilePic || "images/pfp/shark1.png");
+        }
+
+        function getLeaderboardUserRef(doc, data, metricValue) {
+            return {
+                uid: doc?.id || data?.uid || "",
+                email: data?.email || "",
+                username: data?.username ? String(data.username).toLowerCase() : null,
+                displayName: data?.username || "Anonymous",
+                profilePicture: getLeaderboardProfilePicPath(data),
+                metricValue: Number(metricValue) || 0
+            };
         }
 
         const ALL_TIME_TOP3_PFP = {
@@ -1805,6 +2153,257 @@ body.leaderboards-page #friendProfileModal .profile-modal-content .stat-value {
             }));
         }
 
+        function getLocalLeaderboardWinnerHistory() {
+            try {
+                const parsed = JSON.parse(localStorage.getItem("leaderboardWinnerHistory") || "[]");
+                return Array.isArray(parsed) ? parsed : [];
+            } catch (error) {
+                console.warn("Unable to read local winner history.", error);
+                return [];
+            }
+        }
+
+        function setLocalLeaderboardWinnerHistory(winners) {
+            const cleanWinners = Array.isArray(winners) ? winners.filter(Boolean).slice(0, 20) : [];
+            localStorage.setItem("leaderboardWinnerHistory", JSON.stringify(cleanWinners));
+        }
+
+        async function recordPreviousLeaderboardWinner(rangeType, meta, pfpDef) {
+            if (!meta?.leaderUid || !meta?.periodKey) return null;
+            const winner = {
+                id: `${rangeType}_${meta.periodKey}`,
+                rangeType,
+                periodKey: meta.periodKey,
+                periodLabel: formatLeaderboardPeriodLabel(rangeType, meta.periodKey),
+                uid: meta.leaderUid,
+                displayName: meta.leaderName || "Anonymous",
+                profilePicture: meta.leaderProfilePic || "images/pfp/shark1.png",
+                metricValue: Number(meta.leaderMetric) || 0,
+                rewardName: pfpDef.name,
+                rewardImagePath: pfpDef.imagePath,
+                endedAtMs: Date.now()
+            };
+
+            const localHistory = getLocalLeaderboardWinnerHistory().filter(entry => entry.id !== winner.id);
+            setLocalLeaderboardWinnerHistory([winner, ...localHistory]);
+
+            try {
+                await db.collection(LEADERBOARD_WINNERS_COLLECTION).doc(winner.id).set({
+                    ...winner,
+                    createdBy: currentUserUID || null
+                }, { merge: true });
+            } catch (error) {
+                console.warn("Unable to save previous leaderboard winner:", error);
+            }
+            return winner;
+        }
+
+        function renderPreviousWinnerList(rangeType, winners) {
+            const container = document.getElementById(rangeType === "daily" ? "previous-daily-winners" : "previous-monthly-winners");
+            if (!container) return;
+            const filtered = winners
+                .filter(winner => winner.rangeType === rangeType)
+                .slice(0, PREVIOUS_WINNER_LIMIT);
+
+            if (!filtered.length) {
+                container.innerHTML = `<div class="winner-history-empty">No previous ${rangeType} winners recorded yet.</div>`;
+                return;
+            }
+
+            container.innerHTML = filtered.map(winner => `
+                <div class="winner-history-item">
+                    <img src="${escapeLeaderboardHtml(winner.profilePicture || "images/pfp/shark1.png")}" alt="" onerror="this.onerror=null;this.src='images/pfp/shark1.png';">
+                    <div>
+                        <strong>${escapeLeaderboardHtml(winner.displayName || "Anonymous")}</strong>
+                        <span>${escapeLeaderboardHtml(winner.periodLabel || formatLeaderboardPeriodLabel(rangeType, winner.periodKey))} - ${Number(winner.metricValue) || 0} ${rangeType === "daily" ? "daily wins" : "monthly wins"}</span>
+                    </div>
+                </div>
+            `).join("");
+        }
+
+        async function loadPreviousLeaderboardWinners() {
+            let winners = getLocalLeaderboardWinnerHistory();
+            try {
+                const snapshot = await db.collection(LEADERBOARD_WINNERS_COLLECTION)
+                    .orderBy("endedAtMs", "desc")
+                    .limit(20)
+                    .get();
+                const remoteWinners = [];
+                snapshot.forEach(doc => remoteWinners.push({ id: doc.id, ...(doc.data() || {}) }));
+                if (remoteWinners.length) {
+                    winners = remoteWinners;
+                    setLocalLeaderboardWinnerHistory(remoteWinners);
+                }
+            } catch (error) {
+                console.warn("Unable to load previous leaderboard winners:", error);
+            }
+            renderPreviousWinnerList("daily", winners);
+            renderPreviousWinnerList("monthly", winners);
+        }
+
+        function updatePersonalRankCard(data = {}) {
+            const avatar = document.getElementById("personal-rank-avatar");
+            const name = document.getElementById("personal-rank-name");
+            const state = document.getElementById("personal-rank-state");
+            const position = document.getElementById("personal-rank-position");
+            const metric = document.getElementById("personal-rank-metric");
+            const copy = document.getElementById("personal-rank-copy");
+            if (avatar && data.avatar) {
+                avatar.src = data.avatar;
+                avatar.onerror = () => {
+                    avatar.onerror = null;
+                    avatar.src = "images/pfp/shark1.png";
+                };
+            }
+            if (name) name.textContent = data.name || "Anonymous";
+            if (state) state.textContent = data.state || "";
+            if (position) position.textContent = data.position || "--";
+            if (metric) metric.textContent = data.metric || "Wins: --";
+            if (copy) copy.textContent = data.copy || "";
+        }
+
+        function renderPersonalRankLoading(rangeConfig) {
+            updatePersonalRankCard({
+                avatar: "images/pfp/shark1.png",
+                name: "Checking rank",
+                state: rangeConfig.label,
+                position: "...",
+                metric: `${rangeConfig.metricHeader}: --`,
+                copy: "Finding your place on this board."
+            });
+        }
+
+        function renderPersonalRankSignedOut(rangeConfig) {
+            updatePersonalRankCard({
+                avatar: "images/pfp/shark1.png",
+                name: "Login to track",
+                state: "Not signed in",
+                position: "--",
+                metric: `${rangeConfig.metricHeader}: --`,
+                copy: "Login to see your rank even when you are outside the visible Top 25."
+            });
+        }
+
+        function findPersonalRankInRows(candidateRows) {
+            if (!currentUserUID && !currentUserEmail && !currentUsername) return null;
+            const index = candidateRows.findIndex(({ doc, data }) => (
+                (currentUserUID && (doc.id === currentUserUID || data.uid === currentUserUID)) ||
+                (currentUserEmail && data.email && data.email === currentUserEmail) ||
+                (currentUsername && data.username && data.username.toLowerCase() === currentUsername.toLowerCase())
+            ));
+            return index >= 0 ? { index, row: candidateRows[index] } : null;
+        }
+
+        async function computePersonalLeaderboardRank(rangeConfig, candidateRows) {
+            const match = findPersonalRankInRows(candidateRows);
+            if (match) {
+                return {
+                    rank: match.index + 1,
+                    data: match.row.data,
+                    metricValue: match.row.metricValue,
+                    precise: true
+                };
+            }
+
+            if (!currentUserUID) return null;
+            const userDoc = await db.collection("userStats").doc(currentUserUID).get();
+            if (!userDoc.exists) return null;
+
+            const userData = userDoc.data() || {};
+            const metricValue = getLeaderboardMetricValue(userData, rangeConfig.id);
+            if (metricValue <= 0) {
+                return {
+                    rank: null,
+                    data: userData,
+                    metricValue,
+                    precise: true
+                };
+            }
+
+            try {
+                const higherSnapshot = await db.collection("userStats")
+                    .where(rangeConfig.orderField, ">", metricValue)
+                    .get();
+                let higherCount = 0;
+                higherSnapshot.forEach(doc => {
+                    if (doc.id === currentUserUID) return;
+                    const data = doc.data() || {};
+                    const candidateMetric = getLeaderboardMetricValue(data, rangeConfig.id);
+                    if (candidateMetric > metricValue) higherCount++;
+                });
+                return {
+                    rank: higherCount + 1,
+                    data: userData,
+                    metricValue,
+                    precise: true
+                };
+            } catch (error) {
+                console.warn("Unable to compute exact personal leaderboard rank:", error);
+                return {
+                    rank: null,
+                    data: userData,
+                    metricValue,
+                    precise: false
+                };
+            }
+        }
+
+        async function renderPersonalLeaderboardPosition(rangeConfig, candidateRows) {
+            if (!currentUserUID) {
+                renderPersonalRankSignedOut(rangeConfig);
+                return;
+            }
+
+            const expectedRangeId = rangeConfig.id;
+            renderPersonalRankLoading(rangeConfig);
+            try {
+                const personalRank = await computePersonalLeaderboardRank(rangeConfig, candidateRows);
+                if (selectedLeaderboardRange !== expectedRangeId) return;
+                if (!personalRank) {
+                    updatePersonalRankCard({
+                        avatar: "images/pfp/shark1.png",
+                        name: currentUserEmail || "Your account",
+                        state: rangeConfig.label,
+                        position: "Unranked",
+                        metric: `${rangeConfig.metricHeader}: 0`,
+                        copy: "Play a game in this mode to appear on the board."
+                    });
+                    return;
+                }
+
+                const cosmetics = window.SharkdleCosmeticsDisplay;
+                const cachedProfileData = loadCachedLeaderboardProfileData();
+                const rowData = cosmetics
+                    ? cosmetics.mergeRowCosmetics(personalRank.data, cachedProfileData)
+                    : personalRank.data;
+                const rankText = personalRank.rank ? `#${personalRank.rank}` : (candidateRows.length >= LEADERBOARD_SCAN_LIMIT ? `${LEADERBOARD_SCAN_LIMIT}+` : "Outside Top 25");
+                const stateText = personalRank.rank && personalRank.rank <= LEADERBOARD_LIMIT
+                    ? "On the visible board"
+                    : (personalRank.precise ? "Outside Top 25" : "Estimated placement");
+                updatePersonalRankCard({
+                    avatar: getLeaderboardProfilePicPath(rowData),
+                    name: rowData.username || currentUserEmail || "Your account",
+                    state: stateText,
+                    position: personalRank.metricValue > 0 ? rankText : "Unranked",
+                    metric: `${rangeConfig.metricHeader}: ${personalRank.metricValue || 0}`,
+                    copy: personalRank.metricValue > 0
+                        ? "Your position is tracked even when the main board only shows the Top 25."
+                        : "Play a game in this mode to appear on the board."
+                });
+            } catch (error) {
+                console.warn("Personal leaderboard position failed:", error);
+                if (selectedLeaderboardRange !== expectedRangeId) return;
+                updatePersonalRankCard({
+                    avatar: "images/pfp/shark1.png",
+                    name: currentUserEmail || "Your account",
+                    state: "Rank unavailable",
+                    position: "--",
+                    metric: `${rangeConfig.metricHeader}: --`,
+                    copy: "Could not check your position right now."
+                });
+            }
+        }
+
         async function processPeriodLeaderReward(rangeType, top1Ref, periodKey) {
             try {
                 const metaId = rangeType === "daily" ? "daily" : "monthly";
@@ -1821,10 +2420,16 @@ body.leaderboards-page #friendProfileModal .profile-modal-content .stat-value {
                         );
                     }
                 }
+                if (meta.periodKey && meta.periodKey !== periodKey && meta.leaderUid) {
+                    await recordPreviousLeaderboardWinner(rangeType, meta, pfpDef);
+                    loadPreviousLeaderboardWinners();
+                }
 
                 setLocalLeaderboardMeta(metaId, {
                     periodKey,
                     leaderUid: top1Ref?.uid || null,
+                    leaderName: top1Ref?.displayName || null,
+                    leaderProfilePic: top1Ref?.profilePicture || null,
                     leaderMetric: top1Ref?.metricValue || 0
                 });
             } catch (error) {
@@ -1958,6 +2563,7 @@ body.leaderboards-page #friendProfileModal .profile-modal-content .stat-value {
                 console.log("Auth state loaded. Current user UID:", user.uid, "Email:", user.email);
                 await syncLeaderboardCosmeticsToFirestore();
             }
+            loadPreviousLeaderboardWinners();
             loadLeaderboard(selectedLeaderboardRange);
         });
 
@@ -1969,17 +2575,21 @@ body.leaderboards-page #friendProfileModal .profile-modal-content .stat-value {
             document.getElementById('leaderboard-popup').style.display = 'none';
         }
 
-        async function getLeaderboardCandidateRows(rangeConfig) {
+        async function getLeaderboardCandidateRows(rangeConfig, maxCandidates = LEADERBOARD_LIMIT) {
             const candidates = [];
             const baseCollection = db.collection("userStats");
-            const queryLimit = rangeConfig.id === "all_time" ? LEADERBOARD_LIMIT : LEADERBOARD_QUERY_LIMIT;
+            const queryLimit = rangeConfig.id === "all_time"
+                ? Math.min(maxCandidates, LEADERBOARD_SCAN_LIMIT)
+                : LEADERBOARD_QUERY_LIMIT;
             let lastDoc = null;
             let pageCount = 0;
-            const maxPages = rangeConfig.id === "all_time" ? 1 : 8;
+            const maxPages = rangeConfig.id === "all_time"
+                ? Math.max(1, Math.ceil(maxCandidates / queryLimit))
+                : 8;
             let orderField = rangeConfig.orderField;
             let usingFallbackOrder = false;
 
-            while (pageCount < maxPages && candidates.length < LEADERBOARD_LIMIT) {
+            while (pageCount < maxPages && candidates.length < maxCandidates) {
                 let snapshot;
                 try {
                     let query = baseCollection
@@ -2025,7 +2635,7 @@ body.leaderboards-page #friendProfileModal .profile-modal-content .stat-value {
 
             return candidates
                 .sort((a, b) => b.metricValue - a.metricValue)
-                .slice(0, LEADERBOARD_LIMIT);
+                .slice(0, maxCandidates);
         }
 
         async function loadLeaderboard(rangeKey = selectedLeaderboardRange) {
@@ -2040,7 +2650,8 @@ body.leaderboards-page #friendProfileModal .profile-modal-content .stat-value {
             table.style.display = 'none';
             tbody.innerHTML = '';
             try {
-                const candidateRows = await getLeaderboardCandidateRows(rangeConfig);
+                const candidateRows = await getLeaderboardCandidateRows(rangeConfig, LEADERBOARD_SCAN_LIMIT);
+                renderPersonalLeaderboardPosition(rangeConfig, candidateRows);
                 if (!candidateRows.length) {
                     loadingDiv.textContent = rangeConfig.emptyState;
                     if (rangeConfig.id === "daily") {
@@ -2052,19 +2663,14 @@ body.leaderboards-page #friendProfileModal .profile-modal-content .stat-value {
                     return;
                 }
 
-                const top1Ref = {
-                    uid: candidateRows[0].doc.id,
-                    email: candidateRows[0].data.email,
-                    username: candidateRows[0].data.username ? candidateRows[0].data.username.toLowerCase() : null,
-                    metricValue: candidateRows[0].metricValue
-                };
+                const visibleRows = candidateRows.slice(0, LEADERBOARD_LIMIT);
+                const top1Ref = getLeaderboardUserRef(visibleRows[0].doc, visibleRows[0].data, visibleRows[0].metricValue);
                 
                 let rank = 1;
                 let top3Users = [];
                 const cosmetics = window.SharkdleCosmeticsDisplay;
                 const cachedProfileData = loadCachedLeaderboardProfileData();
-                candidateRows.forEach(({ doc, data, metricValue }) => {
-                    if (rank > LEADERBOARD_LIMIT) return;
+                visibleRows.forEach(({ doc, data, metricValue }) => {
                     const tr = document.createElement('tr');
                     const isCurrentUser = (currentUserUID && doc.id === currentUserUID) || 
                         (currentUserEmail && data.email && data.email === currentUserEmail) ||
@@ -2088,6 +2694,7 @@ body.leaderboards-page #friendProfileModal .profile-modal-content .stat-value {
                         ? cosmetics.buildProfilePicHtml(profilePicPath, isCurrentUser)
                         : `<img src="${profilePicPath}" alt="Profile" onerror="this.onerror=null;this.src='images/pfp/shark1.png';" style="width:38px;height:38px;border-radius:50%;border:2px solid #3e92cc;background:#18304a;object-fit:cover;">`;
                     const username = rowData.username ? rowData.username : 'Anonymous';
+                    const safeUsername = escapeLeaderboardHtml(username);
                     let rankCell = '';
                     if (rank === 1) {
                         rankCell = `<span class="rank-pill rank-top-1">🥇</span>`;
@@ -2099,7 +2706,7 @@ body.leaderboards-page #friendProfileModal .profile-modal-content .stat-value {
                         rankCell = `<span class="rank-pill">${rank}</span>`;
                     }
                     const badgeId = rowData.equippedBadge || "starter";
-                    const usernameDisplay = `<div class="leaderboard-player"><div class="leaderboard-player-name">${username}</div></div>`;
+                    const usernameDisplay = `<div class="leaderboard-player"><div class="leaderboard-player-name">${safeUsername}</div></div>`;
                     const badgeDisplay = cosmetics
                         ? cosmetics.buildBadgeHtml(badgeId)
                         : "";
@@ -2107,13 +2714,17 @@ body.leaderboards-page #friendProfileModal .profile-modal-content .stat-value {
                         tr.classList.add('current-user-row');
                     }
                     tr.innerHTML = `
-                        <td>${rankCell}</td>
-                        <td>${profilePicImg}</td>
-                        <td>${usernameDisplay}${badgeDisplay}</td> 
-                        <td class="leaderboard-metric">${metricValue}</td>
-                        <td class="leaderboard-metric">${rowData.currentLevel || 0}</td>
-                        <td class="leaderboard-metric">${rowData.currentStreak || 0}</td>
-                        <td class="leaderboard-metric">${rowData.gamesPlayed || 0}</td>
+                        <td class="leaderboard-row-cell" colspan="7">
+                            <div class="leaderboard-row-card">
+                                <div class="leaderboard-row-segment">${rankCell}</div>
+                                <div class="leaderboard-row-segment">${profilePicImg}</div>
+                                <div class="leaderboard-row-segment leaderboard-row-player">${usernameDisplay}${badgeDisplay}</div>
+                                <div class="leaderboard-row-segment leaderboard-metric">${metricValue}</div>
+                                <div class="leaderboard-row-segment leaderboard-metric">${rowData.currentLevel || 0}</div>
+                                <div class="leaderboard-row-segment leaderboard-metric">${rowData.currentStreak || 0}</div>
+                                <div class="leaderboard-row-segment leaderboard-metric">${rowData.gamesPlayed || 0}</div>
+                            </div>
+                        </td>
                     `;
                     tbody.appendChild(tr);
                     // Make rows clickable to view user profile (like friend items)
@@ -2251,8 +2862,8 @@ body.leaderboards-page #friendProfileModal .profile-modal-content .stat-value {
                             const targetRequests = Array.isArray(targetData.friendRequests) ? targetData.friendRequests : [];
 
                             if (myFriends.includes(uid)) {
-                                actionEl.innerHTML = `<span style="color:#9fdf9f;font-weight:700;">You are friends</span><button id="remove-friend-btn" style="margin-left:8px;padding:8px 10px;border-radius:8px;border:none;background:#ff6b6b;color:#fff;font-weight:700;">Remove</button>`;
-                                document.getElementById('remove-friend-btn').addEventListener('click', async (e) => {
+                                actionEl.innerHTML = `<span style="color:#9fdf9f;font-weight:700;">You are friends</span><button data-remove-friend-btn style="margin-left:8px;padding:8px 10px;border-radius:8px;border:none;background:#ff6b6b;color:#fff;font-weight:700;">Remove</button>`;
+                                actionEl.querySelector('[data-remove-friend-btn]')?.addEventListener('click', async (e) => {
                                     e.stopPropagation();
                                     try {
                                         const otherRef = db.collection('friendNetwork').doc(uid);
@@ -2264,8 +2875,8 @@ body.leaderboards-page #friendProfileModal .profile-modal-content .stat-value {
                                         uFriends = uFriends.filter(x => x !== uid);
                                         oFriends = oFriends.filter(x => x !== current.uid);
                                         await Promise.all([myRef.set({ friends: uFriends }, { merge: true }), otherRef.set({ friends: oFriends }, { merge: true })]);
-                                        actionEl.innerHTML = `<button id="send-friend-btn" style="padding:8px 12px;border-radius:8px;border:none;background:#00b4d8;color:#fff;font-weight:700;">Add Friend</button>`;
-                                        document.getElementById('send-friend-btn').addEventListener('click', async (ev) => {
+                                        actionEl.innerHTML = `<button data-send-friend-btn style="padding:8px 12px;border-radius:8px;border:none;background:#00b4d8;color:#fff;font-weight:700;">Add Friend</button>`;
+                                        actionEl.querySelector('[data-send-friend-btn]')?.addEventListener('click', async (ev) => {
                                             ev.stopPropagation();
                                             await sendFriendRequestFromModal(uid, actionEl);
                                         });
@@ -2276,8 +2887,8 @@ body.leaderboards-page #friendProfileModal .profile-modal-content .stat-value {
                             } else if (targetRequests.includes(current.uid)) {
                                 actionEl.innerHTML = `<span style="color:#ffd47f;font-weight:700;">Request sent</span>`;
                             } else {
-                                actionEl.innerHTML = `<button id="send-friend-btn" style="padding:8px 12px;border-radius:8px;border:none;background:#00b4d8;color:#fff;font-weight:700;">Add Friend</button>`;
-                                document.getElementById('send-friend-btn').addEventListener('click', async (ev) => {
+                                actionEl.innerHTML = `<button data-send-friend-btn style="padding:8px 12px;border-radius:8px;border:none;background:#00b4d8;color:#fff;font-weight:700;">Add Friend</button>`;
+                                actionEl.querySelector('[data-send-friend-btn]')?.addEventListener('click', async (ev) => {
                                     ev.stopPropagation();
                                     await sendFriendRequestFromModal(uid, actionEl);
                                 });
@@ -2288,7 +2899,7 @@ body.leaderboards-page #friendProfileModal .profile-modal-content .stat-value {
                     }
                 }
 
-                document.getElementById('friendProfileModal').classList.remove('hidden');
+                document.getElementById('friendProfileModal')?.classList.remove('hidden');
             } catch (err) {
                 console.warn('openUserProfileModal failed:', err);
                 showLeaderboardPopup();
@@ -2296,7 +2907,7 @@ body.leaderboards-page #friendProfileModal .profile-modal-content .stat-value {
         }
 
         function closeFriendProfileModal() {
-            document.getElementById('friendProfileModal').classList.add('hidden');
+            document.getElementById('friendProfileModal')?.classList.add('hidden');
         }
 
         // Helper: send friend request and update provided action container
@@ -2323,7 +2934,7 @@ body.leaderboards-page #friendProfileModal .profile-modal-content .stat-value {
                 if (actionEl) actionEl.innerHTML = `<span style="color:#ffd47f;font-weight:700;">Request sent</span>`;
             } catch (err) {
                 console.warn('Failed to send friend request:', err);
-                if (actionEl) actionEl.innerHTML = `<button id="send-friend-btn" style="padding:8px 12px;border-radius:8px;border:none;background:#00b4d8;color:#fff;font-weight:700;">Add Friend</button>`;
+                if (actionEl) actionEl.innerHTML = `<button data-send-friend-btn style="padding:8px 12px;border-radius:8px;border:none;background:#00b4d8;color:#fff;font-weight:700;">Add Friend</button>`;
             }
         }
     </script>

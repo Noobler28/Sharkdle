@@ -39,15 +39,15 @@ function getSpeciesModeConfig(modeKey) {
         },
         rays: {
             key: "rays",
-            title: "Raydle - Daily",
-            kicker: "Daily Rays",
-            heading: "Guess the Ray",
-            lead: "Think you know this ray? Make your guess below.",
-            placeholder: "Enter ray name...",
-            animal: "ray",
-            animalTitle: "Ray",
-            shareTitle: "Raydle Daily",
-            recentMode: "Daily Rays",
+            title: "Relatives - Daily",
+            kicker: "Daily Relatives",
+            heading: "Guess the Relative",
+            lead: "Think you know this shark relative? Make your guess below.",
+            placeholder: "Enter relative name...",
+            animal: "relative",
+            animalTitle: "Relative",
+            shareTitle: "Relatives Daily",
+            recentMode: "Daily Relatives",
             heroBackground: HERO_ART.manta,
             heroForeground: HERO_ART.manta
         },
@@ -56,8 +56,8 @@ function getSpeciesModeConfig(modeKey) {
             title: "Sharkdle - Mixed Daily",
             kicker: "Mixed Daily",
             heading: "Guess the Species",
-            lead: "Sharks and rays share the board. Make your guess below.",
-            placeholder: "Enter shark or ray name...",
+            lead: "Sharks and relatives share the board. Make your guess below.",
+            placeholder: "Enter shark or relative name...",
             animal: "species",
             animalTitle: "Species",
             shareTitle: "Sharkdle Mixed Daily",
@@ -173,7 +173,7 @@ function appendSharchiveReviewButton(container) {
 function getDailyVariantSwitcherHtml() {
     const variants = [
         { key: "sharks", label: "Sharks" },
-        { key: "rays", label: "Rays" },
+        { key: "rays", label: "Relatives" },
         { key: "mixed", label: "Mixed" }
     ];
 
@@ -396,24 +396,183 @@ function isMysteryProfileSpeciesDiscovered() {
     return gameWon || guesses.some(guess => guess?.shark?.name === targetShark.name);
 }
 
-function updateMysteryProfilePanel() {
+function getProfileGuessedSpecies() {
+    return guesses.map(guess => guess?.shark).filter(Boolean);
+}
+
+function getYearDiscoveryClueRange() {
+    const targetYear = Number(targetShark?.yod);
+    if (!Number.isFinite(targetYear)) return { lower: null, upper: null };
+
+    return getProfileGuessedSpecies().reduce((range, shark) => {
+        const guessYear = Number(shark?.yod);
+        if (!Number.isFinite(guessYear) || guessYear === targetYear) return range;
+        if (guessYear < targetYear) {
+            range.lower = range.lower === null ? guessYear : Math.max(range.lower, guessYear);
+        } else {
+            range.upper = range.upper === null ? guessYear : Math.min(range.upper, guessYear);
+        }
+        return range;
+    }, { lower: null, upper: null });
+}
+
+function formatYearDiscoveryClueRange(range) {
+    if (!range) return "";
+    if (range.lower !== null && range.upper !== null) return `${range.lower} - ${range.upper}`;
+    if (range.lower !== null) return `After ${range.lower}`;
+    if (range.upper !== null) return `Before ${range.upper}`;
+    return "";
+}
+
+function hasProfileFilterValue(key) {
+    return hasCorrectGuessForProfileField(key) || categoryReveal?.key === key;
+}
+
+function getMysteryProfileFilterState() {
+    const yearRange = getYearDiscoveryClueRange();
+    const state = {
+        search: "",
+        size: "",
+        depth: "",
+        yearEarliest: "",
+        yearLatest: ""
+    };
+
+    if (isMysteryProfileSpeciesDiscovered()) {
+        state.search = targetShark.name;
+    } else {
+        state.search = ["family", "order", "genus"]
+            .filter(hasProfileFilterValue)
+            .map(key => targetShark[key])
+            .filter(Boolean)
+            .join(" ");
+    }
+
+    if (hasProfileFilterValue("size")) state.size = targetShark.size || "";
+    if (hasProfileFilterValue("depth")) state.depth = targetShark.depth || "";
+    if (hasProfileFilterValue("yod")) {
+        state.yearEarliest = targetShark.yod || "";
+        state.yearLatest = targetShark.yod || "";
+    } else {
+        state.yearEarliest = yearRange.lower ?? "";
+        state.yearLatest = yearRange.upper ?? "";
+    }
+
+    return state;
+}
+
+function getMysteryProfileFilterHref() {
+    const state = getMysteryProfileFilterState();
+    const params = new URLSearchParams();
+
+    if (state.search) params.set("search", state.search);
+    if (state.size) params.set("size", state.size);
+    if (state.depth) params.set("depth", state.depth);
+    if (state.yearEarliest !== "") params.set("yearEarliest", state.yearEarliest);
+    if (state.yearLatest !== "") params.set("yearLatest", state.yearLatest);
+
+    if (!Array.from(params.keys()).length) return "";
+
+    const path = typeof resolveAppPath === "function" ? resolveAppPath("Library/index.html") : "Library/index.html";
+    return `${path}?${params.toString()}`;
+}
+
+const SHARCHIVE_FILTER_WINDOW_NAME = "sharkdle-sharchive-filter";
+let sharchiveFilterWindow = null;
+let sharchiveFilterToastTimer = null;
+
+function showSharchiveFilterToast(message = "Sharchive updated") {
+    if (!document.body) return;
+
+    let toast = document.querySelector(".profile-filter-toast");
+    if (!toast) {
+        toast = document.createElement("div");
+        toast.className = "profile-filter-toast";
+        toast.setAttribute("role", "status");
+        toast.setAttribute("aria-live", "polite");
+        document.body.appendChild(toast);
+    }
+
+    toast.textContent = message;
+    window.clearTimeout(sharchiveFilterToastTimer);
+    toast.classList.remove("show");
+    void toast.offsetWidth;
+    toast.classList.add("show");
+    sharchiveFilterToastTimer = window.setTimeout(() => {
+        toast.classList.remove("show");
+    }, 1800);
+}
+
+function openOrUpdateMysteryProfileFilter(href) {
+    if (!href) return;
+
+    if (sharchiveFilterWindow && !sharchiveFilterWindow.closed) {
+        try {
+            sharchiveFilterWindow.location.href = href;
+            sharchiveFilterWindow.focus();
+            showSharchiveFilterToast();
+            return;
+        } catch (error) {
+            sharchiveFilterWindow = null;
+        }
+    }
+
+    sharchiveFilterWindow = window.open(href, SHARCHIVE_FILTER_WINDOW_NAME);
+    if (sharchiveFilterWindow) {
+        try {
+            sharchiveFilterWindow.opener = null;
+            sharchiveFilterWindow.focus();
+        } catch (error) {}
+        showSharchiveFilterToast();
+    }
+}
+
+function updateMysteryProfileFilterButton(panel) {
+    const button = panel.querySelector("#profile-sharchive-filter-btn");
+    if (!button) return;
+
+    const href = getMysteryProfileFilterHref();
+    button.disabled = !href;
+    button.dataset.href = href;
+    button.title = href ? "Open or update these clues in the Sharchive" : "Reveal a clue before filtering the Sharchive";
+    button.onclick = () => {
+        if (button.dataset.href) {
+            openOrUpdateMysteryProfileFilter(button.dataset.href);
+        }
+    };
+}
+
+function updateMysteryProfilePanel(animate = false) {
     const panel = document.querySelector(".mystery-profile-panel");
     if (!panel) return;
 
     let confirmedCount = 0;
+    let narrowedCount = 0;
+    const rowsToAnimate = [];
 
     CATEGORY_REVEAL_OPTIONS.forEach(option => {
         const row = panel.querySelector(`[data-profile-key="${option.key}"]`);
         if (!row) return;
 
         const valueElement = row.querySelector(".mystery-profile-value");
+        const wasVisible = row.classList.contains("revealed") || row.classList.contains("narrowed");
+        const previousValue = valueElement?.textContent || "";
         const confirmedByGuess = hasCorrectGuessForProfileField(option.key);
         const confirmedByReveal = categoryReveal?.key === option.key;
         const isConfirmed = confirmedByGuess || confirmedByReveal;
-        const value = isConfirmed ? String(option.getValue(targetShark) ?? "") : "";
+        const rangeValue = option.key === "yod" && !isConfirmed
+            ? formatYearDiscoveryClueRange(getYearDiscoveryClueRange())
+            : "";
+        const isNarrowed = Boolean(rangeValue);
+        const value = isConfirmed ? String(option.getValue(targetShark) ?? "") : rangeValue;
 
+        row.classList.remove("profile-revealing");
         row.classList.toggle("revealed", isConfirmed);
+        row.classList.toggle("narrowed", isNarrowed);
         row.classList.toggle("purchased", confirmedByReveal && !confirmedByGuess);
+        if (animate && (isConfirmed || isNarrowed) && (!wasVisible || previousValue !== value)) {
+            rowsToAnimate.push(row);
+        }
 
         if (valueElement) {
             valueElement.textContent = value;
@@ -421,9 +580,10 @@ function updateMysteryProfilePanel() {
         }
 
         if (isConfirmed) confirmedCount++;
+        if (isNarrowed) narrowedCount++;
     });
 
-    panel.classList.toggle("has-reveals", confirmedCount > 0);
+    panel.classList.toggle("has-reveals", confirmedCount > 0 || narrowedCount > 0);
 
     const name = panel.querySelector(".mystery-profile-target strong");
     if (name) {
@@ -434,9 +594,23 @@ function updateMysteryProfilePanel() {
 
     const status = panel.querySelector(".mystery-profile-target small");
     if (status) {
-        status.textContent = confirmedCount > 0
-            ? `${confirmedCount}/${CATEGORY_REVEAL_OPTIONS.length} clues confirmed`
-            : "Profile locked";
+        if (confirmedCount > 0) {
+            status.textContent = `${confirmedCount}/${CATEGORY_REVEAL_OPTIONS.length} clues confirmed`;
+        } else if (narrowedCount > 0) {
+            status.textContent = `${narrowedCount} clue narrowed`;
+        } else {
+            status.textContent = "Profile locked";
+        }
+    }
+
+    updateMysteryProfileFilterButton(panel);
+
+    if (rowsToAnimate.length) {
+        void panel.offsetWidth;
+        rowsToAnimate.forEach(row => row.classList.add("profile-revealing"));
+        window.setTimeout(() => {
+            rowsToAnimate.forEach(row => row.classList.remove("profile-revealing"));
+        }, 720);
     }
 }
 
@@ -878,21 +1052,54 @@ function escapeHtml(value) {
         .replace(/'/g, "&#39;");
 }
 
-// Allow Enter key to submit guess
-document.getElementById("sharkGuess").addEventListener("keydown", function(event) {
+const sharkGuessInput = document.getElementById("sharkGuess");
+const suggestionsDiv = document.getElementById("suggestions");
+let highlightedSuggestionIndex = -1;
+
+function getVisibleSuggestionItems() {
+    return Array.from(suggestionsDiv.querySelectorAll(".suggestion-item[data-species-name]"));
+}
+
+function updateHighlightedSuggestion(nextIndex) {
+    const items = getVisibleSuggestionItems();
+    highlightedSuggestionIndex = items.length ? (nextIndex + items.length) % items.length : -1;
+    suggestionsDiv.querySelectorAll(".suggestion-item").forEach(item => item.classList.remove("highlighted"));
+    const highlightedItem = items[highlightedSuggestionIndex];
+    if (highlightedItem) {
+        highlightedItem.classList.add("highlighted");
+        highlightedItem.scrollIntoView({ block: "nearest" });
+    }
+}
+
+// Allow keyboard control of suggestions and Enter submission.
+sharkGuessInput.addEventListener("keydown", function(event) {
+    if (event.key === "Escape") {
+        suggestionsDiv.classList.remove("active");
+        highlightedSuggestionIndex = -1;
+        return;
+    }
+
+    if ((event.key === "ArrowDown" || event.key === "ArrowUp") && suggestionsDiv.classList.contains("active")) {
+        event.preventDefault();
+        updateHighlightedSuggestion(highlightedSuggestionIndex + (event.key === "ArrowDown" ? 1 : -1));
+        return;
+    }
+
     if (event.key === "Enter") {
+        const highlightedItem = getVisibleSuggestionItems()[highlightedSuggestionIndex];
+        if (highlightedItem) {
+            selectShark(decodeURIComponent(highlightedItem.dataset.speciesName));
+        }
         makeGuess();
     }
 });
-
-const sharkGuessInput = document.getElementById("sharkGuess");
-const suggestionsDiv = document.getElementById("suggestions");
 
 sharkGuessInput.addEventListener("input", function() {
     const input = normalizeInput(this.value);
 
     if (input.length === 0) {
         suggestionsDiv.classList.remove("active");
+        highlightedSuggestionIndex = -1;
         return;
     }
 
@@ -903,6 +1110,7 @@ sharkGuessInput.addEventListener("input", function() {
 
     if (matches.length === 0) {
         suggestionsDiv.classList.remove("active");
+        highlightedSuggestionIndex = -1;
         return;
     }
     
@@ -916,6 +1124,7 @@ sharkGuessInput.addEventListener("input", function() {
     }).join("");
     
     suggestionsDiv.classList.add("active");
+    highlightedSuggestionIndex = -1;
 });
 
 // Close suggestions when clicking outside
@@ -934,6 +1143,30 @@ suggestionsDiv.addEventListener("click", function(event) {
 function selectShark(sharkName) {
     document.getElementById("sharkGuess").value = sharkName;
     document.getElementById("suggestions").classList.remove("active");
+    highlightedSuggestionIndex = -1;
+}
+
+function openGuessFeedback(feedbackDiv, animate = false) {
+    if (!feedbackDiv) return;
+    feedbackDiv.style.display = "flex";
+    if (!animate) return;
+
+    feedbackDiv.classList.remove("feedback-revealing");
+    void feedbackDiv.offsetWidth;
+    feedbackDiv.classList.add("feedback-revealing");
+    window.setTimeout(() => {
+        feedbackDiv.classList.remove("feedback-revealing");
+    }, 720);
+}
+
+let mysteryProfileRevealTimer = null;
+
+function scheduleMysteryProfileReveal() {
+    window.clearTimeout(mysteryProfileRevealTimer);
+    mysteryProfileRevealTimer = window.setTimeout(() => {
+        mysteryProfileRevealTimer = null;
+        updateMysteryProfilePanel(true);
+    }, 520);
 }
 
 
@@ -996,11 +1229,11 @@ cards.forEach(card => {
 // Open the newest (first) guess
 if (cards.length > 0) {
     const newestFeedback = cards[0].querySelector('.feedback');
-    newestFeedback.style.display = 'flex';
+    openGuessFeedback(newestFeedback, true);
 }
 
 updateCategoryRevealPanel();
-updateMysteryProfilePanel();
+scheduleMysteryProfileReveal();
 
 if(shark.name === targetShark.name){
 
@@ -1027,6 +1260,7 @@ if(shark.name === targetShark.name){
     profileData.wins = (profileData.wins || 0) + 1;
     profileData.currentStreak = (profileData.currentStreak || 0) + 1;
     profileData.highestStreak = Math.max(profileData.highestStreak || 0, profileData.currentStreak);
+    profileData.currentLossStreak = 0;
     if (typeof incrementProfilePeriodWins === 'function') {
         incrementProfilePeriodWins(profileData);
     }
@@ -1116,11 +1350,23 @@ if(attempts===0 && !gameWon){
         // Update stats
         profileData.gamesPlayed = (profileData.gamesPlayed || 0) + 1;
         profileData.losses = (profileData.losses || 0) + 1;
+        profileData.currentLossStreak = (profileData.currentLossStreak || 0) + 1;
+        const previousWinStreak = Math.max(0, Number(profileData.currentStreak) || 0);
         const streakShieldUsed = typeof window.applyStreakShieldOnLoss === 'function'
             ? window.applyStreakShieldOnLoss(profileData, { mode: speciesMode.recentMode })
             : false;
         if (!streakShieldUsed) {
             profileData.currentStreak = 0; // Reset streak on loss when no shield is available
+            if (previousWinStreak > 0) {
+                if (window.unlockProfileBadge?.("lost-win-streak", "arrow-to-the-knee")) {
+                    profileData.unlockedBadges = [...new Set([...(Array.isArray(profileData.unlockedBadges) ? profileData.unlockedBadges : ["starter"]), "arrow-to-the-knee"])];
+                }
+            }
+        }
+        if (profileData.currentLossStreak >= 6) {
+            if (window.unlockProfileBadge?.("loss-streak", "im-not-okay")) {
+                profileData.unlockedBadges = [...new Set([...(Array.isArray(profileData.unlockedBadges) ? profileData.unlockedBadges : ["starter"]), "im-not-okay"])];
+            }
         }
         
         // Calculate and save average guesses
@@ -1209,7 +1455,9 @@ card.appendChild(feedbackDiv)
 
 card.onclick = ()=>{
 
-feedbackDiv.style.display = feedbackDiv.style.display==="flex"?"none":"flex"
+const isOpen = feedbackDiv.style.display === "flex"
+feedbackDiv.style.display = isOpen ? "none" : "flex"
+if (isOpen) feedbackDiv.classList.remove("feedback-revealing")
 
 }
 
@@ -1342,30 +1590,6 @@ window.revealShark = function() {
     }
     console.log(`TESTING ONLY: The target ${speciesMode.animal} is: ${targetShark.name}`);
 };
-
-async function submitStatsToLeaderboard(won, guesses) {
-    try {
-        // Only submit if user is authenticated
-        if (!firebase.auth().currentUser) {
-            console.log("User not authenticated, skipping leaderboard submission");
-            return;
-        }
-
-        const username = firebase.auth().currentUser.displayName || firebase.auth().currentUser.email || "Anonymous";
-        const docRef = db.collection("leaderboard").doc();
-        await docRef.set({
-            username: username,
-            won: won,
-            guesses: guesses,
-            timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-            mode: "daily",
-            userId: firebase.auth().currentUser.uid  // optional: track user ID
-        });
-        console.log("Stats submitted successfully");
-    } catch (error) {
-        console.error("Error submitting stats:", error);
-    }
-}
 
 // Hint functionality
 const common_names = [

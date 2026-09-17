@@ -73,6 +73,15 @@ function normalizeInput(input) {
     return input.replace(/\s+/g, '').toLowerCase();
 }
 
+function escapeHtml(value) {
+    return String(value)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+}
+
 function makeGuess() {
     const rawInput = document.getElementById("sharkGuess").value.trim();
     const guessInput = normalizeInput(rawInput);
@@ -232,22 +241,56 @@ document.getElementById("guesses").prepend(card)
 
 document.addEventListener('DOMContentLoaded', () => {
     document.getElementById("guessBtn").onclick = makeGuess;
-    document.getElementById("sharkGuess").addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') {
-            makeGuess();
-        }
-    });
 });
 
 
 const sharkGuessInput = document.getElementById("sharkGuess");
 const suggestionsDiv = document.getElementById("suggestions");
+let highlightedSuggestionIndex = -1;
+
+function getVisibleSuggestionItems() {
+    return Array.from(suggestionsDiv.querySelectorAll(".suggestion-item[data-species-name]"));
+}
+
+function updateHighlightedSuggestion(nextIndex) {
+    const items = getVisibleSuggestionItems();
+    highlightedSuggestionIndex = items.length ? (nextIndex + items.length) % items.length : -1;
+    suggestionsDiv.querySelectorAll(".suggestion-item").forEach(item => item.classList.remove("highlighted"));
+    const highlightedItem = items[highlightedSuggestionIndex];
+    if (highlightedItem) {
+        highlightedItem.classList.add("highlighted");
+        highlightedItem.scrollIntoView({ block: "nearest" });
+    }
+}
+
+sharkGuessInput.addEventListener("keydown", function(event) {
+    if (event.key === "Escape") {
+        suggestionsDiv.classList.remove("active");
+        highlightedSuggestionIndex = -1;
+        return;
+    }
+
+    if ((event.key === "ArrowDown" || event.key === "ArrowUp") && suggestionsDiv.classList.contains("active")) {
+        event.preventDefault();
+        updateHighlightedSuggestion(highlightedSuggestionIndex + (event.key === "ArrowDown" ? 1 : -1));
+        return;
+    }
+
+    if (event.key === "Enter") {
+        const highlightedItem = getVisibleSuggestionItems()[highlightedSuggestionIndex];
+        if (highlightedItem) {
+            selectShark(decodeURIComponent(highlightedItem.dataset.speciesName));
+        }
+        makeGuess();
+    }
+});
 
 sharkGuessInput.addEventListener("input", function() {
     const input = this.value.toLowerCase().trim();
     
     if (input.length === 0) {
         suggestionsDiv.classList.remove("active");
+        highlightedSuggestionIndex = -1;
         return;
     }
     
@@ -258,6 +301,7 @@ sharkGuessInput.addEventListener("input", function() {
     
     if (matches.length === 0) {
         suggestionsDiv.classList.remove("active");
+        highlightedSuggestionIndex = -1;
         return;
     }
     
@@ -265,10 +309,13 @@ sharkGuessInput.addEventListener("input", function() {
     suggestionsDiv.innerHTML = matches.map(shark => {
         const isGuessed = shark.guessed === true;
         const guessedClass = isGuessed ? 'guessed' : '';
-        return `<div class="suggestion-item ${guessedClass}" onclick="${isGuessed ? '' : `selectShark('${shark.name}')`}">${shark.name}</div>`;
+        const speciesName = encodeURIComponent(shark.name);
+        const disabledAttr = isGuessed ? 'aria-disabled="true"' : `data-species-name="${speciesName}"`;
+        return `<div class="suggestion-item ${guessedClass}" ${disabledAttr}>${escapeHtml(shark.name)}</div>`;
     }).join("");
     
     suggestionsDiv.classList.add("active");
+    highlightedSuggestionIndex = -1;
 });
 
 // Close suggestions when clicking outside
@@ -278,9 +325,16 @@ document.addEventListener("click", function(event) {
     }
 });
 
+suggestionsDiv.addEventListener("click", function(event) {
+    const item = event.target.closest(".suggestion-item[data-species-name]");
+    if (!item) return;
+    selectShark(decodeURIComponent(item.dataset.speciesName));
+});
+
 function selectShark(sharkName) {
     document.getElementById("sharkGuess").value = sharkName;
     document.getElementById("suggestions").classList.remove("active");
+    highlightedSuggestionIndex = -1;
 }
 
 function createBubbles() {

@@ -295,6 +295,23 @@
             color: #fff;
             border-color: #4dd0e1;
         }
+        .sort-select {
+            min-height: 52px;
+            padding: 13px 42px 13px 16px;
+            border-radius: 16px;
+            border: 1px solid rgba(77, 208, 225, 0.24);
+            background: rgba(11, 34, 51, 0.76);
+            color: #fff;
+            font-family: 'Poppins', sans-serif;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            outline: none;
+        }
+        .sort-select:focus {
+            border-color: #4dd0e1;
+            box-shadow: 0 0 20px rgba(77, 208, 225, 0.32);
+        }
         .clear-filters-btn {
             padding: 13px 18px;
             border-radius: 16px;
@@ -434,6 +451,26 @@
         .results-note {
             color: rgba(220, 241, 247, 0.6);
             font-size: 13px;
+        }
+        .library-count-group {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .library-mini-count {
+            display: inline-flex;
+            align-items: center;
+            min-height: 38px;
+            padding: 9px 12px;
+            border-radius: 999px;
+            border: 1px solid rgba(77, 208, 225, 0.14);
+            background: rgba(77, 208, 225, 0.07);
+            color: rgba(225, 246, 250, 0.78);
+            font-size: 12px;
+            font-weight: 800;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
         }
         .gallery {
             display: grid;
@@ -1384,6 +1421,7 @@
         body.library-page .summary-label,
         body.library-page .filter-status,
         body.library-page #species-count,
+        body.library-page .library-mini-count,
         body.library-page .order-meta,
         body.library-page .shark-chip,
         body.library-page .flip-hint {
@@ -1470,14 +1508,16 @@
         }
 
         body.library-page .search-bar input,
-        body.library-page .year-filter-input {
+        body.library-page .year-filter-input,
+        body.library-page .sort-select {
             font-family: 'Barlow', sans-serif;
             color: #eaffff;
         }
 
         body.library-page .filter-btn,
         body.library-page .clear-filters-btn,
-        body.library-page .filter-option {
+        body.library-page .filter-option,
+        body.library-page .sort-select {
             border-radius: 10px;
             border: 1px solid rgba(44, 196, 196, 0.16);
             background: rgba(44, 196, 196, 0.08);
@@ -1620,7 +1660,7 @@
             }
         }
     </style>
-    <link rel="stylesheet" href="mobile.css">
+    <link rel="stylesheet" href="../mobile.css">
 </head>
 <body class="library-page shell-page">
     <header class="navbar">
@@ -1638,7 +1678,7 @@
             <div style="text-align:center;">
                 <div class="library-kicker">Species Archive</div>
                 <h1>The Sharchive</h1>
-                <p>Browse every shark in the collection. Help narrow down your target shark using the filter options.</p>
+                <p>Browse every shark and relative in the collection. Help narrow down your target species using the filter options.</p>
             </div>
             <div class="library-summary">
                 <div class="summary-card">
@@ -1676,16 +1716,35 @@
             <input 
                 type="text" 
                 id="shark-search" 
-                placeholder="Search sharks by name, family, genus, or order..."
+                placeholder="Search species by name, family, genus, or order..."
             >
             </div>
-            <button id="heart-filter" class="filter-btn" title="Show only hearted sharks">Show Favorites</button>
-            <button id="needs-practice-filter" class="filter-btn" title="Show tracked sharks that have not reached five wins">Needs Practice</button>
+            <button id="heart-filter" class="filter-btn" title="Show only hearted species">Show Favorites</button>
+            <button id="recently-viewed-filter" class="filter-btn" title="Show recently viewed species">Recently Viewed</button>
+            <button id="needs-practice-filter" class="filter-btn" title="Show tracked species that have not reached five wins">Needs Practice</button>
+            <select id="library-sort" class="sort-select" aria-label="Sort species">
+                <option value="taxonomy">Sort: Taxonomy</option>
+                <option value="az">A-Z</option>
+                <option value="za">Z-A</option>
+                <option value="newest">Newest Discovery</option>
+                <option value="oldest">Oldest Discovery</option>
+                <option value="smallest">Small-Large</option>
+                <option value="largest">Large-Small</option>
+                <option value="most-favorited">Most Favourited</option>
+            </select>
         </div>
     </div>
 
     <!-- Size and Depth Filters -->
     <div class="filters-container">
+        <div style="width:100%"><div class="filter-group">
+            <label>Mode:</label>
+            <div class="filter-buttons">
+                <button class="filter-option" data-filter="speciesType" data-value="">All Species</button>
+                <button class="filter-option" data-filter="speciesType" data-value="shark">Sharks Only</button>
+                <button class="filter-option" data-filter="speciesType" data-value="relative">Relatives Only</button>
+            </div>
+        </div></div>
         <div style="width:100%"><div class="filter-group">
             <label>Size:</label>
             <div class="filter-buttons">
@@ -1715,14 +1774,19 @@
     </div>
     
     <div class="results-toolbar">
-        <div id="species-count"></div>
+        <div class="library-count-group">
+            <div id="species-count"></div>
+            <div id="your-favorites-count" class="library-mini-count">Your Favourites: 0</div>
+            <div id="recently-viewed-count" class="library-mini-count">Recently Viewed: 0</div>
+        </div>
         <div class="results-note">Tap a card to flip it and inspect the species details.</div>
     </div>
     <div id="orders-container"></div>
-    <div id="no-results" class="no-results" style="display:none;">No sharks found matching your search.</div>
+    <div id="no-results" class="no-results" style="display:none;">No species found matching your search.</div>
     </main>
     <!-- Shark list -->
     <script src="sharks.js"></script>
+    <script src="rays.js"></script>
     <script src="Library/library.js"></script>
     <script src="species-tracker.js"></script>
     <script>
@@ -1742,16 +1806,29 @@
         let sharkLikeCounts = new Map();
         let collapsedSections = new Set();
         let showOnlyHearted = false;
+        let showRecentlyViewed = false;
         let showNeedsPractice = false;
+        let currentLibrarySort = 'taxonomy';
+        let recentlyViewedSharks = [];
         let libraryAuth = null;
         let libraryDb = null;
         let speciesHistoryById = new Map();
         let speciesHistoryUser = null;
-        const reviewSpeciesName = new URLSearchParams(window.location.search).get('species')?.trim() || '';
+        const libraryUrlParams = new URLSearchParams(window.location.search);
+        const reviewSpeciesName = libraryUrlParams.get('species')?.trim() || '';
+        const initialLibraryFilters = {
+            search: libraryUrlParams.get('search')?.trim() || '',
+            size: libraryUrlParams.get('size')?.trim() || '',
+            depth: libraryUrlParams.get('depth')?.trim() || '',
+            speciesType: (libraryUrlParams.get('speciesType') || libraryUrlParams.get('type') || libraryUrlParams.get('mode') || '').trim(),
+            yearEarliest: (libraryUrlParams.get('yearEarliest') || libraryUrlParams.get('yodMin') || '').trim(),
+            yearLatest: (libraryUrlParams.get('yearLatest') || libraryUrlParams.get('yodMax') || '').trim()
+        };
         let reviewSpeciesScrolled = false;
         let activeFilters = {
             size: null,
-            depth: null
+            depth: null,
+            speciesType: null
         };
         window.activeFilters = activeFilters;
 
@@ -1774,9 +1851,14 @@
             {"scientific": "Lamniformes", "Common": "Mackerel Sharks"},
             {"scientific": "Heterodontiformes", "Common": "Bullhead Sharks"},
             {"scientific": "Squatiniformes", "Common": "Angel Sharks"},
+            {"scientific": "Squantiniformes", "Common": "Angel Sharks"},
             {"scientific": "Pristiophoriformes", "Common": "Saw Sharks"},
             {"scientific": "Squaliformes", "Common": "Dog Sharks"},
             {"scientific": "Hexanchiformes", "Common": "Cow and Frilled Sharks"},
+            {"scientific": "Myliobatiformes", "Common": "Stingrays and Eagle Rays"},
+            {"scientific": "Rajiformes", "Common": "Skates"},
+            {"scientific": "Rhinopristiformes", "Common": "Guitarfishes and Sawfishes"},
+            {"scientific": "Torpediniformes", "Common": "Electric Rays"},
             // Families
             {"scientific": "Sphyrnidae", "Common": "Hammerhead Sharks"},
             {"scientific": "Carcharhinidae", "Common": "Requiem Sharks"},
@@ -1809,6 +1891,33 @@
         function getCommonName(scientificName) {
             const entry = common_names.find(cn => cn.scientific === scientificName);
             return entry ? entry.Common : null;
+        }
+
+        function getLibrarySourceSpecies() {
+            const speciesByName = new Map();
+            const sourcePools = [
+                { type: 'shark', species: Array.isArray(window.sharks) ? window.sharks : [] },
+                { type: 'relative', species: Array.isArray(window.rays) ? window.rays : [] }
+            ];
+
+            sourcePools.forEach(pool => {
+                pool.species.forEach(species => {
+                    if (!species?.name || speciesByName.has(species.name)) return;
+                    speciesByName.set(species.name, {
+                        ...species,
+                        archiveType: pool.type
+                    });
+                });
+            });
+
+            return Array.from(speciesByName.values());
+        }
+
+        function normalizeSpeciesTypeFilter(value) {
+            const normalized = String(value || '').toLowerCase().trim();
+            if (['shark', 'sharks', 'daily', 'classic', 'sharkdle'].includes(normalized)) return 'shark';
+            if (['relative', 'relatives', 'ray', 'rays', 'chimaera', 'chimaeras'].includes(normalized)) return 'relative';
+            return '';
         }
 
         // Size category mapping to actual shark data values
@@ -1863,6 +1972,33 @@
             localStorage.setItem('heartedSharks', JSON.stringify([...heartedSharks]));
         }
 
+        function loadRecentlyViewedSharks() {
+            try {
+                const parsed = JSON.parse(localStorage.getItem('sharchiveRecentlyViewed') || '[]');
+                recentlyViewedSharks = Array.isArray(parsed)
+                    ? parsed.filter(name => typeof name === 'string' && name.trim()).slice(0, 24)
+                    : [];
+            } catch (error) {
+                console.warn('Unable to parse recently viewed species.', error);
+                recentlyViewedSharks = [];
+                localStorage.removeItem('sharchiveRecentlyViewed');
+            }
+        }
+
+        function saveRecentlyViewedSharks() {
+            localStorage.setItem('sharchiveRecentlyViewed', JSON.stringify(recentlyViewedSharks.slice(0, 24)));
+        }
+
+        function recordRecentlyViewedSpecies(sharkName) {
+            if (!sharkName) return;
+            recentlyViewedSharks = [
+                sharkName,
+                ...recentlyViewedSharks.filter(name => name !== sharkName)
+            ].slice(0, 24);
+            saveRecentlyViewedSharks();
+            updateLibrarySummary();
+        }
+
         function getSharkLikeKey(sharkName) {
             return (sharkName || '')
                 .toLowerCase()
@@ -1884,6 +2020,11 @@
                 ? window.SharkdleSpeciesTracker.getSpeciesId(sharkName)
                 : getSharkLikeKey(sharkName);
             return speciesHistoryById.get(speciesId) || null;
+        }
+
+        function getSpeciesArchiveNumber(sharkName) {
+            const index = allSharks.findIndex(shark => shark.name === sharkName);
+            return index >= 0 ? index + 1 : null;
         }
 
         function getSpeciesHistoryIndicatorHtml(sharkName) {
@@ -2086,7 +2227,9 @@
         function getActiveFilterCount() {
             let count = 0;
             if (showOnlyHearted) count += 1;
+            if (showRecentlyViewed) count += 1;
             if (showNeedsPractice) count += 1;
+            if (activeFilters.speciesType) count += 1;
             if (activeFilters.size) count += 1;
             if (activeFilters.depth) count += 1;
             if (document.getElementById('year-earliest')?.value) count += 1;
@@ -2100,10 +2243,14 @@
             const totalOrders = document.getElementById('summary-total-orders');
             const totalFavorites = document.getElementById('summary-favorites');
             const filterStatus = document.getElementById('filter-status');
+            const toolbarFavorites = document.getElementById('your-favorites-count');
+            const toolbarRecent = document.getElementById('recently-viewed-count');
 
             if (totalSpecies) totalSpecies.textContent = allSharks.length;
             if (totalOrders) totalOrders.textContent = new Set(allSharks.map(shark => shark.order)).size;
             if (totalFavorites) totalFavorites.textContent = heartedSharks.size;
+            if (toolbarFavorites) toolbarFavorites.textContent = `Your Favourites: ${heartedSharks.size}`;
+            if (toolbarRecent) toolbarRecent.textContent = `Recently Viewed: ${recentlyViewedSharks.length}`;
             if (filterStatus) {
                 const count = getActiveFilterCount();
                 filterStatus.textContent = `${count} active filter${count === 1 ? '' : 's'}`;
@@ -2112,15 +2259,20 @@
 
         function resetAllFilters() {
             showOnlyHearted = false;
+            showRecentlyViewed = false;
             showNeedsPractice = false;
+            currentLibrarySort = 'taxonomy';
             activeFilters.size = null;
             activeFilters.depth = null;
+            activeFilters.speciesType = null;
 
             const searchInput = document.getElementById('shark-search');
             const yearEarliest = document.getElementById('year-earliest');
             const yearLatest = document.getElementById('year-latest');
             const filterBtn = document.getElementById('heart-filter');
+            const recentlyViewedBtn = document.getElementById('recently-viewed-filter');
             const needsPracticeBtn = document.getElementById('needs-practice-filter');
+            const sortSelect = document.getElementById('library-sort');
 
             if (searchInput) searchInput.value = '';
             if (yearEarliest) yearEarliest.value = '';
@@ -2130,11 +2282,62 @@
                 filterBtn.textContent = 'Show Favorites';
             }
             if (needsPracticeBtn) needsPracticeBtn.classList.remove('active');
+            if (recentlyViewedBtn) recentlyViewedBtn.classList.remove('active');
+            if (sortSelect) sortSelect.value = currentLibrarySort;
 
             document.querySelectorAll('.filter-option').forEach(btn => btn.classList.remove('active'));
             filteredSharks = [...allSharks];
             renderSharkGalleryByOrder();
             updateSpeciesCount();
+        }
+
+        function normalizeYearFilterValue(value) {
+            const parsed = parseInt(value, 10);
+            return Number.isFinite(parsed) ? String(parsed) : '';
+        }
+
+        function applyUrlButtonFilter(filterType, filterValue) {
+            if (!filterValue) return false;
+
+            const buttons = Array.from(document.querySelectorAll(`[data-filter="${filterType}"]`));
+            const matched = buttons.some(button => button.getAttribute('data-value') === filterValue);
+            if (!matched) return false;
+
+            activeFilters[filterType] = filterValue;
+            buttons.forEach(button => {
+                button.classList.toggle('active', button.getAttribute('data-value') === filterValue);
+            });
+            return true;
+        }
+
+        function applyLibraryUrlFilters() {
+            const searchInput = document.getElementById('shark-search');
+            const yearEarliest = document.getElementById('year-earliest');
+            const yearLatest = document.getElementById('year-latest');
+            let hasFilters = false;
+
+            const searchTerm = reviewSpeciesName || initialLibraryFilters.search;
+            if (searchInput && searchTerm) {
+                searchInput.value = searchTerm;
+                hasFilters = true;
+            }
+
+            if (applyUrlButtonFilter('size', initialLibraryFilters.size)) hasFilters = true;
+            if (applyUrlButtonFilter('depth', initialLibraryFilters.depth)) hasFilters = true;
+            if (applyUrlButtonFilter('speciesType', normalizeSpeciesTypeFilter(initialLibraryFilters.speciesType))) hasFilters = true;
+
+            const earliest = normalizeYearFilterValue(initialLibraryFilters.yearEarliest);
+            const latest = normalizeYearFilterValue(initialLibraryFilters.yearLatest);
+            if (yearEarliest && earliest) {
+                yearEarliest.value = earliest;
+                hasFilters = true;
+            }
+            if (yearLatest && latest) {
+                yearLatest.value = latest;
+                hasFilters = true;
+            }
+
+            return hasFilters;
         }
 
         function toggleHeart(sharkName) {
@@ -2163,6 +2366,15 @@
             filterSharks(searchTerm);
         }
 
+        function toggleRecentlyViewedFilter() {
+            showRecentlyViewed = !showRecentlyViewed;
+            const filterBtn = document.getElementById('recently-viewed-filter');
+            filterBtn.classList.toggle('active', showRecentlyViewed);
+            const searchTerm = document.getElementById('shark-search').value;
+            filterSharks(searchTerm);
+            updateSpeciesCount();
+        }
+
         function toggleNeedsPracticeFilter() {
             showNeedsPractice = !showNeedsPractice;
             const filterBtn = document.getElementById('needs-practice-filter');
@@ -2180,8 +2392,15 @@
             if (showOnlyHearted) {
                 baseSharks = baseSharks.filter(shark => heartedSharks.has(shark.name));
             }
+            if (showRecentlyViewed) {
+                const recentSet = new Set(recentlyViewedSharks);
+                baseSharks = baseSharks.filter(shark => recentSet.has(shark.name));
+            }
             if (showNeedsPractice) {
                 baseSharks = baseSharks.filter(shark => speciesNeedsPractice(shark.name));
+            }
+            if (activeFilters.speciesType) {
+                baseSharks = baseSharks.filter(shark => shark.archiveType === activeFilters.speciesType);
             }
             // Apply size filter
             if (activeFilters.size) {
@@ -2222,8 +2441,10 @@
             } else {
                 filteredSharks = baseSharks.filter(shark =>
                     typeof window.sharkMatchesLibrarySearch === 'function'
-                        ? window.sharkMatchesLibrarySearch(shark, term)
+                        ? window.sharkMatchesLibrarySearch(shark, term, getSpeciesArchiveNumber(shark.name))
                         : (
+                            String(getSpeciesArchiveNumber(shark.name) || '') === term ||
+                            `#${getSpeciesArchiveNumber(shark.name)}` === term ||
                             shark.name.toLowerCase().includes(term) ||
                             shark.family.toLowerCase().includes(term) ||
                             shark.order.toLowerCase().includes(term) ||
@@ -2232,7 +2453,31 @@
                         )
                 );
             }
+            filteredSharks = sortLibrarySpecies(filteredSharks);
             renderSharkGalleryByOrder();
+        }
+
+        function getSizeSortValue(size) {
+            return { Tiny: 1, Small: 2, Medium: 3, Large: 4, Giant: 5 }[size] || 99;
+        }
+
+        function sortLibrarySpecies(sharks) {
+            const recentIndex = new Map(recentlyViewedSharks.map((name, index) => [name, index]));
+            return [...sharks].sort((a, b) => {
+                if (showRecentlyViewed && currentLibrarySort === 'taxonomy') {
+                    return (recentIndex.get(a.name) ?? 9999) - (recentIndex.get(b.name) ?? 9999);
+                }
+                if (currentLibrarySort === 'az') return a.name.localeCompare(b.name);
+                if (currentLibrarySort === 'za') return b.name.localeCompare(a.name);
+                if (currentLibrarySort === 'newest') return (Number(b.yod) || 0) - (Number(a.yod) || 0) || a.name.localeCompare(b.name);
+                if (currentLibrarySort === 'oldest') return (Number(a.yod) || 0) - (Number(b.yod) || 0) || a.name.localeCompare(b.name);
+                if (currentLibrarySort === 'smallest') return getSizeSortValue(a.size) - getSizeSortValue(b.size) || a.name.localeCompare(b.name);
+                if (currentLibrarySort === 'largest') return getSizeSortValue(b.size) - getSizeSortValue(a.size) || a.name.localeCompare(b.name);
+                if (currentLibrarySort === 'most-favorited') {
+                    return (sharkLikeCounts.get(getSharkLikeKey(b.name)) || 0) - (sharkLikeCounts.get(getSharkLikeKey(a.name)) || 0) || a.name.localeCompare(b.name);
+                }
+                return a.order.localeCompare(b.order) || a.name.localeCompare(b.name);
+            });
         }
 
         function renderSharkGalleryByOrder() {
@@ -2250,17 +2495,22 @@
             noResults.style.display = 'none';
             
             // Show species count
-            document.getElementById('species-count').textContent = `Showing ${filteredSharks.length} of ${allSharks.length} sharks`;
+            document.getElementById('species-count').textContent = `Showing ${filteredSharks.length} of ${allSharks.length} species`;
             
             ordersContainer.innerHTML = '';
             const orderGroups = {};
             
             filteredSharks.forEach(shark => {
-                if (!orderGroups[shark.order]) orderGroups[shark.order] = [];
-                orderGroups[shark.order].push(shark);
+                const groupKey = (currentLibrarySort === 'taxonomy' && !showRecentlyViewed)
+                    ? shark.order
+                    : (showRecentlyViewed ? 'Recently Viewed Species' : 'Sorted Species');
+                if (!orderGroups[groupKey]) orderGroups[groupKey] = [];
+                orderGroups[groupKey].push(shark);
             });
             
-            const sortedOrders = Object.keys(orderGroups).sort();
+            const sortedOrders = (currentLibrarySort === 'taxonomy' && !showRecentlyViewed)
+                ? Object.keys(orderGroups).sort()
+                : Object.keys(orderGroups);
             sortedOrders.forEach(order => {
                 const section = document.createElement('section');
                 section.className = 'order-section';
@@ -2273,7 +2523,7 @@
                 header.innerHTML = `
                     <div class="order-title">
                         <span class="order-name">${order}</span>
-                        <span class="order-meta">${getCommonName(order) || 'Shark order archive'} / ${orderGroups[order].length} species</span>
+                        <span class="order-meta">${getCommonName(order) || (showRecentlyViewed ? 'Your latest opened cards' : 'Sorted archive view')} / ${orderGroups[order].length} species</span>
                     </div>
                     <span class="order-arrow">&#9660;</span>
                 `;
@@ -2297,16 +2547,19 @@
                     const card = document.createElement('div');
                     card.className = 'shark-card';
                     card.tabIndex = 0;
-                    card.setAttribute('aria-label', `Shark card for ${shark.name}`);
+                    card.setAttribute('aria-label', `Species card for ${shark.name}`);
                     const sharkKey = getSharkLikeKey(shark.name);
                     card.dataset.speciesId = sharkKey;
                     const globalLikes = sharkLikeCounts.get(sharkKey) || 0;
+                    const speciesNumber = getSpeciesArchiveNumber(shark.name) || '';
                     card.innerHTML = `
                         <div class="card-inner">
                             <div class="card-front">
                                 <button class="heart-btn ${heartedSharks.has(shark.name) ? 'hearted' : ''}" data-shark="${shark.name}" title="Add to favorites">${heartedSharks.has(shark.name) ? '❤️' : '♡'}</button>
                                 <div class="card-front-content">
                                     <div class="card-front-meta">
+                                        <span class="shark-chip">#${speciesNumber}</span>
+                                        <span class="shark-chip">${shark.archiveType === 'relative' ? 'Relative' : 'Shark'}</span>
                                         <span class="shark-chip">${shark.size}</span>
                                         <span class="shark-chip">${shark.depth}</span>
                                         ${getSpeciesHistoryIndicatorHtml(shark.name)}
@@ -2351,10 +2604,12 @@
                     }
                     card.addEventListener('click', () => {
                         card.classList.toggle('flipped');
+                        if (card.classList.contains('flipped')) recordRecentlyViewedSpecies(shark.name);
                     });
                     card.addEventListener('keypress', (e) => {
                         if (e.key === 'Enter' || e.key === ' ') {
                             card.classList.toggle('flipped');
+                            if (card.classList.contains('flipped')) recordRecentlyViewedSpecies(shark.name);
                         }
                     });
                     gallery.appendChild(card);
@@ -2368,19 +2623,20 @@
         }
 
         function updateSpeciesCount() {
-            document.getElementById('species-count').textContent = `Showing ${filteredSharks.length} of ${allSharks.length} sharks`;
+            document.getElementById('species-count').textContent = `Showing ${filteredSharks.length} of ${allSharks.length} species`;
             updateLibrarySummary();
         }
 
         function startLibraryApp() {
             initializeLibraryFirebase();
             loadHeartedSharks();
+            loadRecentlyViewedSharks();
             loadCollapsedSections();
-            allSharks = Array.isArray(sharks) ? [...sharks] : [];
+            allSharks = getLibrarySourceSpecies();
             const searchInput = document.getElementById('shark-search');
-            if (reviewSpeciesName && searchInput) {
-                searchInput.value = reviewSpeciesName;
-                filterSharks(reviewSpeciesName);
+            const hasInitialFilters = applyLibraryUrlFilters();
+            if (hasInitialFilters) {
+                filterSharks(searchInput?.value || '');
             } else {
                 filteredSharks = [...allSharks];
                 renderSharkGalleryByOrder();
@@ -2435,6 +2691,14 @@
             filterBtn.addEventListener('click', toggleHeartFilter);
             const needsPracticeBtn = document.getElementById('needs-practice-filter');
             needsPracticeBtn.addEventListener('click', toggleNeedsPracticeFilter);
+            const recentlyViewedBtn = document.getElementById('recently-viewed-filter');
+            recentlyViewedBtn.addEventListener('click', toggleRecentlyViewedFilter);
+            const sortSelect = document.getElementById('library-sort');
+            sortSelect.addEventListener('change', function() {
+                currentLibrarySort = this.value || 'taxonomy';
+                filterSharks(document.getElementById('shark-search')?.value || '');
+                updateSpeciesCount();
+            });
 
             const clearFiltersBtn = document.getElementById('clear-filters');
             if (clearFiltersBtn) {

@@ -91,6 +91,7 @@ function updateStats(isWin, guessesTaken = 0) {
         profileData.totalGuesses = (profileData.totalGuesses || 0) + guessesTaken;
         profileData.currentStreak = (profileData.currentStreak || 0) + 1;
         profileData.highestStreak = Math.max(profileData.highestStreak || 0, profileData.currentStreak);
+        profileData.currentLossStreak = 0;
         if (typeof incrementProfilePeriodWins === 'function') {
             incrementProfilePeriodWins(profileData);
         }
@@ -103,11 +104,23 @@ function updateStats(isWin, guessesTaken = 0) {
         }
     } else {
         profileData.losses = (profileData.losses || 0) + 1;
+        profileData.currentLossStreak = (profileData.currentLossStreak || 0) + 1;
+        const previousWinStreak = Math.max(0, Number(profileData.currentStreak) || 0);
         const streakShieldUsed = typeof window.applyStreakShieldOnLoss === 'function'
             ? window.applyStreakShieldOnLoss(profileData, { mode: "Infinite" })
             : false;
         if (!streakShieldUsed) {
             profileData.currentStreak = 0;
+            if (previousWinStreak > 0) {
+                if (window.unlockProfileBadge?.("lost-win-streak", "arrow-to-the-knee")) {
+                    profileData.unlockedBadges = [...new Set([...(Array.isArray(profileData.unlockedBadges) ? profileData.unlockedBadges : ["starter"]), "arrow-to-the-knee"])];
+                }
+            }
+        }
+        if (profileData.currentLossStreak >= 6) {
+            if (window.unlockProfileBadge?.("loss-streak", "im-not-okay")) {
+                profileData.unlockedBadges = [...new Set([...(Array.isArray(profileData.unlockedBadges) ? profileData.unlockedBadges : ["starter"]), "im-not-okay"])];
+            }
         }
     }
 

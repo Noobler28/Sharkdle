@@ -1,0 +1,319 @@
+* {
+    box-sizing: border-box;
+}
+
+html,
+body.lagoon-page {
+    margin: 0;
+    width: 100%;
+    height: 100%;
+}
+
+body.lagoon-page {
+    overflow: hidden;
+    background: #06324a;
+}
+
+.lagoon-stage,
+.lagoon-ocean {
+    position: fixed;
+    inset: 0;
+    overflow: hidden;
+}
+
+.lagoon-ocean {
+    outline: none;
+    background:
+        linear-gradient(180deg, rgba(78, 204, 230, 0.18), transparent 38%),
+        linear-gradient(180deg, #137fa7, #09617f 52%, #053c58 100%);
+}
+
+.lagoon-ocean::before,
+.lagoon-ocean::after {
+    content: "";
+    position: absolute;
+    inset: -20%;
+    pointer-events: none;
+}
+
+.lagoon-ocean::before {
+    background:
+        repeating-linear-gradient(14deg, rgba(255, 255, 255, 0.055) 0 2px, transparent 2px 92px),
+        repeating-linear-gradient(104deg, rgba(255, 255, 255, 0.035) 0 1px, transparent 1px 80px);
+    opacity: 0.55;
+    transform: translate(var(--camera-x, 0), var(--camera-y, 0));
+}
+
+.lagoon-ocean::after {
+    background:
+        radial-gradient(circle at 20% 18%, rgba(255, 255, 255, 0.1), transparent 10%),
+        radial-gradient(circle at 70% 55%, rgba(89, 226, 216, 0.11), transparent 16%),
+        radial-gradient(circle at 46% 84%, rgba(117, 219, 128, 0.09), transparent 12%);
+    opacity: 0.7;
+}
+
+.lagoon-ocean-water {
+    position: absolute;
+    width: 3200px;
+    height: 2200px;
+    transform: translate(var(--camera-x, 0), var(--camera-y, 0));
+    background:
+        radial-gradient(circle at 620px 430px, rgba(255, 255, 255, 0.08), transparent 250px),
+        radial-gradient(circle at 1900px 1220px, rgba(89, 226, 216, 0.09), transparent 340px),
+        radial-gradient(circle at 2820px 1710px, rgba(255, 214, 121, 0.08), transparent 280px);
+}
+
+.lagoon-player {
+    position: absolute;
+    z-index: 5;
+    width: 96px;
+    height: 96px;
+    transform: translate(-50%, -50%);
+    background-image: url("assets/Pirate_Boat/16dir_128x128_PirateBoat(@Pixel_Salvaje).png");
+    background-repeat: no-repeat;
+    background-size: 1536px 96px;
+    background-position: var(--boat-offset, -768px) 0;
+    image-rendering: pixelated;
+    filter: drop-shadow(0 12px 8px rgba(0, 0, 0, 0.35));
+    pointer-events: none;
+    --trail-x: 0px;
+    --trail-y: 0px;
+}
+
+.lagoon-player::before,
+.lagoon-player::after {
+    content: "";
+    position: absolute;
+    left: calc(50% + var(--trail-x));
+    top: calc(50% + var(--trail-y));
+    border-radius: 50%;
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.65);
+    transition: opacity 120ms ease, transform 120ms ease;
+    pointer-events: none;
+    z-index: -1;
+}
+
+.lagoon-player::before {
+    width: 46px;
+    height: 18px;
+    background: radial-gradient(ellipse, rgba(188, 255, 205, 0.36), rgba(98, 229, 199, 0.16) 48%, transparent 74%);
+    filter: blur(1px);
+}
+
+.lagoon-player::after {
+    width: 28px;
+    height: 10px;
+    background: radial-gradient(ellipse, rgba(245, 226, 144, 0.5), rgba(138, 255, 180, 0.18) 54%, transparent 76%);
+}
+
+.lagoon-player.is-boosting::before,
+.lagoon-player.is-boosting::after {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+    animation: lagoon-boost-trail 360ms ease-out infinite alternate;
+}
+
+@keyframes lagoon-boost-trail {
+    to {
+        opacity: 0.62;
+        transform: translate(-50%, -50%) scale(1.22);
+    }
+}
+
+.lagoon-hud {
+    position: fixed;
+    left: 18px;
+    bottom: 18px;
+    z-index: 8;
+    width: 138px;
+    display: grid;
+    justify-items: center;
+    gap: 0;
+    pointer-events: none;
+    --boost-meter: 100;
+}
+
+.lagoon-boost-gauge {
+    position: relative;
+    width: 104px;
+    height: 31px;
+    margin-bottom: -3px;
+    filter: drop-shadow(0 5px 6px rgba(0, 0, 0, 0.34));
+}
+
+.lagoon-boost-gauge svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+}
+
+.lagoon-boost-gauge path {
+    fill: none;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.lagoon-boost-rim {
+    stroke: #231005;
+    stroke-width: 15;
+}
+
+.lagoon-boost-brass {
+    stroke: #a86a2b;
+    stroke-width: 9;
+}
+
+.lagoon-boost-track {
+    stroke: #173b2b;
+    stroke-width: 5;
+}
+
+.lagoon-boost-fill {
+    stroke: #edd36b;
+    stroke-width: 5;
+    stroke-dasharray: var(--boost-meter) 100;
+    filter: drop-shadow(0 0 4px rgba(143, 255, 113, 0.55));
+}
+
+.lagoon-hud.is-boosting .lagoon-boost-fill {
+    stroke: #f8ea99;
+    filter: drop-shadow(0 0 7px rgba(178, 255, 112, 0.8));
+}
+
+.lagoon-hud.is-empty .lagoon-boost-fill {
+    stroke: #8f6c32;
+    filter: none;
+}
+
+.lagoon-sonar {
+    position: relative;
+    width: 138px;
+    height: 138px;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    background:
+        radial-gradient(circle at 33% 24%, rgba(255, 226, 139, 0.3), transparent 16%),
+        radial-gradient(circle, transparent 0 70%, rgba(33, 15, 6, 0.66) 71% 74%, transparent 75%),
+        conic-gradient(from 18deg, #4d2b12, #c38834 18%, #76451b 34%, #2b1308 48%, #e0ae4d 64%, #7e4a1e 82%, #4d2b12);
+    border: 3px solid #261206;
+    box-shadow:
+        inset 0 0 0 4px #8c5723,
+        inset 0 0 0 10px rgba(20, 9, 4, 0.72),
+        inset 0 0 0 14px rgba(196, 133, 49, 0.72),
+        0 14px 28px rgba(0, 0, 0, 0.38);
+}
+
+.lagoon-sonar-screen {
+    position: relative;
+    width: 98px;
+    height: 98px;
+    overflow: hidden;
+    border-radius: 50%;
+    background:
+        repeating-conic-gradient(from 0deg, rgba(210, 172, 82, 0.48) 0deg 1deg, transparent 1deg 10deg),
+        radial-gradient(circle, transparent 0 18%, rgba(91, 214, 154, 0.22) 19% 20%, transparent 21% 39%, rgba(91, 214, 154, 0.18) 40% 41%, transparent 42% 61%, rgba(91, 214, 154, 0.15) 62% 63%, transparent 64%),
+        linear-gradient(rgba(139, 244, 168, 0.16), rgba(139, 244, 168, 0.16)) center / 1px 100% no-repeat,
+        linear-gradient(90deg, rgba(139, 244, 168, 0.16), rgba(139, 244, 168, 0.16)) center / 100% 1px no-repeat,
+        radial-gradient(circle, rgba(25, 104, 62, 0.88), rgba(4, 27, 24, 0.98) 74%);
+    border: 2px solid #d5a84a;
+    box-shadow:
+        inset 0 0 18px rgba(129, 255, 150, 0.12),
+        0 0 0 2px #4f2a12;
+}
+
+.lagoon-compass-letter {
+    position: absolute;
+    color: #f4d982;
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1;
+    text-shadow: 0 1px 0 #2c1408, 0 0 5px rgba(244, 217, 130, 0.45);
+}
+
+.lagoon-compass-letter.north {
+    top: 7px;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+.lagoon-compass-letter.east {
+    top: 50%;
+    right: 6px;
+    transform: translateY(-50%);
+}
+
+.lagoon-compass-letter.south {
+    bottom: 7px;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+.lagoon-compass-letter.west {
+    top: 50%;
+    left: 6px;
+    transform: translateY(-50%);
+}
+
+.lagoon-sonar-screen::before {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 48%;
+    height: 3px;
+    transform-origin: 0 50%;
+    background: linear-gradient(90deg, #f5e5a2, rgba(120, 255, 138, 0.62), transparent);
+    box-shadow: 0 0 10px rgba(166, 255, 116, 0.68);
+    animation: lagoon-sonar-sweep 2.8s linear infinite;
+}
+
+.lagoon-sonar-screen::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background:
+        radial-gradient(circle at 36% 28%, rgba(244, 218, 125, 0.16), transparent 18%),
+        radial-gradient(circle at 50% 50%, transparent 0 68%, rgba(213, 168, 74, 0.22) 69%, transparent 72%);
+}
+
+@keyframes lagoon-sonar-sweep {
+    to { transform: rotate(360deg); }
+}
+
+@media (max-width: 700px) {
+    .lagoon-hud {
+        left: 12px;
+        bottom: 12px;
+        width: 118px;
+    }
+
+    .lagoon-boost-gauge {
+        width: 94px;
+        height: 29px;
+        margin-bottom: -4px;
+    }
+
+    .lagoon-sonar {
+        width: 112px;
+        height: 112px;
+    }
+
+    .lagoon-sonar-screen {
+        width: 80px;
+        height: 80px;
+    }
+
+    .lagoon-compass-letter {
+        font-size: 10px;
+    }
+
+    .lagoon-compass-letter.north { top: 5px; }
+    .lagoon-compass-letter.east { right: 4px; }
+    .lagoon-compass-letter.south { bottom: 5px; }
+    .lagoon-compass-letter.west { left: 4px; }
+}

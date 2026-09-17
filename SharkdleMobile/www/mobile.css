@@ -1052,3 +1052,433 @@ textarea {
         padding: 9px !important;
     }
 }
+
+/* Website and app mobile finish pass: balanced controls, stable cards, and calmer narrow screens. */
+@media (max-width: 720px) {
+    body.home-v3-page .home-v3-left {
+        gap: 10px;
+    }
+
+    body.home-v3-page .home-v3-logo {
+        min-height: 46px;
+        align-items: center;
+    }
+
+    body.home-v3-page .home-v3-nav {
+        grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+        gap: 6px !important;
+        overflow: visible;
+        padding-bottom: 0;
+    }
+
+    body.home-v3-page .home-v3-nav a,
+    body.home-v3-page .home-v3-nav button {
+        min-height: 46px;
+        padding: 7px 4px;
+        gap: 4px;
+        font-size: 10px;
+    }
+
+    body.home-v3-page .home-v3-quick-access {
+        border-radius: 16px;
+    }
+
+    body.home-v3-page .home-v3-quick-link {
+        min-height: 56px;
+        border-radius: 12px;
+    }
+
+    body.home-v3-page .home-v3-hero {
+        min-height: 420px;
+        padding-top: 20px;
+    }
+
+    body.home-v3-page .home-v3-hero h1,
+    body.mode-v3-page .guess-hero h2 {
+        font-size: 44px !important;
+        line-height: 0.94 !important;
+    }
+
+    body.home-v3-page .home-v3-hero-actions {
+        grid-template-columns: 1fr 1fr !important;
+        gap: 8px !important;
+    }
+
+    body.home-v3-page .home-v3-download-btn {
+        grid-column: 1 / -1;
+    }
+
+    body.home-v3-page .hero-alert {
+        display: grid;
+        gap: 8px;
+        text-align: center;
+    }
+
+    body.home-v3-page .hero-alert button {
+        width: 100%;
+        min-height: 40px;
+    }
+
+    body.home-v3-page .home-v3-panel-heading {
+        margin-bottom: 10px;
+    }
+
+    body.home-v3-page .home-v3-mode-card {
+        min-height: 130px;
+        padding: 15px;
+        border-radius: 16px;
+    }
+
+    body.home-v3-page .home-v3-mode-card strong {
+        font-size: 24px !important;
+        line-height: 0.98;
+    }
+
+    body.mode-v3-page .mode-tabs {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        width: 100%;
+    }
+
+    body.mode-v3-page .mode-tabs button {
+        min-width: 0;
+        min-height: 40px;
+        padding: 8px 6px;
+        font-size: 12px;
+        white-space: normal;
+    }
+
+    .rng-tabs,
+    .rng-tab-row,
+    .rng-sidebar-tabs {
+        display: grid !important;
+        grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+        gap: 6px !important;
+        width: 100% !important;
+        overflow: visible !important;
+    }
+
+    .rng-tab,
+    .rng-sidebar-tab {
+        width: 100% !important;
+        min-width: 0 !important;
+        min-height: 42px !important;
+        padding: 8px 4px !important;
+        justify-content: center !important;
+        text-align: center !important;
+        white-space: normal !important;
+        overflow-wrap: anywhere;
+        line-height: 1.05 !important;
+        border-radius: 11px !important;
+        font-size: 11px !important;
+    }
+
+    .rng-tabs > :last-child:nth-child(3n + 1),
+    .rng-tab-row > :last-child:nth-child(3n + 1),
+    .rng-sidebar-tabs > :last-child:nth-child(3n + 1) {
+        grid-column: 1 / -1;
+    }
+}
+
+@media (max-width: 390px) {
+    body.home-v3-page .home-v3-nav {
+        gap: 5px !important;
+    }
+
+    body.home-v3-page .home-v3-nav a,
+    body.home-v3-page .home-v3-nav button {
+        min-height: 44px;
+        font-size: 9px;
+    }
+
+    body.home-v3-page .home-v3-hero h1,
+    body.mode-v3-page .guess-hero h2 {
+        font-size: 40px !important;
+    }
+
+    .rng-tabs,
+    .rng-tab-row,
+    .rng-sidebar-tabs {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    }
+
+    .rng-tabs > :last-child:nth-child(odd),
+    .rng-tab-row > :last-child:nth-child(odd),
+    .rng-sidebar-tabs > :last-child:nth-child(odd) {
+        grid-column: 1 / -1;
+    }
+}
+
+@media (max-width: 720px) {
+    body.rng-page .rng-tabs {
+        display: grid !important;
+        grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+        gap: 6px !important;
+        padding: 0 !important;
+        width: 100% !important;
+    }
+
+    body.rng-page .rng-tabs .rng-tab {
+        width: 100% !important;
+        min-width: 0 !important;
+        min-height: 42px !important;
+        padding: 8px 4px !important;
+        border-radius: 11px !important;
+        font-size: 11px !important;
+        line-height: 1.05 !important;
+        white-space: normal !important;
+        overflow-wrap: anywhere !important;
+    }
+}
+
+@media (max-width: 390px) {
+    body.rng-page .rng-tabs {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    }
+}
+
+/* Shark RNG gets a purpose-built phone layout. Keep the roll loop visible and make the shop feel native. */
+@media (max-width: 720px) {
+    body.rng-page *,
+    body.rng-page *::before,
+    body.rng-page *::after {
+        box-sizing: border-box;
+    }
+
+    body.rng-page.shell-page {
+        padding: max(10px, env(safe-area-inset-top)) 10px max(14px, env(safe-area-inset-bottom)) !important;
+        gap: 8px !important;
+        background:
+            radial-gradient(ellipse 115% 42% at 50% -12%, rgba(45, 212, 191, 0.18), transparent 58%),
+            linear-gradient(180deg, #06233a 0%, #071827 54%, #04111e 100%) !important;
+    }
+
+    body.rng-page .rng-topbar {
+        min-height: 58px !important;
+        margin-bottom: 8px !important;
+        padding: 8px !important;
+        border-radius: 14px !important;
+        grid-template-columns: minmax(0, 1fr) 40px 40px !important;
+        background: rgba(3, 12, 22, 0.9) !important;
+    }
+
+    body.rng-page .rng-brand {
+        font-size: 21px !important;
+        line-height: 1 !important;
+    }
+
+    body.rng-page .rng-icon-btn,
+    body.rng-page .rng-page.shell-page .rng-icon-btn {
+        width: 40px !important;
+        min-width: 40px !important;
+        height: 40px !important;
+        min-height: 40px !important;
+        border-radius: 12px !important;
+    }
+
+    body.rng-page .rng-game-shell,
+    body.rng-page .rng-app {
+        gap: 8px !important;
+        grid-template-rows: auto auto !important;
+        grid-template-columns: minmax(0, 1fr) !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        overflow: visible !important;
+        min-width: 0 !important;
+    }
+
+    body.rng-page .rng-stage,
+    body.rng-page .rng-sidebar {
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 0 !important;
+        padding: 10px !important;
+        border-radius: 16px !important;
+    }
+
+    body.rng-page .rng-stage {
+        gap: 8px !important;
+        height: auto !important;
+        min-height: 0 !important;
+        flex: 0 0 auto !important;
+    }
+
+    body.rng-page .rng-equipped-bar {
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 0 !important;
+        min-height: 54px !important;
+        padding: 8px 10px !important;
+        border-radius: 12px !important;
+        grid-template-columns: minmax(0, 1fr) 38px !important;
+    }
+
+    body.rng-page .rng-label {
+        font-size: 10px !important;
+    }
+
+    body.rng-page .rng-equipped-name {
+        font-size: 17px !important;
+        line-height: 1.05 !important;
+    }
+
+    body.rng-page .rng-equipped-meta {
+        font-size: 12px !important;
+        line-height: 1.2 !important;
+    }
+
+    body.rng-page .rng-equipped-bar .rng-btn {
+        width: 38px !important;
+        min-width: 38px !important;
+        height: 38px !important;
+        min-height: 38px !important;
+        border-radius: 11px !important;
+    }
+
+    body.rng-page .rng-roll-stage {
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 0 !important;
+        flex: 0 0 auto !important;
+        height: 112px !important;
+        min-height: 112px !important;
+        padding: 12px !important;
+        border-radius: 14px !important;
+    }
+
+    body.rng-page .rng-roll-display {
+        font-size: 28px !important;
+        line-height: 1 !important;
+    }
+
+    body.rng-page .rng-buff-row {
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 0 !important;
+        min-height: 26px !important;
+        padding: 4px 8px !important;
+        border-radius: 9px !important;
+        font-size: 11px !important;
+    }
+
+    body.rng-page .rng-action-row {
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 0 !important;
+        grid-template-columns: 42px minmax(0, 1fr) !important;
+        gap: 8px !important;
+    }
+
+    body.rng-page .rng-action-row > :last-child:not(:nth-child(2)) {
+        grid-column: 1 / -1;
+    }
+
+    body.rng-page .rng-btn,
+    body.rng-page .rng-btn-roll {
+        min-height: 42px !important;
+        border-radius: 12px !important;
+    }
+
+    body.rng-page .rng-quick-stats {
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 0 !important;
+        grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+        gap: 6px !important;
+    }
+
+    body.rng-page .rng-quick-stat {
+        min-height: 50px !important;
+        padding: 7px 4px !important;
+        border-radius: 11px !important;
+    }
+
+    body.rng-page .rng-quick-stat span {
+        font-size: 9px !important;
+        line-height: 1 !important;
+    }
+
+    body.rng-page .rng-quick-stat strong {
+        font-size: 13px !important;
+        line-height: 1.05 !important;
+    }
+
+    body.rng-page .rng-sidebar {
+        gap: 8px !important;
+        height: auto !important;
+        min-height: 0 !important;
+        overflow: visible !important;
+    }
+
+    body.rng-page .rng-tabs {
+        display: flex !important;
+        gap: 7px !important;
+        width: calc(100% + 20px) !important;
+        margin: 0 -10px !important;
+        padding: 0 10px 4px !important;
+        overflow-x: auto !important;
+        overflow-y: hidden !important;
+        scroll-snap-type: x proximity;
+        scrollbar-width: none;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    body.rng-page .rng-tabs::-webkit-scrollbar {
+        display: none;
+    }
+
+    body.rng-page .rng-tabs .rng-tab {
+        flex: 0 0 auto !important;
+        width: auto !important;
+        min-width: 92px !important;
+        min-height: 38px !important;
+        padding: 8px 12px !important;
+        border-radius: 999px !important;
+        scroll-snap-align: start;
+        white-space: nowrap !important;
+        font-size: 11px !important;
+        border: 1px solid rgba(94, 234, 212, 0.2) !important;
+        background: rgba(5, 24, 38, 0.82) !important;
+    }
+
+    body.rng-page .rng-tabs .rng-tab.active {
+        color: #05202b !important;
+        background: linear-gradient(135deg, #67e8f9, #22c55e) !important;
+        border-color: rgba(167, 243, 208, 0.76) !important;
+    }
+
+    body.rng-page .rng-tab-panel {
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 0 !important;
+        padding: 0 !important;
+        height: auto !important;
+        min-height: 0 !important;
+        overflow: visible !important;
+    }
+
+    body.rng-page .rng-upgrade-scroll,
+    body.rng-page .rng-quests-panel,
+    body.rng-page .rng-prestige-panel,
+    body.rng-page .rng-rarities-panel,
+    body.rng-page .rng-leaderboard-panel {
+        padding-right: 0 !important;
+    }
+
+    body.rng-page .rng-upgrade-card,
+    body.rng-page .rng-quest-card,
+    body.rng-page .rng-potion-card {
+        border-radius: 13px !important;
+        padding: 10px !important;
+    }
+}
+
+@media (max-width: 390px) {
+    body.rng-page .rng-quick-stats {
+        grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    }
+
+    body.rng-page .rng-tabs .rng-tab {
+        min-width: 86px !important;
+        padding-inline: 10px !important;
+    }
+}

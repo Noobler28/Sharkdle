@@ -109,10 +109,10 @@ const sharks = [
             { "name": "Viper Dogfish", "family": "Etmopteridae", "order": "Squaliformes", "genus": "Trigonognathus", "size": "Small","depth": "Bathypelagic", "yod": 1990, "OneIn": 26},
             // Oxynotidae | Squaliformes | Oxynotus | 5 species
             { "name": "Prickly Dogfish", "family": "Oxynotidae", "order": "Squaliformes", "genus": "Oxynotus", "size": "Medium","depth": "Bathypelagic", "yod": 1893, "OneIn": 5000000},
-            { "name": "Caribbean Roughshark", "family": "Oxynotidae", "order": "Squaliformes", "genus": "Oxynotus", "size": "Medium","depth": "Bathypelagic", "yod": 1961, "OneIn": 2600000},
-            { "name": "Angular Roughshark", "family": "Oxynotidae", "order": "Squaliformes", "genus": "Oxynotus", "size": "Medium","depth": "Bathypelagic", "yod": 1758, "OneIn": 5800},
-            { "name": "Japanese Roughshark", "family": "Oxynotidae", "order": "Squaliformes", "genus": "Oxynotus", "size": "Medium","depth": "Bathypelagic", "yod": 1985, "OneIn": 110000},
-            { "name": "Sail-fin Roughshark", "family": "Oxynotidae", "order": "Squaliformes", "genus": "Oxynotus", "size": "Medium","depth": "Bathypelagic", "yod": 1929, "OneIn": 24},
+            { "name": "Caribbean Roughshark", "family": "Oxynotidae", "order": "Squaliformes", "genus": "Oxynotus", "size": "Small","depth": "Bathypelagic", "yod": 1961, "OneIn": 2600000},
+            { "name": "Angular Roughshark", "family": "Oxynotidae", "order": "Squaliformes", "genus": "Oxynotus", "size": "Small","depth": "Bathypelagic", "yod": 1758, "OneIn": 5800},
+            { "name": "Japanese Roughshark", "family": "Oxynotidae", "order": "Squaliformes", "genus": "Oxynotus", "size": "Small","depth": "Bathypelagic", "yod": 1985, "OneIn": 110000},
+            { "name": "Sail-fin Roughshark", "family": "Oxynotidae", "order": "Squaliformes", "genus": "Oxynotus", "size": "Small","depth": "Bathypelagic", "yod": 1929, "OneIn": 24},
             // Somniosidae | Squaliformes | Centroscymnus | 2 species
             { "name": "Portuguese Dogfish", "family": "Somniosidae", "order": "Squaliformes", "genus": "Centroscymnus", "size": "Medium","depth": "Bathypelagic", "yod": 1864, "OneIn": 185000000},
             { "name": "Rough-skin Dogfish", "family": "Somniosidae", "order": "Squaliformes", "genus": "Centroscymnus", "size": "Medium","depth": "Bathypelagic", "yod": 1906, "OneIn": 20000},
@@ -317,12 +317,13 @@ const sharks = [
             // Stegostomatidae | Orectolobiformes | Stegostoma | 1 species
             { "name": "Zebra Shark", "family": "Stegostomatidae", "order": "Orectolobiformes", "genus": "Stegostoma", "size": "Medium","depth": "Epipelagic", "yod": 1783, "OneIn": 12000},
             // Ground Sharks | Carcharhiniformes | In Progress
-            // Carcharhinidae | Carcharhiniformes | Carcharhinus | 36 species
+            // Carcharhinidae | Carcharhiniformes | Carcharhinus | 37 species
             { "name": "Blacknose Shark", "family": "Carcharhinidae", "order": "Carcharhiniformes", "genus": "Carcharhinus", "size": "Medium","depth": "Epipelagic", "yod": 1860, "OneIn": 900000},
             { "name": "Silvertip Shark", "family": "Carcharhinidae", "order": "Carcharhiniformes", "genus": "Carcharhinus", "size": "Large","depth": "Epipelagic", "yod": 1837, "OneIn": 65},
             { "name": "Bignose Shark", "family": "Carcharhinidae", "order": "Carcharhiniformes", "genus": "Carcharhinus", "size": "Medium","depth": "Epipelagic", "yod": 1950, "OneIn": 1800},
             { "name": "Graceful Shark", "family": "Carcharhinidae", "order": "Carcharhiniformes", "genus": "Carcharhinus", "size": "Small","depth": "Epipelagic", "yod": 1934, "OneIn": 920000},
             { "name": "Grey Reef Shark", "family": "Carcharhinidae", "order": "Carcharhiniformes", "genus": "Carcharhinus", "size": "Medium","depth": "Epipelagic", "yod": 1856, "OneIn": 88},
+            { "name": "Blacktip Reef Shark", "family": "Carcharhinidae", "order": "Carcharhiniformes", "genus": "Carcharhinus", "size": "Medium","depth": "Epipelagic", "yod": 1824, "OneIn": 96},
             { "name": "Pigeye Shark", "family": "Carcharhinidae", "order": "Carcharhiniformes", "genus": "Carcharhinus", "size": "Medium","depth": "Epipelagic", "yod": 1839, "OneIn": 2100},
             { "name": "Borneo Shark", "family": "Carcharhinidae", "order": "Carcharhiniformes", "genus": "Carcharhinus", "size": "Small","depth": "Epipelagic", "yod": 1858, "OneIn": 500000000},
             { "name": "Copper Shark", "family": "Carcharhinidae", "order": "Carcharhiniformes", "genus": "Carcharhinus", "size": "Medium","depth": "Epipelagic", "yod": 1870, "OneIn": 310},
@@ -592,7 +593,7 @@ const sharks = [
             // Sphyrnidae | Carcharhiniformes | Eusphyra | 1 species
             { "name": "Winghead Shark", "family": "Sphyrnidae", "order": "Carcharhiniformes", "genus": "Eusphyra", "size": "Medium","depth": "Epipelagic", "yod": 1816, "OneIn": 91000000},
             // Sphyrnidae | Carcharhiniformes | Sphyrna | 8 species
-            { "name": "Shovelbill Shark", "family": "Sphyrnidae", "order": "Carcharhiniformes", "genus": "Sphyrna", "size": "Medium","depth": "Epipelagic", "yod": 2024, "OneIn": 7100},
+            { "name": "Shovelbill Shark", "family": "Sphyrnidae", "order": "Carcharhiniformes", "genus": "Sphyrna", "size": "Small","depth": "Epipelagic", "yod": 2024, "OneIn": 7100},
             { "name": "Scalloped Bonnethead", "family": "Sphyrnidae", "order": "Carcharhiniformes", "genus": "Sphyrna", "size": "Medium","depth": "Epipelagic", "yod": 1940, "OneIn": 2000000},
             { "name": "Carolina Hammerhead", "family": "Sphyrnidae", "order": "Carcharhiniformes", "genus": "Sphyrna", "size": "Medium","depth": "Epipelagic", "yod": 2013, "OneIn": 390000000},
             { "name": "Scalloped Hammerhead", "family": "Sphyrnidae", "order": "Carcharhiniformes", "genus": "Sphyrna", "size": "Large","depth": "Epipelagic", "yod": 1834, "OneIn": 9100},
@@ -658,6 +659,13 @@ const sharks = [
             { "name": "Leopard Shark", "family": "Triakidae", "order": "Carcharhiniformes", "genus": "Triakis", "size": "Small","depth": "Epipelagic", "yod": 1855, "OneIn": 91000},
         ];
 
+function hasRequiredClassification(species) {
+    return ["name", "family", "order", "genus"].every(field => {
+        const value = species?.[field];
+        return typeof value === "string" && value.trim() && value.trim().toLowerCase() !== "unknown";
+    });
+}
+
 // Make available globally
-window.sharks = sharks;
+window.sharks = sharks.filter(hasRequiredClassification);
 console.log("sharks.js loaded, window.sharks length:", window.sharks ? window.sharks.length : undefined);

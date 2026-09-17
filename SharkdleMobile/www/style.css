@@ -1,4 +1,4 @@
-
+﻿
 /* Stats Grid and Stat Card */
 .stats-detail {
     display: grid;
@@ -4463,6 +4463,7 @@ body.home-v3-page .home-footer {
     .home-v3-right {
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
+
 }
 
 /* Modal stack guard: the V3 app shell is positioned, so opened modals need an explicit top layer. */
@@ -4480,6 +4481,7 @@ body.home-v3-page #cratesModal,
 body.home-v3-page #homeCratesModal,
 body.home-v3-page #crateDropsModal,
 body.home-v3-page #pearlShopModal,
+body.home-v3-page #socialRewardsModal,
 body.home-v3-page #dailyLoginModal {
     background:
         radial-gradient(ellipse at 50% 0%, rgba(44,196,196,.12), transparent 58%),
@@ -4487,10 +4489,15 @@ body.home-v3-page #dailyLoginModal {
     backdrop-filter: blur(10px);
 }
 
+body.home-v3-page #pearlShopModal:not(.hidden) {
+    z-index: 10001 !important;
+}
+
 body.home-v3-page #cratesModal .modal-content,
 body.home-v3-page #homeCratesModal .modal-content,
 body.home-v3-page #crateDropsModal .modal-content,
 body.home-v3-page #pearlShopModal .modal-content,
+body.home-v3-page #socialRewardsModal .modal-content,
 body.home-v3-page #dailyLoginModal .modal-content {
     border-radius: 12px !important;
     border: 1px solid rgba(44,196,196,.22) !important;
@@ -4617,6 +4624,107 @@ body.home-v3-page .pearl-shop-modal-content {
 
 .pearl-shop-grid .home-v3-shop-item.featured {
     grid-column: 1 / -1;
+}
+
+.pearl-shop-grid .home-v3-shop-item.bottle-pack-featured {
+    position: relative;
+    grid-column: 1 / -1;
+    min-height: 160px;
+    grid-template-columns: minmax(180px, 260px) minmax(0, 1fr) auto;
+    gap: 18px;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, .34);
+    background:
+        radial-gradient(circle at 14% 18%, rgba(255, 255, 255, .38), transparent 22%),
+        linear-gradient(120deg, rgba(255, 92, 158, .92), rgba(255, 204, 94, .9) 28%, rgba(98, 231, 169, .9) 53%, rgba(84, 190, 255, .92) 76%, rgba(190, 132, 255, .94));
+    box-shadow:
+        0 18px 42px rgba(0, 0, 0, .32),
+        0 0 0 1px rgba(255, 255, 255, .16) inset;
+}
+
+.pearl-shop-grid .home-v3-shop-item.bottle-pack-featured::before {
+    content: "";
+    position: absolute;
+    inset: 1px;
+    border-radius: 9px;
+    background: linear-gradient(135deg, rgba(4, 20, 34, .38), rgba(0, 0, 0, .12));
+    pointer-events: none;
+}
+
+.pearl-shop-sticker {
+    position: absolute;
+    top: 12px;
+    right: 14px;
+    z-index: 2;
+    padding: 5px 9px;
+    border: 1px solid rgba(255, 255, 255, .5);
+    border-radius: 999px;
+    background: rgba(3, 20, 34, .76);
+    color: #fff7d0;
+    font-family: "Barlow Condensed", sans-serif;
+    font-size: 12px;
+    font-weight: 900;
+    letter-spacing: .9px;
+    text-transform: uppercase;
+}
+
+.pearl-shop-bottle-stack {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 8px;
+    align-items: end;
+}
+
+.pearl-shop-bottle-stack div {
+    display: grid;
+    justify-items: center;
+    gap: 4px;
+    min-width: 0;
+}
+
+.pearl-shop-bottle-stack img {
+    width: 100%;
+    max-width: 54px;
+    height: 86px;
+    object-fit: contain;
+    filter: drop-shadow(0 10px 12px rgba(0, 0, 0, .32));
+}
+
+.pearl-shop-bottle-stack span {
+    display: inline-grid;
+    min-width: 30px;
+    min-height: 24px;
+    place-items: center;
+    border-radius: 999px;
+    background: rgba(2, 21, 36, .8);
+    color: #fff;
+    font-family: "Barlow Condensed", sans-serif;
+    font-size: 14px;
+    font-weight: 900;
+}
+
+.pearl-shop-grid .home-v3-shop-item.bottle-pack-featured .pearl-shop-bottle-copy,
+.pearl-shop-grid .home-v3-shop-item.bottle-pack-featured button {
+    position: relative;
+    z-index: 1;
+}
+
+.pearl-shop-grid .home-v3-shop-item.bottle-pack-featured strong {
+    color: #fff;
+    text-shadow: 0 2px 12px rgba(0, 0, 0, .32);
+}
+
+.pearl-shop-grid .home-v3-shop-item.bottle-pack-featured span {
+    color: rgba(255, 255, 255, .92);
+}
+
+.pearl-shop-grid .home-v3-shop-item.bottle-pack-featured button {
+    min-width: 112px;
+    border-color: rgba(255, 255, 255, .62);
+    background: linear-gradient(135deg, #fffdf0, #fff0a8 55%, #9cffef);
+    color: #082237;
 }
 
 .pearl-shop-grid .home-v3-shop-item > i {
@@ -4935,6 +5043,15 @@ body.home-v3-page #crateDropsModal button[onclick="closeCrateDropsModal()"] {
 
     .pearl-shop-grid .home-v3-shop-item {
         grid-template-columns: 42px minmax(0, 1fr);
+    }
+
+    .pearl-shop-grid .home-v3-shop-item.bottle-pack-featured {
+        grid-template-columns: 1fr;
+        padding-top: 46px;
+    }
+
+    .pearl-shop-bottle-stack {
+        max-width: 280px;
     }
 
     .pearl-shop-grid .home-v3-shop-item button {
@@ -5531,7 +5648,9 @@ overflow-y:auto;
 }
 
 .profile-badge-panel {
-    min-width: 150px;
+    min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box;
     margin-left: auto !important;
     padding: 14px 14px 12px;
     border-radius: 16px;
@@ -5555,8 +5674,11 @@ overflow-y:auto;
 
 .profile-badge-name {
     display: block;
+    max-width: 100%;
     margin-top: 2px;
     color: #f5fdff;
+    overflow-wrap: anywhere;
+    word-break: break-word;
 }
 
 .profile-badge-btn {
@@ -6646,7 +6768,7 @@ overflow-y:auto;
     }
 }
 
-/* Summer crate unbox — beach cooler, sun burst, splash reveal */
+/* Summer crate unbox â€” beach cooler, sun burst, splash reveal */
 .crate-unbox-fx,
 .crate-unbox-splash {
     display: none;
@@ -7862,10 +7984,8 @@ transform:translateY(-4px);
 
 .profile-hero-card.theme-volcanic-ember {
     background:
-        radial-gradient(circle at 18% 18%, rgba(255, 194, 122, 0.2), transparent 22%),
-        radial-gradient(circle at 80% 22%, rgba(255, 102, 102, 0.26), transparent 24%),
-        radial-gradient(circle at 48% 82%, rgba(255, 149, 0, 0.14), transparent 28%),
-        linear-gradient(140deg, rgba(171, 37, 37, 0.46), rgba(255, 120, 70, 0.16) 36%, rgba(44, 10, 24, 0.98) 72%, rgba(16, 5, 14, 1));
+        linear-gradient(180deg, rgba(15, 3, 2, 0.12), rgba(6, 2, 3, 0.58)),
+        url("images/profileThemes/VolcanicEmber.png") center center / cover no-repeat;
 }
 
 .profile-hero-card.theme-lucky-current {
@@ -7878,18 +7998,14 @@ transform:translateY(-4px);
 
 .profile-hero-card.theme-kelp-canopy {
     background:
-        radial-gradient(circle at 16% 18%, rgba(184, 239, 144, 0.18), transparent 24%),
-        radial-gradient(circle at 82% 20%, rgba(72, 179, 121, 0.16), transparent 26%),
-        radial-gradient(circle at 46% 80%, rgba(225, 255, 181, 0.1), transparent 28%),
-        linear-gradient(145deg, rgba(58, 122, 59, 0.32), rgba(22, 72, 56, 0.98) 48%, rgba(8, 30, 24, 1));
+        linear-gradient(180deg, rgba(6, 31, 23, 0.08), rgba(3, 22, 21, 0.5)),
+        url("images/profileThemes/KelpCanopy.png") center center / cover no-repeat;
 }
 
 .profile-hero-card.theme-glacier-shine {
     background:
-        radial-gradient(circle at 18% 18%, rgba(255, 255, 255, 0.24), transparent 22%),
-        radial-gradient(circle at 78% 16%, rgba(155, 228, 255, 0.18), transparent 24%),
-        radial-gradient(circle at 50% 82%, rgba(195, 235, 255, 0.14), transparent 28%),
-        linear-gradient(145deg, rgba(221, 245, 255, 0.26), rgba(93, 170, 219, 0.18) 36%, rgba(33, 82, 120, 0.94) 72%, rgba(10, 31, 52, 1));
+        linear-gradient(180deg, rgba(255, 255, 255, 0.2), rgba(18, 69, 95, 0.34)),
+        url("images/profileThemes/GlacierShine.png") center center / cover no-repeat;
 }
 
 .profile-hero-card.theme-ocean-breeze {
@@ -7910,6 +8026,31 @@ transform:translateY(-4px);
         radial-gradient(circle at 50% 20%, rgba(255, 220, 100, 0.35), transparent 24%),
         radial-gradient(circle at 30% 70%, rgba(255, 180, 50, 0.15), transparent 28%),
         linear-gradient(140deg, rgba(255, 220, 100, 0.4), rgba(255, 180, 50, 0.25) 42%, rgba(40, 30, 10, 0.98));
+}
+
+.profile-hero-card.theme-abyss-bloom {
+    background:
+        radial-gradient(circle at 18% 22%, rgba(255, 108, 170, 0.22), transparent 24%),
+        radial-gradient(circle at 78% 18%, rgba(72, 221, 196, 0.18), transparent 28%),
+        radial-gradient(circle at 48% 84%, rgba(255, 194, 109, 0.12), transparent 30%),
+        linear-gradient(142deg, rgba(31, 92, 109, 0.34), rgba(18, 31, 68, 0.96) 52%, rgba(7, 12, 31, 1));
+    border-color: rgba(255, 108, 170, 0.26);
+}
+
+.profile-hero-card.theme-neon-reef {
+    background:
+        radial-gradient(circle at 24% 20%, rgba(95, 255, 184, 0.24), transparent 24%),
+        radial-gradient(circle at 82% 70%, rgba(255, 217, 91, 0.16), transparent 30%),
+        linear-gradient(135deg, rgba(22, 143, 126, 0.32), rgba(27, 69, 124, 0.96) 48%, rgba(8, 19, 45, 1));
+    border-color: rgba(95, 255, 184, 0.28);
+}
+
+.profile-hero-card.theme-lunar-current {
+    background:
+        radial-gradient(circle at 76% 16%, rgba(248, 250, 255, 0.24), transparent 18%),
+        radial-gradient(circle at 18% 78%, rgba(139, 189, 255, 0.18), transparent 30%),
+        linear-gradient(145deg, rgba(64, 74, 145, 0.38), rgba(17, 35, 82, 0.98) 55%, rgba(5, 11, 27, 1));
+    border-color: rgba(139, 189, 255, 0.28);
 }
 
 .profile-hero-card.theme-candycane {
@@ -7992,28 +8133,15 @@ transform:translateY(-4px);
 
 .profile-hero-card.theme-elf {
     background:
-        radial-gradient(circle at 20% 20%, rgba(50, 205, 50, 0.25), transparent 24%),
-        radial-gradient(circle at 80% 30%, rgba(34, 139, 34, 0.2), transparent 28%),
-        linear-gradient(140deg, rgba(34, 139, 34, 0.4), rgba(50, 205, 50, 0.3) 50%, rgba(0, 80, 0, 0.92));
+        linear-gradient(180deg, rgba(245, 255, 224, 0.18), rgba(31, 94, 48, 0.26)),
+        url("images/profileThemes/Elf.png") center center / cover no-repeat;
     border-color: rgba(34, 139, 34, 0.3);
     position: relative;
     overflow: hidden;
 }
 
 .profile-hero-card.theme-elf::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-    z-index: 1;
-    background:
-        radial-gradient(circle at 15% 25%, rgba(0, 255, 128, 0.6) 0 3px, transparent 4px),
-        radial-gradient(circle at 35% 60%, rgba(0, 255, 128, 0.5) 0 2.5px, transparent 3.5px),
-        radial-gradient(circle at 55% 15%, rgba(0, 255, 128, 0.7) 0 2px, transparent 3px),
-        radial-gradient(circle at 75% 40%, rgba(0, 255, 128, 0.6) 0 3px, transparent 4px),
-        radial-gradient(circle at 85% 75%, rgba(0, 255, 128, 0.5) 0 2.5px, transparent 3.5px);
-    background-size: 300px 300px;
-    animation: elf-glow 6s ease-in-out infinite alternate;
+    content: none;
 }
 
 @keyframes elf-glow {
@@ -8091,35 +8219,15 @@ transform:translateY(-4px);
 
 .profile-hero-card.theme-north-pole {
     background:
-        radial-gradient(circle at 20% 30%, rgba(255, 255, 255, 0.4) 2px, transparent 3px),
-        radial-gradient(circle at 80% 20%, rgba(255, 255, 255, 0.4) 1.5px, transparent 2.5px),
-        radial-gradient(circle at 40% 70%, rgba(255, 255, 255, 0.4) 1px, transparent 2px),
-        radial-gradient(circle at 60% 40%, rgba(255, 255, 255, 0.4) 1.8px, transparent 2.8px),
-        radial-gradient(circle at 30% 50%, rgba(255, 255, 255, 0.4) 1.2px, transparent 2.2px),
-        radial-gradient(circle at 70% 60%, rgba(255, 255, 255, 0.4) 1.5px, transparent 2.5px),
-        radial-gradient(circle at 50% 20%, rgba(230, 247, 255, 0.4), transparent 28%),
-        linear-gradient(140deg, rgba(230, 247, 255, 0.6), rgba(179, 224, 255, 0.4) 50%, rgba(128, 208, 255, 0.35) 100%);
+        linear-gradient(180deg, rgba(255, 255, 255, 0.42), rgba(120, 188, 220, 0.18)),
+        url("images/profileThemes/Northpole.png") center center / cover no-repeat;
     border-color: rgba(179, 224, 255, 0.3);
     position: relative;
     overflow: hidden;
 }
 
 .profile-hero-card.theme-north-pole::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-    z-index: 1;
-    opacity: 0.6;
-    background:
-        radial-gradient(circle at 30px 50px, rgba(255, 255, 255, 0.9) 0 1.5px, transparent 2px),
-        radial-gradient(circle at 80px 30px, rgba(255, 255, 255, 0.8) 0 1.2px, transparent 1.7px),
-        radial-gradient(circle at 150px 70px, rgba(255, 255, 255, 0.9) 0 1.8px, transparent 2.3px),
-        radial-gradient(circle at 200px 40px, rgba(255, 255, 255, 0.7) 0 1px, transparent 1.5px),
-        radial-gradient(circle at 260px 90px, rgba(255, 255, 255, 0.85) 0 1.4px, transparent 1.9px),
-        radial-gradient(circle at 320px 50px, rgba(255, 255, 255, 0.9) 0 1.6px, transparent 2.1px);
-    background-size: 400px 400px;
-    animation: snowfall-profile 25s linear infinite;
+    content: none;
 }
 
 @keyframes snowfall-profile {
@@ -8197,60 +8305,34 @@ transform:translateY(-4px);
 
 .profile-hero-card.theme-pumpkin-patch {
     background:
-        radial-gradient(34px 22px at 8% 4px, rgba(138, 255, 112, 0.92) 0 68%, transparent 72%),
-        radial-gradient(30px 40px at 23% -9px, rgba(122, 242, 96, 0.92) 0 66%, transparent 70%),
-        radial-gradient(36px 26px at 41% 6px, rgba(144, 255, 120, 0.9) 0 68%, transparent 72%),
-        radial-gradient(28px 38px at 58% -8px, rgba(113, 233, 89, 0.9) 0 66%, transparent 70%),
-        radial-gradient(34px 24px at 74% 5px, rgba(132, 250, 108, 0.9) 0 68%, transparent 72%),
-        radial-gradient(30px 42px at 90% -10px, rgba(120, 236, 94, 0.9) 0 66%, transparent 70%),
-        linear-gradient(180deg, rgba(142, 255, 113, 0.36) 0 16%, transparent 29%),
-        linear-gradient(180deg, rgba(102, 44, 174, 0.72), rgba(39, 15, 72, 0.98) 62%, rgba(16, 7, 31, 1));
+        linear-gradient(180deg, rgba(6, 20, 12, 0.08), rgba(18, 7, 34, 0.56)),
+        url("images/profileThemes/Goo.png") center top / cover no-repeat;
     border-color: rgba(159, 105, 238, 0.34);
     position: relative;
     overflow: hidden;
 }
 
 .profile-hero-card.theme-pumpkin-patch::after {
-    content: "";
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 74px;
-    pointer-events: none;
-    background:
-        radial-gradient(36px 24px at 10% 6px, rgba(138, 255, 112, 0.95) 0 68%, transparent 72%),
-        radial-gradient(30px 44px at 22% -8px, rgba(122, 242, 96, 0.92) 0 66%, transparent 70%),
-        radial-gradient(38px 26px at 40% 7px, rgba(144, 255, 120, 0.94) 0 68%, transparent 72%),
-        radial-gradient(28px 46px at 55% -10px, rgba(113, 233, 89, 0.92) 0 66%, transparent 70%),
-        radial-gradient(34px 24px at 72% 5px, rgba(132, 250, 108, 0.93) 0 68%, transparent 72%),
-        radial-gradient(30px 44px at 88% -8px, rgba(120, 236, 94, 0.92) 0 66%, transparent 70%),
-        linear-gradient(180deg, rgba(132, 247, 107, 0.84) 0 24px, rgba(108, 224, 86, 0.74) 24px 38px, rgba(108, 224, 86, 0) 62px);
-    opacity: 0.96;
-    filter: saturate(1.12);
+    content: none;
 }
 
 .profile-hero-card.theme-pumpkin-patch .profile-username-text,
 .profile-hero-card.theme-pumpkin-patch .profile-badge-kicker,
 .profile-hero-card.theme-pumpkin-patch .profile-badge-name {
-    color: #e9dcff;
+    color: #f5eaff;
 }
 
 .profile-hero-card.theme-haunted-abyss {
     background:
-        radial-gradient(circle at 18% 20%, rgba(255, 151, 126, 0.2), transparent 24%),
-        radial-gradient(circle at 82% 18%, rgba(198, 132, 255, 0.26), transparent 26%),
-        radial-gradient(circle at 50% 80%, rgba(255, 192, 133, 0.12), transparent 30%),
-        linear-gradient(145deg, rgba(104, 44, 166, 0.44), rgba(53, 26, 93, 0.98) 56%, rgba(21, 10, 38, 1));
+        linear-gradient(180deg, rgba(16, 0, 26, 0.02), rgba(7, 0, 18, 0.5)),
+        url("images/profileThemes/Witchlight.png") center center / cover no-repeat;
     border-color: rgba(214, 148, 255, 0.3);
 }
 
 .profile-hero-card.theme-nightmare-reef {
     background:
-        radial-gradient(circle at 18% 18%, rgba(168, 255, 226, 0.16), transparent 24%),
-        radial-gradient(circle at 82% 22%, rgba(145, 224, 255, 0.14), transparent 26%),
-        radial-gradient(circle at 48% 80%, rgba(128, 191, 255, 0.1), transparent 30%),
-        linear-gradient(150deg, rgba(45, 118, 126, 0.3), rgba(22, 49, 66, 0.98) 52%, rgba(10, 20, 35, 1));
+        linear-gradient(180deg, rgba(6, 12, 18, 0.08), rgba(3, 7, 12, 0.56)),
+        url("images/profileThemes/PhantomFog.png") center center / cover no-repeat;
     border-color: rgba(123, 200, 224, 0.26);
 }
 
@@ -13273,6 +13355,9 @@ body.home-v3-page #dailyLoginModal {
 }
 
 .auth-panel { display: grid; gap: 12px; }
+.auth-panel.hidden {
+    display: none;
+}
 .auth-field { display: grid; gap: 7px; color: rgba(233,251,255,.78); font-size: 12px; font-weight: 900; letter-spacing: .08em; text-transform: uppercase; }
 .auth-field input {
     width: 100%;
@@ -13471,6 +13556,7 @@ body.home-v3-page #dailyLoginModal {
     .profile-overhaul-sidebar { border-right: 0; border-bottom: 1px solid rgba(255,255,255,.08); }
     .profile-overhaul-tabs { grid-template-columns: repeat(2, 1fr); }
     .profile-overhaul-quickstats, .profile-inventory-summary, .profile-overhaul-split, .profile-overhaul-settings-grid { grid-template-columns: 1fr; }
+    body.home-v3-page .profile-achievement-showcase { grid-template-columns: 1fr; }
     .profile-overhaul-main { overflow: visible; padding: 22px; }
     .crafting-overhaul-grid { grid-template-columns: 1fr; }
     .crafting-overhaul-arrow { transform: rotate(90deg); text-align:center; }
@@ -13536,6 +13622,10 @@ body.home-v3-page .profile-avatar-orb {
     position: relative;
     width: 132px;
     margin: 0 auto;
+    padding: 8px;
+    border-radius: 34px;
+    background: rgba(2, 18, 31, .85);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.12), 0 16px 34px rgba(0,0,0,.22);
 }
 
 body.home-v3-page .profile-avatar-orb img {
@@ -13545,6 +13635,29 @@ body.home-v3-page .profile-avatar-orb img {
     border: 4px solid rgba(225, 251, 255, .82);
     background: rgba(2, 18, 31, .85);
     box-shadow: 0 16px 34px rgba(0,0,0,.42), 0 0 0 8px rgba(88, 214, 229, .12);
+}
+
+.profile-inventory-search {
+    margin: 12px 0 16px;
+}
+
+.profile-inventory-search input {
+    width: min(420px, 100%);
+    min-height: 42px;
+    border-radius: 12px;
+    border: 1px solid rgba(126, 232, 255, .22);
+    background: rgba(2, 18, 31, .72);
+    color: #eaffff;
+    padding: 0 14px;
+    font: 800 15px "Barlow Condensed", sans-serif;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    outline: none;
+}
+
+.profile-inventory-search input:focus {
+    border-color: rgba(126, 232, 255, .58);
+    box-shadow: 0 0 0 3px rgba(126, 232, 255, .12);
 }
 
 body.home-v3-page .profile-avatar-orb span {
@@ -13718,6 +13831,116 @@ body.home-v3-page .profile-inventory-summary strong {
     font-family: 'Barlow Condensed', sans-serif;
     font-size: 40px;
     line-height: .95;
+}
+
+body.home-v3-page .profile-achievement-showcase-panel {
+    margin: 0 0 18px;
+}
+
+body.home-v3-page .profile-achievement-showcase-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 14px;
+    margin-bottom: 14px;
+}
+
+body.home-v3-page .profile-achievement-showcase-head span {
+    display: block;
+    color: #9beef7;
+    font-size: 11px;
+    font-weight: 900;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+}
+
+body.home-v3-page .profile-achievement-showcase-head h3 {
+    margin: 3px 0 0;
+    color: #fff;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 26px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}
+
+body.home-v3-page .profile-achievement-showcase-head a {
+    flex: 0 0 auto;
+    min-height: 36px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 13px;
+    border-radius: 12px;
+    border: 1px solid rgba(126, 240, 255, .22);
+    background: rgba(126, 240, 255, .10);
+    color: #dffbff;
+    font-weight: 900;
+    font-size: 12px;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    text-decoration: none;
+}
+
+body.home-v3-page .profile-achievement-showcase {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+}
+
+body.home-v3-page .profile-achievement-showcase-card {
+    min-height: 104px;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    gap: 12px;
+    padding: 14px;
+    border-radius: 14px;
+    border: 1px solid rgba(125, 211, 252, .18);
+    background:
+        radial-gradient(circle at 100% 0%, rgba(125, 211, 252, .14), transparent 42%),
+        rgba(1, 12, 20, .38);
+}
+
+body.home-v3-page .profile-achievement-showcase-card.rarity-rare { border-color: rgba(96, 165, 250, .28); }
+body.home-v3-page .profile-achievement-showcase-card.rarity-epic { border-color: rgba(192, 132, 252, .32); }
+body.home-v3-page .profile-achievement-showcase-card.rarity-legendary { border-color: rgba(251, 191, 36, .38); }
+body.home-v3-page .profile-achievement-showcase-card.rarity-mythic { border-color: rgba(251, 113, 133, .42); }
+
+body.home-v3-page .profile-achievement-showcase-card > span {
+    width: 46px;
+    height: 46px;
+    display: grid;
+    place-items: center;
+    border-radius: 13px;
+    background: rgba(255,255,255,.08);
+    border: 1px solid rgba(255,255,255,.10);
+    font-size: 24px;
+}
+
+body.home-v3-page .profile-achievement-showcase-card strong {
+    display: block;
+    color: #fff;
+    font-size: 14px;
+    line-height: 1.15;
+    overflow-wrap: anywhere;
+}
+
+body.home-v3-page .profile-achievement-showcase-card small {
+    display: block;
+    margin-top: 5px;
+    color: rgba(223, 251, 255, .64);
+    font-size: 10px;
+    font-weight: 900;
+    letter-spacing: .08em;
+}
+
+body.home-v3-page .profile-achievement-showcase-empty {
+    grid-column: 1 / -1;
+    padding: 18px;
+    border-radius: 14px;
+    border: 1px dashed rgba(126, 240, 255, .20);
+    color: rgba(223, 251, 255, .68);
+    background: rgba(1, 12, 20, .34);
 }
 
 body.home-v3-page .profile-overhaul-tile,
@@ -15122,6 +15345,8 @@ body.home-v3-page .profile-edit-btn {
 body.home-v3-page .profile-overhaul-equipped {
     width: 100% !important;
     min-width: 0 !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
     display: grid !important;
     grid-template-columns: minmax(0, 1fr) 42px !important;
     gap: 10px !important;
@@ -15133,6 +15358,11 @@ body.home-v3-page .profile-overhaul-equipped {
     text-align: left !important;
 }
 
+body.home-v3-page .profile-overhaul-equipped > div {
+    min-width: 0 !important;
+    max-width: 100% !important;
+}
+
 body.home-v3-page .profile-overhaul-equipped span {
     font-size: 9px !important;
     letter-spacing: .12em !important;
@@ -15140,11 +15370,14 @@ body.home-v3-page .profile-overhaul-equipped span {
 
 body.home-v3-page .profile-overhaul-equipped strong {
     display: block !important;
+    max-width: 100% !important;
     overflow: hidden !important;
-    text-overflow: ellipsis !important;
-    white-space: nowrap !important;
+    white-space: normal !important;
+    overflow-wrap: anywhere !important;
+    word-break: break-word !important;
     color: #5fe5ff !important;
     font-size: 14px !important;
+    line-height: 1.08 !important;
 }
 
 body.home-v3-page .profile-badge-image {
@@ -15389,6 +15622,374 @@ body.home-v3-page .compact-social .friends-header {
     padding: 16px !important;
 }
 
+body.home-v3-page .social-rewards-panel {
+    border: 1px solid rgba(125, 211, 252, 0.2);
+    background:
+        radial-gradient(circle at 18% 0%, rgba(125, 211, 252, 0.16), transparent 34%),
+        linear-gradient(180deg, rgba(6, 34, 52, 0.9), rgba(3, 18, 31, 0.96));
+    border-radius: 12px;
+    padding: 20px;
+}
+
+body.home-v3-page .social-rewards-modal-content {
+    width: min(980px, 95vw);
+    max-height: 88vh;
+    overflow-y: auto;
+    padding: 20px;
+}
+
+body.home-v3-page .social-rewards-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 18px;
+    margin-bottom: 18px;
+    padding: 18px;
+    border: 1px solid rgba(255, 217, 138, 0.18);
+    border-radius: 12px;
+    background:
+        radial-gradient(circle at 92% 18%, rgba(255, 217, 138, 0.18), transparent 32%),
+        rgba(1, 17, 29, 0.68);
+}
+
+body.home-v3-page .social-rewards-head h3 {
+    margin: 4px 0 6px;
+    color: #fff;
+    font-family: "Barlow Condensed", sans-serif;
+    font-size: clamp(34px, 5vw, 54px);
+    line-height: 0.92;
+    text-transform: uppercase;
+}
+
+body.home-v3-page .social-rewards-head p,
+body.home-v3-page .social-reward-copy small {
+    margin: 0;
+    color: rgba(224, 242, 254, 0.72);
+}
+
+body.home-v3-page .social-rewards-balance,
+body.home-v3-page .social-reward-prize {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: #f8e7a2;
+    font-weight: 800;
+    white-space: nowrap;
+}
+
+body.home-v3-page .social-rewards-balance {
+    min-width: 150px;
+    justify-content: center;
+    padding: 13px 16px;
+    border: 1px solid rgba(255, 217, 138, 0.34);
+    border-radius: 10px;
+    background: rgba(255, 217, 138, 0.10);
+    font-size: 22px;
+}
+
+body.home-v3-page .social-rewards-list {
+    display: grid;
+    gap: 12px;
+}
+
+body.home-v3-page .social-reward-group {
+    overflow: hidden;
+    border: 1px solid rgba(125, 211, 252, 0.18);
+    border-radius: 12px;
+    background: rgba(1, 19, 32, 0.62);
+}
+
+body.home-v3-page .social-reward-group summary {
+    min-height: 76px;
+    display: grid;
+    grid-template-columns: 46px minmax(0, 1fr) auto 22px;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 16px;
+    cursor: pointer;
+    list-style: none;
+}
+
+body.home-v3-page .social-reward-group summary::-webkit-details-marker {
+    display: none;
+}
+
+body.home-v3-page .social-reward-group summary strong,
+body.home-v3-page .rewards-redeem-copy strong {
+    display: block;
+    color: #fff;
+    font-size: 19px;
+}
+
+body.home-v3-page .social-reward-group summary small,
+body.home-v3-page .rewards-redeem-copy span {
+    display: block;
+    color: rgba(224, 242, 254, 0.68);
+    font-size: 13px;
+}
+
+body.home-v3-page .social-reward-group summary b {
+    padding: 7px 10px;
+    border-radius: 999px;
+    background: rgba(125, 211, 252, 0.12);
+    color: #7dd3fc;
+    font-size: 13px;
+}
+
+body.home-v3-page .social-reward-group[open] summary > .fa-chevron-down {
+    transform: rotate(180deg);
+}
+
+body.home-v3-page .social-reward-group-icon {
+    width: 46px;
+    height: 46px;
+    display: inline-grid;
+    place-items: center;
+    border-radius: 10px;
+    background: linear-gradient(135deg, rgba(125, 211, 252, 0.18), rgba(255, 217, 138, 0.12));
+    color: #7dd3fc;
+    font-size: 21px;
+}
+
+body.home-v3-page .social-reward-group-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 0 16px 12px 74px;
+    color: rgba(224, 242, 254, 0.66);
+    font-size: 12px;
+    font-weight: 800;
+    text-transform: uppercase;
+}
+
+body.home-v3-page .social-reward-group-meta span {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+
+body.home-v3-page .social-reward-group-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 10px;
+    padding: 0 14px 14px;
+}
+
+body.home-v3-page .social-reward-card {
+    min-height: 104px;
+    display: grid;
+    grid-template-columns: 42px minmax(0, 1fr) auto;
+    grid-template-rows: 1fr auto;
+    align-items: center;
+    gap: 10px 12px;
+    padding: 14px;
+    border: 1px solid rgba(148, 163, 184, 0.2);
+    border-radius: 10px;
+    background: linear-gradient(155deg, rgba(8, 43, 63, 0.88), rgba(2, 20, 34, 0.9));
+}
+
+body.home-v3-page .social-reward-card > i {
+    width: 34px;
+    height: 34px;
+    display: inline-grid;
+    place-items: center;
+    border-radius: 8px;
+    background: rgba(14, 165, 233, 0.16);
+    color: #7dd3fc;
+    font-size: 18px;
+    flex: 0 0 auto;
+}
+
+body.home-v3-page .social-reward-copy {
+    min-width: 0;
+    flex: 1 1 auto;
+}
+
+body.home-v3-page .social-reward-copy span {
+    display: block;
+    color: #38bdf8;
+    font-size: 12px;
+    font-weight: 800;
+    text-transform: uppercase;
+}
+
+body.home-v3-page .social-reward-copy strong,
+body.home-v3-page .social-reward-copy small {
+    display: block;
+}
+
+body.home-v3-page .social-reward-card button {
+    grid-column: 2 / 4;
+    width: 100%;
+    min-height: 38px;
+    border: 1px solid rgba(255, 217, 138, 0.34);
+    border-radius: 8px;
+    background: linear-gradient(135deg, #fff7d0, #ffd36d 55%, #72d8d0);
+    color: #082237;
+    font-weight: 900;
+}
+
+body.home-v3-page .social-reward-card.claimed {
+    opacity: 0.72;
+}
+
+body.home-v3-page .social-reward-card.claimed button {
+    cursor: default;
+}
+
+body.home-v3-page .rewards-redeem-card {
+    display: grid;
+    gap: 12px;
+    padding: 16px;
+    border-top: 1px solid rgba(125, 211, 252, 0.14);
+    background: rgba(1, 16, 28, 0.46);
+}
+
+body.home-v3-page .rewards-redeem-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 10px;
+}
+
+body.home-v3-page .rewards-redeem-row input {
+    min-height: 44px;
+    border: 1px solid rgba(125, 211, 252, 0.24);
+    border-radius: 8px;
+    background: rgba(0, 12, 22, 0.72);
+    color: #e0f7ff;
+    padding: 0 12px;
+    font-weight: 800;
+}
+
+body.home-v3-page .rewards-redeem-row button {
+    min-height: 44px;
+    border: 1px solid rgba(125, 211, 252, 0.32);
+    border-radius: 8px;
+    background: rgba(125, 211, 252, 0.14);
+    color: #e0f7ff;
+    font-weight: 900;
+}
+
+body.home-v3-page .rewards-redeem-message {
+    display: none;
+    padding: 10px 12px;
+    border-radius: 8px;
+    font-weight: 800;
+}
+
+body.home-v3-page .social-reward-claim-popup {
+    position: fixed;
+    inset: 0;
+    z-index: 10020;
+    display: grid;
+    place-items: center;
+    padding: 18px;
+    background: rgba(0, 10, 18, 0.58);
+    backdrop-filter: blur(8px);
+}
+
+body.home-v3-page .social-reward-claim-popup.hidden {
+    display: none;
+}
+
+body.home-v3-page .social-reward-claim-card {
+    position: relative;
+    width: min(420px, 94vw);
+    display: grid;
+    gap: 12px;
+    justify-items: center;
+    padding: 24px;
+    border: 1px solid rgba(255, 217, 138, 0.28);
+    border-radius: 14px;
+    background:
+        radial-gradient(circle at 50% 0%, rgba(255, 217, 138, 0.18), transparent 36%),
+        linear-gradient(180deg, rgba(7, 39, 56, 0.98), rgba(2, 15, 27, 0.98));
+    box-shadow: 0 24px 70px rgba(0, 0, 0, 0.5);
+    color: #e0f7ff;
+    text-align: center;
+}
+
+body.home-v3-page .social-reward-claim-close {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    width: 34px;
+    height: 34px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.06);
+    color: #e0f7ff;
+    cursor: pointer;
+}
+
+body.home-v3-page .social-reward-claim-icon {
+    width: 58px;
+    height: 58px;
+    display: grid;
+    place-items: center;
+    border-radius: 14px;
+    background: linear-gradient(135deg, rgba(125, 211, 252, 0.22), rgba(255, 217, 138, 0.16));
+    color: #7dd3fc;
+    font-size: 26px;
+}
+
+body.home-v3-page .social-reward-claim-card > span {
+    color: #ffd98a;
+    font-size: 12px;
+    font-weight: 900;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}
+
+body.home-v3-page .social-reward-claim-card h3 {
+    margin: 0;
+    color: #fff;
+    font-family: "Barlow Condensed", sans-serif;
+    font-size: 38px;
+    line-height: 0.95;
+    text-transform: uppercase;
+}
+
+body.home-v3-page .social-reward-claim-card p {
+    margin: 0;
+    color: rgba(224, 242, 254, 0.72);
+}
+
+body.home-v3-page .social-reward-claim-prize {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 10px 14px;
+    border: 1px solid rgba(255, 217, 138, 0.34);
+    border-radius: 999px;
+    background: rgba(255, 217, 138, 0.10);
+    color: #f8e7a2;
+    font-weight: 900;
+}
+
+body.home-v3-page .social-reward-claim-actions {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+
+body.home-v3-page .social-reward-claim-actions button {
+    min-height: 42px;
+    border: 1px solid rgba(125, 211, 252, 0.24);
+    border-radius: 8px;
+    background: rgba(125, 211, 252, 0.12);
+    color: #e0f7ff;
+    font-weight: 900;
+    cursor: pointer;
+}
+
+body.home-v3-page .social-reward-claim-actions .social-reward-claim-primary {
+    border-color: rgba(255, 217, 138, 0.38);
+    background: linear-gradient(135deg, #fff7d0, #ffd36d 55%, #72d8d0);
+    color: #082237;
+}
+
 body.home-v3-page .compact-social .friends-title {
     margin: 0 !important;
     font-size: 28px !important;
@@ -15431,6 +16032,37 @@ body.home-v3-page .profile-overhaul-settings-grid {
 }
 
 @media (max-width: 820px) {
+    body.home-v3-page .social-rewards-head {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    body.home-v3-page .social-reward-card {
+        grid-template-columns: 38px minmax(0, 1fr);
+    }
+
+    body.home-v3-page .social-reward-card button,
+    body.home-v3-page .social-reward-prize {
+        grid-column: 1 / 3;
+        width: 100%;
+    }
+
+    body.home-v3-page .social-reward-group summary {
+        grid-template-columns: 42px minmax(0, 1fr) auto;
+    }
+
+    body.home-v3-page .social-reward-group summary > .fa-chevron-down {
+        display: none;
+    }
+
+    body.home-v3-page .social-reward-group-meta {
+        padding-left: 16px;
+    }
+
+    body.home-v3-page .rewards-redeem-row {
+        grid-template-columns: 1fr;
+    }
+
     body.home-v3-page .profile-overhaul-modal {
         grid-template-columns: 1fr !important;
         height: min(94vh, 760px) !important;
@@ -15452,6 +16084,7 @@ body.home-v3-page .profile-overhaul-settings-grid {
     body.home-v3-page .profile-overhaul-split,
     body.home-v3-page .profile-stats-scroll,
     body.home-v3-page .compact-social .friends-header,
+    body.home-v3-page .profile-achievement-showcase,
     body.home-v3-page .profile-overhaul-settings-grid {
         grid-template-columns: 1fr !important;
     }
@@ -16909,6 +17542,47 @@ body.home-v3-page .profile-settings-copy span {
     line-height: 1.35;
 }
 
+body.home-v3-page .profile-settings-audio-row {
+    grid-column: 1 / -1;
+}
+
+body.home-v3-page .profile-settings-audio-controls {
+    display: grid;
+    grid-template-columns: auto minmax(180px, 260px);
+    align-items: center;
+    gap: 18px;
+}
+
+body.home-v3-page .profile-settings-volume {
+    display: grid;
+    gap: 8px;
+    min-width: 180px;
+}
+
+body.home-v3-page .profile-settings-volume label {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    color: rgba(225, 246, 250, .72);
+    font-size: 12px;
+    font-weight: 900;
+    text-transform: uppercase;
+}
+
+body.home-v3-page .profile-settings-volume output {
+    color: #7ee8ff;
+}
+
+body.home-v3-page .profile-settings-volume input[type="range"] {
+    width: 100%;
+    accent-color: #20bfd9;
+}
+
+body.home-v3-page .profile-settings-volume input[type="range"]:disabled {
+    opacity: .4;
+}
+
 .toggle-switch {
     position: relative;
     width: 62px;
@@ -17005,6 +17679,15 @@ body.home-v3-page .profile-settings-actions button:nth-last-child(1) {
     body.home-v3-page .profile-settings-row {
         display: grid;
         grid-template-columns: 1fr;
+    }
+
+    body.home-v3-page .profile-settings-audio-controls {
+        grid-template-columns: 1fr;
+        justify-items: start;
+    }
+
+    body.home-v3-page .profile-settings-volume {
+        width: 100%;
     }
 }
 
@@ -18721,4 +19404,3129 @@ body.home-v3-page #theme-select-container .theme-option.active::after {
         min-height: 136px !important;
         gap: 5px !important;
     }
+}
+
+body.home-v3-page .profile-inventory-hero .profile-avatar-orb {
+    padding: 0 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    background-clip: padding-box !important;
+    box-shadow: none !important;
+}
+
+body.home-v3-page .profile-inventory-hero .profile-avatar-orb img {
+    display: block !important;
+}
+
+.lost-treasures-home-card {
+    position: relative;
+    overflow: hidden;
+    min-height: 158px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    background:
+        linear-gradient(135deg, rgba(6, 58, 72, .88), rgba(12, 28, 54, .98)),
+        radial-gradient(circle at 82% 18%, rgba(255, 214, 124, .24), transparent 28%) !important;
+    border-color: rgba(255, 210, 125, .32) !important;
+}
+
+.lost-treasures-home-card > * {
+    position: relative;
+    z-index: 1;
+}
+
+.lost-treasures-home-card::after {
+    content: "";
+    position: absolute;
+    right: -24px;
+    bottom: -34px;
+    width: 112px;
+    height: 148px;
+    background: url("images/lostTreasure/Bottles/BottleRare.png") center / contain no-repeat;
+    opacity: .42;
+    transform: rotate(13deg);
+    pointer-events: none;
+}
+
+.lost-treasures-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 18px;
+    background: rgba(1, 12, 20, .78);
+    backdrop-filter: blur(12px);
+}
+
+.lost-treasures-modal.hidden {
+    display: none;
+}
+
+.lost-treasures-card {
+    position: relative;
+    width: min(1240px, 96vw);
+    max-height: 92vh;
+    overflow-y: auto;
+    padding: 0;
+    border: 1px solid rgba(126, 232, 255, .22);
+    border-radius: 16px;
+    background:
+        radial-gradient(circle at 12% 8%, rgba(255, 214, 124, .16), transparent 28%),
+        radial-gradient(circle at 88% 12%, rgba(107, 225, 214, .16), transparent 30%),
+        linear-gradient(145deg, rgba(5, 44, 56, .98), rgba(7, 20, 39, .98));
+    box-shadow: 0 28px 80px rgba(0,0,0,.48);
+    color: #eaffff;
+}
+
+.lost-treasures-close {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    z-index: 2;
+}
+
+.lost-treasures-hero {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(380px, 440px);
+    gap: 14px;
+    align-items: stretch;
+    padding: 16px;
+    border-bottom: 1px solid rgba(126, 232, 255, .14);
+    background:
+        linear-gradient(180deg, rgba(6, 56, 67, .48), rgba(3, 20, 34, .16)),
+        radial-gradient(circle at 20% 18%, rgba(255, 217, 138, .2), transparent 34%);
+}
+
+.lost-treasures-copy {
+    min-height: 168px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    padding: 18px 20px;
+    border-left: 4px solid rgba(255, 217, 138, .72);
+    border-radius: 8px;
+    background:
+        linear-gradient(90deg, rgba(0, 12, 22, .54), rgba(0, 12, 22, .08)),
+        radial-gradient(circle at 18% 22%, rgba(255, 210, 125, .14), transparent 34%);
+}
+
+.lost-treasures-copy span,
+.lost-treasures-grand span,
+.lost-treasures-album-head span {
+    color: #ffd98a;
+    font-family: "Barlow Condensed", sans-serif;
+    font-size: 12px;
+    font-weight: 900;
+    letter-spacing: 1.3px;
+    text-transform: uppercase;
+}
+
+.lost-treasures-copy h2 {
+    margin: 5px 0 6px;
+    color: #fff;
+    font-family: "Barlow Condensed", sans-serif;
+    font-size: clamp(38px, 5vw, 62px);
+    line-height: .9;
+    text-transform: uppercase;
+}
+
+.lost-treasures-copy p {
+    max-width: 560px;
+    margin: 0 0 12px;
+    color: rgba(220, 248, 255, .78);
+}
+
+.lost-treasures-progress {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 120px));
+    gap: 10px;
+}
+
+.lost-treasures-progress div {
+    padding: 8px 10px;
+    border: 1px solid rgba(126, 232, 255, .16);
+    border-radius: 8px;
+    background: rgba(1, 19, 32, .56);
+}
+
+.lost-treasures-progress strong {
+    display: block;
+    color: #fff;
+    font-size: 20px;
+    line-height: 1;
+}
+
+.lost-treasures-progress span {
+    color: rgba(180, 235, 244, .72);
+    font-size: 11px;
+}
+
+.lost-treasures-bottle-stage {
+    display: grid;
+    grid-template-columns: 150px minmax(0, 1fr) minmax(0, 1fr);
+    gap: 8px 10px;
+    align-items: center;
+    justify-items: stretch;
+    padding: 12px;
+    border: 1px solid rgba(255, 217, 138, .18);
+    border-radius: 10px;
+    background:
+        linear-gradient(180deg, rgba(2, 30, 43, .86), rgba(1, 16, 28, .68));
+}
+
+.lost-treasures-dock-head {
+    grid-column: 2 / 4;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.lost-treasures-dock h3 {
+    margin: 0;
+    color: #fff;
+    font-family: "Barlow Condensed", sans-serif;
+    font-size: 20px;
+    letter-spacing: .8px;
+    text-transform: uppercase;
+}
+
+.lost-treasures-bottle-stage .lost-treasures-buy-bottles {
+    min-height: 30px;
+    padding: 5px 10px;
+    border-color: rgba(126, 232, 255, .34);
+    background: rgba(126, 232, 255, .12);
+    color: #dffcff;
+    font-size: 12px;
+}
+
+.lost-treasures-bottle-stage img {
+    grid-row: 1 / 5;
+    width: 190px;
+    justify-self: center;
+    align-self: center;
+    aspect-ratio: 1 / 1.25;
+    object-fit: contain;
+    filter: drop-shadow(0 18px 28px rgba(0,0,0,.36));
+}
+
+.lost-treasures-bottle-list {
+    grid-column: 2 / 4;
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 7px;
+}
+
+.lost-treasures-bottle-list button {
+    min-height: 58px;
+    display: grid;
+    grid-template-rows: 24px auto auto;
+    justify-items: center;
+    gap: 2px;
+    padding: 6px;
+    border: 1px solid rgba(255,255,255,.12);
+    border-radius: 8px;
+    background: rgba(1, 19, 32, .58);
+    color: #dffcff;
+    font-family: "Barlow Condensed", sans-serif;
+    cursor: pointer;
+}
+
+.lost-treasures-bottle-list button.active {
+    border-color: rgba(255, 217, 138, .72);
+    box-shadow: 0 0 0 1px rgba(255, 217, 138, .22) inset;
+}
+
+.lost-treasures-bottle-list img {
+    grid-row: auto;
+    width: 20px;
+    height: 24px;
+    object-fit: contain;
+    filter: none;
+}
+
+.lost-treasures-bottle-list span {
+    max-width: 100%;
+    overflow: hidden;
+    color: rgba(225, 249, 252, .78);
+    font-size: 10px;
+    font-weight: 800;
+    text-overflow: ellipsis;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+.lost-treasures-bottle-list small {
+    color: rgba(210, 238, 244, .56);
+    font-size: 8px;
+    font-weight: 800;
+    text-transform: uppercase;
+}
+
+.lost-treasures-bottle-list strong {
+    color: #ffd98a;
+    font-size: 12px;
+    line-height: 1;
+}
+
+.lost-treasures-selected-bottle {
+    grid-column: 2 / 4;
+    width: 100%;
+    padding: 7px 9px;
+    border: 1px solid rgba(126, 232, 255, .16);
+    border-radius: 8px;
+    background: rgba(1, 19, 32, .54);
+    color: rgba(225, 249, 252, .78);
+    font-family: "Barlow Condensed", sans-serif;
+    font-size: 13px;
+    font-weight: 900;
+    letter-spacing: .8px;
+    text-align: center;
+    text-transform: uppercase;
+}
+
+.lost-treasures-open-amount {
+    grid-column: 2 / 4;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 6px;
+    width: 100%;
+}
+
+.lost-treasures-open-amount.hidden {
+    display: none;
+}
+
+.lost-treasures-bottle-stage .lost-treasures-open-amount button {
+    min-height: 28px;
+    border-color: rgba(126, 232, 255, .22);
+    background: rgba(1, 19, 32, .58);
+    color: rgba(225, 249, 252, .82);
+    font-size: 12px;
+}
+
+.lost-treasures-bottle-stage .lost-treasures-open-amount button.active {
+    border-color: rgba(255, 217, 138, .7);
+    background: rgba(255, 217, 138, .18);
+    color: #fff7d0;
+}
+
+.lost-treasures-bottle-stage button,
+.lost-treasures-album-head button,
+.lost-treasures-grand button {
+    min-height: 36px;
+    border: 1px solid rgba(255, 217, 138, .42);
+    border-radius: 8px;
+    background: linear-gradient(135deg, #fff7d0, #ffd36d 55%, #72d8d0);
+    color: #082237;
+    font-family: "Barlow Condensed", sans-serif;
+    font-size: 14px;
+    font-weight: 900;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    cursor: pointer;
+}
+
+#lost-treasures-open-bottle-btn {
+    grid-column: 2 / 4;
+    width: 100%;
+}
+
+.lost-treasures-bottle-stage .lost-treasures-fake-purchase {
+    grid-column: 3;
+}
+
+.lost-treasures-bottle-stage .lost-treasures-reset {
+    grid-column: 2 / 4;
+}
+
+.lost-treasures-bottle-stage .lost-treasures-fake-purchase.hidden,
+.lost-treasures-bottle-stage .lost-treasures-reset.hidden {
+    display: none;
+}
+
+.lost-treasures-bottle-stage button:disabled,
+.lost-treasures-album-head button:disabled,
+.lost-treasures-grand button:disabled {
+    cursor: not-allowed;
+    color: rgba(224, 244, 248, .56);
+    background: rgba(255,255,255,.08);
+    border-color: rgba(255,255,255,.12);
+}
+
+.lost-treasures-bottle-stage .lost-treasures-fake-purchase {
+    border-color: rgba(126, 232, 255, .32);
+    background: rgba(126, 232, 255, .12);
+    color: #dffcff;
+}
+
+.lost-treasures-bottle-stage .lost-treasures-reset {
+    border-color: rgba(255, 129, 129, .32);
+    background: rgba(255, 129, 129, .10);
+    color: #ffd7d7;
+}
+
+.lost-treasures-meter {
+    height: 10px;
+    margin: 14px 22px;
+    overflow: hidden;
+    border-radius: 999px;
+    background: rgba(1, 16, 28, .72);
+}
+
+.lost-treasures-meter span {
+    display: block;
+    height: 100%;
+    width: 0;
+    border-radius: inherit;
+    background: linear-gradient(90deg, #72d8d0, #ffd36d);
+    transition: width .24s ease;
+}
+
+.lost-treasures-opening {
+    position: fixed;
+    inset: 0;
+    z-index: 10002;
+    display: grid;
+    place-items: center;
+    padding: 22px;
+    border: 1px solid rgba(255, 217, 138, .22);
+    background:
+        radial-gradient(circle at 50% 18%, rgba(255, 217, 138, .22), transparent 34%),
+        rgba(0, 10, 18, .78);
+    opacity: 1;
+    transition: opacity .26s ease, transform .26s ease;
+}
+
+.lost-treasures-opening-flash {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    opacity: 0;
+    background:
+        radial-gradient(circle at 50% 45%, rgba(255, 255, 255, .94), rgba(255, 225, 138, .42) 22%, transparent 56%);
+    mix-blend-mode: screen;
+}
+
+.lost-treasures-opening.flash-common .lost-treasures-opening-flash {
+    animation: lostBottleFlashCommon .9s ease-out both;
+}
+
+.lost-treasures-opening.flash-rare .lost-treasures-opening-flash {
+    background:
+        radial-gradient(circle at 50% 45%, rgba(255, 255, 255, 1), rgba(126, 232, 255, .68) 20%, rgba(255, 112, 176, .38) 38%, transparent 64%);
+    animation: lostBottleFlashRare 1s ease-out both;
+}
+
+.lost-treasures-opening.hidden {
+    display: none;
+}
+
+.lost-treasures-opening.closing {
+    opacity: 0;
+    transform: scale(.98);
+}
+
+.lost-treasures-opening-actions {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    z-index: 3;
+    display: flex;
+    gap: 8px;
+}
+
+.lost-treasures-opening-actions button {
+    min-height: 34px;
+    padding: 7px 12px;
+    border: 1px solid rgba(255, 217, 138, .46);
+    border-radius: 8px;
+    background: linear-gradient(135deg, #fff7d0, #ffd36d 55%, #72d8d0);
+    color: #082237;
+    font-family: "Barlow Condensed", sans-serif;
+    font-size: 13px;
+    font-weight: 900;
+    letter-spacing: .8px;
+    text-transform: uppercase;
+    cursor: pointer;
+}
+
+.lost-treasures-opening-actions button.hidden {
+    display: none;
+}
+
+.lost-treasures-opening-bottle {
+    position: relative;
+    z-index: 2;
+    display: grid;
+    justify-items: center;
+    gap: 8px;
+    color: #ffd98a;
+    font-family: "Barlow Condensed", sans-serif;
+    font-size: 14px;
+    font-weight: 900;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}
+
+.lost-treasures-opening-bottle img {
+    width: min(245px, 48vw);
+    height: min(305px, 58vh);
+    object-fit: contain;
+    animation: lostBottleShake .9s ease-in-out both;
+}
+
+.lost-treasures-opening.revealed .lost-treasures-opening-bottle {
+    opacity: 1;
+    transform: translateY(72px) scale(.9);
+    transition: opacity .22s ease, transform .22s ease;
+}
+
+.lost-treasures-opening-scrolls {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    z-index: 3;
+    display: flex;
+    width: min(840px, 94vw);
+    gap: 9px;
+    justify-content: center;
+    align-items: flex-end;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    padding: 0 16px 150px;
+    background: transparent;
+    box-shadow: none;
+    scroll-snap-type: x proximity;
+    scrollbar-color: rgba(255, 217, 138, .62) rgba(1, 19, 32, .56);
+    scrollbar-width: thin;
+    transform: translate(-50%, -42%);
+}
+
+.lost-treasures-opening-scrolls::-webkit-scrollbar {
+    height: 10px;
+}
+
+.lost-treasures-opening-scrolls::-webkit-scrollbar-track {
+    border-radius: 999px;
+    background: rgba(1, 19, 32, .56);
+}
+
+.lost-treasures-opening-scrolls::-webkit-scrollbar-thumb {
+    border-radius: 999px;
+    background: rgba(255, 217, 138, .62);
+}
+
+.lost-treasures-opening-scroll {
+    flex: 0 0 126px;
+    min-height: 124px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 7px;
+    padding: 9px;
+    border: 1px solid rgba(255,255,255,.12);
+    border-radius: 8px;
+    background:
+        radial-gradient(circle at 50% 18%, color-mix(in srgb, var(--category-color) 24%, transparent), transparent 36%),
+        linear-gradient(160deg, rgba(3, 42, 54, .95), rgba(3, 15, 30, .98));
+    opacity: 0;
+    scroll-snap-align: start;
+    transform: translateY(150px) scale(.16) rotate(-10deg);
+    transform-origin: 50% 100%;
+    animation: lostScrollPopFromBottle .56s cubic-bezier(.18, 1.35, .32, 1) forwards;
+    animation-delay: calc(var(--reveal-index) * 120ms);
+}
+
+.lost-treasures-opening-scroll.rarity-rare {
+    border-color: rgba(126, 232, 255, .5);
+    background:
+        linear-gradient(160deg, rgba(3, 42, 54, .95), rgba(3, 15, 30, .98)) padding-box,
+        linear-gradient(135deg, #ff6b9d, #ffd36d, #65f2a6, #72d8ff, #c58cff) border-box;
+    box-shadow:
+        0 0 0 1px rgba(255,255,255,.12) inset,
+        0 0 22px rgba(114, 216, 255, .16);
+}
+
+.lost-treasures-opening-scroll.duplicate {
+    filter: saturate(.75);
+    opacity: .8;
+}
+
+.lost-treasures-opening-scroll strong {
+    color: #fff;
+    font-size: 12px;
+    line-height: 1.05;
+}
+
+.lost-treasures-opening-scroll small {
+    color: #ffd98a;
+    font-weight: 900;
+    text-transform: uppercase;
+}
+
+.lost-treasures-opening-scroll.rarity-rare small,
+.lost-treasures-slot.rarity-rare small {
+    background: linear-gradient(90deg, #ff7aa8, #ffe56f, #66f0a8, #72dcff, #c78cff);
+    background-clip: text;
+    -webkit-background-clip: text;
+    color: transparent;
+    font-weight: 900;
+    text-transform: uppercase;
+}
+
+@keyframes lostBottleShake {
+    0% { transform: rotate(0deg) scale(1); }
+    15% { transform: rotate(-9deg) scale(1.03); }
+    30% { transform: rotate(10deg) scale(1.06); }
+    46% { transform: rotate(-8deg) scale(1.08); }
+    62% { transform: rotate(6deg) scale(1.06); }
+    78% { transform: rotate(-3deg) scale(1.1); }
+    100% { transform: rotate(0deg) scale(1.03); }
+}
+
+@keyframes lostBottleFlashCommon {
+    0%, 55% { opacity: 0; }
+    68% { opacity: .62; }
+    100% { opacity: 0; }
+}
+
+@keyframes lostBottleFlashRare {
+    0%, 48% { opacity: 0; }
+    58% { opacity: .95; }
+    68% { opacity: .45; }
+    78% { opacity: .82; }
+    100% { opacity: 0; }
+}
+
+@keyframes lostScrollPopFromBottle {
+    0% {
+        opacity: 0;
+        transform: translateY(150px) scale(.16) rotate(-10deg);
+    }
+    24% {
+        opacity: 1;
+        transform: translateY(96px) scale(.46) rotate(7deg);
+    }
+    62% {
+        opacity: 1;
+        transform: translateY(-14px) scale(1.08) rotate(3deg);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1) rotate(0deg);
+    }
+}
+
+.lost-treasures-main {
+    display: grid;
+    grid-template-columns: 230px minmax(0, 1fr);
+    gap: 16px;
+    padding: 0 22px 22px;
+}
+
+.lost-treasures-side {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    min-width: 0;
+}
+
+.lost-treasures-side-panel,
+.lost-treasures-album-shell {
+    border: 1px solid rgba(126, 232, 255, .14);
+    border-radius: 10px;
+    background: rgba(1, 19, 32, .42);
+}
+
+.lost-treasures-side-panel {
+    padding: 12px;
+}
+
+.lost-treasures-album-shell {
+    min-width: 0;
+    padding: 14px;
+    background:
+        linear-gradient(180deg, rgba(4, 33, 47, .6), rgba(1, 16, 28, .38));
+}
+
+.lost-treasures-exchange-panel > span,
+.lost-treasures-side-panel > span {
+    display: block;
+    margin-bottom: 8px;
+    color: #ffd98a;
+    font-family: "Barlow Condensed", sans-serif;
+    font-size: 12px;
+    font-weight: 900;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+}
+
+.lost-treasures-exchange {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 8px;
+}
+
+.lost-treasures-exchange button {
+    min-height: 42px;
+    padding: 8px;
+    border: 1px solid rgba(126, 232, 255, .22);
+    border-radius: 8px;
+    background: rgba(126, 232, 255, .10);
+    color: #dffcff;
+    cursor: pointer;
+    display: grid;
+    grid-template-columns: 34px minmax(0, 1fr);
+    align-items: center;
+    gap: 9px;
+    text-align: left;
+}
+
+.lost-treasures-exchange button:disabled {
+    cursor: not-allowed;
+    opacity: .52;
+}
+
+.lost-treasures-exchange img {
+    width: 30px;
+    height: 38px;
+    object-fit: contain;
+    filter: drop-shadow(0 8px 10px rgba(0,0,0,.35));
+}
+
+.lost-treasures-exchange strong,
+.lost-treasures-exchange span,
+.lost-treasures-exchange small {
+    display: block;
+}
+
+.lost-treasures-exchange strong {
+    font-size: 12px;
+}
+
+.lost-treasures-exchange small {
+    color: #ffd98a;
+    font-size: 11px;
+    font-weight: 900;
+    font-style: normal;
+}
+
+.lost-treasures-categories {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.lost-treasures-categories button {
+    position: relative;
+    min-height: 64px;
+    padding: 10px 10px 10px 13px;
+    border: 1px solid rgba(255,255,255,.10);
+    border-radius: 8px;
+    background:
+        linear-gradient(90deg, color-mix(in srgb, var(--category-color) 14%, transparent), rgba(1, 19, 32, .64));
+    color: #dffcff;
+    text-align: left;
+    cursor: pointer;
+}
+
+.lost-treasures-categories button::before {
+    content: "";
+    position: absolute;
+    inset: 9px auto 9px 0;
+    width: 3px;
+    border-radius: 999px;
+    background: var(--category-color);
+    opacity: .72;
+}
+
+.lost-treasures-categories button.active {
+    border-color: var(--category-color);
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--category-color) 35%, transparent) inset;
+}
+
+.lost-treasures-categories button.complete {
+    background: linear-gradient(135deg, color-mix(in srgb, var(--category-color) 24%, transparent), rgba(1, 19, 32, .74));
+}
+
+.lost-treasures-categories strong,
+.lost-treasures-categories span {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.lost-treasures-categories strong {
+    font-size: 12px;
+}
+
+.lost-treasures-categories span {
+    margin-top: 3px;
+    color: rgba(210, 238, 244, .68);
+    font-size: 11px;
+}
+
+.lost-treasures-album-head,
+.lost-treasures-grand {
+    display: flex;
+    justify-content: space-between;
+    gap: 14px;
+    align-items: center;
+    margin-top: 14px;
+    padding: 14px;
+    border: 1px solid rgba(126, 232, 255, .14);
+    border-radius: 8px;
+    background: rgba(0, 13, 24, .46);
+}
+
+.lost-treasures-album-head > div:first-child,
+.lost-treasures-grand > div:first-child {
+    min-width: 0;
+}
+
+.lost-treasures-category-reward {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.lost-treasures-grand-rewards {
+    display: flex;
+    align-items: stretch;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.lost-treasures-reward-chip {
+    min-height: 54px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 8px 10px;
+    border: 1px solid rgba(255,255,255,.11);
+    border-radius: 8px;
+    background: linear-gradient(155deg, rgba(255,255,255,.08), rgba(255,255,255,.025));
+    color: #e9fbff;
+    box-shadow: 0 10px 24px rgba(0,0,0,.18);
+}
+
+.lost-treasures-reward-chip b,
+.lost-treasures-reward-chip strong,
+.lost-treasures-reward-chip span {
+    display: block;
+    line-height: 1.05;
+}
+
+.lost-treasures-reward-chip strong {
+    font-size: 24px;
+}
+
+.lost-treasures-reward-chip b {
+    color: #fff;
+    font-size: 13px;
+    font-weight: 900;
+}
+
+.lost-treasures-reward-chip span {
+    color: rgba(218, 244, 248, .72);
+    font-size: 11px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+}
+
+.lost-treasures-reward-chip.pearl {
+    border-color: rgba(255, 220, 120, .24);
+    background:
+        radial-gradient(circle at 18% 20%, rgba(255, 238, 174, .2), transparent 32%),
+        linear-gradient(155deg, rgba(99, 208, 211, .14), rgba(255, 196, 87, .08));
+}
+
+.lost-treasures-reward-chip.pearl::before {
+    content: "";
+    width: 24px;
+    height: 24px;
+    flex: 0 0 auto;
+    border-radius: 999px;
+    background:
+        radial-gradient(circle at 34% 28%, #fff 0 10%, #e8fbff 24%, #8fe8f2 58%, #4eb9c8 100%);
+    box-shadow: 0 0 18px rgba(145, 238, 255, .28);
+}
+
+.lost-treasures-reward-chip.badge {
+    border-color: rgba(255, 211, 109, .28);
+}
+
+.lost-treasures-reward-chip.badge::before {
+    content: none;
+    width: 26px;
+    height: 26px;
+    flex: 0 0 auto;
+    border-radius: 8px;
+    background:
+        radial-gradient(circle at 50% 38%, #fff7d8 0 16%, #ffd36d 17% 52%, #a96f23 100%);
+    box-shadow: 0 0 18px rgba(255, 211, 109, .24);
+    transform: rotate(45deg);
+}
+
+.lost-treasures-reward-chip.pfp {
+    justify-content: flex-start;
+}
+
+.lost-treasures-reward-chip.pfp img {
+    width: 42px;
+    height: 42px;
+    flex: 0 0 auto;
+    border-radius: 8px;
+    object-fit: cover;
+    border: 1px solid rgba(255,255,255,.18);
+}
+
+.lost-treasures-album-head h3 {
+    margin: 3px 0 0;
+    color: #fff;
+    font-family: "Barlow Condensed", sans-serif;
+    font-size: 30px;
+    text-transform: uppercase;
+}
+
+.lost-treasures-album-head p {
+    margin: 4px 0 0;
+    color: rgba(218, 244, 248, .62);
+    font-size: 13px;
+}
+
+.lost-treasures-grid {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(116px, 1fr));
+    gap: 10px;
+    margin-top: 12px;
+}
+
+.lost-treasures-slot {
+    appearance: none;
+    position: relative;
+    min-height: 190px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 7px;
+    padding: 10px;
+    border: 1px solid rgba(255,255,255,.10);
+    border-radius: 8px;
+    background:
+        radial-gradient(circle at 50% 18%, color-mix(in srgb, var(--category-color) 24%, transparent), transparent 36%),
+        linear-gradient(160deg, rgba(3, 42, 54, .92), rgba(3, 15, 30, .98));
+    color: inherit;
+    cursor: pointer;
+    text-align: left;
+    transition: border-color .18s ease, transform .18s ease, opacity .18s ease;
+}
+
+.lost-treasures-slot:hover {
+    transform: translateY(-2px);
+    border-color: color-mix(in srgb, var(--category-color) 50%, rgba(255,255,255,.2));
+}
+
+.lost-treasures-slot.rarity-rare {
+    border-color: rgba(126, 232, 255, .42);
+    background:
+        radial-gradient(circle at 18% 18%, rgba(255, 122, 168, .2), transparent 28%),
+        radial-gradient(circle at 78% 20%, rgba(114, 220, 255, .2), transparent 30%),
+        radial-gradient(circle at 44% 86%, rgba(102, 240, 168, .18), transparent 34%),
+        linear-gradient(160deg, rgba(10, 39, 54, .94), rgba(5, 19, 35, .98));
+    box-shadow: 0 0 0 1px rgba(255,255,255,.08) inset;
+}
+
+.lost-treasures-slot.rarity-rare::before {
+    content: "";
+    position: absolute;
+    inset: -1px;
+    border-radius: inherit;
+    padding: 1px;
+    background: linear-gradient(135deg, #ff6b9d, #ffd36d, #65f2a6, #72d8ff, #c58cff);
+    mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    mask-composite: exclude;
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    pointer-events: none;
+}
+
+.lost-treasures-slot.locked {
+    opacity: .78;
+}
+
+.lost-treasures-slot.locked .lost-treasures-scroll-art {
+    filter: grayscale(.22) saturate(.82);
+}
+
+.lost-treasures-scroll-art {
+    position: relative;
+    width: min(92%, 132px);
+    min-height: 122px;
+    aspect-ratio: 3 / 4;
+    display: grid;
+    place-items: center;
+    align-self: center;
+    overflow: hidden;
+    border-radius: 5px;
+    background: transparent;
+}
+
+.lost-treasures-scroll-art img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    z-index: 0;
+}
+
+.lost-treasures-scroll-art.has-species-art .lost-treasures-species-card {
+    inset: 21% 16% 22%;
+    width: 68%;
+    height: 57%;
+    object-fit: contain;
+    z-index: 1;
+    filter: drop-shadow(0 8px 12px rgba(0,0,0,.28));
+}
+
+.lost-treasures-frame-card {
+    z-index: 0;
+}
+
+.lost-treasures-slot.locked .lost-treasures-species-card {
+    opacity: .12;
+    filter: grayscale(1) blur(1px);
+}
+
+.lost-treasures-opening-scroll .lost-treasures-scroll-art {
+    width: 100%;
+    min-height: 96px;
+}
+
+.lost-treasures-slot.rarity-rare .lost-treasures-scroll-art {
+    filter:
+        drop-shadow(0 0 9px rgba(255, 122, 168, .18))
+        drop-shadow(0 0 12px rgba(114, 220, 255, .16));
+}
+
+.lost-treasures-scroll-art b {
+    position: relative;
+    z-index: 2;
+    max-width: 78%;
+    color: #fff;
+    font-family: "Barlow Condensed", sans-serif;
+    font-size: clamp(13px, 1.5vw, 19px);
+    font-weight: 900;
+    letter-spacing: 1px;
+    line-height: .9;
+    text-align: center;
+    text-transform: uppercase;
+    text-shadow: 0 2px 10px rgba(0,0,0,.38);
+}
+
+.lost-treasures-slot.owned .lost-treasures-scroll-art b,
+.lost-treasures-opening-scroll .lost-treasures-scroll-art b,
+.lost-treasures-slot.owned .lost-treasures-scroll-number,
+.lost-treasures-opening-scroll .lost-treasures-scroll-number {
+    display: none;
+}
+
+.lost-treasures-slot.locked .lost-treasures-scroll-art b {
+    color: rgba(255,255,255,.54);
+    font-size: 22px;
+}
+
+.lost-treasures-scroll-number {
+    position: absolute;
+    top: 10%;
+    left: 10%;
+    width: 22px;
+    height: 22px;
+    display: grid;
+    place-items: center;
+    border-radius: 999px;
+    background: rgba(255,255,255,.10);
+    color: #fff;
+    font-size: 10px;
+    font-weight: 900;
+    z-index: 1;
+}
+
+.lost-treasures-slot strong {
+    color: #fff;
+    font-size: 13px;
+    line-height: 1.1;
+    min-height: 30px;
+}
+
+.lost-treasures-slot small {
+    color: rgba(218, 244, 248, .64);
+    font-size: 11px;
+    line-height: 1;
+}
+
+.lost-treasures-grand strong,
+.lost-treasures-grand p {
+    display: block;
+    margin: 3px 0 0;
+}
+
+.lost-treasures-grand p {
+    color: rgba(218, 244, 248, .68);
+}
+
+.lost-treasures-detail {
+    position: fixed;
+    inset: 0;
+    z-index: 10001;
+    display: grid;
+    place-items: center;
+    padding: 18px;
+    background: rgba(0, 10, 18, .72);
+}
+
+.lost-treasures-detail.hidden {
+    display: none;
+}
+
+.lost-treasures-detail-card {
+    position: relative;
+    width: min(760px, 94vw);
+    display: grid;
+    grid-template-columns: minmax(220px, 320px) minmax(0, 1fr);
+    gap: 20px;
+    align-items: center;
+    padding: 18px;
+    border: 1px solid rgba(126, 232, 255, .22);
+    border-radius: 12px;
+    background:
+        radial-gradient(circle at 18% 20%, rgba(255, 217, 138, .16), transparent 32%),
+        linear-gradient(145deg, rgba(5, 44, 56, .98), rgba(7, 20, 39, .98));
+    box-shadow: 0 26px 72px rgba(0,0,0,.48);
+}
+
+.lost-treasures-detail-card.rarity-rare {
+    border-color: rgba(126, 232, 255, .46);
+    box-shadow:
+        0 26px 72px rgba(0,0,0,.48),
+        0 0 0 1px rgba(255,255,255,.08) inset,
+        0 0 26px rgba(114, 220, 255, .12);
+}
+
+.lost-treasures-detail-card.rarity-rare::before {
+    content: "";
+    position: absolute;
+    inset: -1px;
+    border-radius: inherit;
+    padding: 1px;
+    background: linear-gradient(135deg, #ff6b9d, #ffd36d, #65f2a6, #72d8ff, #c58cff);
+    mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    mask-composite: exclude;
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    pointer-events: none;
+}
+
+@media (max-width: 1100px) {
+    .lost-treasures-home-card {
+        min-height: 138px;
+    }
+}
+
+.lost-treasures-detail-nav {
+    position: absolute;
+    top: 50%;
+    z-index: 3;
+    width: 42px;
+    height: 52px;
+    display: grid;
+    place-items: center;
+    border: 1px solid rgba(126, 232, 255, .34);
+    border-radius: 8px;
+    background: rgba(4, 22, 36, .88);
+    color: #fff;
+    font-size: 34px;
+    font-weight: 900;
+    line-height: 1;
+    cursor: pointer;
+    transform: translateY(-50%);
+    box-shadow: 0 14px 28px rgba(0,0,0,.28);
+}
+
+.lost-treasures-detail-nav:hover {
+    border-color: rgba(255, 217, 138, .7);
+    background: rgba(10, 45, 62, .96);
+}
+
+.lost-treasures-detail-nav.previous {
+    left: -20px;
+}
+
+.lost-treasures-detail-nav.next {
+    right: -20px;
+}
+
+.lost-treasures-detail-art {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 3 / 4;
+    display: grid;
+    place-items: center;
+    overflow: hidden;
+    border-radius: 6px;
+}
+
+.lost-treasures-detail-art > img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+.lost-treasures-detail-art.has-species-art .lost-treasures-species-card {
+    inset: 21% 15% 21%;
+    width: 70%;
+    height: 58%;
+    object-fit: contain;
+    z-index: 1;
+    filter: drop-shadow(0 12px 18px rgba(0,0,0,.34));
+}
+
+.lost-treasures-detail-card h3 {
+    margin: 6px 0 8px;
+    color: #fff;
+    font-family: "Barlow Condensed", sans-serif;
+    font-size: clamp(34px, 5vw, 56px);
+    line-height: .92;
+    text-transform: uppercase;
+}
+
+.lost-treasures-detail-card p {
+    margin: 0 0 14px;
+    color: rgba(218, 244, 248, .68);
+}
+
+.lost-treasures-detail-card dl {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    margin: 0;
+}
+
+.lost-treasures-detail-card dl div {
+    padding: 9px;
+    border: 1px solid rgba(255,255,255,.10);
+    border-radius: 8px;
+    background: rgba(0, 12, 22, .46);
+}
+
+.lost-treasures-detail-card dt,
+.lost-treasures-detail-card dd {
+    margin: 0;
+}
+
+.lost-treasures-detail-card dt {
+    color: #ffd98a;
+    font-size: 11px;
+    font-weight: 900;
+    text-transform: uppercase;
+}
+
+.lost-treasures-detail-card dd {
+    color: #fff;
+    font-size: 14px;
+    font-weight: 800;
+}
+
+@media (max-width: 760px) {
+    .lost-treasures-card {
+        width: 96vw;
+        max-height: 92vh;
+    }
+
+    .lost-treasures-hero {
+        grid-template-columns: 1fr;
+        padding: 14px;
+    }
+
+    .lost-treasures-copy {
+        min-height: 156px;
+        padding: 16px;
+    }
+
+    .lost-treasures-copy h2 {
+        font-size: clamp(36px, 13vw, 54px);
+    }
+
+    .lost-treasures-progress {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .lost-treasures-bottle-stage {
+        grid-template-columns: 124px minmax(0, 1fr);
+    }
+
+    .lost-treasures-dock h3,
+    .lost-treasures-dock-head,
+    .lost-treasures-bottle-list,
+    .lost-treasures-open-amount,
+    .lost-treasures-selected-bottle {
+        grid-column: 2;
+    }
+
+    .lost-treasures-bottle-stage > img {
+        width: 150px;
+    }
+
+    #lost-treasures-open-bottle-btn,
+    .lost-treasures-bottle-stage .lost-treasures-fake-purchase,
+    .lost-treasures-bottle-stage .lost-treasures-reset {
+        grid-column: 1 / 3;
+    }
+
+    .lost-treasures-main,
+    .lost-treasures-detail-card {
+        grid-template-columns: 1fr;
+    }
+
+    .lost-treasures-detail-nav {
+        top: 34%;
+        width: 38px;
+        height: 48px;
+    }
+
+    .lost-treasures-detail-nav.previous {
+        left: 8px;
+    }
+
+    .lost-treasures-detail-nav.next {
+        right: 8px;
+    }
+
+    .lost-treasures-main {
+        padding: 0 14px 14px;
+    }
+
+    .lost-treasures-categories {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .lost-treasures-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .lost-treasures-slot {
+        min-height: 178px;
+    }
+
+    .lost-treasures-meter {
+        margin-left: 14px;
+        margin-right: 14px;
+    }
+
+    .lost-treasures-album-head,
+    .lost-treasures-grand {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .lost-treasures-category-reward {
+        justify-content: flex-start;
+    }
+
+    .lost-treasures-category-reward button,
+    .lost-treasures-grand button {
+        width: 100%;
+    }
+
+    .lost-treasures-reward-chip {
+        min-height: 48px;
+    }
+}
+
+/* Christmas theme overhaul */
+body.home-page.index-theme-christmas,
+body.home-v3-page.index-theme-christmas {
+    --v3-bg-deep: #02131c;
+    --v3-bg-mid: #082c38;
+    --v3-card: #092633;
+    --v3-card-2: #123341;
+    --v3-teal: #9be8ff;
+    --v3-teal-soft: rgba(155, 232, 255, 0.16);
+    --v3-gold: #ffe08a;
+    --v3-gold-dark: #d92139;
+    --v3-text: #f3fbff;
+    --v3-muted: #b8d8e5;
+    --v3-border: rgba(155, 232, 255, 0.24);
+    background:
+        radial-gradient(ellipse 42% 28% at 78% 8%, rgba(255, 255, 255, 0.22), transparent 66%),
+        radial-gradient(ellipse 52% 38% at 10% 0%, rgba(125, 211, 252, 0.18), transparent 68%),
+        radial-gradient(ellipse 68% 54% at 78% 92%, rgba(217, 33, 57, 0.15), transparent 70%),
+        linear-gradient(150deg, #020d14 0%, #062333 46%, #143a46 70%, #3a0c16 100%);
+}
+
+body.home-v3-page.index-theme-christmas::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    background:
+        radial-gradient(circle at 8% 14%, rgba(255, 255, 255, 0.28) 0 1px, transparent 2px),
+        radial-gradient(circle at 28% 42%, rgba(255, 255, 255, 0.2) 0 1px, transparent 2px),
+        radial-gradient(circle at 52% 18%, rgba(255, 255, 255, 0.22) 0 1px, transparent 2px),
+        radial-gradient(circle at 76% 36%, rgba(255, 255, 255, 0.22) 0 1px, transparent 2px),
+        radial-gradient(circle at 92% 72%, rgba(255, 255, 255, 0.16) 0 1px, transparent 2px);
+    background-size: 180px 180px, 240px 240px, 210px 210px, 260px 260px, 190px 190px;
+    opacity: 0.55;
+}
+
+body.home-v3-page.index-theme-christmas::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.08), transparent 18%),
+        radial-gradient(ellipse 60% 18% at 50% 102%, rgba(255, 240, 180, 0.13), transparent 70%);
+    mix-blend-mode: screen;
+    opacity: 0.48;
+}
+
+body.home-v3-page.index-theme-christmas .ambient-rays {
+    background:
+        radial-gradient(ellipse at 76% 2%, rgba(255, 255, 255, 0.2), transparent 44%),
+        radial-gradient(ellipse at 22% 8%, rgba(125, 211, 252, 0.16), transparent 58%);
+    filter: blur(4px);
+}
+
+body.home-v3-page.index-theme-christmas .ambient-bubble {
+    width: 5px;
+    height: 5px;
+    border: 0;
+    background: rgba(255, 255, 255, 0.5);
+    box-shadow: 0 0 14px rgba(155, 232, 255, 0.34);
+}
+
+body.home-v3-page.index-theme-christmas .home-v3-left,
+body.home-v3-page.index-theme-christmas .home-v3-right,
+body.home-v3-page.index-theme-christmas .home-v3-hub-panels,
+body.home-v3-page.index-theme-christmas .home-v3-modes {
+    position: relative;
+    background:
+        radial-gradient(ellipse 72% 42% at 0 0, rgba(155, 232, 255, 0.11), transparent 68%),
+        linear-gradient(180deg, rgba(4, 30, 43, 0.96), rgba(3, 14, 23, 0.98));
+    border-color: rgba(255, 224, 138, 0.2);
+    z-index: 2;
+}
+
+body.home-v3-page.index-theme-christmas .home-v3-logo-icon {
+    background: linear-gradient(135deg, rgba(255, 224, 138, 0.28), rgba(217, 33, 57, 0.24), rgba(155, 232, 255, 0.22));
+    color: #fff8d8;
+    box-shadow: 0 0 28px rgba(155, 232, 255, 0.22);
+}
+
+body.home-v3-page.index-theme-christmas .home-v3-logo strong,
+body.home-page.index-theme-christmas .logo {
+    background: linear-gradient(135deg, #ffffff, #9be8ff 38%, #ffe08a 66%, #ff4b61);
+    -webkit-background-clip: text;
+    background-clip: text;
+}
+
+body.home-v3-page.index-theme-christmas .home-v3-logo em,
+body.home-v3-page.index-theme-christmas .home-v3-eyebrow,
+body.home-v3-page.index-theme-christmas .home-v3-section-label,
+body.home-v3-page.index-theme-christmas .home-v3-event span,
+body.home-v3-page.index-theme-christmas .home-v3-fact span {
+    color: #9be8ff;
+}
+
+body.home-v3-page.index-theme-christmas .home-v3-title strong {
+    color: #ff4b61;
+    text-shadow: 0 0 28px rgba(255, 75, 97, 0.24);
+}
+
+body.home-v3-page.index-theme-christmas .home-v3-primary-action {
+    background: linear-gradient(135deg, #fff7d1, #ffe08a 36%, #ff8a2b 62%, #d92139);
+    color: #1d0710;
+    box-shadow: 0 18px 36px rgba(217, 33, 57, 0.2);
+}
+
+body.home-v3-page.index-theme-christmas .home-v3-ghost-action,
+body.home-v3-page.index-theme-christmas .home-v3-menu-item,
+body.home-v3-page.index-theme-christmas .home-v3-profile-widget,
+body.home-v3-page.index-theme-christmas .home-v3-resource,
+body.home-v3-page.index-theme-christmas .home-v3-quick-card,
+body.home-v3-page.index-theme-christmas .home-v3-streak,
+body.home-v3-page.index-theme-christmas .home-v3-event,
+body.home-v3-page.index-theme-christmas .home-v3-fact,
+body.home-v3-page.index-theme-christmas .home-v3-dev,
+body.home-v3-page.index-theme-christmas .home-v3-stats,
+body.home-v3-page.index-theme-christmas .home-v3-mode-card {
+    border-color: rgba(155, 232, 255, 0.18);
+    background: linear-gradient(180deg, rgba(9, 38, 51, 0.82), rgba(9, 14, 27, 0.92));
+}
+
+body.home-v3-page.index-theme-christmas .home-v3-menu-item:hover,
+body.home-v3-page.index-theme-christmas .home-v3-menu-item.active,
+body.home-v3-page.index-theme-christmas .home-v3-mode-card:hover,
+body.home-v3-page.index-theme-christmas .home-v3-mode-card.active,
+body.home-v3-page.index-theme-christmas .home-v3-profile-widget:hover,
+body.home-v3-page.index-theme-christmas .home-v3-event:hover {
+    border-color: rgba(255, 224, 138, 0.42);
+    box-shadow: 0 18px 40px rgba(125, 211, 252, 0.14), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+body.home-v3-page.index-theme-christmas .home-v3-mode-card::before {
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.1), transparent 30%),
+        var(--mode-bg);
+    background-size: cover, 138% auto;
+    background-position: center, center 20%;
+    background-repeat: no-repeat;
+    opacity: 0.68;
+    filter: saturate(0.92) hue-rotate(350deg) brightness(1.08);
+}
+
+body.home-v3-page.index-theme-christmas .home-v3-mode-card::after {
+    background:
+        linear-gradient(to top, rgba(2, 13, 20, .98) 0%, rgba(5, 30, 43, .76) 42%, rgba(125, 211, 252, .08) 100%),
+        radial-gradient(ellipse at 50% 8%, rgba(255, 255, 255, .13), transparent 58%);
+}
+
+body.home-v3-page.index-theme-christmas .home-v3-mode-card strong {
+    color: #ffffff;
+    text-shadow: 0 2px 14px rgba(0, 0, 0, 0.5);
+}
+
+body.home-v3-page.index-theme-christmas .home-v3-mode-card p {
+    color: rgba(230, 248, 255, 0.78);
+}
+
+body.home-v3-page.index-theme-christmas .home-v3-hero {
+    isolation: isolate;
+}
+
+body.home-v3-page.index-theme-christmas .home-v3-hero h1 {
+    text-shadow: 0 3px 18px rgba(0, 16, 27, 0.48);
+}
+
+body.home-v3-page.index-theme-christmas .home-v3-hero-copy,
+body.home-v3-page.index-theme-christmas .home-v3-hub-panels,
+body.home-v3-page.index-theme-christmas .home-v3-left,
+body.home-v3-page.index-theme-christmas .home-v3-right {
+    position: relative;
+    z-index: 30;
+}
+
+body.home-v3-page.index-theme-christmas .home-v3-hero-copy > *,
+body.home-v3-page.index-theme-christmas .home-v3-hero-actions,
+body.home-v3-page.index-theme-christmas .home-v3-hero-actions > * {
+    position: relative;
+    z-index: 31;
+}
+
+body.home-v3-page.index-theme-christmas .home-v3-hero-actions {
+    filter: drop-shadow(0 3px 12px rgba(0, 14, 24, 0.2));
+}
+
+body.home-v3-page.index-theme-christmas .home-v3-shark-bg,
+body.home-v3-page.index-theme-christmas .home-v3-shark-fg,
+body.home-v3-page.index-theme-christmas .home-v3-bubbles {
+    z-index: 4;
+}
+
+body.home-v3-page.index-theme-christmas .home-v3-hero .christmas-hero-decoration {
+    z-index: 3;
+}
+
+body.home-v3-page.index-theme-christmas.halloween-web-editing .home-v3-hero .christmas-hero-decoration {
+    z-index: 40;
+    pointer-events: auto;
+    cursor: grab;
+    outline: 1px dashed rgba(155, 232, 255, 0.65);
+    outline-offset: 4px;
+}
+
+body.home-v3-page.index-theme-christmas .home-v3-hero .hero-subtitle {
+    color: rgba(4, 18, 27, 0.82);
+    font-weight: 800;
+    text-shadow: 0 1px 0 rgba(255, 255, 255, 0.32);
+}
+
+/* Halloween theme overhaul */
+body.home-page.index-theme-halloween,
+body.home-v3-page.index-theme-halloween {
+    --v3-bg-deep: #08040f;
+    --v3-bg-mid: #12071f;
+    --v3-card: #190d25;
+    --v3-card-2: #241036;
+    --v3-teal: #b8ff5f;
+    --v3-teal-soft: rgba(184, 255, 95, 0.16);
+    --v3-gold: #ff8a25;
+    --v3-gold-dark: #d95713;
+    --v3-text: #f6edf8;
+    --v3-muted: #c7a8dc;
+    --v3-border: rgba(255, 138, 37, 0.24);
+    background:
+        radial-gradient(circle at 82% 12%, rgba(255, 241, 190, 0.15), transparent 15%),
+        radial-gradient(ellipse 48% 36% at 12% 4%, rgba(111, 255, 90, 0.12), transparent 65%),
+        radial-gradient(ellipse 70% 58% at 76% 84%, rgba(255, 102, 18, 0.16), transparent 68%),
+        linear-gradient(150deg, #07040d 0%, #160822 44%, #261033 72%, #160807 100%);
+}
+
+body.home-v3-page.index-theme-halloween::before {
+    content: none;
+    display: none;
+}
+
+body.home-v3-page.index-theme-halloween::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    background:
+        radial-gradient(ellipse 55% 18% at 50% 102%, rgba(198, 255, 137, 0.1), transparent 70%),
+        repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.025) 0 1px, transparent 1px 5px);
+    mix-blend-mode: screen;
+    opacity: 0.55;
+}
+
+.halloween-web-layer {
+    display: none;
+}
+
+body.home-v3-page.index-theme-halloween .halloween-web-layer,
+body.home-v3-page.index-theme-christmas .halloween-web-layer {
+    position: fixed;
+    inset: 0;
+    z-index: 3;
+    display: block;
+    pointer-events: none;
+    overflow: hidden;
+}
+
+body.home-v3-page.index-theme-halloween .halloween-web,
+body.home-v3-page.index-theme-christmas .halloween-web {
+    position: absolute;
+    display: block;
+    width: clamp(190px, 26vw, 360px);
+    aspect-ratio: var(--halloween-web-ratio, 1);
+    background-image: var(--halloween-web-image);
+    background-repeat: no-repeat;
+    background-size: contain;
+    background-position: center;
+    filter: var(--halloween-web-filter, invert(1) brightness(1.85) drop-shadow(0 0 14px rgba(255, 236, 190, 0.2)));
+    opacity: 0.24;
+    mix-blend-mode: var(--halloween-web-blend, screen);
+}
+
+body.home-v3-page.index-theme-halloween .halloween-web-1 {
+    --halloween-web-image: url("images/Halloween/cobweb1.png");
+    --halloween-web-ratio: 252 / 257;
+    top: -46px;
+    left: -50px;
+    width: clamp(150px, 13vw, 230px);
+}
+
+body.home-v3-page.index-theme-halloween .halloween-web-2 {
+    --halloween-web-image: url("images/Halloween/cobweb2.png");
+    --halloween-web-ratio: 179 / 208;
+    top: -28px;
+    right: 24%;
+    width: clamp(110px, 10vw, 180px);
+    opacity: 0.16;
+}
+
+body.home-v3-page.index-theme-halloween .halloween-web-3 {
+    --halloween-web-image: url("images/Halloween/cobweb3.png");
+    --halloween-web-ratio: 276 / 240;
+    top: 32%;
+    right: -56px;
+    width: clamp(160px, 15vw, 260px);
+    opacity: 0.14;
+    transform: rotate(90deg);
+}
+
+body.home-v3-page.index-theme-halloween .halloween-web-4 {
+    --halloween-web-image: url("images/Halloween/cobweb4.png");
+    --halloween-web-ratio: 237 / 214;
+    bottom: -38px;
+    left: 14%;
+    width: clamp(130px, 12vw, 210px);
+    transform: rotate(180deg);
+    opacity: 0.13;
+}
+
+body.home-v3-page.index-theme-halloween .halloween-web-texture-1 {
+    --halloween-web-image: url("images/Halloween/cobweb1.png");
+    --halloween-web-ratio: 252 / 257;
+}
+
+body.home-v3-page.index-theme-halloween .halloween-web-texture-2 {
+    --halloween-web-image: url("images/Halloween/cobweb2.png");
+    --halloween-web-ratio: 179 / 208;
+}
+
+body.home-v3-page.index-theme-halloween .halloween-web-texture-3 {
+    --halloween-web-image: url("images/Halloween/cobweb3.png");
+    --halloween-web-ratio: 276 / 240;
+}
+
+body.home-v3-page.index-theme-halloween .halloween-web-texture-4 {
+    --halloween-web-image: url("images/Halloween/cobweb4.png");
+    --halloween-web-ratio: 237 / 214;
+}
+
+body.home-v3-page.index-theme-halloween .halloween-web-texture-web-cobweb {
+    --halloween-web-image: url("images/Halloween/halloween-web-cobweb.png");
+    --halloween-web-ratio: 1;
+}
+
+body.home-v3-page.index-theme-halloween .halloween-web-texture-ghost {
+    --halloween-web-image: url("images/Halloween/halloween-ghost.png");
+    --halloween-web-ratio: 1;
+    --halloween-web-filter: drop-shadow(0 0 18px rgba(255, 241, 210, 0.24));
+    --halloween-web-blend: normal;
+}
+
+body.home-v3-page.index-theme-halloween .halloween-web-texture-pumpkin {
+    --halloween-web-image: url("images/Halloween/halloween-pumpkin.png");
+    --halloween-web-ratio: 1;
+    --halloween-web-filter: drop-shadow(0 0 20px rgba(255, 138, 37, 0.26));
+    --halloween-web-blend: normal;
+}
+
+body.home-v3-page.index-theme-halloween .halloween-web-texture-bats,
+body.home-v3-page.index-theme-halloween .halloween-web-texture-bats-wide,
+body.home-v3-page.index-theme-halloween .halloween-web-texture-cat,
+body.home-v3-page.index-theme-halloween .halloween-web-texture-tombstone,
+body.home-v3-page.index-theme-halloween .halloween-web-texture-coffin,
+body.home-v3-page.index-theme-halloween .halloween-web-texture-skull,
+body.home-v3-page.index-theme-halloween .halloween-web-texture-broom,
+body.home-v3-page.index-theme-halloween .halloween-web-texture-haunted-house {
+    --halloween-web-filter: invert(1) brightness(1.75) drop-shadow(0 0 16px rgba(255, 226, 166, 0.2));
+    --halloween-web-blend: screen;
+}
+
+body.home-v3-page.index-theme-halloween .halloween-web-texture-bats {
+    --halloween-web-image: url("images/Halloween/halloween-bats.png");
+    --halloween-web-ratio: 1;
+}
+
+body.home-v3-page.index-theme-halloween .halloween-web-texture-bats-wide {
+    --halloween-web-image: url("images/Halloween/halloween-bats-wide.png");
+    --halloween-web-ratio: 1;
+}
+
+body.home-v3-page.index-theme-halloween .halloween-web-texture-cauldron {
+    --halloween-web-image: url("images/Halloween/halloween-cauldron.png");
+    --halloween-web-ratio: 1;
+    --halloween-web-filter: drop-shadow(0 0 18px rgba(184, 255, 95, 0.2));
+    --halloween-web-blend: normal;
+}
+
+body.home-v3-page.index-theme-halloween .halloween-web-texture-cat {
+    --halloween-web-image: url("images/Halloween/halloween-cat.png");
+    --halloween-web-ratio: 1;
+}
+
+body.home-v3-page.index-theme-halloween .halloween-web-texture-candle {
+    --halloween-web-image: url("images/Halloween/halloween-candle.png");
+    --halloween-web-ratio: 1;
+    --halloween-web-filter: drop-shadow(0 0 22px rgba(255, 196, 110, 0.3));
+    --halloween-web-blend: normal;
+}
+
+body.home-v3-page.index-theme-halloween .halloween-web-texture-potion {
+    --halloween-web-image: url("images/Halloween/halloween-potion.png");
+    --halloween-web-ratio: 1;
+    --halloween-web-filter: drop-shadow(0 0 18px rgba(184, 255, 95, 0.22));
+    --halloween-web-blend: normal;
+}
+
+body.home-v3-page.index-theme-halloween .halloween-web-texture-tombstone {
+    --halloween-web-image: url("images/Halloween/halloween-tombstone.png");
+    --halloween-web-ratio: 1;
+}
+
+body.home-v3-page.index-theme-halloween .halloween-web-texture-coffin {
+    --halloween-web-image: url("images/Halloween/halloween-coffin.png");
+    --halloween-web-ratio: 1;
+}
+
+body.home-v3-page.index-theme-halloween .halloween-web-texture-skull {
+    --halloween-web-image: url("images/Halloween/halloween-skull.png");
+    --halloween-web-ratio: 1;
+}
+
+body.home-v3-page.index-theme-halloween .halloween-web-texture-owl {
+    --halloween-web-image: url("images/Halloween/halloween-owl.png");
+    --halloween-web-ratio: 1;
+    --halloween-web-filter: drop-shadow(0 0 18px rgba(255, 226, 166, 0.18));
+    --halloween-web-blend: normal;
+}
+
+body.home-v3-page.index-theme-halloween .halloween-web-texture-broom {
+    --halloween-web-image: url("images/Halloween/halloween-broom.png");
+    --halloween-web-ratio: 1;
+}
+
+body.home-v3-page.index-theme-halloween .halloween-web-texture-haunted-house {
+    --halloween-web-image: url("images/Halloween/halloween-haunted-house.png");
+    --halloween-web-ratio: 1;
+}
+
+body.home-v3-page.index-theme-christmas .halloween-web {
+    --halloween-web-ratio: 1;
+    --halloween-web-filter: invert(1) brightness(1.92) drop-shadow(0 0 18px rgba(155, 232, 255, 0.18));
+    --halloween-web-blend: normal;
+}
+
+body.home-v3-page.index-theme-christmas .halloween-web-texture-santa-hat {
+    --halloween-web-image: url("images/Christmas/christmas-santa-hat.png");
+    --halloween-web-filter: invert(42%) sepia(84%) saturate(2844%) hue-rotate(327deg) brightness(108%) contrast(104%) drop-shadow(0 0 18px rgba(255, 75, 97, 0.24));
+}
+
+body.home-v3-page.index-theme-christmas .halloween-web-texture-santa-cap {
+    --halloween-web-image: url("images/Christmas/christmas-santa-cap.png");
+    --halloween-web-filter: invert(42%) sepia(84%) saturate(2844%) hue-rotate(327deg) brightness(108%) contrast(104%) drop-shadow(0 0 18px rgba(255, 75, 97, 0.24));
+}
+
+body.home-v3-page.index-theme-christmas .halloween-web-texture-snowman {
+    --halloween-web-image: url("images/Christmas/christmas-snowman.png");
+    --christmas-decoration-color: #f6fbff;
+}
+
+body.home-v3-page.index-theme-christmas .halloween-web-texture-snowman-scarf {
+    --halloween-web-image: url("images/Christmas/christmas-snowman-scarf.png");
+    --christmas-decoration-color: #f6fbff;
+}
+
+body.home-v3-page.index-theme-christmas .halloween-web-texture-tree {
+    --halloween-web-image: url("images/Christmas/christmas-tree.png");
+    --halloween-web-filter: invert(77%) sepia(49%) saturate(511%) hue-rotate(84deg) brightness(92%) contrast(88%) drop-shadow(0 0 18px rgba(99, 217, 143, 0.2));
+}
+
+body.home-v3-page.index-theme-christmas .halloween-web-texture-tree-alt {
+    --halloween-web-image: url("images/Christmas/christmas-tree-alt.png");
+    --halloween-web-filter: invert(77%) sepia(49%) saturate(511%) hue-rotate(84deg) brightness(92%) contrast(88%) drop-shadow(0 0 18px rgba(99, 217, 143, 0.2));
+}
+
+body.home-v3-page.index-theme-christmas .halloween-web-texture-gift {
+    --halloween-web-image: url("images/Christmas/christmas-gift.png");
+    --halloween-web-filter: invert(93%) sepia(38%) saturate(859%) hue-rotate(336deg) brightness(104%) contrast(103%) drop-shadow(0 0 18px rgba(255, 224, 138, 0.24));
+}
+
+body.home-v3-page.index-theme-christmas .halloween-web-texture-present {
+    --halloween-web-image: url("images/Christmas/christmas-present.png");
+    --halloween-web-filter: invert(42%) sepia(84%) saturate(2844%) hue-rotate(327deg) brightness(108%) contrast(104%) drop-shadow(0 0 18px rgba(255, 75, 97, 0.24));
+}
+
+body.home-v3-page.index-theme-christmas .halloween-web-texture-snowflake {
+    --halloween-web-image: url("images/Christmas/christmas-snowflake.png");
+    --halloween-web-filter: drop-shadow(0 0 20px rgba(255, 255, 255, 0.24));
+    --halloween-web-blend: screen;
+}
+
+body.home-v3-page.index-theme-christmas .halloween-web-texture-wreath {
+    --halloween-web-image: url("images/Christmas/christmas-wreath.png");
+    --halloween-web-filter: invert(77%) sepia(49%) saturate(511%) hue-rotate(84deg) brightness(92%) contrast(88%) drop-shadow(0 0 18px rgba(99, 217, 143, 0.2));
+}
+
+body.home-v3-page.index-theme-christmas .halloween-web-texture-stocking {
+    --halloween-web-image: url("images/Christmas/christmas-stocking.png");
+    --halloween-web-filter: invert(42%) sepia(84%) saturate(2844%) hue-rotate(327deg) brightness(108%) contrast(104%) drop-shadow(0 0 18px rgba(255, 75, 97, 0.24));
+}
+
+body.home-v3-page.index-theme-christmas .halloween-web-texture-candy-cane {
+    --halloween-web-image: url("images/Christmas/christmas-candy-cane.png");
+    --halloween-web-filter: invert(42%) sepia(84%) saturate(2844%) hue-rotate(327deg) brightness(108%) contrast(104%) drop-shadow(0 0 18px rgba(255, 75, 97, 0.24));
+}
+
+body.home-v3-page.index-theme-christmas .halloween-web-texture-ornament {
+    --halloween-web-image: url("images/Christmas/christmas-ornament.png");
+    --halloween-web-filter: invert(85%) sepia(24%) saturate(936%) hue-rotate(159deg) brightness(103%) contrast(103%) drop-shadow(0 0 18px rgba(155, 232, 255, 0.22));
+}
+
+body.home-v3-page.index-theme-christmas .halloween-web-texture-bell {
+    --halloween-web-image: url("images/Christmas/christmas-bell.png");
+    --halloween-web-filter: invert(93%) sepia(38%) saturate(859%) hue-rotate(336deg) brightness(104%) contrast(103%) drop-shadow(0 0 18px rgba(255, 224, 138, 0.24));
+}
+
+body.home-v3-page.index-theme-christmas .halloween-web-texture-star {
+    --halloween-web-image: url("images/Christmas/christmas-star.png");
+    --halloween-web-filter: invert(93%) sepia(38%) saturate(859%) hue-rotate(336deg) brightness(104%) contrast(103%) drop-shadow(0 0 20px rgba(255, 224, 138, 0.28));
+}
+
+body.home-v3-page.index-theme-christmas .halloween-web-texture-ball {
+    --halloween-web-image: url("images/Christmas/christmas-ball.png");
+    --halloween-web-filter: invert(85%) sepia(24%) saturate(936%) hue-rotate(159deg) brightness(103%) contrast(103%) drop-shadow(0 0 18px rgba(155, 232, 255, 0.22));
+}
+
+body.home-v3-page.index-theme-christmas .halloween-web-texture-santa {
+    --halloween-web-image: url("images/Christmas/christmas-santa.png");
+    --halloween-web-filter: invert(96%) sepia(31%) saturate(571%) hue-rotate(335deg) brightness(106%) contrast(101%) drop-shadow(0 0 18px rgba(255, 247, 209, 0.22));
+}
+
+body.home-v3-page.index-theme-christmas .halloween-web-texture-hills {
+    --halloween-web-image: url("images/Christmas/Hills.png");
+    --halloween-web-ratio: 1204 / 560;
+    --halloween-web-filter: drop-shadow(0 -10px 24px rgba(155, 232, 255, 0.12));
+    --halloween-web-blend: normal;
+    z-index: 1;
+    pointer-events: none;
+}
+
+body.home-v3-page.index-theme-christmas.halloween-web-editing .halloween-web-texture-hills {
+    cursor: grab;
+    pointer-events: auto;
+}
+
+body.halloween-web-editing {
+    user-select: none;
+}
+
+body.home-v3-page.index-theme-halloween.halloween-web-editing .halloween-web-layer,
+body.home-v3-page.index-theme-christmas.halloween-web-editing .halloween-web-layer {
+    z-index: 10020;
+    pointer-events: auto;
+}
+
+body.home-v3-page.index-theme-christmas.halloween-web-editing .halloween-web-layer {
+    z-index: 20;
+}
+
+body.home-v3-page.index-theme-halloween.halloween-web-editing .halloween-web,
+body.home-v3-page.index-theme-christmas.halloween-web-editing .halloween-web {
+    cursor: grab;
+    outline: 1px dashed rgba(184, 255, 95, 0.3);
+    outline-offset: 4px;
+    touch-action: none;
+}
+
+body.home-v3-page.index-theme-halloween.halloween-web-editing .halloween-web:active,
+body.home-v3-page.index-theme-christmas.halloween-web-editing .halloween-web:active {
+    cursor: grabbing;
+}
+
+body.home-v3-page.index-theme-halloween.halloween-web-editing .halloween-web.is-editing {
+    outline-color: rgba(255, 226, 166, 0.78);
+    filter: invert(1) brightness(2.1) drop-shadow(0 0 18px rgba(255, 138, 37, 0.4));
+}
+
+body.home-v3-page.index-theme-christmas.halloween-web-editing .halloween-web.is-editing {
+    outline-color: rgba(255, 224, 138, 0.78);
+    filter: drop-shadow(0 0 18px rgba(155, 232, 255, 0.42));
+}
+
+.halloween-web-editor {
+    position: fixed;
+    right: 18px;
+    bottom: 18px;
+    z-index: 10030;
+    width: min(320px, calc(100vw - 28px));
+    display: grid;
+    gap: 12px;
+    padding: 14px;
+    border: 1px solid rgba(255, 138, 37, 0.34);
+    border-radius: 10px;
+    background:
+        radial-gradient(circle at 100% 0, rgba(184, 255, 95, 0.1), transparent 34%),
+        linear-gradient(180deg, rgba(24, 8, 35, 0.98), rgba(8, 3, 13, 0.98));
+    color: #fff6e8;
+    box-shadow: 0 22px 58px rgba(0, 0, 0, 0.42), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.halloween-web-editor.hidden {
+    display: none;
+}
+
+.halloween-web-editor-head,
+.halloween-web-editor-row,
+.halloween-web-editor-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.halloween-web-editor-head {
+    justify-content: space-between;
+    cursor: grab;
+    touch-action: none;
+    user-select: none;
+}
+
+body.seasonal-decoration-editor-dragging .halloween-web-editor-head {
+    cursor: grabbing;
+}
+
+.halloween-web-editor-head button {
+    cursor: pointer;
+}
+
+.halloween-web-editor-head strong {
+    color: #b8ff5f;
+    font-family: "Barlow Condensed", sans-serif;
+    font-size: 1.08rem;
+    letter-spacing: 0;
+    text-transform: uppercase;
+}
+
+.halloween-web-editor button,
+.halloween-web-editor select {
+    min-height: 34px;
+    border: 1px solid rgba(184, 255, 95, 0.22);
+    border-radius: 8px;
+    background: rgba(184, 255, 95, 0.08);
+    color: #fff6e8;
+    font-weight: 800;
+}
+
+.halloween-web-editor-head button {
+    width: 34px;
+    padding: 0;
+}
+
+.halloween-web-editor-row select {
+    flex: 1;
+}
+
+.halloween-web-editor-control {
+    display: grid;
+    grid-template-columns: 72px 1fr;
+    align-items: center;
+    gap: 10px;
+    color: rgba(246, 237, 248, 0.74);
+    font-weight: 800;
+}
+
+.halloween-web-editor-control input {
+    width: 100%;
+    accent-color: #ff8a25;
+}
+
+.halloween-web-editor-actions button {
+    flex: 1 1 96px;
+    background: linear-gradient(135deg, #ffe2a6, #ff8a25 56%, #d95713);
+    color: #180709;
+}
+
+.halloween-web-editor-actions button:nth-child(2),
+.halloween-web-editor-actions button:nth-child(3),
+.halloween-web-editor-actions button:nth-child(5),
+.halloween-web-editor-actions button:nth-child(6) {
+    background: rgba(184, 255, 95, 0.08);
+    color: #fff6e8;
+}
+
+body.home-v3-page.index-theme-christmas .halloween-web-editor {
+    border-color: rgba(155, 232, 255, 0.34);
+    background:
+        radial-gradient(ellipse 78% 42% at 100% 0, rgba(255, 224, 138, 0.12), transparent 68%),
+        linear-gradient(180deg, rgba(8, 40, 55, 0.98), rgba(4, 14, 24, 0.98));
+    color: #f3fbff;
+}
+
+body.home-v3-page.index-theme-christmas .halloween-web-editor-head strong {
+    color: #9be8ff;
+}
+
+body.home-v3-page.index-theme-christmas .halloween-web-editor button,
+body.home-v3-page.index-theme-christmas .halloween-web-editor select {
+    border-color: rgba(155, 232, 255, 0.24);
+    background: rgba(155, 232, 255, 0.1);
+    color: #f3fbff;
+}
+
+body.home-v3-page.index-theme-christmas .halloween-web-editor-control {
+    color: rgba(230, 248, 255, 0.78);
+}
+
+body.home-v3-page.index-theme-christmas .halloween-web-editor-control input {
+    accent-color: #ff4b61;
+}
+
+body.home-v3-page.index-theme-christmas .halloween-web-editor-actions button {
+    background: linear-gradient(135deg, #ffffff, #9be8ff 46%, #ffe08a);
+    color: #06141d;
+}
+
+body.home-v3-page.index-theme-christmas .halloween-web-editor-actions button:nth-child(2),
+body.home-v3-page.index-theme-christmas .halloween-web-editor-actions button:nth-child(3),
+body.home-v3-page.index-theme-christmas .halloween-web-editor-actions button:nth-child(5),
+body.home-v3-page.index-theme-christmas .halloween-web-editor-actions button:nth-child(6) {
+    background: rgba(217, 33, 57, 0.14);
+    color: #fff2f4;
+}
+
+body.home-v3-page.index-theme-halloween .ambient-rays {
+    background:
+        radial-gradient(ellipse at 74% 4%, rgba(255, 226, 166, 0.16), transparent 42%),
+        radial-gradient(ellipse at 24% 8%, rgba(173, 255, 93, 0.11), transparent 58%);
+    filter: blur(4px);
+}
+
+body.home-v3-page.index-theme-halloween .ambient-bubble {
+    width: 5px;
+    height: 5px;
+    border: 0;
+    background: rgba(255, 126, 31, 0.38);
+    box-shadow: 0 0 14px rgba(255, 126, 31, 0.28);
+}
+
+body.home-v3-page.index-theme-halloween .home-v3-left,
+body.home-v3-page.index-theme-halloween .home-v3-right,
+body.home-v3-page.index-theme-halloween .home-v3-hub-panels,
+body.home-v3-page.index-theme-halloween .home-v3-modes {
+    position: relative;
+    background:
+        radial-gradient(circle at 0 0, rgba(184, 255, 95, 0.07), transparent 36%),
+        linear-gradient(180deg, rgba(18, 7, 31, 0.96), rgba(8, 4, 15, 0.98));
+    border-color: rgba(255, 138, 37, 0.18);
+    z-index: 2;
+}
+
+body.home-v3-page.index-theme-halloween .home-v3-shell::before {
+    content: none;
+    display: none;
+}
+
+body.home-v3-page.index-theme-halloween .home-v3-logo-icon {
+    background: linear-gradient(135deg, rgba(255, 138, 37, 0.28), rgba(184, 255, 95, 0.18));
+    color: #fff1d1;
+    box-shadow: 0 0 28px rgba(255, 126, 31, 0.22);
+}
+
+body.home-v3-page.index-theme-halloween .home-v3-logo strong,
+body.home-page.index-theme-halloween .logo {
+    background: linear-gradient(135deg, #fff3c8, #ff8a25 42%, #b8ff5f 74%, #d49cff);
+    -webkit-background-clip: text;
+    background-clip: text;
+}
+
+body.home-v3-page.index-theme-halloween .home-v3-logo em,
+body.home-v3-page.index-theme-halloween .home-v3-eyebrow,
+body.home-v3-page.index-theme-halloween .home-v3-section-label,
+body.home-v3-page.index-theme-halloween .home-v3-event span,
+body.home-v3-page.index-theme-halloween .home-v3-fact span {
+    color: #b8ff5f;
+}
+
+body.home-v3-page.index-theme-halloween .home-v3-nav a,
+body.home-v3-page.index-theme-halloween .home-v3-nav button,
+body.home-v3-page.index-theme-halloween .home-v3-fact,
+body.home-v3-page.index-theme-halloween .home-v3-event,
+body.home-v3-page.index-theme-halloween .home-v3-side-section,
+body.home-v3-page.index-theme-halloween .home-v3-quick-access,
+body.home-v3-page.index-theme-halloween .home-v3-profile-widget,
+body.home-v3-page.index-theme-halloween .home-v3-bonus,
+body.home-v3-page.index-theme-halloween .home-v3-currencies > *,
+body.home-v3-page.index-theme-halloween .home-v3-shield-pill {
+    border-color: rgba(255, 138, 37, 0.22);
+    background:
+        radial-gradient(circle at 100% 0, rgba(184, 255, 95, 0.08), transparent 38%),
+        linear-gradient(145deg, rgba(35, 15, 48, 0.9), rgba(10, 5, 18, 0.92));
+}
+
+body.home-v3-page.index-theme-halloween .home-v3-nav a:hover,
+body.home-v3-page.index-theme-halloween .home-v3-nav a.active,
+body.home-v3-page.index-theme-halloween .home-v3-nav button:hover,
+body.home-v3-page.index-theme-halloween .home-v3-nav button.active,
+body.home-v3-page.index-theme-halloween .home-v3-quick-link:hover {
+    color: #fff8dc;
+    border-color: rgba(184, 255, 95, 0.46);
+    background: linear-gradient(135deg, rgba(255, 138, 37, 0.2), rgba(66, 24, 86, 0.72));
+    box-shadow: 0 10px 28px rgba(255, 102, 18, 0.14);
+}
+
+body.home-v3-page.index-theme-halloween .home-v3-hero,
+body.home-page.index-theme-halloween .home-hero {
+    background:
+        radial-gradient(circle at 82% 14%, rgba(255, 240, 198, 0.2), transparent 13%),
+        radial-gradient(ellipse 42% 34% at 22% 12%, rgba(177, 255, 92, 0.12), transparent 66%),
+        radial-gradient(ellipse 65% 50% at 76% 100%, rgba(255, 102, 18, 0.2), transparent 66%),
+        linear-gradient(180deg, #090511 0%, #170927 48%, #09040d 100%);
+}
+
+body.home-v3-page.index-theme-halloween .home-v3-hero::before {
+    content: none;
+    display: none;
+}
+
+body.home-v3-page.index-theme-halloween .home-v3-shark-bg {
+    opacity: 0.12;
+    filter: blur(2px) sepia(0.45) hue-rotate(222deg) saturate(1.2) drop-shadow(0 0 80px rgba(184, 255, 95, 0.14));
+}
+
+body.home-v3-page.index-theme-halloween .home-v3-shark-fg {
+    filter: sepia(0.28) hue-rotate(210deg) saturate(1.18) drop-shadow(0 0 46px rgba(255, 126, 31, 0.2));
+}
+
+body.home-v3-page.index-theme-halloween .home-v3-bubbles span {
+    border-radius: 2px;
+    background: rgba(255, 126, 31, 0.34);
+    box-shadow: 0 0 18px rgba(184, 255, 95, 0.12);
+}
+
+body.home-v3-page.index-theme-halloween .home-v3-hero h1 span {
+    color: #ff8a25;
+    text-shadow: 0 0 30px rgba(255, 126, 31, 0.28);
+}
+
+body.home-v3-page.index-theme-halloween .hero-subtitle,
+body.home-v3-page.index-theme-halloween .home-v3-panel-heading p,
+body.home-v3-page.index-theme-halloween .home-v3-event p,
+body.home-v3-page.index-theme-halloween .home-v3-fact p,
+body.home-v3-page.index-theme-halloween .home-v3-stat-row {
+    color: rgba(246, 237, 248, 0.72);
+}
+
+body.home-v3-page.index-theme-halloween .home-v3-play-btn,
+body.home-v3-page.index-theme-halloween .auth-btn,
+body.home-v3-page.index-theme-halloween .home-v3-shop-item button,
+body.home-v3-page.index-theme-halloween .pearl-shop-grid .home-v3-shop-item button {
+    color: #180709;
+    background: linear-gradient(135deg, #ffe2a6, #ff8a25 55%, #d95713);
+    box-shadow: 0 10px 30px rgba(255, 102, 18, 0.26);
+}
+
+body.home-v3-page.index-theme-halloween .home-v3-ghost-btn,
+body.home-v3-page.index-theme-halloween .home-v3-download-btn,
+body.home-v3-page.index-theme-halloween .home-v3-reward-pill,
+body.home-v3-page.index-theme-halloween .home-v3-shield-pill,
+body.home-v3-page.index-theme-halloween .hero-crates-btn,
+body.home-v3-page.index-theme-halloween .hero-spin-btn {
+    color: #f8f1ff;
+    border-color: rgba(184, 255, 95, 0.24);
+    background: rgba(184, 255, 95, 0.08);
+}
+
+body.home-v3-page.index-theme-halloween .home-v3-mode-card,
+body.home-v3-page.index-theme-halloween .home-v3-shop-item,
+body.home-v3-page.index-theme-halloween .profile-inventory-card,
+body.home-v3-page.index-theme-halloween #theme-select-container .theme-option {
+    border-color: rgba(255, 138, 37, 0.2);
+    background:
+        linear-gradient(to top, rgba(8, 4, 14, 0.98) 0%, rgba(18, 7, 31, 0.72) 44%, rgba(66, 24, 86, 0.14) 100%),
+        var(--mode-bg, none);
+    background-size: cover, 132% auto;
+    background-position: center, center 22%;
+    background-repeat: no-repeat;
+}
+
+body.home-v3-page.index-theme-halloween .home-v3-mode-card::before {
+    background:
+        radial-gradient(circle at 76% 10%, rgba(255, 231, 178, 0.16), transparent 18%),
+        var(--mode-bg);
+    background-size: cover, 138% auto;
+    background-position: center, center 20%;
+    background-repeat: no-repeat;
+    opacity: 0.68;
+    filter: sepia(0.18) hue-rotate(215deg) saturate(1.08);
+}
+
+body.home-v3-page.index-theme-halloween .home-v3-event,
+body.home-v3-page.index-theme-halloween .home-crate-card.halloween,
+body.home-v3-page.index-theme-halloween #halloween-crate-panel,
+body.home-v3-page.index-theme-halloween .profile-hero-card.theme-pumpkin-patch,
+body.home-v3-page.index-theme-halloween .profile-hero-card.theme-haunted-abyss,
+body.home-v3-page.index-theme-halloween .profile-hero-card.theme-nightmare-reef {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+}
+
+body.home-v3-page.index-theme-halloween .home-v3-mode-card::after {
+    background:
+        linear-gradient(to top, rgba(9, 4, 15, .98) 0%, rgba(21, 8, 31, .78) 42%, rgba(60, 20, 70, .08) 100%),
+        radial-gradient(ellipse at 50% 8%, rgba(184, 255, 95, .12), transparent 58%);
+}
+
+body.home-v3-page.index-theme-halloween .home-v3-event::before,
+body.home-v3-page.index-theme-halloween .home-crate-card.halloween::before,
+body.home-v3-page.index-theme-halloween #halloween-crate-panel::before,
+body.home-v3-page.index-theme-halloween .profile-hero-card.theme-pumpkin-patch::before,
+body.home-v3-page.index-theme-halloween .profile-hero-card.theme-haunted-abyss::before,
+body.home-v3-page.index-theme-halloween .profile-hero-card.theme-nightmare-reef::before {
+    content: none;
+    display: none;
+}
+
+body.home-v3-page.index-theme-halloween .home-v3-event {
+    --halloween-panel-web: url("images/Halloween/cobweb3.png");
+}
+
+body.home-v3-page.index-theme-halloween .home-crate-card.halloween,
+body.home-v3-page.index-theme-halloween #halloween-crate-panel {
+    --halloween-panel-web: url("images/Halloween/cobweb1.png");
+}
+
+body.home-v3-page.index-theme-halloween .profile-hero-card.theme-pumpkin-patch,
+body.home-v3-page.index-theme-halloween .profile-hero-card.theme-haunted-abyss,
+body.home-v3-page.index-theme-halloween .profile-hero-card.theme-nightmare-reef {
+    --halloween-panel-web: url("images/Halloween/cobweb4.png");
+}
+
+body.home-v3-page.index-theme-halloween .home-v3-event > *,
+body.home-v3-page.index-theme-halloween .home-crate-card.halloween > *,
+body.home-v3-page.index-theme-halloween #halloween-crate-panel > * {
+    position: relative;
+    z-index: 1;
+}
+
+body.home-v3-page.index-theme-halloween .home-v3-mode-card:hover::before {
+    opacity: 0.88;
+    transform: scale(1.08);
+}
+
+body.home-v3-page.index-theme-halloween .home-v3-mode-card strong {
+    color: #fff7dc;
+    text-shadow: 0 2px 14px rgba(0, 0, 0, 0.5);
+}
+
+body.home-v3-page.index-theme-halloween .home-v3-mode-card p {
+    color: rgba(252, 238, 222, 0.76);
+}
+
+body.home-v3-page.index-theme-halloween .home-v3-mode-card:hover,
+body.home-v3-page.index-theme-halloween .home-v3-mode-card.active,
+body.home-v3-page.index-theme-halloween .home-v3-profile-widget:hover,
+body.home-v3-page.index-theme-halloween .home-v3-event:hover {
+    border-color: rgba(184, 255, 95, 0.42);
+    box-shadow: 0 18px 40px rgba(255, 102, 18, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+body.home-v3-page.index-theme-halloween .home-crate-card.halloween {
+    position: relative;
+    overflow: hidden;
+    border-color: rgba(255, 138, 37, 0.34);
+    background:
+        radial-gradient(circle at 86% 14%, rgba(255, 230, 172, 0.22), transparent 20%),
+        radial-gradient(circle at 12% 8%, rgba(184, 255, 95, 0.12), transparent 34%),
+        linear-gradient(160deg, rgba(40, 13, 54, 0.96), rgba(10, 5, 18, 0.98));
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.06), 0 22px 50px rgba(0,0,0,.22);
+}
+
+body.home-v3-page.index-theme-halloween .home-crate-count.halloween,
+body.home-v3-page.index-theme-halloween #halloween-crate-panel .crate-count-badge {
+    border-color: rgba(184, 255, 95, 0.3);
+    background: rgba(184, 255, 95, 0.12);
+    color: #d9ffad;
+}
+
+body.home-v3-page.index-theme-halloween .home-crate-visual.halloween,
+body.home-v3-page.index-theme-halloween .crate-crafting-icon.halloween {
+    color: #fff0c7;
+    background:
+        radial-gradient(circle at 50% 22%, rgba(255, 236, 185, 0.18), transparent 24%),
+        radial-gradient(circle at 76% 76%, rgba(184, 255, 95, 0.16), transparent 32%),
+        linear-gradient(160deg, rgba(255, 128, 31, 0.32), rgba(93, 35, 132, 0.58));
+    box-shadow: inset 0 0 0 1px rgba(255, 226, 166, 0.18), 0 18px 36px rgba(255, 102, 18, 0.12);
+}
+
+body.home-v3-page.index-theme-halloween #halloween-crate-panel {
+    border-color: rgba(255, 138, 37, 0.3);
+    background:
+        radial-gradient(circle at 90% 10%, rgba(255, 226, 166, 0.18), transparent 18%),
+        radial-gradient(circle at 12% 12%, rgba(184, 255, 95, 0.1), transparent 34%),
+        linear-gradient(160deg, rgba(37, 13, 52, 0.96), rgba(8, 4, 14, 0.98));
+}
+
+body.home-v3-page.index-theme-halloween .crate-unbox-overlay.crate-theme-halloween .crate-unbox-backdrop {
+    background:
+        radial-gradient(circle at 72% 18%, rgba(255, 235, 190, 0.2), transparent 15%),
+        radial-gradient(circle at 18% 78%, rgba(184, 255, 95, 0.16), transparent 28%),
+        radial-gradient(circle at 82% 78%, rgba(255, 102, 18, 0.16), transparent 30%),
+        rgba(7, 3, 12, 0.93);
+}
+
+body.home-v3-page.index-theme-halloween .crate-unbox-overlay.crate-theme-halloween .crate-unbox-stage {
+    overflow: hidden;
+    border-color: rgba(255, 138, 37, 0.28);
+    background:
+        radial-gradient(circle at 78% 12%, rgba(255, 238, 201, 0.18), transparent 18%),
+        radial-gradient(circle at 18% 18%, rgba(184, 255, 95, 0.1), transparent 34%),
+        linear-gradient(180deg, rgba(32, 11, 46, 0.98), rgba(7, 3, 13, 0.99));
+}
+
+body.home-v3-page.index-theme-halloween .crate-unbox-overlay.crate-theme-halloween .crate-unbox-stage::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background:
+        linear-gradient(136deg, transparent 0 64%, rgba(239, 232, 220, 0.16) 64.2% 64.6%, transparent 64.8%),
+        radial-gradient(circle at 100% 0, transparent 0 56px, rgba(239, 232, 220, 0.18) 57px 58px, transparent 59px 104px, rgba(239, 232, 220, 0.12) 105px 106px, transparent 107px);
+    z-index: 0;
+}
+
+body.home-v3-page.index-theme-halloween .crate-unbox-overlay.crate-theme-halloween .crate-unbox-crate-lid {
+    background: linear-gradient(180deg, rgba(255, 218, 145, 0.98), rgba(255, 126, 31, 0.96));
+    border-color: rgba(255, 231, 185, 0.38);
+}
+
+body.home-v3-page.index-theme-halloween .crate-unbox-overlay.crate-theme-halloween .crate-unbox-crate-body {
+    color: #fff1d6;
+    background:
+        radial-gradient(circle at 20% 18%, rgba(184, 255, 95, 0.24), transparent 24%),
+        linear-gradient(180deg, rgba(82, 29, 118, 0.98), rgba(24, 8, 36, 0.99));
+    border-color: rgba(184, 255, 95, 0.24);
+    box-shadow: 0 18px 38px rgba(255, 102, 18, 0.18), inset 0 0 0 1px rgba(255,255,255,.08);
+}
+
+body.home-v3-page.index-theme-halloween .crate-unbox-burst.active-halloween {
+    background: radial-gradient(circle, rgba(255, 225, 154, 0.86), rgba(255, 126, 31, 0.34) 36%, rgba(184, 255, 95, 0.16) 55%, transparent 72%);
+}
+
+body.home-v3-page.index-theme-halloween .crate-overlay-reveal.crate-reveal-halloween {
+    border-color: rgba(255, 138, 37, 0.32);
+    background:
+        radial-gradient(circle at 82% 12%, rgba(255, 235, 190, 0.18), transparent 18%),
+        radial-gradient(circle at 14% 82%, rgba(184, 255, 95, 0.13), transparent 28%),
+        linear-gradient(180deg, rgba(33, 10, 48, 0.98), rgba(8, 3, 14, 0.99));
+}
+
+body.home-v3-page.index-theme-halloween .profile-hero-card.theme-pumpkin-patch,
+body.home-v3-page.index-theme-halloween .profile-hero-card.theme-haunted-abyss,
+body.home-v3-page.index-theme-halloween .profile-hero-card.theme-nightmare-reef {
+    border-color: rgba(255, 138, 37, 0.3);
+    box-shadow: 0 24px 54px rgba(0, 0, 0, 0.34), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+body.home-v3-page.index-theme-halloween .profile-hero-card.theme-pumpkin-patch::after,
+body.home-v3-page.index-theme-halloween .profile-hero-card.theme-haunted-abyss::after,
+body.home-v3-page.index-theme-halloween .profile-hero-card.theme-nightmare-reef::after {
+    content: "";
+    position: absolute;
+    inset: auto 0 0;
+    height: 42%;
+    pointer-events: none;
+    background: linear-gradient(0deg, rgba(4, 2, 8, 0.58), transparent);
+    z-index: 0;
+}
+
+body.home-v3-page.index-theme-halloween .profile-hero-card.theme-pumpkin-patch > *,
+body.home-v3-page.index-theme-halloween .profile-hero-card.theme-haunted-abyss > *,
+body.home-v3-page.index-theme-halloween .profile-hero-card.theme-nightmare-reef > * {
+    position: relative;
+    z-index: 1;
+}
+
+body.home-v3-page.index-theme-halloween .profile-hero-card.theme-pumpkin-patch .profile-avatar-orb,
+body.home-v3-page.index-theme-halloween .profile-hero-card.theme-haunted-abyss .profile-avatar-orb,
+body.home-v3-page.index-theme-halloween .profile-hero-card.theme-nightmare-reef .profile-avatar-orb {
+    border-color: rgba(184, 255, 95, 0.32);
+    box-shadow: 0 0 0 5px rgba(255, 138, 37, 0.13), 0 18px 34px rgba(0, 0, 0, 0.3);
+}
+
+body.home-v3-page.index-theme-halloween .profile-hero-card.theme-pumpkin-patch .profile-username-text,
+body.home-v3-page.index-theme-halloween .profile-hero-card.theme-haunted-abyss .profile-username-text,
+body.home-v3-page.index-theme-halloween .profile-hero-card.theme-nightmare-reef .profile-username-text {
+    color: #fff6d6;
+    text-shadow: 0 2px 18px rgba(0, 0, 0, 0.42);
+}
+
+@media (max-width: 760px) {
+    body.home-v3-page.index-theme-halloween .home-v3-shell::before {
+        width: 180px;
+        opacity: 0.18;
+    }
+
+    body.home-v3-page.index-theme-halloween .home-v3-hero {
+        background:
+            radial-gradient(circle at 74% 12%, rgba(255, 240, 198, 0.18), transparent 14%),
+            radial-gradient(ellipse 88% 46% at 50% 100%, rgba(255, 102, 18, 0.16), transparent 72%),
+            linear-gradient(180deg, #090511 0%, #170927 55%, #08040f 100%);
+    }
+
+    body.home-v3-page.index-theme-halloween .halloween-web-1 {
+        width: 140px;
+        top: -36px;
+        left: -48px;
+    }
+
+    body.home-v3-page.index-theme-halloween .halloween-web-2 {
+        width: 120px;
+        top: -28px;
+        right: -20px;
+    }
+
+    body.home-v3-page.index-theme-halloween .halloween-web-3 {
+        width: 150px;
+        top: 42%;
+        right: -72px;
+    }
+
+    body.home-v3-page.index-theme-halloween .halloween-web-4 {
+        width: 120px;
+        bottom: -36px;
+        left: -30px;
+    }
+
+    .halloween-web-editor {
+        right: 14px;
+        bottom: 14px;
+    }
+}
+
+/* Social rewards cleanup */
+body.home-v3-page .social-rewards-modal-content {
+    width: min(1120px, 96vw);
+    padding: 14px;
+}
+
+body.home-v3-page .social-rewards-panel {
+    display: grid;
+    gap: 14px;
+    padding: 16px;
+    border-radius: 10px;
+}
+
+body.home-v3-page .social-rewards-head {
+    margin-bottom: 0;
+    padding: 14px 16px;
+    border-radius: 8px;
+}
+
+body.home-v3-page .social-rewards-head h3 {
+    margin: 2px 0 4px;
+    font-size: clamp(28px, 4vw, 44px);
+}
+
+body.home-v3-page .social-rewards-balance {
+    min-width: 128px;
+    min-height: 50px;
+    border-radius: 8px;
+    font-size: 20px;
+}
+
+body.home-v3-page .social-rewards-list {
+    gap: 10px;
+}
+
+body.home-v3-page .social-rewards-overview {
+    display: grid;
+    grid-template-columns: minmax(170px, 220px) minmax(0, 1fr);
+    gap: 10px;
+}
+
+body.home-v3-page .social-rewards-total-card,
+body.home-v3-page .social-rewards-platform-card {
+    border: 1px solid rgba(125, 211, 252, 0.16);
+    border-radius: 8px;
+    background: rgba(2, 22, 37, 0.72);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+body.home-v3-page .social-rewards-total-card {
+    display: grid;
+    align-content: center;
+    gap: 4px;
+    padding: 14px;
+}
+
+body.home-v3-page .social-rewards-total-card span,
+body.home-v3-page .social-rewards-platform-card span {
+    color: rgba(224, 242, 254, 0.68);
+    font-size: 12px;
+    font-weight: 900;
+    text-transform: uppercase;
+}
+
+body.home-v3-page .social-rewards-total-card strong {
+    color: #ffffff;
+    font-family: "Barlow Condensed", sans-serif;
+    font-size: 36px;
+    line-height: 0.95;
+}
+
+body.home-v3-page .social-rewards-total-card small {
+    color: #f8e7a2;
+    font-size: 13px;
+    font-weight: 800;
+}
+
+body.home-v3-page .social-rewards-platform-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 10px;
+}
+
+body.home-v3-page .social-rewards-platform-card {
+    --platform-accent: #7dd3fc;
+    display: grid;
+    grid-template-columns: 34px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 8px;
+    padding: 11px;
+}
+
+body.home-v3-page .social-rewards-platform-youtube,
+body.home-v3-page .social-reward-group-youtube {
+    --platform-accent: #ff6464;
+}
+
+body.home-v3-page .social-rewards-platform-instagram,
+body.home-v3-page .social-reward-group-instagram {
+    --platform-accent: #f472b6;
+}
+
+body.home-v3-page .social-rewards-platform-tiktok,
+body.home-v3-page .social-reward-group-tiktok {
+    --platform-accent: #67e8f9;
+}
+
+body.home-v3-page .social-rewards-platform-support,
+body.home-v3-page .social-reward-group-support {
+    --platform-accent: #f8e7a2;
+}
+
+body.home-v3-page .social-rewards-platform-card i {
+    width: 34px;
+    height: 34px;
+    display: grid;
+    place-items: center;
+    border-radius: 8px;
+    background: color-mix(in srgb, var(--platform-accent) 16%, transparent);
+    color: var(--platform-accent);
+}
+
+body.home-v3-page .social-rewards-platform-card strong {
+    color: #ffffff;
+    font-size: 14px;
+}
+
+body.home-v3-page .social-rewards-progress {
+    grid-column: 1 / -1;
+    height: 6px;
+    overflow: hidden;
+    border-radius: 999px;
+    background: rgba(148, 163, 184, 0.18);
+}
+
+body.home-v3-page .social-rewards-progress span {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, var(--platform-accent), #f8e7a2);
+}
+
+body.home-v3-page .social-reward-group {
+    border-radius: 8px;
+    background: rgba(1, 18, 31, 0.74);
+}
+
+body.home-v3-page .social-reward-group summary {
+    min-height: 66px;
+    border-left: 4px solid var(--platform-accent, #7dd3fc);
+    grid-template-columns: 42px minmax(0, 1fr) auto 18px;
+    padding: 12px 14px 12px 12px;
+}
+
+body.home-v3-page .social-reward-group-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    background: color-mix(in srgb, var(--platform-accent, #7dd3fc) 16%, transparent);
+    color: var(--platform-accent, #7dd3fc);
+}
+
+body.home-v3-page .social-reward-group summary b {
+    border: 1px solid color-mix(in srgb, var(--platform-accent, #7dd3fc) 28%, transparent);
+    background: color-mix(in srgb, var(--platform-accent, #7dd3fc) 12%, transparent);
+    color: var(--platform-accent, #7dd3fc);
+}
+
+body.home-v3-page .social-reward-group-meta {
+    padding: 0 14px 10px 68px;
+}
+
+body.home-v3-page .social-reward-group-list {
+    max-height: min(44vh, 430px);
+    overflow-y: auto;
+    grid-template-columns: 1fr;
+    gap: 8px;
+    padding: 0 12px 12px;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(125, 211, 252, 0.5) rgba(2, 22, 37, 0.6);
+}
+
+body.home-v3-page .social-reward-card {
+    min-height: 72px;
+    grid-template-columns: 38px minmax(0, 1fr) auto;
+    grid-template-rows: auto;
+    gap: 10px;
+    padding: 10px;
+    border-radius: 8px;
+    background: rgba(3, 27, 45, 0.82);
+}
+
+body.home-v3-page .social-reward-card > i {
+    width: 34px;
+    height: 34px;
+    border-radius: 8px;
+    background: color-mix(in srgb, var(--platform-accent, #7dd3fc) 14%, transparent);
+    color: var(--platform-accent, #7dd3fc);
+}
+
+body.home-v3-page .social-reward-copy strong {
+    color: #ffffff;
+    font-size: 15px;
+    line-height: 1.2;
+}
+
+body.home-v3-page .social-reward-copy small {
+    margin-top: 2px;
+    font-size: 12px;
+}
+
+body.home-v3-page .social-reward-card-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+body.home-v3-page .social-reward-card button {
+    grid-column: auto;
+    width: auto;
+    min-width: 88px;
+    min-height: 36px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    padding: 0 12px;
+    border-radius: 8px;
+}
+
+body.home-v3-page .social-reward-card.claimed {
+    opacity: 0.58;
+}
+
+body.home-v3-page .social-reward-card.claimed .social-reward-prize {
+    color: rgba(224, 242, 254, 0.62);
+}
+
+body.home-v3-page .social-reward-codes {
+    margin-top: 2px;
+}
+
+@media (max-width: 860px) {
+    body.home-v3-page .social-rewards-overview {
+        grid-template-columns: 1fr;
+    }
+
+    body.home-v3-page .social-rewards-platform-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 620px) {
+    body.home-v3-page .social-rewards-modal-content {
+        width: 96vw;
+        padding: 10px;
+    }
+
+    body.home-v3-page .social-rewards-panel {
+        padding: 12px;
+    }
+
+    body.home-v3-page .social-rewards-head {
+        align-items: flex-start;
+    }
+
+    body.home-v3-page .social-rewards-platform-grid {
+        grid-template-columns: 1fr;
+    }
+
+    body.home-v3-page .social-reward-card {
+        grid-template-columns: 34px minmax(0, 1fr);
+    }
+
+    body.home-v3-page .social-reward-card-actions {
+        grid-column: 1 / -1;
+        justify-content: space-between;
+    }
+
+    body.home-v3-page .social-reward-card button {
+        flex: 1 1 auto;
+    }
+
+    body.home-v3-page .social-reward-group summary {
+        grid-template-columns: 38px minmax(0, 1fr) auto;
+    }
+
+    body.home-v3-page .social-reward-group summary > .fa-chevron-down {
+        display: none;
+    }
+
+    body.home-v3-page .social-reward-group-meta {
+        padding-left: 14px;
+    }
+}
+
+.admin-abuse-close-btn {
+    width: 100%;
+    flex-shrink: 0;
+    min-height: 42px;
+    margin-top: 16px;
+    border: 0;
+    border-radius: 8px;
+    background: #cccccc;
+    color: #333333;
+    cursor: pointer;
+    font-weight: 800;
+}
+
+body.home-v3-page.index-theme-halloween .admin-abuse-modal-content {
+    border: 1px solid rgba(255, 138, 37, 0.34);
+    border-radius: 12px;
+    background:
+        radial-gradient(circle at 88% 4%, rgba(255, 230, 172, 0.16), transparent 24%),
+        radial-gradient(circle at 12% 12%, rgba(184, 255, 95, 0.08), transparent 34%),
+        linear-gradient(180deg, #210b30, #09040f);
+    box-shadow: 0 28px 70px rgba(0, 0, 0, 0.54), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+body.home-v3-page.index-theme-halloween .admin-abuse-modal-content .picker-modal-heading {
+    border-bottom: 1px solid rgba(255, 138, 37, 0.18);
+    padding-bottom: 12px;
+}
+
+body.home-v3-page.index-theme-halloween .admin-abuse-modal-content .picker-modal-kicker,
+body.home-v3-page.index-theme-halloween .admin-abuse-card-title,
+body.home-v3-page.index-theme-halloween .admin-abuse-section h3 {
+    color: #b8ff5f;
+}
+
+body.home-v3-page.index-theme-halloween .admin-abuse-modal-content h2 {
+    color: #fff1d6;
+    text-shadow: 0 0 24px rgba(255, 138, 37, 0.22);
+}
+
+body.home-v3-page.index-theme-halloween .admin-abuse-section,
+body.home-v3-page.index-theme-halloween .admin-abuse-card {
+    border-color: rgba(255, 138, 37, 0.2);
+    border-radius: 10px;
+    background:
+        radial-gradient(circle at 100% 0, rgba(255, 138, 37, 0.1), transparent 34%),
+        #10071a;
+}
+
+body.home-v3-page.index-theme-halloween .admin-abuse-input,
+body.home-v3-page.index-theme-halloween .admin-abuse-select,
+body.home-v3-page.index-theme-halloween .admin-abuse-textarea {
+    border-color: rgba(184, 255, 95, 0.24);
+    background: rgba(4, 2, 9, 0.78);
+    color: #fff6e8;
+    box-shadow: inset 0 0 0 1px rgba(255, 138, 37, 0.06);
+}
+
+body.home-v3-page.index-theme-halloween .admin-abuse-input::placeholder,
+body.home-v3-page.index-theme-halloween .admin-abuse-textarea::placeholder {
+    color: rgba(246, 237, 248, 0.52);
+}
+
+body.home-v3-page.index-theme-halloween .admin-abuse-btn {
+    border: 1px solid rgba(255, 196, 110, 0.28);
+    background: linear-gradient(135deg, #ffe2a6, #ff8a25 56%, #d95713);
+    color: #180709;
+    box-shadow: 0 10px 24px rgba(255, 102, 18, 0.18);
+}
+
+body.home-v3-page.index-theme-halloween .admin-abuse-btn-secondary {
+    border-color: rgba(184, 255, 95, 0.24);
+    background: rgba(184, 255, 95, 0.08);
+    color: #f8f1ff;
+    box-shadow: none;
+}
+
+body.home-v3-page.index-theme-halloween .admin-abuse-status {
+    color: rgba(246, 237, 248, 0.76);
+}
+
+body.home-v3-page.index-theme-halloween .admin-visitor-stat,
+body.home-v3-page.index-theme-halloween .admin-recent-visitors-list {
+    border-color: rgba(255, 138, 37, 0.18);
+    background: rgba(5, 2, 12, 0.5);
+}
+
+body.home-v3-page.index-theme-halloween .admin-abuse-close-btn {
+    border: 1px solid rgba(184, 255, 95, 0.24);
+    background: rgba(184, 255, 95, 0.09);
+    color: #fff6e8;
+}
+
+body.home-v3-page.index-theme-halloween .admin-abuse-modal-content::before,
+body.home-v3-page.index-theme-halloween .admin-abuse-section::before,
+body.home-v3-page.index-theme-halloween .admin-abuse-card::before {
+    content: none;
+    display: none;
+}
+
+body.home-v3-page.index-theme-halloween .admin-abuse-modal-content {
+    display: grid !important;
+    grid-auto-flow: row;
+    grid-auto-rows: max-content;
+    align-content: start;
+    gap: 14px;
+    isolation: auto;
+    overflow-y: auto;
+    overflow-x: hidden;
+    text-align: left;
+}
+
+body.home-v3-page.index-theme-halloween .admin-abuse-section,
+body.home-v3-page.index-theme-halloween .admin-abuse-card {
+    display: grid;
+    grid-auto-flow: row;
+    grid-auto-rows: max-content;
+    align-content: start;
+    gap: 10px;
+    flex: 0 0 auto;
+    box-sizing: border-box;
+    isolation: auto;
+    overflow: visible;
+    min-height: 0;
+    height: auto;
+    padding: 16px 18px;
+    background:
+        linear-gradient(180deg, #15091f, #0b0612);
+}
+
+body.home-v3-page.index-theme-halloween .admin-abuse-section h3 {
+    margin: 0 !important;
+}
+
+body.home-v3-page.index-theme-halloween .admin-abuse-card {
+    padding: 12px;
+}
+
+body.home-v3-page.index-theme-halloween .admin-abuse-card-title {
+    margin: 0 !important;
+}
+
+body.home-v3-page.index-theme-halloween .admin-abuse-section > *,
+body.home-v3-page.index-theme-halloween .admin-abuse-card > * {
+    min-width: 0;
+    position: relative;
+    z-index: 1;
+}
+
+body.home-v3-page.index-theme-halloween .admin-abuse-row {
+    align-items: stretch;
+}
+
+body.home-v3-page.index-theme-halloween .admin-abuse-input,
+body.home-v3-page.index-theme-halloween .admin-abuse-select,
+body.home-v3-page.index-theme-halloween .admin-abuse-btn {
+    min-height: 42px;
+}
+
+body.home-v3-page.index-theme-halloween .admin-abuse-input,
+body.home-v3-page.index-theme-halloween .admin-abuse-select {
+    border-radius: 8px;
+}
+
+body.home-v3-page.index-theme-halloween .admin-visitor-stats {
+    align-items: stretch;
+}
+
+body.home-v3-page.index-theme-halloween .admin-visitor-stat {
+    min-height: 68px;
+    padding: 12px;
+}
+
+body.home-v3-page.index-theme-christmas .admin-abuse-modal-content {
+    display: grid !important;
+    grid-auto-flow: row;
+    grid-auto-rows: max-content;
+    align-content: start;
+    gap: 14px;
+    isolation: auto;
+    overflow-y: auto;
+    overflow-x: hidden;
+    text-align: left;
+    border: 1px solid rgba(155, 232, 255, 0.34);
+    border-radius: 12px;
+    background:
+        radial-gradient(ellipse 70% 34% at 88% 4%, rgba(255, 255, 255, 0.16), transparent 68%),
+        radial-gradient(ellipse 58% 36% at 12% 12%, rgba(217, 33, 57, 0.12), transparent 68%),
+        linear-gradient(180deg, #082c38, #03101a);
+    box-shadow: 0 28px 70px rgba(0, 0, 0, 0.54), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+body.home-v3-page.index-theme-christmas .admin-abuse-modal-content .picker-modal-heading {
+    border-bottom: 1px solid rgba(155, 232, 255, 0.18);
+    padding-bottom: 12px;
+}
+
+body.home-v3-page.index-theme-christmas .admin-abuse-modal-content .picker-modal-kicker,
+body.home-v3-page.index-theme-christmas .admin-abuse-card-title,
+body.home-v3-page.index-theme-christmas .admin-abuse-section h3 {
+    color: #9be8ff;
+}
+
+body.home-v3-page.index-theme-christmas .admin-abuse-modal-content h2 {
+    color: #fff7d1;
+    text-shadow: 0 0 24px rgba(155, 232, 255, 0.22);
+}
+
+body.home-v3-page.index-theme-christmas .admin-abuse-section,
+body.home-v3-page.index-theme-christmas .admin-abuse-card {
+    display: grid;
+    grid-auto-flow: row;
+    grid-auto-rows: max-content;
+    align-content: start;
+    gap: 10px;
+    flex: 0 0 auto;
+    box-sizing: border-box;
+    isolation: auto;
+    overflow: visible;
+    min-height: 0;
+    height: auto;
+    padding: 16px 18px;
+    border-color: rgba(155, 232, 255, 0.2);
+    border-radius: 10px;
+    background: linear-gradient(180deg, #092633, #04121d);
+}
+
+body.home-v3-page.index-theme-christmas .admin-abuse-input,
+body.home-v3-page.index-theme-christmas .admin-abuse-select,
+body.home-v3-page.index-theme-christmas .admin-abuse-textarea {
+    border-color: rgba(155, 232, 255, 0.26);
+    border-radius: 8px;
+    background: rgba(2, 13, 20, 0.78);
+    color: #f3fbff;
+    box-shadow: inset 0 0 0 1px rgba(255, 224, 138, 0.06);
+}
+
+body.home-v3-page.index-theme-christmas .admin-abuse-input::placeholder,
+body.home-v3-page.index-theme-christmas .admin-abuse-textarea::placeholder {
+    color: rgba(230, 248, 255, 0.52);
+}
+
+body.home-v3-page.index-theme-christmas .admin-abuse-btn {
+    min-height: 42px;
+    border: 1px solid rgba(255, 224, 138, 0.32);
+    background: linear-gradient(135deg, #ffffff, #9be8ff 48%, #ffe08a);
+    color: #06141d;
+    box-shadow: 0 10px 24px rgba(125, 211, 252, 0.16);
+}
+
+body.home-v3-page.index-theme-christmas .admin-abuse-btn-secondary {
+    border-color: rgba(217, 33, 57, 0.28);
+    background: rgba(217, 33, 57, 0.14);
+    color: #fff2f4;
+    box-shadow: none;
+}
+
+body.home-v3-page.index-theme-christmas .admin-abuse-status {
+    color: rgba(230, 248, 255, 0.76);
+}
+
+body.home-v3-page.index-theme-christmas .admin-visitor-stat,
+body.home-v3-page.index-theme-christmas .admin-recent-visitors-list {
+    border-color: rgba(155, 232, 255, 0.18);
+    background: rgba(2, 13, 20, 0.5);
+}
+
+body.home-v3-page.index-theme-christmas .admin-abuse-close-btn {
+    border: 1px solid rgba(155, 232, 255, 0.24);
+    background: rgba(155, 232, 255, 0.09);
+    color: #f3fbff;
+}
+
+body.home-v3-page.index-theme-christmas .admin-abuse-modal-content::before,
+body.home-v3-page.index-theme-christmas .admin-abuse-section::before,
+body.home-v3-page.index-theme-christmas .admin-abuse-card::before {
+    content: none;
+    display: none;
+}
+
+body.home-v3-page.index-theme-christmas .admin-abuse-section h3,
+body.home-v3-page.index-theme-christmas .admin-abuse-card-title {
+    margin: 0 !important;
+}
+
+body.home-v3-page.index-theme-christmas .admin-abuse-card {
+    padding: 12px;
+}
+
+body.home-v3-page.index-theme-christmas .admin-abuse-section > *,
+body.home-v3-page.index-theme-christmas .admin-abuse-card > * {
+    min-width: 0;
+    position: relative;
+    z-index: 1;
+}
+
+body.home-v3-page.index-theme-christmas .admin-abuse-row {
+    align-items: stretch;
+}
+
+body.home-v3-page.index-theme-christmas .admin-abuse-input,
+body.home-v3-page.index-theme-christmas .admin-abuse-select {
+    min-height: 42px;
+}
+
+body.home-v3-page.index-theme-christmas .admin-visitor-stats {
+    align-items: stretch;
+}
+
+body.home-v3-page.index-theme-christmas .admin-visitor-stat {
+    min-height: 68px;
+    padding: 12px;
+}
+
+body.home-v3-page .profile-badge-panel,
+body.home-v3-page .profile-overhaul-equipped,
+body.home-v3-page .profile-inventory-hero .profile-overhaul-equipped {
+    max-width: 100% !important;
+    min-width: 0 !important;
+    box-sizing: border-box !important;
+}
+
+body.home-v3-page .profile-overhaul-equipped {
+    grid-template-columns: minmax(0, 1fr) auto !important;
+}
+
+body.home-v3-page .profile-overhaul-equipped > div {
+    min-width: 0 !important;
+    max-width: 100% !important;
+}
+
+body.home-v3-page .profile-badge-name,
+body.home-v3-page .profile-overhaul-equipped strong,
+body.home-v3-page .profile-inventory-hero .profile-overhaul-equipped strong {
+    max-width: 100% !important;
+    white-space: normal !important;
+    overflow-wrap: anywhere !important;
+    word-break: break-word !important;
+}
+
+body.home-v3-page .profile-overhaul-equipped strong,
+body.home-v3-page .profile-inventory-hero .profile-overhaul-equipped strong {
+    display: -webkit-box !important;
+    -webkit-box-orient: vertical !important;
+    -webkit-line-clamp: 2 !important;
+    overflow: hidden !important;
+    line-height: 1.08 !important;
 }

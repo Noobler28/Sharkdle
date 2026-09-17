@@ -15,6 +15,79 @@ const achievementCategoryMeta = [
     { key: "milestones", label: "Social", icon: "fa-users" }
 ];
 
+const ACHIEVEMENT_RARITY_META = {
+    common: { label: "Common", rank: 1 },
+    rare: { label: "Rare", rank: 2 },
+    epic: { label: "Epic", rank: 3 },
+    legendary: { label: "Legendary", rank: 4 },
+    mythic: { label: "Mythic", rank: 5 }
+};
+
+function getAchievementRarity(achievement = {}) {
+    if (ACHIEVEMENT_RARITY_META[achievement.rarity]) return achievement.rarity;
+    const points = Number(achievement.points) || 0;
+    if (points >= 500) return "mythic";
+    if (points >= 300) return "legendary";
+    if (points >= 150) return "epic";
+    if (points >= 50) return "rare";
+    return "common";
+}
+
+function getAchievementRarityMeta(achievement = {}) {
+    const rarity = getAchievementRarity(achievement);
+    return { id: rarity, ...(ACHIEVEMENT_RARITY_META[rarity] || ACHIEVEMENT_RARITY_META.common) };
+}
+
+function getAllAchievementDefinitions() {
+    return Object.values(achievementDefinitions).flat();
+}
+
+function getAchievementById(achievementId) {
+    return getAllAchievementDefinitions().find(achievement => achievement.id === achievementId) || null;
+}
+
+function getAchievementProgressValue(achievement = {}, profileData = {}) {
+    const metric = achievement.metric || "";
+    if (metric === "wins" || achievement.id?.includes("wins_")) return Number(profileData.wins) || 0;
+    if (metric === "gamesPlayed" || achievement.id?.includes("games_")) return Number(profileData.gamesPlayed ?? profileData.games) || 0;
+    if (metric === "currentStreak" || achievement.id?.includes("streak_")) return Number(profileData.currentStreak) || 0;
+    if (metric === "highestStreak") return Number(profileData.highestStreak) || 0;
+    if (metric === "friendsCount" || achievement.id?.includes("friends_")) return Number(profileData.friendsCount) || 0;
+    if (metric === "duelGames") return Number(profileData.duelGames) || 0;
+    if (metric === "duelWins") return Number(profileData.duelWins) || 0;
+    if (metric === "cratesOpened") {
+        if (typeof window.getOpenedCrateCount === "function") return window.getOpenedCrateCount(profileData);
+        return Number(profileData.cratesOpened) || 0;
+    }
+    return 0;
+}
+
+function getAchievementRewardText(achievement = {}) {
+    const rewards = [];
+    if (achievement.badgeRewardName) rewards.push(`${achievement.badgeRewardName} badge`);
+    if (achievement.themeRewardName) rewards.push(`${achievement.themeRewardName} theme`);
+    if (achievement.cosmetic?.name) rewards.push(`${achievement.cosmetic.name} portrait`);
+    return rewards.join(" + ");
+}
+
+function cacheAchievementCatalog() {
+    const catalog = getAllAchievementDefinitions().map(achievement => ({
+        id: achievement.id,
+        name: achievement.name,
+        description: achievement.description,
+        icon: achievement.icon,
+        points: achievement.points,
+        rarity: getAchievementRarity(achievement),
+        rewardText: getAchievementRewardText(achievement)
+    }));
+    window.SharkdleAchievementCatalog = catalog;
+    try {
+        localStorage.setItem("achievementCatalogCache", JSON.stringify(catalog));
+    } catch (error) {
+        console.warn("Unable to cache achievement catalog:", error);
+    }
+}
+
 // Achievement Definitions
 const achievementDefinitions = {
     // Special Achievements
@@ -42,6 +115,7 @@ const achievementDefinitions = {
             icon: '🦈',
             points: 180,
             type: 'special',
+            rarity: 'epic',
             themeRewardId: 'pearl-reef',
             themeRewardName: 'Pearl Reef'
         },
@@ -111,6 +185,32 @@ const achievementDefinitions = {
             icon: '🛡️',
             points: 100,
             type: 'special'
+        },
+        {
+            id: 'crate_collector_10',
+            name: 'Crate Collector',
+            description: 'Open 10 cosmetic crates',
+            icon: '🧰',
+            points: 125,
+            type: 'special',
+            milestone: 10,
+            metric: 'cratesOpened',
+            rarity: 'rare',
+            badgeRewardId: 'crate-connoisseur',
+            badgeRewardName: 'Crate Connoisseur'
+        },
+        {
+            id: 'crate_collector_50',
+            name: 'Vault Breaker',
+            description: 'Open 50 cosmetic crates',
+            icon: '💎',
+            points: 320,
+            type: 'special',
+            milestone: 50,
+            metric: 'cratesOpened',
+            rarity: 'legendary',
+            themeRewardId: 'neon-reef',
+            themeRewardName: 'Neon Reef'
         }
     ],
     
@@ -123,7 +223,9 @@ const achievementDefinitions = {
         { id: 'wins_25', name: 'Legendary Observer', description: 'Win 25 games', icon: '👑', points: 100, milestone: 25 },
         { id: 'wins_50', name: 'Master Observer', description: 'Win 50 games', icon: '👑👑', points: 150, milestone: 50 },
         { id: 'wins_100', name: 'Mythical Observer', description: 'Win 100 games', icon: '🏆', points: 250, milestone: 100 },
-        { id: 'wins_250', name: 'Transcendant Observer', description: 'Win 250 games', icon: '🏆🏆', points: 400, milestone: 250 }
+        { id: 'wins_250', name: 'Transcendant Observer', description: 'Win 250 games', icon: '🏆🏆', points: 400, milestone: 250, rarity: 'legendary' },
+        { id: 'wins_500', name: 'Abyssal Legend', description: 'Win 500 games', icon: '🌌', points: 550, milestone: 500, rarity: 'mythic', badgeRewardId: 'abyssal-legend', badgeRewardName: 'Abyssal Legend' },
+        { id: 'wins_1000', name: 'Eternal Fin', description: 'Win 1,000 games', icon: '♾️', points: 900, milestone: 1000, rarity: 'mythic', themeRewardId: 'lunar-current', themeRewardName: 'Lunar Current' }
     ],
     
     // Games Played Milestones
@@ -133,7 +235,9 @@ const achievementDefinitions = {
         { id: 'games_50', name: 'Dedicated Gamer', description: 'Play 50 games', icon: '🎮🎮🎮', points: 75, milestone: 50 },
         { id: 'games_100', name: 'Obsessed', description: 'Play 100 games', icon: '🎮🎮🎮🎮', points: 150, milestone: 100 },
         { id: 'games_250', name: 'Cant Stop', description: 'Play 250 games', icon: '💪', points: 250, milestone: 250 },
-        { id: 'games_500', name: 'True Addict', description: 'Play 500 games', icon: '🌊', points: 400, milestone: 500 }
+        { id: 'games_500', name: 'True Addict', description: 'Play 500 games', icon: '🌊', points: 400, milestone: 500, rarity: 'legendary' },
+        { id: 'games_750', name: 'Deep Habit', description: 'Play 750 games', icon: '📘', points: 520, milestone: 750, rarity: 'mythic' },
+        { id: 'games_1000', name: 'Marathon Fin', description: 'Play 1,000 games', icon: '🏁', points: 750, milestone: 1000, rarity: 'mythic', badgeRewardId: 'marathon-fin', badgeRewardName: 'Marathon Fin' }
     ],
     
     // Streak Milestones
@@ -143,18 +247,24 @@ const achievementDefinitions = {
         { id: 'streak_5', name: 'Hot Streak', description: 'Win 5 games in a row', icon: '🔥🔥', points: 40, milestone: 5 },
         { id: 'streak_10', name: 'Unbeatable', description: 'Win 10 games in a row', icon: '🔥🔥🔥', points: 100, milestone: 10 },
         { id: 'streak_25', name: 'Unstoppable', description: 'Win 25 games in a row', icon: '⚡', points: 200, milestone: 25 },
-        { id: 'streak_50', name: 'Invincible', description: 'Win 50 games in a row', icon: '⚡⚡', points: 350, milestone: 50 }
+        { id: 'streak_50', name: 'Invincible', description: 'Win 50 games in a row', icon: '⚡⚡', points: 350, milestone: 50, rarity: 'legendary' },
+        { id: 'streak_75', name: 'Current Keeper', description: 'Win 75 games in a row', icon: '🌊', points: 500, milestone: 75, rarity: 'mythic' },
+        { id: 'streak_100', name: 'Untouchable Tide', description: 'Win 100 games in a row', icon: '🔱', points: 800, milestone: 100, rarity: 'mythic', themeRewardId: 'volcanic-ember', themeRewardName: 'Volcanic Ember' }
     ],
     
     // Efficiency Achievements
     efficiency: [
+        { id: 'perfect_win', name: 'One-Shot Oracle', description: 'Win in 1 guess', icon: '🎯', points: 125, type: 'efficiency', rarity: 'rare', badgeRewardId: 'one-shot-oracle', badgeRewardName: 'One-Shot Oracle' },
         { id: 'avg_guesses_low', name: 'Sharp Mind', description: 'Average 4 or fewer guesses per win', icon: '🧠', points: 100, type: 'efficiency' },
-        { id: 'guess_master', name: 'Guess Master', description: 'Average 3 or fewer guesses per win', icon: '🎯', points: 150, type: 'efficiency', themeRewardId: 'deep-abyss', themeRewardName: 'Deep Abyss' }
+        { id: 'guess_master', name: 'Guess Master', description: 'Average 3 or fewer guesses per win', icon: '🎯', points: 150, type: 'efficiency', rarity: 'epic', themeRewardId: 'deep-abyss', themeRewardName: 'Deep Abyss' }
     ],
 
     duels: [
         { id: 'duel_played', name: 'First Blood', description: 'Play your first friend duel', icon: '⚔️', points: 40, type: 'duel' },
-        { id: 'duel_won', name: 'Apex Rival', description: 'Win a friend duel', icon: '🏆', points: 75, type: 'duel', themeRewardId: 'storm-current', themeRewardName: 'Storm Current' }
+        { id: 'duel_won', name: 'Apex Rival', description: 'Win a friend duel', icon: '🏆', points: 75, type: 'duel', rarity: 'rare', themeRewardId: 'storm-current', themeRewardName: 'Storm Current' },
+        { id: 'duel_games_10', name: 'Duel Regular', description: 'Play 10 friend duels', icon: '🤝', points: 140, type: 'duel', milestone: 10, metric: 'duelGames', rarity: 'rare' },
+        { id: 'duel_wins_10', name: 'Rival Breaker', description: 'Win 10 friend duels', icon: '🥇', points: 260, type: 'duel', milestone: 10, metric: 'duelWins', rarity: 'epic', badgeRewardId: 'rival-breaker', badgeRewardName: 'Rival Breaker' },
+        { id: 'duel_wins_25', name: 'Arena Apex', description: 'Win 25 friend duels', icon: '👑', points: 420, type: 'duel', milestone: 25, metric: 'duelWins', rarity: 'legendary' }
     ],
 
     // World Map Achievements
@@ -215,7 +325,10 @@ const achievementDefinitions = {
             description: 'Complete Japan region on the world map',
             icon: '🧩',
             points: 450,
-            type: 'worldmap'
+            type: 'worldmap',
+            rarity: 'legendary',
+            badgeRewardId: 'deep-cartographer',
+            badgeRewardName: 'Deep Cartographer'
         },
         {
             id: 'australia_master',
@@ -231,9 +344,12 @@ const achievementDefinitions = {
         { id: 'friends_1', name: 'First Friend', description: 'Add your first friend', icon: '👋', points: 25, milestone: 1 },
         { id: 'friends_3', name: 'Social Butterfly', description: 'Add 3 friends', icon: '🦋', points: 50, milestone: 3 },
         { id: 'friends_5', name: 'Popular', description: 'Add 5 friends', icon: '⭐', points: 100, milestone: 5 },
-        { id: 'friends_10', name: 'Socialite', description: 'Add 10 friends', icon: '👥', points: 200, milestone: 10 }
+        { id: 'friends_10', name: 'Socialite', description: 'Add 10 friends', icon: '👥', points: 200, milestone: 10, rarity: 'epic' },
+        { id: 'friends_25', name: 'Social Current', description: 'Add 25 friends', icon: '🌐', points: 420, milestone: 25, metric: 'friendsCount', rarity: 'legendary', badgeRewardId: 'social-current', badgeRewardName: 'Social Current' }
     ]
 };
+
+cacheAchievementCatalog();
 
 // Initialize achievements on page load
 document.addEventListener('DOMContentLoaded', async function() {
@@ -478,6 +594,13 @@ async function retroactivelyUnlockAchievements(profileData, unlockedAchievements
     if ((secretState.apexCells || 0) >= 10 && !unlockedAchievements.includes('secret_apex_cells_10')) {
         unlockedAchievements.push('secret_apex_cells_10');
     }
+
+    getAllAchievementDefinitions().forEach(achievement => {
+        if (!achievement.milestone || unlockedAchievements.includes(achievement.id)) return;
+        if (getAchievementProgressValue(achievement, profileData) >= achievement.milestone) {
+            unlockedAchievements.push(achievement.id);
+        }
+    });
 
     // Check story/world map progress
     try {
@@ -759,12 +882,17 @@ function createCategorySection(categoryName, categoryKey, profileData, unlockedA
 
 function createAchievementCard(achievement, profileData, unlockedAchievements) {
     const card = document.createElement('div');
-    card.className = 'achievement-card';
+    const rarityMeta = getAchievementRarityMeta(achievement);
+    card.className = `achievement-card rarity-${rarityMeta.id}`;
     const secretHidden = achievement.hiddenUntilSecret && !hasSecretPageDiscovery();
     
-    const isUnlocked = unlockedAchievements.includes(achievement.id);
     const claimedAchievements = getStoredAchievementIds("claimedAchievements");
     const isClaimed = claimedAchievements.includes(achievement.id);
+    const isUnlocked = unlockedAchievements.includes(achievement.id) || isClaimed;
+    const showcasedAchievements = typeof window.getProfileShowcasedAchievementIds === "function"
+        ? window.getProfileShowcasedAchievementIds(profileData)
+        : [];
+    const isShowcased = showcasedAchievements.includes(achievement.id);
     
     card.classList.add(isUnlocked ? 'unlocked' : 'locked');
     
@@ -787,6 +915,10 @@ function createAchievementCard(achievement, profileData, unlockedAchievements) {
     const pointsDisplay = document.createElement('div');
     pointsDisplay.className = 'achievement-points';
     pointsDisplay.textContent = `+${achievement.points} XP`;
+
+    const rarityDisplay = document.createElement('div');
+    rarityDisplay.className = `achievement-rarity rarity-${rarityMeta.id}`;
+    rarityDisplay.textContent = secretHidden ? "Hidden" : rarityMeta.label;
     
     const status = document.createElement('div');
     status.className = 'achievement-status';
@@ -801,9 +933,16 @@ function createAchievementCard(achievement, profileData, unlockedAchievements) {
         rewardNote.textContent = `Unlocks the ${achievement.themeRewardName} profile theme when claimed.`;
         content.appendChild(rewardNote);
     }
+    if (achievement.badgeRewardName && !secretHidden) {
+        const rewardNote = document.createElement('div');
+        rewardNote.className = 'achievement-description';
+        rewardNote.textContent = `Unlocks the ${achievement.badgeRewardName} badge when claimed.`;
+        content.appendChild(rewardNote);
+    }
 
     const side = document.createElement('div');
     side.className = 'achievement-side';
+    side.appendChild(rarityDisplay);
     side.appendChild(pointsDisplay);
     
     // Determine progress display
@@ -835,16 +974,7 @@ function createAchievementCard(achievement, profileData, unlockedAchievements) {
         }
     } else if (achievement.milestone) {
         // Show progress for milestone achievements
-        let currentProgress = 0;
-        if (achievement.id.includes('wins_')) {
-            currentProgress = profileData.wins || 0;
-        } else if (achievement.id.includes('games_')) {
-            currentProgress = profileData.gamesPlayed || 0;
-        } else if (achievement.id.includes('streak_')) {
-            currentProgress = profileData.currentStreak || 0;
-        } else if (achievement.id.includes('friends_')) {
-            currentProgress = profileData.friendsCount || 0;
-        }
+        const currentProgress = getAchievementProgressValue(achievement, profileData);
         
         const progress = Math.min((currentProgress / achievement.milestone) * 100, 100);
         status.textContent = `${currentProgress}/${achievement.milestone}`;
@@ -861,6 +991,20 @@ function createAchievementCard(achievement, profileData, unlockedAchievements) {
     }
     
     side.appendChild(status);
+    if (isClaimed && !secretHidden) {
+        const showcaseBtn = document.createElement('button');
+        showcaseBtn.type = 'button';
+        showcaseBtn.className = `achievement-showcase-btn ${isShowcased ? "active" : ""}`;
+        showcaseBtn.textContent = isShowcased ? "Showing" : "Showcase";
+        showcaseBtn.onclick = async function(e) {
+            e.stopPropagation();
+            if (typeof window.setProfileShowcaseAchievement === "function") {
+                window.setProfileShowcaseAchievement(achievement.id, !isShowcased);
+                setTimeout(async () => await loadAndDisplayAchievements(), 150);
+            }
+        };
+        side.appendChild(showcaseBtn);
+    }
     if (progressBar) content.appendChild(progressBar);
     card.appendChild(media);
     card.appendChild(content);
@@ -938,6 +1082,8 @@ async function claimAchievementReward(achievementId, points) {
         const profileData = typeof window.getCurrentProfileData === "function"
             ? window.getCurrentProfileData()
             : JSON.parse(localStorage.getItem("userProfile") || "{}");
+        profileData.claimedAchievements = claimedAchievements;
+        profileData.unlockedAchievements = mergeAchievementIdLists(profileData.unlockedAchievements, getStoredAchievementIds("unlockedAchievements"));
         const xpAward = typeof window.applyLimitedTimeXpBonus === "function"
             ? window.applyLimitedTimeXpBonus(points)
             : { totalXp: points, multiplier: 1, baseXp: points };
@@ -960,6 +1106,14 @@ async function claimAchievementReward(achievementId, points) {
             profileData.unlockedCardThemes = themeSyncResult.unlockedThemeIds;
             unlockedThemeName = achievement.themeRewardName || achievement.themeRewardId;
         }
+        let unlockedBadgeName = "";
+        if (achievement?.badgeRewardId) {
+            if (!Array.isArray(profileData.unlockedBadges)) profileData.unlockedBadges = ["starter"];
+            if (!profileData.unlockedBadges.includes(achievement.badgeRewardId)) {
+                profileData.unlockedBadges.push(achievement.badgeRewardId);
+            }
+            unlockedBadgeName = achievement.badgeRewardName || achievement.badgeRewardId;
+        }
         
         if (typeof window.saveUserProfileLocally === "function") {
             window.saveUserProfileLocally(profileData);
@@ -980,6 +1134,9 @@ async function claimAchievementReward(achievementId, points) {
         showClaimNotification(xpAward.totalXp, xpAward.multiplier, xpAward.baseXp);
         if (unlockedThemeName && typeof showNotification === "function") {
             showNotification(`${unlockedThemeName} profile theme unlocked!`, 'success', 4200);
+        }
+        if (unlockedBadgeName && typeof showNotification === "function") {
+            showNotification(`${unlockedBadgeName} badge unlocked!`, 'success', 4200);
         }
     }
 }
@@ -1074,6 +1231,9 @@ function checkAchievements(isWin, guessesTaken, wasGameWon) {
     if (isWin && guessesTaken === 2) {
         unlockAchievement('speed_win');
     }
+    if (isWin && guessesTaken === 1) {
+        unlockAchievement('perfect_win');
+    }
     
     if (isWin && guessesTaken === 11) {
         unlockAchievement('comeback_win');
@@ -1104,6 +1264,14 @@ function checkAchievements(isWin, guessesTaken, wasGameWon) {
             unlockAchievement(achievement.id);
         }
     });
+
+    achievementDefinitions.duels
+        .filter(achievement => achievement.milestone)
+        .forEach(achievement => {
+            if (getAchievementProgressValue(achievement, profileData) >= achievement.milestone) {
+                unlockAchievement(achievement.id);
+            }
+        });
     
     // Check efficiency achievements
     if (wins > 0) {

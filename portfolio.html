@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Portfolio for Connor Eagle, creator of Sharkdle.">
+  <title>Connor Eagle | Sharkdle Creator</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%2306101d'/%3E%3Cpath d='M12 37c12-16 25-20 40-14-6 2-9 5-12 10 5 1 9 4 12 9-15 3-28 0-40-5Z' fill='%2316c4d8'/%3E%3Ccircle cx='43' cy='28' r='2.5' fill='%23f7fbff'/%3E%3Cpath d='M20 38c3 5 8 8 14 9-5 4-12 4-19 0 1-3 2-6 5-9Z' fill='%237bd389'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="portfolio.css">
+  <script src="portfolio.js" defer></script>
+</head>
+<body>
+  <div class="spotlight" aria-hidden="true"></div>
+  <header class="site-header">
+    <a class="brand" href="portfolio.html" aria-label="Connor Eagle portfolio home">
+      <span class="brand-mark">CE</span>
+      <span>Connor Eagle</span>
+    </a>
+    <nav aria-label="Portfolio navigation">
+      <a href="#case-study">Work</a>
+      <a href="#craft">Craft</a>
+      <a href="#lab">Lab</a>
+      <a href="#contact">Contact</a>
+    </nav>
+  </header>
+
+  <main>
+    <section class="hero" aria-labelledby="hero-title">
+      <img src="images/dev.jpg" alt="Connor scuba diving in an aquarium" class="hero-image">
+      <div class="hero-overlay"></div>
+
+      <div class="hero-content">
+        <p class="eyebrow">Independent game creator / Noobler28</p>
+        <h1 id="hero-title">Building ocean-bright games for curious players.</h1>
+        <p class="hero-copy">
+          I am Connor Eagle, creator of Sharkdle: a daily web game that blends shark identification,
+          collectible rewards, minigames, events, leaderboards, and a growing community.
+        </p>
+        <div class="hero-actions" aria-label="Primary links">
+          <a class="button primary" href="https://sharkdle.online">Play Sharkdle</a>
+          <a class="button secondary" href="#case-study">Read the Case Study</a>
+        </div>
+      </div>
+
+      <aside class="hero-panel" aria-label="Portfolio highlights">
+        <div class="metric-card featured">
+          <span>Live project</span>
+          <strong>Sharkdle</strong>
+          <small>Daily shark-guessing game</small>
+        </div>
+        <div class="metric-card">
+          <span>Built with</span>
+          <strong>HTML, CSS, JavaScript, Firebase</strong>
+        </div>
+        <div class="metric-card">
+          <span>Focus</span>
+          <strong>Game feel, retention, learning, community</strong>
+        </div>
+      </aside>
+    </section>
+
+    <section class="marquee" aria-label="Portfolio focus areas">
+      <div>
+        <span>Game systems</span>
+        <span>Responsive UI</span>
+        <span>Player rewards</span>
+        <span>Species discovery</span>
+        <span>Community updates</span>
+        <span>Mobile polish</span>
+        <span aria-hidden="true">Game systems</span>
+        <span aria-hidden="true">Responsive UI</span>
+        <span aria-hidden="true">Player rewards</span>
+        <span aria-hidden="true">Species discovery</span>
+        <span aria-hidden="true">Community updates</span>
+        <span aria-hidden="true">Mobile polish</span>
+      </div>
+    </section>
+
+    <section class="intro-section" aria-label="About Connor">
+      <div>
+        <p class="section-kicker">About</p>
+        <h2>I build playful, information-rich web experiences around things people are curious about.</h2>
+      </div>
+      <p>
+        My work sits between game design, front-end development, and learning design. I like projects
+        with a clear hook, a lot of hidden depth, and enough personality that players remember them.
+        Sharkdle is the main example: a simple guessing loop that has grown into modes, rewards,
+        species references, mobile support, and live updates.
+      </p>
+    </section>
+
+    <section class="case-study reveal" id="case-study" aria-labelledby="case-title">
+      <div class="section-heading">
+        <p class="section-kicker">Featured case study</p>
+        <h2 id="case-title">Sharkdle</h2>
+      </div>
+
+      <article class="case-card">
+        <div class="case-copy">
+          <p class="project-type">Live web game</p>
+          <h3>A daily shark identification game that expanded into a full player ecosystem.</h3>
+          <p>
+            Sharkdle began with a simple challenge: guess the shark. The project now supports daily,
+            practice, infinite, story, and minigame modes, with achievements, profile themes, cosmetic
+            collections, Sharkpass progression, leaderboards, and Firebase-backed player data.
+          </p>
+          <div class="case-actions">
+            <a class="button primary" href="https://sharkdle.online">Open Sharkdle</a>
+            <a class="button secondary" href="index.html">View Local Game Page</a>
+          </div>
+        </div>
+
+        <div class="case-stack" aria-label="Sharkdle project facts">
+          <div>
+            <span>Role</span>
+            <strong>Creator, designer, developer</strong>
+          </div>
+          <div>
+            <span>Platform</span>
+            <strong>Responsive web + mobile build</strong>
+          </div>
+          <div>
+            <span>Core stack</span>
+            <strong>HTML, CSS, JavaScript, Firebase</strong>
+          </div>
+          <div>
+            <span>Release style</span>
+            <strong>Frequent updates and seasonal content</strong>
+          </div>
+        </div>
+      </article>
+
+      <div class="bento-grid">
+        <article class="bento-card tall">
+          <span class="work-icon">M</span>
+          <h3>Multiple Modes</h3>
+          <p>Daily challenges, practice sessions, infinite play, story content, RNG, lagoon, and other minigame surfaces.</p>
+        </article>
+        <article class="bento-card">
+          <span class="work-icon">R</span>
+          <h3>Rewards + Identity</h3>
+          <p>Cosmetics, profile images, crates, achievements, Sharkpass progress, and profile themes give players long-term goals.</p>
+        </article>
+        <article class="bento-card">
+          <span class="work-icon">L</span>
+          <h3>Learning Layer</h3>
+          <p>The library and species details make the game more than a quiz, giving players a way to discover real shark information.</p>
+        </article>
+        <article class="bento-card wide">
+          <span class="work-icon">U</span>
+          <h3>Live Updates</h3>
+          <p>Events, broadcasts, seasonal drops, and mobile releases keep the project feeling active instead of frozen.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="craft-section reveal" id="craft" aria-labelledby="craft-title">
+      <div class="section-heading">
+        <p class="section-kicker">Craft</p>
+        <h2 id="craft-title">How I Work</h2>
+      </div>
+
+      <div class="craft-layout">
+        <div class="skill-list" aria-label="Skills">
+          <span>JavaScript</span>
+          <span>Responsive UI</span>
+          <span>Game Loops</span>
+          <span>Firebase</span>
+          <span>Player Progression</span>
+          <span>Content Systems</span>
+          <span>Mobile Web</span>
+          <span>Community Updates</span>
+          <span>Seasonal Events</span>
+          <span>Interface Polish</span>
+        </div>
+
+        <div class="process-list">
+          <article>
+            <span>Design the loop</span>
+            <p>Start with a repeatable action that is easy to understand and satisfying to improve at.</p>
+          </article>
+          <article>
+            <span>Add reasons to return</span>
+            <p>Build progression, collections, modes, and update rhythms around the core experience.</p>
+          </article>
+          <article>
+            <span>Polish the details</span>
+            <p>Tune layout, responsiveness, copy, feedback, and small interactions until the experience feels cared for.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="lab-section reveal" id="lab" aria-labelledby="lab-title">
+      <div class="section-heading">
+        <p class="section-kicker">Lab</p>
+        <h2 id="lab-title">What makes the work feel alive</h2>
+      </div>
+      <div class="lab-grid">
+        <article>
+          <span>01</span>
+          <h3>Fast Feedback</h3>
+          <p>Clear states, responsive motion, and small interface details that make every click feel intentional.</p>
+        </article>
+        <article>
+          <span>02</span>
+          <h3>Playable Depth</h3>
+          <p>Simple first sessions with deeper loops for players who want progress, collections, and mastery.</p>
+        </article>
+        <article>
+          <span>03</span>
+          <h3>Content Momentum</h3>
+          <p>Systems built to support new species, events, rewards, announcements, and future experiments.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="now-section reveal" aria-labelledby="now-title">
+      <p class="section-kicker">Now</p>
+      <h2 id="now-title">Currently improving Sharkdle through new modes, mobile polish, and richer player rewards.</h2>
+    </section>
+  </main>
+
+  <footer class="footer" id="contact">
+    <div>
+      <p class="section-kicker">Contact</p>
+      <h2>Want to talk games, sharks, or web projects?</h2>
+    </div>
+    <div class="footer-links" aria-label="Contact links">
+      <a href="https://sharkdle.online">Play Sharkdle</a>
+      <a href="https://discord.gg/FbnWZNsq">Join the Discord</a>
+      <a href="index.html">Return to the Game</a>
+    </div>
+  </footer>
+  <script src="global-broadcast.js"></script>
+</body>
+</html>

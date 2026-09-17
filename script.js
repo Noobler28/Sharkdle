@@ -1,4 +1,4 @@
-const FRIENDS_COLLECTION = 'friendNetwork';
+﻿const FRIENDS_COLLECTION = 'friendNetwork';
 const FRIEND_CODES_COLLECTION = 'friendCodes';
 let friendDocumentUnsubscribe = null;
 let adminCompensationNoticeUnsubscribe = null;
@@ -9,6 +9,9 @@ let duelSharkOptionNames = [];
 let duelSuggestionIndex = -1;
 let duelVisibleSuggestions = [];
 const PROCESSED_DUELS_KEY = 'processedFriendDuels';
+const SHARE_REWARD_ID = "friend-code-share-v1";
+const SHARE_REWARD_CRATES = 1;
+const REFERRAL_REWARD_CRATES = 1;
 
 const duelSizeThresholds = {
     Tiny: '0-3ft',
@@ -97,12 +100,160 @@ async function resolveUidFromFriendCode(code) {
     return doc.exists ? doc.data().uid : null;
 }
 
+function getReferralPairId(uidA, uidB) {
+    return [uidA, uidB].filter(Boolean).sort().join("_");
+}
+
+function getReferralRewards(profileData = {}) {
+    return profileData.referralRewards && typeof profileData.referralRewards === "object"
+        ? profileData.referralRewards
+        : {};
+}
+
+async function grantReferralCratesToUid(uid, pairId, source = "referral") {
+    if (!db || !uid || !pairId) return false;
+    const userRef = db.collection("userStats").doc(uid);
+    try {
+        let granted = false;
+        await db.runTransaction(async transaction => {
+            const snap = await transaction.get(userRef);
+            const data = snap.exists ? (snap.data() || {}) : {};
+            const rewards = getReferralRewards(data);
+            const rewardedPairs = Array.isArray(rewards.rewardedPairs) ? rewards.rewardedPairs : [];
+            if (rewardedPairs.includes(pairId)) return;
+            const inventory = normalizeCrateInventory(data.crateInventory || {});
+            inventory.reef = (Number(inventory.reef) || 0) + REFERRAL_REWARD_CRATES;
+            transaction.set(userRef, {
+                crateInventory: inventory,
+                referralRewards: {
+                    ...rewards,
+                    rewardedPairs: [...rewardedPairs, pairId],
+                    totalReferralCrates: (Number(rewards.totalReferralCrates) || 0) + REFERRAL_REWARD_CRATES,
+                    lastReferralRewardAt: Date.now(),
+                    lastReferralRewardSource: source
+                },
+                lastUpdated: new Date()
+            }, { merge: true });
+            granted = true;
+        });
+        return granted;
+    } catch (error) {
+        console.warn("Unable to grant referral crates:", error);
+        return false;
+    }
+}
+
+async function claimPendingReferralRewards() {
+    if (!currentUser || !db) return 0;
+    const networkRef = getFriendDocumentRef(currentUser.uid);
+    try {
+        const snap = await networkRef.get();
+        const data = snap.exists ? (snap.data() || {}) : {};
+        const pendingPairs = Array.isArray(data.pendingReferralRewardPairs) ? data.pendingReferralRewardPairs : [];
+        if (!pendingPairs.length) return 0;
+
+        const remainingPairs = [];
+        let claimed = 0;
+        for (const pairId of pendingPairs) {
+            const granted = await grantReferralCratesToUid(currentUser.uid, pairId, "friend-accepted-pending");
+            if (granted) {
+                claimed += REFERRAL_REWARD_CRATES;
+            } else {
+                remainingPairs.push(pairId);
+            }
+        }
+        await networkRef.set({ pendingReferralRewardPairs: remainingPairs }, { merge: true });
+        if (claimed > 0) {
+            await loadUserProfile();
+            renderCratesButton();
+            showNotification(`Referral reward: ${claimed} Cosmetic Crate${claimed === 1 ? "" : "s"}.`, "success", 3600);
+        }
+        return claimed;
+    } catch (error) {
+        console.warn("Unable to claim pending referral rewards:", error);
+        return 0;
+    }
+}
+
+async function grantLocalShareReward() {
+    if (!currentUser || !db) return false;
+    const profileData = getCurrentProfileData();
+    const rewards = getReferralRewards(profileData);
+    const claimed = Array.isArray(rewards.claimedShareRewards) ? rewards.claimedShareRewards : [];
+    if (claimed.includes(SHARE_REWARD_ID)) return false;
+
+    const inventory = getCrateInventory(profileData);
+    inventory.reef = (Number(inventory.reef) || 0) + SHARE_REWARD_CRATES;
+    profileData.crateInventory = normalizeCrateInventory(inventory);
+    profileData.referralRewards = {
+        ...rewards,
+        claimedShareRewards: [...claimed, SHARE_REWARD_ID],
+        shareRewardCrates: (Number(rewards.shareRewardCrates) || 0) + SHARE_REWARD_CRATES,
+        lastShareRewardAt: Date.now()
+    };
+    saveUserProfileLocally(profileData);
+    await db.collection("userStats").doc(currentUser.uid).set({
+        crateInventory: profileData.crateInventory,
+        referralRewards: profileData.referralRewards,
+        lastUpdated: new Date()
+    }, { merge: true });
+    renderCratesButton();
+    showNotification("Share reward claimed: 1 Cosmetic Crate.", "success", 3600);
+    return true;
+}
+
+function getFriendShareText() {
+    const code = currentUser ? generateFriendCode(currentUser.uid) : "";
+    return `Play Sharkdle with me. Add my friend code: ${code}`;
+}
+
+window.shareFriendCode = async function() {
+    if (!currentUser) {
+        openLoginModal();
+        return;
+    }
+    const shareText = getFriendShareText();
+    try {
+        if (navigator.share) {
+            await navigator.share({ title: "Sharkdle", text: shareText, url: window.location.origin || window.location.href });
+        } else if (navigator.clipboard) {
+            await navigator.clipboard.writeText(shareText);
+            showNotification("Friend code share text copied.", "success", 2600);
+        }
+        await grantLocalShareReward();
+    } catch (error) {
+        if (error?.name !== "AbortError") {
+            console.warn("Unable to share friend code:", error);
+            showNotification("Could not share right now.", "error", 3000);
+        }
+    }
+};
+
+window.copyFriendCode = async function() {
+    if (!currentUser) {
+        openLoginModal();
+        return;
+    }
+    const code = generateFriendCode(currentUser.uid);
+    try {
+        if (navigator.clipboard) {
+            await navigator.clipboard.writeText(code);
+        }
+        showNotification("Friend code copied.", "success", 2400);
+        await grantLocalShareReward();
+    } catch (error) {
+        console.warn("Unable to copy friend code:", error);
+        showNotification(`Friend code: ${code}`, "info", 4200);
+        await grantLocalShareReward();
+    }
+};
+
 window.openFriendsTab = async function() {
     if (!currentUser) {
         openLoginModal();
         return;
-        if (duelsList) duelsList.innerHTML = '<li class="empty-state"><div class="empty-icon">🔒</div><div class="empty-text">Login to see duels</div></li>';
-        if (duelsList) duelsList.innerHTML = '<li class="empty-state"><div class="empty-icon">🔒</div><div class="empty-text">Login to see duels</div></li>';
+        if (duelsList) duelsList.innerHTML = '<li class="empty-state"><div class="empty-icon">\u{1F512}</div><div class="empty-text">Login to see duels</div></li>';
+        if (duelsList) duelsList.innerHTML = '<li class="empty-state"><div class="empty-icon">\u{1F512}</div><div class="empty-text">Login to see duels</div></li>';
         return;
     }
     await openProfileModal();
@@ -131,9 +282,9 @@ async function populateFriendsTab() {
         const friendsList = document.getElementById('friends-list');
         const requestsList = document.getElementById('requests-list');
         const duelsList = document.getElementById('duels-list');
-        if (duelsList) duelsList.innerHTML = '<li class="empty-state"><div class="empty-icon">🔒</div><div class="empty-text">Login to see duels</div></li>';
-        if (friendsList) friendsList.innerHTML = '<li class="empty-state"><div class="empty-icon">🔒</div><div class="empty-text">Login to see friends</div></li>';
-        if (requestsList) requestsList.innerHTML = '<li class="empty-state"><div class="empty-icon">🔒</div><div class="empty-text">Login to see requests</div></li>';
+        if (duelsList) duelsList.innerHTML = '<li class="empty-state"><div class="empty-icon">\u{1F512}</div><div class="empty-text">Login to see duels</div></li>';
+        if (friendsList) friendsList.innerHTML = '<li class="empty-state"><div class="empty-icon">\u{1F512}</div><div class="empty-text">Login to see friends</div></li>';
+        if (requestsList) requestsList.innerHTML = '<li class="empty-state"><div class="empty-icon">\u{1F512}</div><div class="empty-text">Login to see requests</div></li>';
         return;
     }
 
@@ -144,6 +295,7 @@ async function populateFriendsTab() {
         ensureFriendDocument(currentUser.uid),
         ensureFriendCodeDocument(currentUser.uid)
     ]);
+    await claimPendingReferralRewards();
 
     const data = await getFriendNetworkData(currentUser.uid);
     const friends = Array.isArray(data.friends) ? data.friends : [];
@@ -242,7 +394,9 @@ const SHARKDLE_ACTIVITY_ROUTES = Object.freeze([
     { match: "/shark-rescue/", label: "Shark Rescue" },
     { match: "/secret.html", label: "Shark Rescue" },
     { match: "/minigames/sharkslots/", label: "Shark Slots" },
-    { match: "/slots.html", label: "Shark Slots" }
+    { match: "/slots.html", label: "Shark Slots" },
+    { match: "/minigames/sharklagoon/", label: "Shark Lagoon" },
+    { match: "/lagoon.html", label: "Shark Lagoon" }
 ]);
 
 function getCurrentSharkdleActivityLabel() {
@@ -352,31 +506,9 @@ function formatDuelStatus(status) {
     }
 }
 
-async function persistCrateProfileUpdate(profileData) {
-    profileData.lastUpdated = Date.now();
-    saveUserProfileLocally(profileData, { skipRemoteSync: true });
-
-    if (!currentUser || !db) return;
-    await db.collection("userStats").doc(currentUser.uid).set({
-        crateInventory: normalizeCrateInventory(profileData.crateInventory),
-        cratesOpened: Math.max(0, Number(profileData.cratesOpened) || 0),
-        cratesSinceLegendary: getCratesSinceLegendary(profileData),
-        streakShields: getStreakShieldCount(profileData),
-        instantCrateOpen: getCrateInstantOpenEnabled(profileData),
-        pearls: getPearlCount(profileData),
-        pearlBoostExpiresAt: getPearlBoostExpiresAt(profileData),
-        seasonXpBoosts: getSeasonXpBoosts(profileData),
-        totalXP: Math.max(0, Number(profileData.totalXP) || 0),
-        earnedCosmetics: Array.isArray(profileData.earnedCosmetics) ? profileData.earnedCosmetics : [],
-        unlockedBadges: Array.isArray(profileData.unlockedBadges) ? profileData.unlockedBadges : ["starter"],
-        unlockedCardThemes: Array.isArray(profileData.unlockedCardThemes) ? profileData.unlockedCardThemes : ["default"],
-        lastUpdated: profileData.lastUpdated,
-        ...buildCosmeticSyncPayload(profileData)
-    }, { merge: true });
-}
-
-const SEASONAL_CRATE_IDS = ["summer", "christmas", "halloween"];
+const SEASONAL_CRATE_IDS = ["christmas", "halloween"];
 const SEASONAL_CRATE_CRAFT_COST = 2;
+const SUMMER_CRATE_RETIREMENT_VERSION = 2;
 let activeSeasonalCrateThemeId = "default";
 let seasonalCrateCraftingInProgress = false;
 
@@ -394,7 +526,7 @@ function getSeasonalCrateMeta(crateId = "event") {
             countClass: "event",
             icon: "fa-star",
             spinColor: "#7ee8ff",
-            spinIcon: "★"
+            spinIcon: "\u{2605}"
         },
         summer: {
             id: "summer",
@@ -404,7 +536,7 @@ function getSeasonalCrateMeta(crateId = "event") {
             countClass: "summer",
             icon: "fa-umbrella-beach",
             spinColor: "#ff8f57",
-            spinIcon: "☀️"
+            spinIcon: "\u{2600}\uFE0F"
         },
         christmas: {
             id: "christmas",
@@ -414,7 +546,7 @@ function getSeasonalCrateMeta(crateId = "event") {
             countClass: "christmas",
             icon: "fa-gift",
             spinColor: "#4fd1a5",
-            spinIcon: "🎁"
+            spinIcon: "\u{1F381}"
         },
         halloween: {
             id: "halloween",
@@ -424,7 +556,7 @@ function getSeasonalCrateMeta(crateId = "event") {
             countClass: "halloween",
             icon: "fa-ghost",
             spinColor: "#b86cff",
-            spinIcon: "🎃"
+            spinIcon: "\u{1F383}"
         }
     };
     return meta[crateId] || meta.event;
@@ -456,11 +588,6 @@ function shouldShowSeasonalCratePanel(crateId, profileData = getCurrentProfileDa
 }
 
 function updateSeasonalCratePanels(profileData = getCurrentProfileData()) {
-    const summerPanel = document.getElementById("summer-crate-panel");
-    if (summerPanel) {
-        summerPanel.style.display = shouldShowSeasonalCratePanel("summer", profileData) ? "" : "none";
-    }
-
     const christmasPanel = document.getElementById("christmas-crate-panel");
     if (christmasPanel) {
         christmasPanel.style.display = shouldShowSeasonalCratePanel("christmas", profileData) ? "" : "none";
@@ -561,10 +688,6 @@ function updateSeasonalCrateCraftingUI(profileData = getCurrentProfileData()) {
     });
 }
 
-function updateSummerCrateCraftingUI(profileData = getCurrentProfileData()) {
-    updateSeasonalCrateCraftingUI(profileData);
-}
-
 window.openActiveSeasonalCrateDropsModal = function openActiveSeasonalCrateDropsModal() {
     const activeCrateId = getActiveSeasonalCrateId();
     if (!activeCrateId) {
@@ -616,8 +739,6 @@ window.craftSeasonalCrate = async function() {
         updateSeasonalCrateCraftingUI(getCurrentProfileData());
     }
 };
-
-window.craftSummerCrate = window.craftSeasonalCrate;
 
 function getDuelStatusClass(status) {
     if (status === 'active' || status === 'completed' || status === 'declined') return status;
@@ -708,7 +829,7 @@ async function renderFriendsList(friends) {
     const list = document.getElementById('friends-list');
     if (!list) return;
     if (!friends.length) {
-        list.innerHTML = '<li class="empty-state"><div class="empty-icon">🐠</div><div class="empty-text">No friends yet</div><div class="empty-subtext">Add some friends to start dueling!</div></li>';
+        list.innerHTML = '<li class="empty-state"><div class="empty-icon">\u{1F420}</div><div class="empty-text">No friends yet</div><div class="empty-subtext">Add some friends to start dueling!</div></li>';
         return;
     }
     list.innerHTML = '';
@@ -741,15 +862,15 @@ async function renderFriendsList(friends) {
             </div>
             <div class="friend-actions">
                 <button onclick="event.stopPropagation(); challengeFriendToDuel('${uid}')" class="action-btn duel-btn">
-                    <span class="btn-icon">⚔</span>
+                    <span class="btn-icon">\u{2694}</span>
                     Duel
                 </button>
                 <button onclick="event.stopPropagation(); openUserProfileModal('${uid}')" class="action-btn view-btn">
-                    <span class="btn-icon">👁</span>
+                    <span class="btn-icon">\u{1F441}</span>
                     View
                 </button>
                 <button onclick="event.stopPropagation(); removeFriend('${uid}')" class="action-btn remove-btn" title="Remove friend">
-                    <span class="btn-icon">❌</span>
+                    <span class="btn-icon">\u{274C}</span>
                     Remove
                 </button>
             </div>
@@ -763,7 +884,7 @@ async function renderDuelsList(duels) {
     if (!list) return;
 
     if (!currentUser || !duels.length) {
-        list.innerHTML = '<li class="empty-state"><div class="empty-icon">🦈</div><div class="empty-text">No duels yet</div><div class="empty-subtext">Use the Duel button on a friend card to start a shark guessing battle.</div></li>';
+        list.innerHTML = '<li class="empty-state"><div class="empty-icon">\u{1F988}</div><div class="empty-text">No duels yet</div><div class="empty-subtext">Use the Duel button on a friend card to start a shark guessing battle.</div></li>';
         return;
     }
 
@@ -836,7 +957,7 @@ async function renderRequestsList(requests) {
     const list = document.getElementById('requests-list');
     if (!list) return;
     if (!requests.length) {
-        list.innerHTML = '<li class="empty-state"><div class="empty-icon">📭</div><div class="empty-text">No requests</div><div class="empty-subtext">Share your friend code to get requests!</div></li>';
+        list.innerHTML = '<li class="empty-state"><div class="empty-icon">\u{1F4ED}</div><div class="empty-text">No requests</div><div class="empty-subtext">Share your friend code to get requests!</div></li>';
         return;
     }
     list.innerHTML = '';
@@ -864,11 +985,11 @@ async function renderRequestsList(requests) {
             </div>
             <div class="friend-actions">
                 <button onclick="event.stopPropagation(); acceptFriendRequest('${uid}')" class="action-btn accept-btn">
-                    <span class="btn-icon">✅</span>
+                    <span class="btn-icon">\u{2705}</span>
                     Accept
                 </button>
                 <button onclick="event.stopPropagation(); declineFriendRequest('${uid}')" class="action-btn decline-btn">
-                    <span class="btn-icon">❌</span>
+                    <span class="btn-icon">\u{274C}</span>
                 </button>
             </div>
         `;
@@ -952,6 +1073,36 @@ async function sendFriendRequest(targetUid) {
     return 'Request sent!';
 }
 
+async function grantFriendPairReferralRewards(uidA, uidB) {
+    const pairId = getReferralPairId(uidA, uidB);
+    if (!pairId) return;
+    const grantedA = currentUser?.uid === uidA
+        ? await grantReferralCratesToUid(uidA, pairId, "friend-accepted")
+        : false;
+    const grantedB = currentUser?.uid === uidB
+        ? await grantReferralCratesToUid(uidB, pairId, "friend-accepted")
+        : false;
+
+    if ((currentUser?.uid === uidA && grantedA) || (currentUser?.uid === uidB && grantedB)) {
+        const profileData = getCurrentProfileData();
+        const inventory = getCrateInventory(profileData);
+        inventory.reef = (Number(inventory.reef) || 0) + REFERRAL_REWARD_CRATES;
+        profileData.crateInventory = normalizeCrateInventory(inventory);
+        const rewards = getReferralRewards(profileData);
+        const rewardedPairs = Array.isArray(rewards.rewardedPairs) ? rewards.rewardedPairs : [];
+        profileData.referralRewards = {
+            ...rewards,
+            rewardedPairs: rewardedPairs.includes(pairId) ? rewardedPairs : [...rewardedPairs, pairId],
+            totalReferralCrates: (Number(rewards.totalReferralCrates) || 0) + REFERRAL_REWARD_CRATES,
+            lastReferralRewardAt: Date.now(),
+            lastReferralRewardSource: "friend-accepted"
+        };
+        saveUserProfileLocally(profileData, { skipRemoteSync: true });
+        renderCratesButton();
+        showNotification("Referral reward: 1 Cosmetic Crate.", "success", 3600);
+    }
+}
+
 window.acceptFriendRequest = async function(uid) {
     if (!currentUser) return;
     const userRef = db.collection(FRIENDS_COLLECTION).doc(currentUser.uid);
@@ -965,10 +1116,16 @@ window.acceptFriendRequest = async function(uid) {
     if (!friends.includes(uid)) friends.push(uid);
     const otherFriends = Array.isArray(otherData.friends) ? otherData.friends : [];
     if (!otherFriends.includes(currentUser.uid)) otherFriends.push(currentUser.uid);
+    const pairId = getReferralPairId(currentUser.uid, uid);
+    const otherPendingReferralRewardPairs = Array.isArray(otherData.pendingReferralRewardPairs) ? otherData.pendingReferralRewardPairs : [];
+    if (pairId && !otherPendingReferralRewardPairs.includes(pairId)) {
+        otherPendingReferralRewardPairs.push(pairId);
+    }
     await Promise.all([
         userRef.set({ friendRequests: requests, friends }, { merge: true }),
-        otherRef.set({ friends: otherFriends }, { merge: true })
+        otherRef.set({ friends: otherFriends, pendingReferralRewardPairs: otherPendingReferralRewardPairs }, { merge: true })
     ]);
+    await grantFriendPairReferralRewards(currentUser.uid, uid);
     populateFriendsTab();
 };
 
@@ -1332,24 +1489,6 @@ function duelPlayerStatusText(playerState, duelStatus, isSelf) {
     return `${12 - (playerState.attemptsLeft ?? 12)} guesses used`;
 }
 
-function duelModalMessage(duelData, selfState, opponentState) {
-    if (duelData.status === 'pending') {
-        return duelData.opponentUid === currentUser.uid
-            ? 'Accept the duel to open the shared shark board.'
-            : 'Challenge sent. The board opens as soon as your rival accepts.';
-    }
-    if (duelData.status === 'declined') {
-        return 'This challenge was declined.';
-    }
-    if (duelData.status === 'completed') {
-        return duelData.resultLabel || 'Final result locked.';
-    }
-    if (selfState.completed && !opponentState.completed) {
-        return "Your run is locked. Now it is your rival's turn to finish.";
-    }
-    return 'Read the feedback, narrow the shark, and solve in fewer guesses than your rival.';
-}
-
 function duelLiveNoteText(duelData, selfState, opponentState) {
     if (duelData.status === 'pending') {
         return 'This screen updates automatically the moment the other player responds.';
@@ -1386,7 +1525,7 @@ function createDuelGuessCard(guessedShark, feedback, targetShark, guessNumber) {
     const feedbackHtml = feedback.map(item => {
         let extra = '';
         if (item.category === 'Year of Discovery' && !item.correct) {
-            extra = item.value < targetShark.yod ? ' ↑' : ' ↓';
+            extra = item.value < targetShark.yod ? ' \u{2191}' : ' \u{2193}';
         }
         if (item.category === 'Size' && duelSizeThresholds[item.value]) {
             extra = ` (${duelSizeThresholds[item.value]})`;
@@ -1491,7 +1630,7 @@ function getRevealableDuel(duelId = null) {
 // Console command for testing: revealShark() - Dev only
 window.revealShark = function(duelId = null) {
     if (!firebase.auth().currentUser || !isDeveloperUid(firebase.auth().currentUser.uid)) {
-        console.log("Access denied. This command is for developers only.");
+        console.log("\u{274C} Access denied. This command is for developers only.");
         return;
     }
 
@@ -1529,6 +1668,7 @@ window.reset = async function(uid) {
             localStorage.removeItem('currentLoginDay');
             localStorage.removeItem('claimedAchievements');
             localStorage.removeItem('unlockedAchievements');
+            localStorage.removeItem('showcasedAchievements');
         }
         // Also clear if the current logged in user matches
         if (uid === currentUser.uid) {
@@ -1540,6 +1680,7 @@ window.reset = async function(uid) {
             localStorage.removeItem('currentLoginDay');
             localStorage.removeItem('claimedAchievements');
             localStorage.removeItem('unlockedAchievements');
+            localStorage.removeItem('showcasedAchievements');
         }
         showNotification('Account data reset for UID: ' + uid, 'success', 4000);
     } catch (err) {
@@ -1632,19 +1773,22 @@ const sharkPassCardThemes = [
     { id: "deep-abyss", name: "Deep Abyss", unlockAchievement: "guess_master", preview: "linear-gradient(135deg, rgba(17, 255, 203, 0.14), rgba(5, 18, 34, 0.94) 42%, rgba(1, 6, 15, 0.99))" },
     { id: "storm-current", name: "Storm Current", unlockAchievement: "duel_won", preview: "linear-gradient(135deg, rgba(117, 202, 255, 0.26), rgba(67, 126, 255, 0.2) 34%, rgba(9, 20, 47, 0.98))" },
     { id: "pearl-reef", name: "Pearl Reef", unlockAchievement: "secret_command_found", preview: "linear-gradient(135deg, rgba(250, 240, 214, 0.3), rgba(164, 244, 231, 0.18) 42%, rgba(24, 72, 92, 0.96))" },
-    { id: "volcanic-ember", name: "Volcanic Ember", preview: "linear-gradient(135deg, rgba(255, 120, 70, 0.3), rgba(255, 66, 66, 0.18) 34%, rgba(44, 10, 24, 0.98) 72%, rgba(16, 5, 14, 1))" },
+    { id: "volcanic-ember", name: "Volcanic Ember", unlockAchievement: "streak_100", preview: "linear-gradient(180deg, rgba(15, 3, 2, 0.12), rgba(6, 2, 3, 0.58)), url(images/profileThemes/VolcanicEmber.png) center center / cover no-repeat" },
     { id: "lucky-current", name: "Lucky Current", preview: "linear-gradient(135deg, rgba(103, 255, 174, 0.3), rgba(255, 220, 92, 0.2) 34%, rgba(13, 83, 75, 0.96) 70%, rgba(6, 27, 38, 1))" },
-    { id: "kelp-canopy", name: "Kelp Canopy", preview: "linear-gradient(135deg, rgba(166, 223, 110, 0.18), rgba(65, 121, 70, 0.22) 34%, rgba(12, 49, 43, 0.98) 70%, rgba(6, 24, 21, 1))" },
-    { id: "glacier-shine", name: "Glacier Shine", preview: "linear-gradient(135deg, rgba(232, 247, 255, 0.34), rgba(132, 214, 255, 0.18) 36%, rgba(35, 80, 118, 0.92) 72%, rgba(10, 31, 52, 1))" },
+    { id: "kelp-canopy", name: "Kelp Canopy", preview: "linear-gradient(180deg, rgba(6, 31, 23, 0.08), rgba(3, 22, 21, 0.5)), url(images/profileThemes/KelpCanopy.png) center center / cover no-repeat" },
+    { id: "glacier-shine", name: "Glacier Shine", preview: "linear-gradient(180deg, rgba(255, 255, 255, 0.2), rgba(18, 69, 95, 0.34)), url(images/profileThemes/GlacierShine.png) center center / cover no-repeat" },
     { id: "ocean-breeze", name: "Ocean Breeze", preview: "linear-gradient(135deg, rgba(100, 200, 255, 0.3), rgba(50, 150, 200, 0.2) 42%, rgba(10, 50, 80, 0.96))" },
     { id: "horizonflare", name: "Horizon", preview: "radial-gradient(circle at 50% 10%, rgba(255,255,255,0.06), transparent 30%), linear-gradient(to top, rgba(255,145,70,0.9) 0%, rgba(255,95,160,0.8) 55%, rgba(140,90,180,0.85) 100%)" },
     { id: "solsticeglow", name: "Summer Glow", preview: "linear-gradient(135deg, rgba(255, 220, 100, 0.4), rgba(255, 180, 50, 0.25) 42%, rgba(40, 30, 10, 0.98))" },
+    { id: "abyss-bloom", name: "Abyss Bloom", preview: "radial-gradient(circle at 18% 22%, rgba(255, 108, 170, 0.22), transparent 24%), radial-gradient(circle at 78% 18%, rgba(72, 221, 196, 0.18), transparent 28%), linear-gradient(142deg, rgba(31, 92, 109, 0.34), rgba(18, 31, 68, 0.96) 52%, rgba(7, 12, 31, 1))" },
+    { id: "neon-reef", name: "Neon Reef", unlockAchievement: "crate_collector_50", preview: "radial-gradient(circle at 24% 20%, rgba(95, 255, 184, 0.24), transparent 24%), radial-gradient(circle at 82% 70%, rgba(255, 217, 91, 0.16), transparent 30%), linear-gradient(135deg, rgba(22, 143, 126, 0.32), rgba(27, 69, 124, 0.96) 48%, rgba(8, 19, 45, 1))" },
+    { id: "lunar-current", name: "Lunar Current", unlockAchievement: "wins_1000", preview: "radial-gradient(circle at 76% 16%, rgba(248, 250, 255, 0.24), transparent 18%), radial-gradient(circle at 18% 78%, rgba(139, 189, 255, 0.18), transparent 30%), linear-gradient(145deg, rgba(64, 74, 145, 0.38), rgba(17, 35, 82, 0.98) 55%, rgba(5, 11, 27, 1))" },
     { id: "candycane", name: "Candy Cane", preview: "repeating-linear-gradient(135deg, #fff5f5 0 11px, #ff6b6b 11px 22px)" },
-    { id: "elf", name: "Elf", preview: "linear-gradient(135deg, #228b22 0%, #32cd32 50%, #228b22 100%)" },
-    { id: "north-pole", name: "North Pole", preview: "linear-gradient(135deg, #e6f7ff 0%, #b3e0ff 50%, #80d0ff 100%)" },
-    { id: "pumpkin-patch", name: "Goo", preview: "radial-gradient(34px 22px at 8% 4px, rgba(138, 255, 112, 0.88) 0 68%, transparent 72%), radial-gradient(30px 40px at 23% -9px, rgba(122, 242, 96, 0.88) 0 66%, transparent 70%), radial-gradient(36px 26px at 41% 6px, rgba(144, 255, 120, 0.86) 0 68%, transparent 72%), radial-gradient(28px 38px at 58% -8px, rgba(113, 233, 89, 0.86) 0 66%, transparent 70%), radial-gradient(34px 24px at 74% 5px, rgba(132, 250, 108, 0.86) 0 68%, transparent 72%), radial-gradient(30px 42px at 90% -10px, rgba(120, 236, 94, 0.86) 0 66%, transparent 70%), linear-gradient(180deg, rgba(142, 255, 113, 0.34) 0 16%, transparent 29%), linear-gradient(180deg, rgba(154, 88, 228, 0.64), rgba(58, 24, 94, 0.98) 62%, rgba(20, 9, 38, 1))" },
-    { id: "haunted-abyss", name: "Witchlight", preview: "radial-gradient(circle at 18% 22%, rgba(250, 128, 114, 0.24), transparent 26%), radial-gradient(circle at 82% 18%, rgba(199, 121, 255, 0.26), transparent 28%), linear-gradient(145deg, rgba(97, 40, 154, 0.4), rgba(45, 22, 78, 0.98) 58%, rgba(18, 8, 34, 1))" },
-    { id: "nightmare-reef", name: "Phantom Fog", preview: "radial-gradient(circle at 20% 18%, rgba(170, 255, 230, 0.16), transparent 24%), radial-gradient(circle at 80% 24%, rgba(141, 224, 255, 0.14), transparent 26%), linear-gradient(150deg, rgba(41, 112, 120, 0.28), rgba(18, 42, 56, 0.98) 52%, rgba(9, 18, 31, 1))" }
+    { id: "elf", name: "Elf", preview: "linear-gradient(180deg, rgba(245, 255, 224, 0.18), rgba(31, 94, 48, 0.26)), url(images/profileThemes/Elf.png) center center / cover no-repeat" },
+    { id: "north-pole", name: "North Pole", preview: "linear-gradient(180deg, rgba(255, 255, 255, 0.42), rgba(120, 188, 220, 0.18)), url(images/profileThemes/Northpole.png) center center / cover no-repeat" },
+    { id: "pumpkin-patch", name: "Goo", preview: "radial-gradient(circle at 12% 16%, rgba(196, 255, 111, 0.24), transparent 23%), radial-gradient(circle at 84% 8%, rgba(255, 130, 35, 0.24), transparent 20%), linear-gradient(155deg, rgba(12, 26, 12, 0.2), rgba(23, 6, 34, 0.72)), url(images/profileThemes/Goo.png) center top / cover no-repeat" },
+    { id: "haunted-abyss", name: "Witchlight", preview: "radial-gradient(circle at 76% 12%, rgba(213, 160, 255, 0.26), transparent 22%), radial-gradient(circle at 16% 82%, rgba(159, 255, 103, 0.16), transparent 28%), linear-gradient(160deg, rgba(13, 0, 24, 0.08), rgba(6, 0, 18, 0.64)), url(images/profileThemes/Witchlight.png) center center / cover no-repeat" },
+    { id: "nightmare-reef", name: "Phantom Fog", preview: "radial-gradient(circle at 82% 18%, rgba(245, 238, 218, 0.2), transparent 19%), radial-gradient(circle at 12% 72%, rgba(130, 255, 174, 0.12), transparent 30%), linear-gradient(180deg, rgba(6, 12, 18, 0.08), rgba(2, 4, 10, 0.66)), url(images/profileThemes/PhantomFog.png) center center / cover no-repeat" }
 ];
 
 const CRATE_DROP_CHANCE = 0.5;
@@ -1724,6 +1868,10 @@ const COMMUNITY_BOSS_EVENTS = [
     }
 ];
 const COMMUNITY_BOSS_EVENT = getCurrentCommunityBossEvent();
+const COMMUNITY_BOSS_DISPLAY_DISABLED_FOR_NOW = true;
+const CLADOSELACHE_PARTICIPATION_EVENT_ID = "summer-cladoselache-2026";
+const CLADOSELACHE_PARTICIPATION_REWARD_ID = "cladoselache-participation-cosmetic-crate";
+const CLADOSELACHE_PARTICIPATION_ACCOUNT_CUTOFF_MS = new Date("2026-07-05T23:59:59Z").getTime();
 const SEASONAL_THEME_DISABLED_KEY = "disableSeasonalTheme";
 const INDEX_THEME_OPTIONS = [
     { id: "default", name: "Default Ocean" },
@@ -1834,19 +1982,37 @@ const crateDuplicateXpRewards = {
 const STREAK_SHIELD_ITEM_ID = "streak-shield";
 
 const crateRewardPool = [
-    { id: "crate-pfp-pyjama", type: "pfp", name: "Pyjama Shark", imagePath: "images/cratePfp/Shark24.png", rarity: "common", blurb: "Unlock the Pyjama Shark profile picture." },
-    { id: "crate-badge-reef-glint", type: "badge", badgeId: "reef-glint", name: "Driftwood", rarity: "common", blurb: "Unlock the Driftwood badge." },
-    { id: "crate-pfp-japanese-bullhead", type: "pfp", name: "Japanese Bullhead Shark", imagePath: "images/cratePfp/Shark25.png", rarity: "rare", blurb: "Unlock the Japanese Bullhead Shark profile picture." },
-    { id: "crate-badge-kelp-warden", type: "badge", badgeId: "kelp-warden", name: "Smelly Boot", rarity: "rare", blurb: "Unlock the Smelly Boot badge." },
-    { id: "crate-theme-volcanic-ember", type: "theme", themeId: "volcanic-ember", name: "Volcanic Ember", rarity: "rare", blurb: "Unlock the Volcanic Ember theme." },
-    { id: "crate-pfp-frilled", type: "pfp", name: "Frilled Shark", imagePath: "images/cratePfp/Shark23.png", rarity: "epic", blurb: "Unlock the Frilled Shark profile picture." },
-    { id: "crate-badge-trench-myth", type: "badge", badgeId: "trench-myth", name: "Message Bottle", rarity: "epic", blurb: "Unlock the Message Bottle badge." },
-    { id: "crate-item-streak-shield", type: "item", itemId: STREAK_SHIELD_ITEM_ID, quantity: 1, emoji: "🛡️", name: "Streak Shield", rarity: "epic", blurb: "Protects your win streak from one loss. Auto-activates when needed." },
-    { id: "crate-theme-kelp-canopy", type: "theme", themeId: "kelp-canopy", name: "Kelp Canopy", rarity: "epic", blurb: "Unlock the Kelp Canopy theme." },
-    { id: "crate-pfp-megamouth", type: "pfp", name: "Megamouth Shark", imagePath: "images/cratePfp/Shark22.png", rarity: "legendary", blurb: "Unlock the Megamouth Shark profile picture." },
-    { id: "crate-badge-aurora-fin", type: "badge", badgeId: "aurora-fin", name: "Doubloon", rarity: "legendary", blurb: "Unlock the Doubloon badge." },
-    { id: "crate-theme-glacier-shine", type: "theme", themeId: "glacier-shine", name: "Glacier Shine", rarity: "legendary", blurb: "Unlock the Glacier Shine theme." }
+    { id: "crate-pfp-cobbler-wobbegong", type: "pfp", name: "Cobbler Wobbegong", imagePath: "images/cratePfp/cosmeticCrate2/CobblerWobbegong.png", rarity: "common", blurb: "Unlock the Cobbler Wobbegong profile picture." },
+    { id: "crate-badge-tide-glass", type: "badge", badgeId: "tide-glass", name: "Tide Glass", rarity: "common", blurb: "Unlock the Tide Glass badge." },
+    { id: "crate-pfp-japanese-sawshark", type: "pfp", name: "Japanese Sawshark", imagePath: "images/cratePfp/cosmeticCrate2/JapaneseSawShark.png", rarity: "rare", blurb: "Unlock the Japanese Sawshark profile picture." },
+    { id: "crate-badge-fossil-tooth", type: "badge", badgeId: "fossil-tooth", name: "Fossil Tooth", rarity: "rare", blurb: "Unlock the Fossil Tooth badge." },
+    { id: "crate-theme-abyss-bloom", type: "theme", themeId: "abyss-bloom", name: "Abyss Bloom", rarity: "rare", blurb: "Unlock the Abyss Bloom profile theme." },
+    { id: "crate-pfp-pelagic-stingray", type: "pfp", name: "Pelagic Stingray", imagePath: "images/cratePfp/cosmeticCrate2/PelagicStingray.png", rarity: "epic", blurb: "Unlock the Pelagic Stingray profile picture." },
+    { id: "crate-badge-deep-anchor", type: "badge", badgeId: "deep-anchor", name: "Deep Anchor", rarity: "epic", blurb: "Unlock the Deep Anchor badge." },
+    { id: "crate-item-streak-shield", type: "item", itemId: STREAK_SHIELD_ITEM_ID, quantity: 1, emoji: "\u{1F6E1}\uFE0F", name: "Streak Shield", rarity: "epic", blurb: "Protects your win streak from one loss. Auto-activates when needed." },
+    { id: "crate-theme-neon-reef", type: "theme", themeId: "neon-reef", name: "Neon Reef", rarity: "epic", blurb: "Unlock the Neon Reef profile theme." },
+    { id: "crate-pfp-whiptail-stingray", type: "pfp", name: "Whiptail Stingray", imagePath: "images/cratePfp/cosmeticCrate2/WhiptailStingray.png", rarity: "legendary", blurb: "Unlock the Whiptail Stingray profile picture." },
+    { id: "crate-badge-royal-pearl", type: "badge", badgeId: "royal-pearl", name: "Royal Pearl", rarity: "legendary", blurb: "Unlock the Royal Pearl badge." },
+    { id: "crate-theme-lunar-current", type: "theme", themeId: "lunar-current", name: "Lunar Current", rarity: "legendary", blurb: "Unlock the Lunar Current profile theme." }
 ];
+
+const legacyCrate1RewardPool = [
+    { id: "crate-pfp-pyjama", type: "pfp", name: "Pyjama Shark", imagePath: "images/cratePfp/Shark24.png", rarity: "common", blurb: "Retired Cosmetic Crate 1 profile picture." },
+    { id: "crate-badge-reef-glint", type: "badge", badgeId: "reef-glint", name: "Driftwood", rarity: "common", blurb: "Retired Cosmetic Crate 1 badge." },
+    { id: "crate-pfp-japanese-bullhead", type: "pfp", name: "Japanese Bullhead Shark", imagePath: "images/cratePfp/Shark25.png", rarity: "rare", blurb: "Retired Cosmetic Crate 1 profile picture." },
+    { id: "crate-badge-kelp-warden", type: "badge", badgeId: "kelp-warden", name: "Smelly Boot", rarity: "rare", blurb: "Retired Cosmetic Crate 1 badge." },
+    { id: "crate-theme-volcanic-ember", type: "theme", themeId: "volcanic-ember", name: "Volcanic Ember", rarity: "rare", blurb: "Retired Cosmetic Crate 1 theme." },
+    { id: "crate-pfp-frilled", type: "pfp", name: "Frilled Shark", imagePath: "images/cratePfp/Shark23.png", rarity: "epic", blurb: "Retired Cosmetic Crate 1 profile picture." },
+    { id: "crate-badge-trench-myth", type: "badge", badgeId: "trench-myth", name: "Message Bottle", rarity: "epic", blurb: "Retired Cosmetic Crate 1 badge." },
+    { id: "crate-theme-kelp-canopy", type: "theme", themeId: "kelp-canopy", name: "Kelp Canopy", rarity: "epic", blurb: "Retired Cosmetic Crate 1 theme." },
+    { id: "crate-pfp-megamouth", type: "pfp", name: "Megamouth Shark", imagePath: "images/cratePfp/Shark22.png", rarity: "legendary", blurb: "Retired Cosmetic Crate 1 profile picture." },
+    { id: "crate-badge-aurora-fin", type: "badge", badgeId: "aurora-fin", name: "Doubloon", rarity: "legendary", blurb: "Retired Cosmetic Crate 1 badge." },
+    { id: "crate-theme-glacier-shine", type: "theme", themeId: "glacier-shine", name: "Glacier Shine", rarity: "legendary", blurb: "Retired Cosmetic Crate 1 theme." }
+];
+
+function getLegacyCrate1RewardByThemeId(themeId) {
+    return legacyCrate1RewardPool.find(reward => reward.type === "theme" && reward.themeId === themeId);
+}
 
 const summerCrateRewardPool = [
     { id: "crate-pfp-leopard", type: "pfp", name: "Leopard Shark", imagePath: "images/cratePfp/SummerPfp/Shark1.png", rarity: "common", blurb: "Unlock the Leopard Shark profile picture." },
@@ -1902,6 +2068,10 @@ let communityBossUiTimer = null;
 let cloudProfileReloadTimeouts = [];
 let lastServerHydratedProfileUid = null;
 const CLOUD_PROFILE_RELOAD_DELAYS_MS = [1200, 4000, 9000];
+const FULL_PROFILE_COLLECTION = "sharkdleProfiles";
+const FULL_PROFILE_CHUNK_COLLECTION = "chunks";
+const FULL_PROFILE_SCHEMA_VERSION = 1;
+const FULL_PROFILE_CHUNK_CHAR_LIMIT = 180000;
 
 const sharkPassRewards = [
     { level: 2, type: "pfp", name: "Angel Shark", imagePath: "images/levelPfp/Shark6.png", rarity: "common", blurb: "A fresh portrait reward for early progress." },
@@ -1970,18 +2140,18 @@ const sharkPassBadgeMeta = {
     "open-water-ace": { emoji: "\u{2728}" },
     "storm-tracker": { emoji: "\u{26A1}" },
     "apex-voyager": { emoji: "\u{1F451}" },
-    "reef-glint": { emoji: "🐚" },
-    "kelp-warden": { emoji: "🌿" },
-    "trench-myth": { emoji: "⚓" },
-    "aurora-fin": { emoji: "🌊" },
-    "Tidepool": { emoji: "🌀" },
-    "Ice Cream": { emoji: "🍦" },
-    "Horizon": { emoji: "🌅" },
-    "Summer": { emoji: "🌴" },
-    "Christmas": { emoji: "🎄" },
-    "Present": { emoji: "🎁" },
-    "Snowflake": { emoji: "❄️" },
-    "Santa": { emoji: "🎅" },
+    "tide-glass": { emoji: "\u{1FAE7}" },
+    "fossil-tooth": { emoji: "\u{1F9B7}" },
+    "deep-anchor": { emoji: "\u{2693}" },
+    "royal-pearl": { emoji: "\u{1F9AA}" },
+    "Tidepool": { emoji: "\u{1F300}" },
+    "Ice Cream": { emoji: "\u{1F366}" },
+    "Horizon": { emoji: "\u{1F305}" },
+    "Summer": { emoji: "\u{1F334}" },
+    "Christmas": { emoji: "\u{1F384}" },
+    "Present": { emoji: "\u{1F381}" },
+    "Snowflake": { emoji: "\u{2744}\uFE0F" },
+    "Santa": { emoji: "\u{1F385}" },
 };
 
 const badgeRarityMeta = {
@@ -2005,10 +2175,10 @@ const sharkPassBadgeTiers = {
     "apex-voyager": 5,
     "current-rider": 4,
     "tidebreaker": 5,
-    "reef-glint": 1,
-    "kelp-warden": 2,
-    "trench-myth": 4,
-    "aurora-fin": 5
+    "tide-glass": 1,
+    "fossil-tooth": 2,
+    "deep-anchor": 4,
+    "royal-pearl": 5
 };
 
 Object.assign(sharkPassBadgeMeta, {
@@ -2021,14 +2191,14 @@ Object.assign(sharkPassBadgeMeta, {
     "apex-voyager": { emoji: "\u{1F451}" },
     "current-rider": { emoji: "\u{1F30A}" },
     "tidebreaker": { emoji: "\u{1F4AB}" },
-    "reef-glint": { emoji: "🐚" },
-    "kelp-warden": { emoji: "🌿" },
-    "trench-myth": { emoji: "⚓" },
-    "aurora-fin": { emoji: "🌊" },
-    "Beachball": { emoji: "🏖️" },
-    "SunHat": { emoji: "👒" },
-    "Pineapple": { emoji: "🍍" },
-    "Coconut": { emoji: "🥥" }
+    "tide-glass": { emoji: "\u{1FAE7}" },
+    "fossil-tooth": { emoji: "\u{1F9B7}" },
+    "deep-anchor": { emoji: "\u{2693}" },
+    "royal-pearl": { emoji: "\u{1F9AA}" },
+    "Beachball": { emoji: "\u{1F3D6}\uFE0F" },
+    "SunHat": { emoji: "\u{1F452}" },
+    "Pineapple": { emoji: "\u{1F34D}" },
+    "Coconut": { emoji: "\u{1F965}" }
 });
 
 function getCurrentProfileData() {
@@ -2041,12 +2211,95 @@ function getCurrentProfileData() {
 window.getCurrentProfileData = getCurrentProfileData;
 
 function getCurrentPlayerLevel(profileData = getCurrentProfileData()) {
-    return getLevelFromXP(profileData.totalXP || 0);
+    const passXP = getSharkPassXP(profileData);
+    return passXP <= 0 ? 0 : getLevelFromXP(passXP);
+}
+
+function getSharkPassXP(profileData = getCurrentProfileData(), season = getActiveSharkPassSeason()) {
+    if (!season?.id || profileData.sharkPassProgressSeasonId !== season.id) return 0;
+    return Math.max(0, Number(profileData.sharkPassXP) || 0);
+}
+
+function getSharkPassXPInCurrentLevel(profileData = getCurrentProfileData()) {
+    const passXP = getSharkPassXP(profileData);
+    const level = getCurrentPlayerLevel(profileData);
+    return level <= 0 ? passXP : getXPInCurrentLevel(passXP);
 }
 
 function getUnlockedPassRewards(profileData = getCurrentProfileData()) {
     const level = getCurrentPlayerLevel(profileData);
     return sharkPassRewards.filter(reward => level >= reward.level);
+}
+
+function getCurrentPassRewardUnlocks(profileData = getCurrentProfileData()) {
+    const level = getCurrentPlayerLevel(profileData);
+    return {
+        pfpPaths: new Set(sharkPassRewards
+            .filter(reward => reward.type === "pfp" && reward.level <= level)
+            .map(reward => String(reward.imagePath || "").replace(/\\/g, "/").toLowerCase())),
+        badgeIds: new Set(sharkPassRewards
+            .filter(reward => reward.type === "badge" && reward.level <= level)
+            .map(reward => reward.badgeId)),
+        themeIds: new Set(sharkPassRewards
+            .filter(reward => reward.type === "theme" && reward.level <= level)
+            .map(reward => reward.themeId))
+    };
+}
+
+function isCurrentPassPfpPath(path) {
+    const normalized = String(path || "").replace(/\\/g, "/").toLowerCase();
+    return sharkPassRewards.some(reward => reward.type === "pfp" && String(reward.imagePath || "").replace(/\\/g, "/").toLowerCase() === normalized);
+}
+
+function isCurrentPassBadgeId(badgeId) {
+    return sharkPassRewards.some(reward => reward.type === "badge" && reward.badgeId === badgeId);
+}
+
+function isCurrentPassThemeId(themeId) {
+    return sharkPassRewards.some(reward => reward.type === "theme" && reward.themeId === themeId);
+}
+
+function sanitizeCurrentSharkPassUnlocks(profileData = getCurrentProfileData()) {
+    if (!profileData || typeof profileData !== "object") return { profileData, changed: false };
+    const unlocks = getCurrentPassRewardUnlocks(profileData);
+    let changed = false;
+
+    if (Array.isArray(profileData.earnedCosmetics)) {
+        const filtered = profileData.earnedCosmetics.filter(cosmetic => {
+            const path = String(cosmetic?.imagePath || "").replace(/\\/g, "/").toLowerCase();
+            return !isCurrentPassPfpPath(path) || unlocks.pfpPaths.has(path);
+        });
+        changed = changed || filtered.length !== profileData.earnedCosmetics.length;
+        profileData.earnedCosmetics = filtered;
+    }
+
+    if (Array.isArray(profileData.unlockedBadges)) {
+        const filtered = profileData.unlockedBadges.filter(badgeId => !isCurrentPassBadgeId(badgeId) || unlocks.badgeIds.has(badgeId));
+        changed = changed || filtered.length !== profileData.unlockedBadges.length;
+        profileData.unlockedBadges = filtered.length ? filtered : ["starter"];
+    }
+
+    if (Array.isArray(profileData.unlockedCardThemes)) {
+        const filtered = profileData.unlockedCardThemes.filter(themeId => !isCurrentPassThemeId(themeId) || unlocks.themeIds.has(themeId));
+        changed = changed || filtered.length !== profileData.unlockedCardThemes.length;
+        profileData.unlockedCardThemes = filtered.includes("default") ? filtered : ["default", ...filtered];
+    }
+
+    if (profileData.equippedBadge && isCurrentPassBadgeId(profileData.equippedBadge) && !unlocks.badgeIds.has(profileData.equippedBadge)) {
+        profileData.equippedBadge = "starter";
+        changed = true;
+    }
+    if (profileData.equippedCardTheme && isCurrentPassThemeId(profileData.equippedCardTheme) && !unlocks.themeIds.has(profileData.equippedCardTheme)) {
+        profileData.equippedCardTheme = "default";
+        changed = true;
+    }
+    if (isCurrentPassPfpPath(profileData.profilePicture || profileData.profilePic) && !unlocks.pfpPaths.has(String(profileData.profilePicture || profileData.profilePic || "").replace(/\\/g, "/").toLowerCase())) {
+        profileData.profilePicture = "images/pfp/shark1.png";
+        profileData.profilePic = "images/pfp/shark1.png";
+        changed = true;
+    }
+
+    return { profileData, changed };
 }
 
 function getActiveSharkPassSeason(now = Date.now()) {
@@ -2129,6 +2382,14 @@ function ensureSharkPassSeasonBaseline(profileData = getCurrentProfileData(), se
         : {};
     const quests = getSharkPassSeasonQuestList(season);
     let changed = false;
+
+    // Each season has independent pass XP. This reset preserves account XP while starting the new track at level 0.
+    if (profileData.sharkPassProgressSeasonId !== season.id) {
+        profileData.sharkPassProgressSeasonId = season.id;
+        profileData.sharkPassXP = 0;
+        profileData.sharkPassLevelRewardClaims = [];
+        changed = true;
+    }
 
     quests.forEach(quest => {
         if (quest.progressMode === "absolute") return;
@@ -2233,6 +2494,8 @@ async function claimSharkPassMission(missionId) {
         : { totalXp: mission.xp, multiplier: 1, baseXp: mission.xp };
 
     profileData.totalXP = (Number(profileData.totalXP) || 0) + xpAward.totalXp;
+    profileData.sharkPassXP = getSharkPassXP(profileData) + xpAward.totalXp;
+    profileData.sharkPassProgressSeasonId = seasonId;
     profileData.sharkPassMissionClaims = claims;
     profileData.sharkPassSeasonId = seasonId;
     saveUserProfileLocally(profileData, { skipRemoteSync: true });
@@ -2240,6 +2503,8 @@ async function claimSharkPassMission(missionId) {
     if (currentUser && db) {
         await db.collection("userStats").doc(currentUser.uid).set({
             totalXP: profileData.totalXP,
+            sharkPassXP: profileData.sharkPassXP,
+            sharkPassProgressSeasonId: profileData.sharkPassProgressSeasonId,
             sharkPassMissionClaims: claims,
             sharkPassSeasonBaselines: profileData.sharkPassSeasonBaselines || {},
             sharkPassSeasonId: seasonId,
@@ -2363,10 +2628,156 @@ function syncAchievementThemeUnlocks(profileData = getCurrentProfileData()) {
 
 window.syncAchievementThemeUnlocks = syncAchievementThemeUnlocks;
 
+const PROFILE_ACHIEVEMENT_SHOWCASE_LIMIT = 3;
+const PROFILE_ACHIEVEMENT_RARITY_RANKS = {
+    common: 1,
+    rare: 2,
+    epic: 3,
+    legendary: 4,
+    mythic: 5
+};
+const PROFILE_ACHIEVEMENT_FALLBACK_CATALOG = [
+    { id: "perfect_win", name: "One-Shot Oracle", icon: "\u{1F3AF}", rarity: "rare", points: 125, description: "Win in a single guess." },
+    { id: "guess_master", name: "Guess Master", icon: "\u{1F9E0}", rarity: "epic", points: 200, description: "Average 3 guesses or fewer." },
+    { id: "wins_250", name: "Transcendant Observer", icon: "\u{1F3C6}\u{1F3C6}", rarity: "legendary", points: 400, description: "Win 250 games." },
+    { id: "wins_500", name: "Abyssal Legend", icon: "\u{1F30C}", rarity: "mythic", points: 550, description: "Win 500 games." },
+    { id: "wins_1000", name: "Eternal Fin", icon: "\u{1F451}", rarity: "mythic", points: 900, description: "Win 1,000 games." },
+    { id: "games_500", name: "True Addict", icon: "\u{1F30A}", rarity: "legendary", points: 400, description: "Play 500 games." },
+    { id: "games_750", name: "Deep Habit", icon: "\u{1F30A}", rarity: "mythic", points: 520, description: "Play 750 games." },
+    { id: "games_1000", name: "Marathon Fin", icon: "\u{1F3C1}", rarity: "mythic", points: 750, description: "Play 1,000 games." },
+    { id: "streak_100", name: "Untouchable Tide", icon: "\u{1F525}", rarity: "mythic", points: 800, description: "Reach a 100 win streak." },
+    { id: "crate_collector_50", name: "Vault Breaker", icon: "\u{1F4E6}", rarity: "legendary", points: 320, description: "Open 50 cosmetic crates." },
+    { id: "japan_master", name: "Japan Mastered", icon: "\u{1F5FE}", rarity: "legendary", points: 260, description: "Complete every Japan story challenge." },
+    { id: "friends_25", name: "Social Current", icon: "\u{1F465}", rarity: "legendary", points: 260, description: "Add 25 friends." }
+];
+
+function parseProfileIdList(value) {
+    if (Array.isArray(value)) return value.filter(Boolean);
+    try {
+        const parsed = JSON.parse(value || "[]");
+        return Array.isArray(parsed) ? parsed.filter(Boolean) : [];
+    } catch (error) {
+        return [];
+    }
+}
+
+function mergeProfileIdLists(...lists) {
+    return [...new Set(lists.flatMap(list => parseProfileIdList(list)))];
+}
+
+function getProfileAchievementCatalog() {
+    if (Array.isArray(window.SharkdleAchievementCatalog) && window.SharkdleAchievementCatalog.length) {
+        return window.SharkdleAchievementCatalog;
+    }
+    const cached = parseProfileIdList(localStorage.getItem("achievementCatalogCache"));
+    if (cached.length && cached.every(item => item && typeof item === "object")) {
+        return cached;
+    }
+    return PROFILE_ACHIEVEMENT_FALLBACK_CATALOG;
+}
+
+function getProfileAchievementMeta(achievementId) {
+    return getProfileAchievementCatalog().find(achievement => achievement.id === achievementId) || {
+        id: achievementId,
+        name: "Achievement",
+        icon: "\u{1F3C6}",
+        rarity: "common",
+        points: 0,
+        description: "Claimed achievement"
+    };
+}
+
+function getProfileClaimedAchievementIds(profileData = {}) {
+    return mergeProfileIdLists(
+        profileData.claimedAchievements,
+        localStorage.getItem("claimedAchievements")
+    );
+}
+
+function getProfileShowcasedAchievementIds(profileData = {}) {
+    const claimed = new Set(getProfileClaimedAchievementIds(profileData));
+    return mergeProfileIdLists(
+        profileData.showcasedAchievements,
+        localStorage.getItem("showcasedAchievements")
+    ).filter(achievementId => claimed.has(achievementId)).slice(0, PROFILE_ACHIEVEMENT_SHOWCASE_LIMIT);
+}
+
+function getVisibleProfileShowcaseAchievementIds(profileData = {}) {
+    const showcased = getProfileShowcasedAchievementIds(profileData);
+    if (showcased.length) return showcased;
+    return getProfileClaimedAchievementIds(profileData)
+        .map(achievementId => getProfileAchievementMeta(achievementId))
+        .sort((a, b) => {
+            const rarityDiff = (PROFILE_ACHIEVEMENT_RARITY_RANKS[b.rarity] || 0) - (PROFILE_ACHIEVEMENT_RARITY_RANKS[a.rarity] || 0);
+            if (rarityDiff !== 0) return rarityDiff;
+            return (Number(b.points) || 0) - (Number(a.points) || 0);
+        })
+        .slice(0, PROFILE_ACHIEVEMENT_SHOWCASE_LIMIT)
+        .map(achievement => achievement.id);
+}
+
+function setProfileShowcaseAchievement(achievementId, shouldShow = true) {
+    const profileData = getCurrentProfileData();
+    const claimed = new Set(getProfileClaimedAchievementIds(profileData));
+    if (!claimed.has(achievementId)) return getProfileShowcasedAchievementIds(profileData);
+    const current = getProfileShowcasedAchievementIds(profileData).filter(id => id !== achievementId);
+    const next = shouldShow
+        ? [achievementId, ...current].slice(0, PROFILE_ACHIEVEMENT_SHOWCASE_LIMIT)
+        : current;
+    profileData.showcasedAchievements = next;
+    localStorage.setItem("showcasedAchievements", JSON.stringify(next));
+    saveUserProfileLocally(profileData);
+    if (currentUser && db) {
+        db.collection("userStats").doc(currentUser.uid).set({
+            showcasedAchievements: next,
+            lastUpdated: Date.now()
+        }, { merge: true });
+    }
+    renderProfileAchievementShowcase(profileData);
+    return next;
+}
+
+function renderProfileAchievementShowcase(profileData = getCurrentProfileData()) {
+    const container = document.getElementById("profile-achievement-showcase");
+    if (!container) return;
+    const achievementIds = getVisibleProfileShowcaseAchievementIds(profileData);
+    container.innerHTML = "";
+    if (!achievementIds.length) {
+        const empty = document.createElement("div");
+        empty.className = "profile-achievement-showcase-empty";
+        empty.textContent = "Claim achievements to fill this showcase.";
+        container.appendChild(empty);
+        return;
+    }
+    achievementIds.forEach(achievementId => {
+        const achievement = getProfileAchievementMeta(achievementId);
+        const card = document.createElement("article");
+        card.className = `profile-achievement-showcase-card rarity-${achievement.rarity || "common"}`;
+        const icon = document.createElement("span");
+        icon.textContent = achievement.icon || "\u{1F3C6}";
+        const copy = document.createElement("div");
+        const name = document.createElement("strong");
+        name.textContent = achievement.name || "Achievement";
+        const meta = document.createElement("small");
+        meta.textContent = `${String(achievement.rarity || "common").toUpperCase()} - ${Number(achievement.points) || 0} XP`;
+        copy.appendChild(name);
+        copy.appendChild(meta);
+        card.appendChild(icon);
+        card.appendChild(copy);
+        container.appendChild(card);
+    });
+}
+
+window.getProfileShowcasedAchievementIds = getProfileShowcasedAchievementIds;
+window.setProfileShowcaseAchievement = setProfileShowcaseAchievement;
+window.renderProfileAchievementShowcase = renderProfileAchievementShowcase;
+
 function getUnlockedCardThemes(profileData = getCurrentProfileData()) {
-    const normalizedProfile = syncAchievementThemeUnlocks(profileData).profileData;
+    const normalizedProfile = sanitizeCurrentSharkPassUnlocks(syncAchievementThemeUnlocks(profileData).profileData).profileData;
     const level = getCurrentPlayerLevel(normalizedProfile);
-    const storedThemeIds = Array.isArray(normalizedProfile.unlockedCardThemes) ? normalizedProfile.unlockedCardThemes : [];
+    const currentPassUnlocks = getCurrentPassRewardUnlocks(normalizedProfile);
+    const storedThemeIds = (Array.isArray(normalizedProfile.unlockedCardThemes) ? normalizedProfile.unlockedCardThemes : [])
+        .filter(themeId => !isCurrentPassThemeId(themeId) || currentPassUnlocks.themeIds.has(themeId));
     const claimedAchievementThemeIds = getAchievementUnlockedThemeIds();
 
     const unlockedThemeIds = new Set(["default", ...storedThemeIds, ...claimedAchievementThemeIds]);
@@ -2380,8 +2791,35 @@ function getUnlockedCardThemes(profileData = getCurrentProfileData()) {
 }
 
 function getStoredUnlockedBadgeIds(profileData = getCurrentProfileData()) {
-    return Array.isArray(profileData.unlockedBadges) ? profileData.unlockedBadges : [];
+    const currentPassUnlocks = getCurrentPassRewardUnlocks(profileData);
+    return (Array.isArray(profileData.unlockedBadges) ? profileData.unlockedBadges : [])
+        .map(normalizeBadgeId)
+        .filter(badgeId => !isCurrentPassBadgeId(badgeId) || currentPassUnlocks.badgeIds.has(badgeId));
 }
+
+function normalizeBadgeId(badgeId) {
+    return badgeId === "rollin'" ? "rollin" : badgeId;
+}
+
+function unlockProfileBadge(source = "game", badgeId = "") {
+    const normalizedBadgeId = normalizeBadgeId(badgeId);
+    const badge = getBadgeMeta(normalizedBadgeId);
+    if (!badge || badge.id === "starter") return false;
+    const profileData = getCurrentProfileData();
+    const unlockedBadges = new Set(["starter", ...getStoredUnlockedBadgeIds(profileData).map(normalizeBadgeId)]);
+    if (unlockedBadges.has(normalizedBadgeId)) return false;
+    unlockedBadges.add(normalizedBadgeId);
+    profileData.unlockedBadges = [...unlockedBadges];
+    profileData.lastBadgeUnlockSource = source;
+    saveUserProfileLocally(profileData);
+    updateProfileBadgeUI?.();
+    renderBadgeSelection?.();
+    renderProfileInventoryUI?.(profileData);
+    showNotification?.(`${badge.name} badge unlocked!`, "success", 4200);
+    return true;
+}
+
+window.unlockProfileBadge = unlockProfileBadge;
 
 function normalizeCrateInventory(rawInventory) {
     return {
@@ -2392,16 +2830,53 @@ function normalizeCrateInventory(rawInventory) {
     };
 }
 
-function mergeCrateInventory(localInventory, remoteInventory) {
+function mergeCrateInventory(localInventory, remoteInventory, summerCratesRetired = false) {
     const local = normalizeCrateInventory(localInventory);
     const remote = normalizeCrateInventory(remoteInventory);
     return {
         reef: Math.max(local.reef, remote.reef),
-        summer: Math.max(local.summer, remote.summer),
+        summer: summerCratesRetired ? 0 : Math.max(local.summer, remote.summer),
         christmas: Math.max(local.christmas, remote.christmas),
         halloween: Math.max(local.halloween, remote.halloween)
     };
 }
+
+function retireSummerCrates(profileData) {
+    if (!profileData || typeof profileData !== "object") return false;
+    if (Number(profileData.summerCrateRetirementVersion) >= SUMMER_CRATE_RETIREMENT_VERSION) return false;
+
+    const inventory = normalizeCrateInventory(profileData.crateInventory);
+    const convertedCrates = Math.floor(inventory.summer / 2);
+    profileData.crateInventory = {
+        ...inventory,
+        reef: inventory.reef + convertedCrates,
+        summer: 0
+    };
+    profileData.summerCrateRetirementVersion = SUMMER_CRATE_RETIREMENT_VERSION;
+    return true;
+}
+
+window.repairRetiredSummerCrateConversion = async function repairRetiredSummerCrateConversion(originalSummerCrates, originalCosmeticCrates = 0) {
+    const originalCount = Math.max(0, Math.floor(Number(originalSummerCrates) || 0));
+    const originalCosmeticCount = Math.max(0, Math.floor(Number(originalCosmeticCrates) || 0));
+    if (!originalCount) {
+        showNotification("Enter the original Summer Crate balance to repair this conversion.", "error", 3600);
+        return false;
+    }
+
+    const profileData = getCurrentProfileData();
+    const inventory = normalizeCrateInventory(profileData.crateInventory);
+    inventory.reef = originalCosmeticCount + Math.floor(originalCount / 2);
+    inventory.summer = 0;
+    profileData.crateInventory = inventory;
+    profileData.summerCrateRetirementVersion = SUMMER_CRATE_RETIREMENT_VERSION;
+    await persistCrateProfileUpdate(profileData);
+    renderCratesButton();
+    renderHomeCratesModal();
+    renderCratesModal();
+    showNotification("Summer Crate conversion repaired at the 2:1 rate.", "success", 3600);
+    return true;
+};
 
 function getCrateInventory(profileData = getCurrentProfileData()) {
     return normalizeCrateInventory(profileData.crateInventory || {});
@@ -2418,8 +2893,55 @@ const PEARL_SHOP_ITEMS = {
     "pearl-boost": { price: 500, label: "2x Pearls Boost" },
     "cosmetic-crate": { price: 500, label: "Cosmetic Crate" },
     "event-crate": { price: 750, label: "Event Crate" },
+    "message-bottle-pack": { price: 300, label: "Message in a Bottle Pack" },
     "season-xp": { price: 3000, label: "Season 2x XP" }
 };
+const SOCIAL_REWARD_TASKS = [
+    { id: "like-youtube-short-u0lcqvaahog-2026", platform: "YouTube", action: "Like Sharkdle Short 1", description: "Like this YouTube Short.", url: "https://youtube.com/shorts/U0lcQVAAhOg?feature=share", icon: "fa-brands fa-youtube", pearls: 50 },
+    { id: "like-youtube-short-ahzzvuritzc-2026", platform: "YouTube", action: "Like Sharkdle Short 2", description: "Like this YouTube Short.", url: "https://youtube.com/shorts/AHZZVuritZc?feature=share", icon: "fa-brands fa-youtube", pearls: 50 },
+    { id: "like-youtube-short-q3otnuxy3ri-2026", platform: "YouTube", action: "Like Sharkdle Short 3", description: "Like this YouTube Short.", url: "https://youtube.com/shorts/Q3otnuXy3RI?feature=share", icon: "fa-brands fa-youtube", pearls: 50 },
+    { id: "like-youtube-short-srjsmp1bzzu-2026", platform: "YouTube", action: "Like Sharkdle Short 4", description: "Like this YouTube Short.", url: "https://youtube.com/shorts/SrjSmP1bzZU?si=qfL_wUs7Yu4Md3fk", icon: "fa-brands fa-youtube", pearls: 50 },
+    { id: "like-youtube-short-bxrl7ezwxak-2026", platform: "YouTube", action: "Like Sharkdle Short 5", description: "Like this YouTube Short.", url: "https://youtube.com/shorts/bxRL7EZWxAk?si=LbA5brefhXfXgSjw", icon: "fa-brands fa-youtube", pearls: 50 },
+    { id: "like-youtube-short-fb-zww391fg-2026", platform: "YouTube", action: "Like Sharkdle Short 6", description: "Like this YouTube Short.", url: "https://youtube.com/shorts/fB-Zww391Fg?si=_bX7nVACYMsC0xv5", icon: "fa-brands fa-youtube", pearls: 50 },
+    { id: "like-youtube-short-arvtyir0vou-2026", platform: "YouTube", action: "Like Sharkdle Short 7", description: "Like this YouTube Short.", url: "https://youtube.com/shorts/ARvtyir0voU?si=KiUE_Mztlip-cn8o", icon: "fa-brands fa-youtube", pearls: 50 },
+    { id: "like-youtube-short-p6ucddpukxe-2026", platform: "YouTube", action: "Like Sharkdle Short 8", description: "Like this YouTube Short.", url: "https://youtube.com/shorts/P6ucDdpUkXE?si=ltYGHtRubzRSMhbR", icon: "fa-brands fa-youtube", pearls: 50 },
+    { id: "like-youtube-short-rzk-8eygvui-2026", platform: "YouTube", action: "Like Sharkdle Short 9", description: "Like this YouTube Short.", url: "https://youtube.com/shorts/RZK-8EYGVuI?si=_JQCChSYHgnyzvOj", icon: "fa-brands fa-youtube", pearls: 50 },
+    { id: "like-youtube-short-e9pqmdfpykg-2026", platform: "YouTube", action: "Like Sharkdle Short 10", description: "Like this YouTube Short.", url: "https://youtube.com/shorts/e9PqMdFPYkg", icon: "fa-brands fa-youtube", pearls: 50 },
+    { id: "like-youtube-short-0lwvkrr4yh4-2026", platform: "YouTube", action: "Like Sharkdle Short 11", description: "Like this YouTube Short.", url: "https://youtube.com/shorts/0LWvkrr4yh4?si=qbKHYCmyw8al2rts", icon: "fa-brands fa-youtube", pearls: 50 },
+    { id: "like-youtube-short-tnpq2jwucew-2026", platform: "YouTube", action: "Like Sharkdle Short 12", description: "Like this YouTube Short.", url: "https://youtube.com/shorts/Tnpq2Jwucew?si=RAvm3-Tn5DptzrwB", icon: "fa-brands fa-youtube", pearls: 50 },
+    { id: "like-youtube-short-iseecm90zyk-2026", platform: "YouTube", action: "Like Sharkdle Short 13", description: "Like this YouTube Short.", url: "https://youtube.com/shorts/isEecM90ZYk?si=PXmJSfLcV9O_dS0d", icon: "fa-brands fa-youtube", pearls: 50 },
+    { id: "like-youtube-short-7ztwn14z3ju-2026", platform: "YouTube", action: "Like Sharkdle Short 14", description: "Like this YouTube Short.", url: "https://youtube.com/shorts/7ZtwN14z3JU?si=qjo-u8aeOFiWMR_t", icon: "fa-brands fa-youtube", pearls: 50 },
+    { id: "like-youtube-short-rdmsgzwvxmm-2026", platform: "YouTube", action: "Like Sharkdle Short 15", description: "Like this YouTube Short.", url: "https://youtube.com/shorts/rdMsGzWvxmM?si=H6UOladkD261ARhm", icon: "fa-brands fa-youtube", pearls: 50 },
+    { id: "like-youtube-short-uaxgdprxou8-2026", platform: "YouTube", action: "Like Sharkdle Short 16", description: "Like this YouTube Short.", url: "https://youtube.com/shorts/UaxgDPrXOU8?si=Gkfn71KRWygvUJ34", icon: "fa-brands fa-youtube", pearls: 50 },
+    { id: "like-instagram-reel-dcofq1zslco-2026", platform: "Instagram", action: "Like Instagram Reel 1", description: "Like this Sharkdle reel.", url: "https://www.instagram.com/reel/DcOFQ1zsLCo/?utm_source=ig_web_copy_link&igsh=MzRlODBiNWFlZA==", icon: "fa-brands fa-instagram", pearls: 50 },
+    { id: "like-instagram-reel-dcl5-eamkek-2026", platform: "Instagram", action: "Like Instagram Reel 2", description: "Like this Sharkdle reel.", url: "https://www.instagram.com/reel/DcL5-EAMkeK/?utm_source=ig_web_copy_link&igsh=MzRlODBiNWFlZA==", icon: "fa-brands fa-instagram", pearls: 50 },
+    { id: "like-instagram-reel-dcj2adsmgcg-2026", platform: "Instagram", action: "Like Instagram Reel 3", description: "Like this Sharkdle reel.", url: "https://www.instagram.com/reel/DcJ2adSMGcg/?utm_source=ig_web_copy_link&igsh=MzRlODBiNWFlZA==", icon: "fa-brands fa-instagram", pearls: 50 },
+    { id: "like-tiktok-video-7675091407878589719-2026", platform: "TikTok", action: "Like TikTok Video 1", description: "Like this Sharkdle TikTok.", url: "https://www.tiktok.com/@c0nn0rrrr/video/7675091407878589719?is_from_webapp=1&sender_device=pc&web_id=7631295855539226135", icon: "fa-brands fa-tiktok", pearls: 50 },
+    { id: "like-tiktok-video-7675389328360574230-2026", platform: "TikTok", action: "Like TikTok Video 2", description: "Like this Sharkdle TikTok.", url: "https://www.tiktok.com/@c0nn0rrrr/video/7675389328360574230?is_from_webapp=1&sender_device=pc&web_id=7631295855539226135", icon: "fa-brands fa-tiktok", pearls: 50 },
+    { id: "like-tiktok-video-7675704065292111106-2026", platform: "TikTok", action: "Like TikTok Video 3", description: "Like this Sharkdle TikTok.", url: "https://www.tiktok.com/@c0nn0rrrr/video/7675704065292111106?is_from_webapp=1&sender_device=pc&web_id=7631295855539226135", icon: "fa-brands fa-tiktok", pearls: 50 },
+    { id: "like-tiktok-video-7654212931978136854-2026", platform: "TikTok", action: "Like TikTok Video 4", description: "Like this Sharkdle TikTok.", url: "https://www.tiktok.com/@c0nn0rrrr/video/7654212931978136854?is_from_webapp=1&sender_device=pc", icon: "fa-brands fa-tiktok", pearls: 50 },
+    { id: "like-tiktok-video-7679878803937709334-2026", platform: "TikTok", action: "Like TikTok Video 5", description: "Like this Sharkdle TikTok.", url: "https://www.tiktok.com/@c0nn0rrrr/video/7679878803937709334?is_from_webapp=1&sender_device=pc&web_id=7674943822669989398", icon: "fa-brands fa-tiktok", pearls: 50 },
+    { id: "like-tiktok-video-7679244798347267350-2026", platform: "TikTok", action: "Like TikTok Video 6", description: "Like this Sharkdle TikTok.", url: "https://www.tiktok.com/@c0nn0rrrr/video/7679244798347267350?is_from_webapp=1&sender_device=pc&web_id=7674943822669989398", icon: "fa-brands fa-tiktok", pearls: 50 },
+    { id: "like-tiktok-video-7678649686810496278-2026", platform: "TikTok", action: "Like TikTok Video 7", description: "Like this Sharkdle TikTok.", url: "https://www.tiktok.com/@c0nn0rrrr/video/7678649686810496278?is_from_webapp=1&sender_device=pc&web_id=7674943822669989398", icon: "fa-brands fa-tiktok", pearls: 50 },
+    { id: "like-tiktok-video-7678223759773519107-2026", platform: "TikTok", action: "Like TikTok Video 8", description: "Like this Sharkdle TikTok.", url: "https://www.tiktok.com/@c0nn0rrrr/video/7678223759773519107?is_from_webapp=1&sender_device=pc&web_id=7674943822669989398", icon: "fa-brands fa-tiktok", pearls: 50 },
+    { id: "like-tiktok-video-7677723361312640278-2026", platform: "TikTok", action: "Like TikTok Video 9", description: "Like this Sharkdle TikTok.", url: "https://www.tiktok.com/@c0nn0rrrr/video/7677723361312640278?is_from_webapp=1&sender_device=pc&web_id=7674943822669989398", icon: "fa-brands fa-tiktok", pearls: 50 },
+    { id: "like-tiktok-video-7677365792861621526-2026", platform: "TikTok", action: "Like TikTok Video 10", description: "Like this Sharkdle TikTok.", url: "https://www.tiktok.com/@c0nn0rrrr/video/7677365792861621526?is_from_webapp=1&sender_device=pc&web_id=7674943822669989398", icon: "fa-brands fa-tiktok", pearls: 50 },
+    { id: "like-tiktok-video-7676963669607222530-2026", platform: "TikTok", action: "Like TikTok Video 11", description: "Like this Sharkdle TikTok.", url: "https://www.tiktok.com/@c0nn0rrrr/video/7676963669607222530?is_from_webapp=1&sender_device=pc&web_id=7674943822669989398", icon: "fa-brands fa-tiktok", pearls: 50 },
+    { id: "like-tiktok-video-7676513360992832791-2026", platform: "TikTok", action: "Like TikTok Video 12", description: "Like this Sharkdle TikTok.", url: "https://www.tiktok.com/@c0nn0rrrr/video/7676513360992832791?is_from_webapp=1&sender_device=pc&web_id=7674943822669989398", icon: "fa-brands fa-tiktok", pearls: 50 },
+    { id: "subscribe-youtube-wheresshark-2026", platform: "YouTube", action: "Subscribe to Connor on YouTube", description: "Subscribe for Sharkdle updates.", url: "https://youtube.com/@wheresshark?si=SQwsJVve_6P0Qj0F", icon: "fa-brands fa-youtube", pearls: 200 },
+    { id: "follow-instagram-2026", platform: "Instagram", action: "Follow @sharkdle.dev", description: "Follow the Sharkdle development feed.", url: "https://www.instagram.com/sharkdle.dev/", icon: "fa-brands fa-instagram", pearls: 150 },
+    { id: "follow-tiktok-2026", platform: "TikTok", action: "Follow Connor on TikTok", description: "Follow for Sharkdle updates.", url: "https://www.tiktok.com/@c0nn0rrrr?is_from_webapp=1&sender_device=pc", icon: "fa-brands fa-tiktok", pearls: 150 },
+    { id: "star-github-repository-2026", platform: "Support", action: "Star the GitHub repo", description: "Star Sharkdle on GitHub to support development.", url: "https://github.com/Noobler28/sharkdle", icon: "fa-brands fa-github", pearls: 125 },
+    { id: "join-discord-server-2026", platform: "Support", action: "Join the Discord", description: "Join the Sharkdle Discord community.", url: "https://discord.gg/V97Y8545Ve", icon: "fa-brands fa-discord", pearls: 150 },
+    { id: "share-sharkdle-home-2026", platform: "Support", action: "Share Sharkdle", description: "Send Sharkdle to a friend or group chat.", url: "https://sharkdle.online", icon: "fa-solid fa-share-nodes", pearls: 75 },
+    { id: "check-updates-page-2026", platform: "Support", action: "Read the updates", description: "Visit the updates page to see what changed.", url: "Updates/index.html", icon: "fa-solid fa-newspaper", pearls: 50 }
+];
+const SOCIAL_REWARD_GROUPS = [
+    { id: "tiktok", label: "TikTok", platform: "TikTok", icon: "fa-brands fa-tiktok", description: "Follow and like Sharkdle TikToks." },
+    { id: "instagram", label: "Instagram", platform: "Instagram", icon: "fa-brands fa-instagram", description: "Follow and like Sharkdle reels." },
+    { id: "youtube", label: "YouTube", platform: "YouTube", icon: "fa-brands fa-youtube", description: "Subscribe and like Sharkdle Shorts." },
+    { id: "support", label: "Support", platform: "Support", icon: "fa-solid fa-hands-holding-heart", description: "Small ways to help Sharkdle grow." }
+];
 
 function getPearlCount(profileData = getCurrentProfileData()) {
     return Math.max(0, Math.floor(Number(profileData?.pearls ?? profileData?.tidePearls) || 0));
@@ -2444,6 +2966,19 @@ function addPearls(amount, profileData = getCurrentProfileData(), options = {}) 
         updateHomeV3Sidebar(profileData);
     }
     return nextAmount;
+}
+
+function getClaimedSocialRewards(profileData = getCurrentProfileData()) {
+    return Array.isArray(profileData?.socialRewardsClaimed)
+        ? [...new Set(profileData.socialRewardsClaimed.map(id => String(id || "").trim()).filter(Boolean))]
+        : [];
+}
+
+function setClaimedSocialRewards(profileData, rewardIds = []) {
+    if (!profileData || typeof profileData !== "object") return [];
+    const claimed = [...new Set((Array.isArray(rewardIds) ? rewardIds : []).map(id => String(id || "").trim()).filter(Boolean))];
+    profileData.socialRewardsClaimed = claimed;
+    return claimed;
 }
 
 function getPearlBoostExpiresAt(profileData = getCurrentProfileData()) {
@@ -2511,7 +3046,7 @@ function applyStreakShieldOnLoss(profileData, options = {}) {
     const remainingShields = setStreakShieldCount(profileData, availableShields - 1);
     if (!options.silent && typeof showNotification === "function") {
         const modeLabel = options.mode ? ` in ${options.mode}` : "";
-        showNotification(`🛡️ Streak Shield activated${modeLabel}. Streak protected! (${remainingShields} left)`, "success", 4200);
+        showNotification(`\u{1F6E1}\uFE0F Streak Shield activated${modeLabel}. Streak protected! (${remainingShields} left)`, "success", 4200);
     }
     if (typeof window.unlockAchievement === "function") {
         window.unlockAchievement("streak_shield_used");
@@ -2600,16 +3135,16 @@ const SPIN_WHEEL_LEGENDARY_PFP = {
 };
 
 const spinWheelRewards = [
-    { id: "spin_xp_250", type: "xp", amount: 250, weight: 14, label: "250 XP", wheelLabel: "250", rarity: "common", color: "#35d07f", icon: "✨" },
-    { id: "spin_xp_500", type: "xp", amount: 500, weight: 13, label: "500 XP", wheelLabel: "500", rarity: "common", color: "#2f9cff", icon: "⚡" },
-    { id: "spin_xp_1000", type: "xp", amount: 1000, weight: 12, label: "1000 XP", wheelLabel: "1K", rarity: "uncommon", color: "#9b7cff", icon: "💫" },
-    { id: "spin_reef_crate", type: "crate", crateId: "reef", amount: 1, weight: 14, label: "Cosmetic Crate", wheelLabel: "Crate", rarity: "uncommon", color: "#f6a04d", icon: "📦" },
-    { id: "spin_event_crate", type: "seasonal_crate", amount: 1, weight: 10, label: "Event Crate", wheelLabel: "Event", rarity: "rare", color: "#ff5f57", icon: "★" },
-    { id: "spin_shield", type: "item", itemId: STREAK_SHIELD_ITEM_ID, quantity: 1, weight: 10, label: "Streak Shield", wheelLabel: "Shield", rarity: "rare", color: "#4e7cff", icon: "🛡️" },
-    { id: "spin_pass_level", type: "pass_level", amount: 1, weight: 8, label: "Free Shark Pass Level", wheelLabel: "Pass", rarity: "epic", color: "#f4d35e", icon: "⬆️" },
-    { id: "spin_badge", type: "badge", badgeId: "lucky-fin", name: "Lucky Fin", weight: 7, label: "Lucky Fin Badge", wheelLabel: "Badge", rarity: "epic", color: "#2ec4b6", icon: "🍀" },
-    { id: "spin_theme", type: "theme", themeId: "lucky-current", weight: 7, label: "Lucky Current Theme", wheelLabel: "Luck", rarity: "epic", color: "#5be7a9", icon: "🍀" },
-    { id: "spin_pfp", type: "pfp", name: SPIN_WHEEL_LEGENDARY_PFP.name, imagePath: SPIN_WHEEL_LEGENDARY_PFP.imagePath, weight: 5, label: "Blue-spotted Ribbontail Ray PFP", wheelLabel: "Jackpot", rarity: "legendary", color: "#f7e967", icon: "🖼️" }
+    { id: "spin_xp_250", type: "xp", amount: 250, weight: 14, label: "250 XP", wheelLabel: "250", rarity: "common", color: "#35d07f", icon: "\u{2728}" },
+    { id: "spin_xp_500", type: "xp", amount: 500, weight: 13, label: "500 XP", wheelLabel: "500", rarity: "common", color: "#2f9cff", icon: "\u{26A1}" },
+    { id: "spin_xp_1000", type: "xp", amount: 1000, weight: 12, label: "1000 XP", wheelLabel: "1K", rarity: "uncommon", color: "#9b7cff", icon: "\u{1F4AB}" },
+    { id: "spin_reef_crate", type: "crate", crateId: "reef", amount: 1, weight: 14, label: "Cosmetic Crate", wheelLabel: "Crate", rarity: "uncommon", color: "#f6a04d", icon: "\u{1F4E6}" },
+    { id: "spin_event_crate", type: "seasonal_crate", amount: 1, weight: 10, label: "Event Crate", wheelLabel: "Event", rarity: "rare", color: "#ff5f57", icon: "\u{2605}" },
+    { id: "spin_shield", type: "item", itemId: STREAK_SHIELD_ITEM_ID, quantity: 1, weight: 10, label: "Streak Shield", wheelLabel: "Shield", rarity: "rare", color: "#4e7cff", icon: "\u{1F6E1}\uFE0F" },
+    { id: "spin_pass_level", type: "pass_level", amount: 1, weight: 8, label: "Free Shark Pass Level", wheelLabel: "Pass", rarity: "epic", color: "#f4d35e", icon: "\u{2B06}\uFE0F" },
+    { id: "spin_badge", type: "badge", badgeId: "lucky-fin", name: "Lucky Fin", weight: 7, label: "Lucky Fin Badge", wheelLabel: "Badge", rarity: "epic", color: "#2ec4b6", icon: "\u{1F340}" },
+    { id: "spin_theme", type: "theme", themeId: "lucky-current", weight: 7, label: "Lucky Current Theme", wheelLabel: "Luck", rarity: "epic", color: "#5be7a9", icon: "\u{1F340}" },
+    { id: "spin_pfp", type: "pfp", name: SPIN_WHEEL_LEGENDARY_PFP.name, imagePath: SPIN_WHEEL_LEGENDARY_PFP.imagePath, weight: 5, label: "Blue-spotted Ribbontail Ray PFP", wheelLabel: "Jackpot", rarity: "legendary", color: "#f7e967", icon: "\u{1F5BC}\uFE0F" }
 ];
 
 let spinWheelRotation = 0;
@@ -2766,7 +3301,7 @@ function grantSpinWheelReward(profileData, reward) {
             message = `Free Shark Pass level up! (Level ${currentLevel + 1})`;
         } else {
             profileData.totalXP = (profileData.totalXP || 0) + 1500;
-            message = "Max level reached — 1500 XP instead";
+            message = "Max level reached \u2014 1500 XP instead";
         }
     } else if (reward.type === "item" || reward.type === "badge" || reward.type === "theme" || reward.type === "pfp") {
         const result = grantCrateReward(profileData, {
@@ -2784,7 +3319,7 @@ function grantSpinWheelReward(profileData, reward) {
             message = "Streak Shield (already at max)";
         } else if (duplicate) {
             profileData.totalXP = (profileData.totalXP || 0) + 750;
-            message = `${reward.label} (owned) — 750 XP instead`;
+            message = `${reward.label} (owned) \u2014 750 XP instead`;
         }
     }
 
@@ -2979,7 +3514,7 @@ async function spinDailyWheel() {
 
     if (result) {
         result.classList.remove("hidden");
-        result.innerHTML = `🎉 You won <strong>${grantResult.message}</strong>!`;
+        result.innerHTML = `\u{1F389} You won <strong>${grantResult.message}</strong>!`;
     }
 
     if (reward.type === "pfp" && !grantResult.duplicate && typeof showCosmeticUnlockToast === "function") {
@@ -2991,7 +3526,7 @@ async function spinDailyWheel() {
             subtitle: reward.name,
             accent: "#ffd47f",
             background: "linear-gradient(135deg, rgba(255, 212, 127, 0.96), rgba(91, 58, 9, 0.96))",
-            icon: "🎡"
+            icon: "\u{1F3A1}"
         });
     } else {
         showNotification(`Spin reward: ${grantResult.message}`, "success", 4200);
@@ -3020,6 +3555,14 @@ function collectAllUnlockablePfps() {
     };
 
     levelRewards.forEach(reward => addEntry(reward.name, reward.imagePath, { level: reward.level }));
+    sharkPassRewards
+        .filter(reward => reward.type === "pfp")
+        .forEach(reward => addEntry(reward.name, reward.imagePath, {
+            level: reward.level,
+            passReward: true,
+            rarity: reward.rarity,
+            source: getSharkPassRewardSourceLabel(reward)
+        }));
     getAllCrateRewardPools().flat()
         .filter(reward => reward.type === "pfp")
         .forEach(reward => addEntry(reward.name, reward.imagePath, { crateReward: true, rarity: reward.rarity }));
@@ -3044,7 +3587,7 @@ function collectAllUnlockableBadgeIds(uid = currentUser?.uid) {
 
 window.unlockAllCosmetics = async function() {
     if (!currentUser || !isDeveloperUid(currentUser.uid)) {
-        console.log("❌ Access denied. unlockAllCosmetics() is for developers only.");
+        console.log("? Access denied. unlockAllCosmetics() is for developers only.");
         showNotification("Dev command: Access denied.", "error", 4000);
         return;
     }
@@ -3053,10 +3596,21 @@ window.unlockAllCosmetics = async function() {
     const allPfps = collectAllUnlockablePfps();
     const allBadgeIds = collectAllUnlockableBadgeIds(currentUser.uid);
     const allThemeIds = [...new Set(["default", ...sharkPassCardThemes.map(theme => theme.id)])];
+    const activePassSeason = getActiveSharkPassSeason();
+    const passCapLevel = sharkPassRewards.reduce((max, reward) => Math.max(max, Number(reward.level) || 0), 0);
+    const passCapXp = passCapLevel > 0 ? getXPForLevel(passCapLevel) : 0;
+    const currentSeasonPassXp = activePassSeason?.id && profileData.sharkPassProgressSeasonId === activePassSeason.id
+        ? Math.max(0, Number(profileData.sharkPassXP) || 0)
+        : 0;
 
     profileData.earnedCosmetics = getUnifiedCosmeticList(profileData.earnedCosmetics, allPfps, "imagePath");
     profileData.unlockedBadges = [...new Set(["starter", ...allBadgeIds])];
     profileData.unlockedCardThemes = allThemeIds;
+    if (activePassSeason?.id) {
+        profileData.sharkPassProgressSeasonId = activePassSeason.id;
+        profileData.sharkPassSeasonId = activePassSeason.id;
+    }
+    profileData.sharkPassXP = Math.max(currentSeasonPassXp, passCapXp);
     if (allBadgeIds.includes("tester")) {
         profileData.testerBadgeUnlocked = true;
     }
@@ -3068,6 +3622,9 @@ window.unlockAllCosmetics = async function() {
             earnedCosmetics: profileData.earnedCosmetics,
             unlockedBadges: profileData.unlockedBadges,
             unlockedCardThemes: profileData.unlockedCardThemes,
+            sharkPassProgressSeasonId: profileData.sharkPassProgressSeasonId,
+            sharkPassSeasonId: profileData.sharkPassSeasonId,
+            sharkPassXP: profileData.sharkPassXP,
             testerBadgeUnlocked: profileData.testerBadgeUnlocked === true
         }, { merge: true });
     }
@@ -3078,13 +3635,13 @@ window.unlockAllCosmetics = async function() {
     if (typeof loadEarnedCosmetics === "function") loadEarnedCosmetics();
     if (typeof updateProfileBadgeUI === "function") updateProfileBadgeUI();
 
-    console.log(`✅ Unlocked ${profileData.earnedCosmetics.length} profile icons, ${profileData.unlockedBadges.length} badges, and ${profileData.unlockedCardThemes.length} themes.`);
+    console.log(`? Unlocked ${profileData.earnedCosmetics.length} profile icons, ${profileData.unlockedBadges.length} badges, and ${profileData.unlockedCardThemes.length} themes.`);
     showNotification("Unlocked all profile icons, badges, and themes.", "success", 4200);
 };
 
 window.resetDailySpin = function() {
     if (!currentUser || !isDeveloperUid(currentUser.uid)) {
-        console.log("❌ Access denied. resetDailySpin() is for developers only.");
+        console.log("? Access denied. resetDailySpin() is for developers only.");
         return;
     }
     const profileData = getCurrentProfileData();
@@ -3095,12 +3652,12 @@ window.resetDailySpin = function() {
         db.collection("userStats").doc(currentUser.uid).set({ lastSpinWheelDate: "" }, { merge: true }).catch(() => {});
     }
     updateSpinWheelUI();
-    console.log("✅ Daily spin reset. You can spin again.");
+    console.log("? Daily spin reset. You can spin again.");
 };
 
 window.giveDailySpin = function(count = 1) {
     if (!currentUser || !isDeveloperUid(currentUser.uid)) {
-        console.log("❌ Access denied. giveDailySpin() is for developers only.");
+        console.log("? Access denied. giveDailySpin() is for developers only.");
         return;
     }
     const grantCount = Math.max(1, Math.floor(Number(count) || 1));
@@ -3124,7 +3681,7 @@ window.giveDailySpin = function(count = 1) {
         }, { merge: true }).catch(() => {});
     }
     updateSpinWheelUI();
-    console.log(`✅ Granted ${grantCount} daily wheel spin${grantCount === 1 ? "" : "s"}. You now have ${nextBonusSpins} spin${nextBonusSpins === 1 ? "" : "s"} available.`);
+    console.log(`? Granted ${grantCount} daily wheel spin${grantCount === 1 ? "" : "s"}. You now have ${nextBonusSpins} spin${nextBonusSpins === 1 ? "" : "s"} available.`);
 };
 
 window.giveSpin = window.giveDailySpin;
@@ -3138,8 +3695,12 @@ function getAllCrateRewardPools() {
     return [crateRewardPool, summerCrateRewardPool, christmasCrateRewardPool, halloweenCrateRewardPool];
 }
 
+function getAllDisplayCrateRewardPools() {
+    return [legacyCrate1RewardPool, ...getAllCrateRewardPools()];
+}
+
 function getAllCrateBadgeRewards() {
-    return getAllCrateRewardPools()
+    return getAllDisplayCrateRewardPools()
         .flat()
         .filter(reward => reward.type === "badge");
 }
@@ -3151,11 +3712,11 @@ function getOpenedCrateCount(profileData = getCurrentProfileData(), crateId = nu
         const inventory = normalizeCrateInventory(profileData.crateInventory || {});
         return inventory[crateId] || 0;
     }
-    
+
     if (crateId === null) {
         return crateRewardPool.filter(reward => isCrateRewardOwned(profileData, reward)).length;
     }
-    
+
     const pool = getCratePoolById(crateId);
     return pool.filter(reward => isCrateRewardOwned(profileData, reward)).length;
 }
@@ -3610,7 +4171,6 @@ function getCommunityBossDisplayState() {
     const started = isCommunityBossStarted(nowMs);
     const expired = isCommunityBossExpired(nowMs);
     const contributionOpen = isCommunityBossContributionOpen(nowMs);
-    const bossGotAway = expired && !complete;
 
     let timerText = "";
     if (!started) {
@@ -3620,7 +4180,7 @@ function getCommunityBossDisplayState() {
     } else if (canClaim) {
         timerText = `${pendingRewards.length} reward${pendingRewards.length === 1 ? "" : "s"} unlocked.`;
     } else if (expired) {
-        timerText = `The ${COMMUNITY_BOSS_EVENT.bossName} got away.`;
+        timerText = "Event ended.";
     } else {
         timerText = `Ends in ${formatEventTimeRemaining(COMMUNITY_BOSS_EVENT.endMs - nowMs)}`;
     }
@@ -3639,8 +4199,6 @@ function getCommunityBossDisplayState() {
             : `Your next Daily or Infinite win will add ${getCommunityBossContributionMultiplier()} to the global total.`
         : complete
         ? "The community did it. Claim every unlocked reward while logged in."
-        : bossGotAway
-        ? `The ${COMMUNITY_BOSS_EVENT.bossName} got away, so wins are no longer being counted for this event.`
         : "Wins are no longer being counted for this event.";
 
     return {
@@ -3653,11 +4211,7 @@ function getCommunityBossDisplayState() {
         claimLabel,
         pendingRewardCount: pendingRewards.length,
         timerText,
-        contributionCopy,
-        title: bossGotAway ? `The ${COMMUNITY_BOSS_EVENT.bossName} Got Away` : COMMUNITY_BOSS_EVENT.title,
-        description: bossGotAway
-            ? `The event has ended, and the ${COMMUNITY_BOSS_EVENT.bossName} got away before the community reached ${target.toLocaleString()} global wins.`
-            : getCommunityBossDescription()
+        contributionCopy
     };
 }
 
@@ -3690,8 +4244,8 @@ function renderCommunityBossEventModal() {
         <section class="community-boss-event community-boss-modal-event community-boss-season-${COMMUNITY_BOSS_EVENT.season}" aria-live="polite">
             <div class="community-boss-modal-heading">
                 <span class="community-boss-kicker">${COMMUNITY_BOSS_EVENT.seasonLabel}</span>
-                <h2 id="community-boss-modal-title">${state.title}</h2>
-                <p>${state.description}</p>
+                <h2 id="community-boss-modal-title">${COMMUNITY_BOSS_EVENT.title}</h2>
+                <p>${getCommunityBossDescription()}</p>
             </div>
             <div class="community-boss-progress-shell community-boss-modal-progress">
                 <div class="community-boss-progress-meta">
@@ -4140,6 +4694,7 @@ function ensureCommunityBossStyles() {
 }
 
 function ensureCommunityBossPanel() {
+    if (COMMUNITY_BOSS_DISPLAY_DISABLED_FOR_NOW) return;
     const pageKind = getCommunityBossPageKind();
     if (!pageKind || document.getElementById("community-boss-event")) return;
 
@@ -4218,6 +4773,7 @@ function renderCommunityBossPanel() {
 }
 
 function ensureCommunityBossUiTimer() {
+    if (COMMUNITY_BOSS_DISPLAY_DISABLED_FOR_NOW) return;
     ensureCommunityBossPanel();
     if (communityBossUiTimer) return;
     if (!getCommunityBossPageKind()) return;
@@ -4541,222 +5097,1243 @@ async function claimCommunityBossReward() {
     showNotification(`${reward.label} reward claimed: ${rewardParts.join(", ")}.`, "success", 5600);
 }
 
+function getProfileAccountCreatedMs(profileData = {}) {
+    const createdAt = profileData.createdAt || profileData.accountCreatedAt || profileData.joinedAt || null;
+    if (!createdAt) return 0;
+    if (typeof createdAt.toMillis === "function") return createdAt.toMillis();
+    if (typeof createdAt.seconds === "number") return createdAt.seconds * 1000;
+    if (createdAt instanceof Date) return createdAt.getTime();
+    if (typeof createdAt === "number") return createdAt;
+    const parsed = Date.parse(String(createdAt));
+    return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function isEligibleForCladoselacheParticipation(profileData = getCurrentProfileData()) {
+    const createdMs = getProfileAccountCreatedMs(profileData);
+    return !createdMs || createdMs <= CLADOSELACHE_PARTICIPATION_ACCOUNT_CUTOFF_MS;
+}
+
+async function claimGlobalCladoselacheParticipationCrate(options = {}) {
+    const silentIfUnavailable = Boolean(options.silentIfUnavailable);
+    if (!currentUser) {
+        if (!silentIfUnavailable) openLoginModal();
+        return false;
+    }
+    if (!db) {
+        if (!silentIfUnavailable) showNotification("Participation reward is unavailable right now.", "error", 3200);
+        return false;
+    }
+
+    const profileData = getCurrentProfileData();
+    if (!isEligibleForCladoselacheParticipation(profileData)) {
+        if (!silentIfUnavailable) showNotification("This participation reward is for accounts from the Global Cladoselache event.", "info", 3600);
+        return false;
+    }
+    const allRewards = profileData.communityBossRewards && typeof profileData.communityBossRewards === "object"
+        ? { ...profileData.communityBossRewards }
+        : {};
+    const cladoselacheRewards = allRewards[CLADOSELACHE_PARTICIPATION_EVENT_ID]
+        && typeof allRewards[CLADOSELACHE_PARTICIPATION_EVENT_ID] === "object"
+        ? { ...allRewards[CLADOSELACHE_PARTICIPATION_EVENT_ID] }
+        : {};
+    const claims = cladoselacheRewards.claims && typeof cladoselacheRewards.claims === "object"
+        ? { ...cladoselacheRewards.claims }
+        : {};
+
+    if (cladoselacheRewards.participationClaimedAt || claims[CLADOSELACHE_PARTICIPATION_REWARD_ID]) {
+        if (!silentIfUnavailable) showNotification("You already claimed the Global Cladoselache participation crate.", "info", 3200);
+        return false;
+    }
+
+    const claimTime = Date.now();
+    const inventory = getCrateInventory(profileData);
+    inventory.reef = (Number(inventory.reef) || 0) + 1;
+    profileData.crateInventory = normalizeCrateInventory(inventory);
+
+    claims[CLADOSELACHE_PARTICIPATION_REWARD_ID] = {
+        claimedAt: claimTime,
+        crateId: "reef",
+        crateCount: 1,
+        crates: { reef: 1 },
+        participation: true
+    };
+    profileData.communityBossRewards = {
+        ...allRewards,
+        [CLADOSELACHE_PARTICIPATION_EVENT_ID]: {
+            ...cladoselacheRewards,
+            updatedAt: claimTime,
+            participationClaimedAt: claimTime,
+            participationRewardId: CLADOSELACHE_PARTICIPATION_REWARD_ID,
+            crates: {
+                ...(cladoselacheRewards.crates && typeof cladoselacheRewards.crates === "object" ? cladoselacheRewards.crates : {}),
+                reef: (Number(cladoselacheRewards.crates?.reef) || 0) + 1
+            },
+            claims
+        }
+    };
+
+    saveUserProfileLocally(profileData);
+    try {
+        await db.collection("userStats").doc(currentUser.uid).set({
+            crateInventory: profileData.crateInventory,
+            communityBossRewards: profileData.communityBossRewards,
+            lastUpdated: new Date()
+        }, { merge: true });
+    } catch (error) {
+        console.warn("Unable to sync Global Cladoselache participation reward:", error);
+        if (!silentIfUnavailable) showNotification("Participation crate saved locally but sync failed. Try again later.", "error", 3800);
+        return true;
+    }
+
+    renderCratesButton();
+    showNotification("Global Cladoselache participation reward claimed: 1 Cosmetic Crate.", "success", 4200);
+    return true;
+}
+
 window.contributeCommunityBossWin = contributeCommunityBossWin;
 window.claimCommunityBossReward = claimCommunityBossReward;
+window.claimGlobalCladoselacheParticipationCrate = claimGlobalCladoselacheParticipationCrate;
 window.openCommunityBossRanksModal = openCommunityBossRanksModal;
 window.closeCommunityBossRanksModal = closeCommunityBossRanksModal;
 window.openCommunityBossEventModal = openCommunityBossEventModal;
 window.closeCommunityBossEventModal = closeCommunityBossEventModal;
 
-const MEGALODON_ESCAPE_EVENT_ID = "summer-megaladon-2026";
-const MEGALODON_ESCAPE_AWARD_ID = `${MEGALODON_ESCAPE_EVENT_ID}-participation`;
-const MEGALODON_ESCAPE_AWARD_STORAGE_KEY = "megalodonEscapeParticipationAwardClaimed";
-const MEGALODON_ESCAPE_AWARD_XP = 1000;
-const MEGALODON_ESCAPE_AWARD_CRATE_ID = "summer";
-const MEGALODON_ESCAPE_AWARD_CRATE_COUNT = 1;
-let megalodonEscapeAwardShowTimer = null;
-
-function getMegalodonEscapeAwardStorageKey(uid = currentUser?.uid) {
-    return uid ? `${MEGALODON_ESCAPE_AWARD_STORAGE_KEY}_${uid}` : MEGALODON_ESCAPE_AWARD_STORAGE_KEY;
-}
-
-function getMegalodonEscapeAwardAuthUser() {
-    const authUser = typeof firebase !== "undefined" && firebase.auth ? firebase.auth().currentUser : null;
-    return currentUser && authUser?.uid === currentUser.uid ? authUser : null;
-}
-
-function getMegalodonEscapeContributorRef(uid = currentUser?.uid) {
-    return db && uid
-        ? db.collection("communityEvents").doc(MEGALODON_ESCAPE_EVENT_ID).collection("contributors").doc(uid)
-        : null;
-}
-
-async function hasMegalodonEscapeContribution(authUser = getMegalodonEscapeAwardAuthUser()) {
-    if (!authUser || !db) return false;
-    const contributorRef = getMegalodonEscapeContributorRef(authUser.uid);
-    if (!contributorRef) return false;
-
-    try {
-        const snapshot = await contributorRef.get();
-        const wins = Math.max(0, Number(snapshot.data()?.wins) || 0);
-        return snapshot.exists && wins > 0;
-    } catch (error) {
-        console.warn("Unable to verify Megalodon participation:", error);
-        return false;
+const LOST_TREASURES_EVENT_ID = "lost-treasures-2026";
+const LOST_TREASURES_BOTTLES = [
+    { id: "barnacle", name: "Barnacle Bottle", image: "images/lostTreasure/Bottles/Bottle1.png", scrollCount: 3, rareChance: 0.001, maxRareCards: 1 },
+    { id: "red-sea", name: "Red Sea Bottle", image: "images/lostTreasure/Bottles/Bottle2.png", scrollCount: 5, rareChance: 0.01, maxRareCards: 1 },
+    { id: "seafoam", name: "Seafoam Bottle", image: "images/lostTreasure/Bottles/Bottle3.png", scrollCount: 7, rareChance: 0.05, maxRareCards: 2 },
+    { id: "celestial", name: "Celestial Bottle", image: "images/lostTreasure/Bottles/BottleRare.png", scrollCount: 1, rareChance: 1, maxRareCards: 1, rareOnly: true }
+];
+const LOST_TREASURES_BOTTLE_IMAGES = LOST_TREASURES_BOTTLES.map(bottle => bottle.image);
+const LOST_TREASURES_CARD_IMAGES = Object.freeze({
+    common: "images/lostTreasure/Cards/Card.png",
+    commonWorn: "images/lostTreasure/Cards/Card2.png",
+    rare: "images/lostTreasure/Cards/RareCard.png",
+    rareWorn: "images/lostTreasure/Cards/RareCard2.png"
+});
+const LOST_TREASURES_SPECIES_ART_FILENAMES = Object.freeze({
+    "Benthic Broadwings|Torpedo Ray": "RingedTorpedoRay.png",
+    "Abyssal Relics|Pointy-nosed Blue Chimaera": "PointyNoseBlueChimaera.png",
+    "Gentle Giants|Spinetail Devil Ray": "SpinetailDevilray.png",
+    "Ambush Hunters|Brown-banded Bamboo Shark": "BrownBrandedBambooShark.png",
+    "Odd Adaptations|Cookiecutter Shark": "CookieCutterShark.png",
+    "Odd Adaptations|Japanese Bullhead Shark": "JapeneseBullheadShark.png",
+    "Reef Regulars|Blacktip Reef Shark": "BlackTipReefShark.png",
+    "Reef Regulars|Blue-spotted Ribbontail Ray": "BlueSpottedRibbontailRay.png",
+    "Reef Regulars|Whitetip Reef Shark": "WhiteTipReefShark.png",
+    "Miniature Marvels|Smallspotted Catshark": "SmallSpottedCatshark.png",
+    "Seafloor Walkers|Brown-banded Bamboo Shark": "BrownBandedBambooShark.png",
+    "Seafloor Walkers|Whitespotted Bamboo Shark": "WhiteSpottedBambooShark.png"
+});
+const LOST_TREASURES_BOTTLE_DROP_CHANCE = 0.36;
+const LOST_TREASURES_BOTTLE_DROP_WEIGHTS = Object.freeze({
+    barnacle: 64,
+    "red-sea": 24,
+    seafoam: 10,
+    celestial: 2
+});
+const LOST_TREASURES_LEGACY_BOTTLE_IDS = Object.freeze({
+    barnacle: "weathered",
+    "red-sea": ["placeholder", "seafoam"],
+    seafoam: "barnacle",
+    celestial: "rare"
+});
+const LOST_TREASURES_BOTTLE_ID_ALIASES = Object.freeze(
+    {
+        weathered: "barnacle",
+        placeholder: "red-sea",
+        rare: "celestial"
     }
+);
+const LOST_TREASURES_DAILY_WIN_BOTTLE_ID = "barnacle";
+const LOST_TREASURES_STREAK_BOTTLE_REWARDS = Object.freeze([
+    { streak: 3, bottleId: "barnacle", amount: 1 },
+    { streak: 7, bottleId: "red-sea", amount: 1 },
+    { streak: 14, bottleId: "seafoam", amount: 1 },
+    { streak: 30, bottleId: "celestial", amount: 1 }
+]);
+const LOST_TREASURES_DUPLICATE_EXCHANGES = [
+    { id: "dupes-red-sea", cost: 10, bottleId: "red-sea", amount: 1, label: "10 Dupes", reward: "Red Sea Bottle" },
+    { id: "dupes-seafoam", cost: 25, bottleId: "seafoam", amount: 1, label: "25 Dupes", reward: "Seafoam Bottle" },
+    { id: "dupes-celestial", cost: 60, bottleId: "celestial", amount: 1, label: "60 Dupes", reward: "Celestial Bottle" }
+];
+const LOST_TREASURES_DUPLICATE_BASE_CHANCE = 0.28;
+const LOST_TREASURES_DUPLICATE_PROGRESS_BONUS = 0.34;
+const LOST_TREASURES_DUPLICATE_MAX_CHANCE = 0.72;
+const LOST_TREASURES_RARE_DUPLICATE_VALUE = 3;
+const LOST_TREASURES_CATEGORY_PEARL_REWARD = 300;
+const LOST_TREASURES_GRAND_PEARL_REWARD = 2500;
+const LOST_TREASURES_GRAND_BADGE = Object.freeze({
+    id: "treasure-keeper",
+    name: "Treasure Keeper",
+    emoji: "\u{1F5FA}\uFE0F"
+});
+const LOST_TREASURES_GRAND_PFPS = Object.freeze([
+    {
+        name: "Grey Nurse Shark",
+        imagePath: "images/lostTreasure/Pfp/GreyNurseShark.png",
+        rarity: "legendary",
+        source: "Lost Treasures"
+    },
+    {
+        name: "Reef Manta Ray",
+        imagePath: "images/lostTreasure/Pfp/ReefMantaRay.png",
+        rarity: "legendary",
+        source: "Lost Treasures"
+    }
+]);
+const LOST_TREASURES_CATEGORY_SUBTITLES = Object.freeze({
+    "everyone-knows": "Broad, bottom-dwelling species including rays, skates, and flat-bodied sharks.",
+    "reef-regulars": "Extreme-depth species with photos from submersibles or deep trawls.",
+    "open-ocean-icons": "Large plankton-feeders with abundant real photos.",
+    "deep-sea-strangers": "Common reef species with thousands of real photographs.",
+    "flat-and-fancy": "Pelagic species photographed by divers and fisheries.",
+    "saw-snouts": "Species known for stealth or sudden strikes.",
+    "ancient-oddballs": "Species with bizarre shapes or adaptations.",
+    "tiny-terrors": "Species documented in rivers or brackish systems.",
+    "carpet-crew": "Species from frigid seas with verified photos.",
+    "sting-and-wing": "Miniature sharks and rays with confirmed photos.",
+    "hammer-time": "Species that walk or rest on the seafloor.",
+    "rare-finds": "Fast, powerful apex hunters with abundant real photos."
+});
+const LOST_TREASURES_CATEGORIES = [
+    { id: "everyone-knows", name: "Benthic Broadwings", color: "#66e0d1", species: ["Ornate Wobbegong", "Japanese Sawshark", "Common Sawfish", "Bowmouth Guitarfish", "Shovelnose Guitarfish", "Cownose Ray", "Southern Stingray", "Big Skate", "Torpedo Ray", "Spotted Eagle Ray"] },
+    { id: "reef-regulars", name: "Abyssal Relics", color: "#d8a55f", species: ["Goblin Shark", "Frilled Shark", "Greenland Shark", "Bluntnose Sixgill Shark", "Sevengill Shark", "Pacific Sleeper Shark", "Portuguese Dogfish", "Kitefin Shark", "Chimaera monstrosa", "Pointy-nosed Blue Chimaera"] },
+    { id: "open-ocean-icons", name: "Gentle Giants", color: "#f4d7ff", species: ["Whale Shark", "Basking Shark", "Megamouth Shark", "Reef Manta Ray", "Giant Manta Ray", "Devil Ray", "Bentfin Devil Ray", "Spinetail Devil Ray", "Pygmy Devil Ray", "Chilean Devil Ray"] },
+    { id: "deep-sea-strangers", name: "Reef Regulars", color: "#7bd875", species: ["Blacktip Reef Shark", "Whitetip Reef Shark", "Grey Reef Shark", "Nurse Shark", "Zebra Shark", "Epaulette Shark", "Blue-spotted Ribbontail Ray", "Honeycomb Stingray", "Reticulate Whipray", "Coral Catshark"] },
+    { id: "flat-and-fancy", name: "Open Ocean Drifters", color: "#8fb6ff", species: ["Blue Shark", "Oceanic Whitetip", "Shortfin Mako", "Salmon Shark", "Pelagic Thresher", "Bigeye Thresher", "Pelagic Stingray", "Mobula kuhlii", "Mobula hypostoma", "Mobula munkiana"] },
+    { id: "saw-snouts", name: "Ambush Hunters", color: "#ffcc70", species: ["Great White Shark", "Tiger Shark", "Bull Shark", "Sand Tiger Shark", "Angel Shark", "Ornate Angel Shark", "Tasselled Wobbegong", "Spotted Wobbegong", "Copper Shark", "Brown-banded Bamboo Shark"] },
+    { id: "ancient-oddballs", name: "Odd Adaptations", color: "#7fe8ff", species: ["Scalloped Hammerhead", "Great Hammerhead", "Winghead Shark", "Sawshark", "Cookiecutter Shark", "Longnose Sawshark", "Chimaera phantasma", "Elephant Fish", "Spotted Ratfish", "Japanese Bullhead Shark"] },
+    { id: "tiny-terrors", name: "River Shadows", color: "#d6c3a4", species: ["Bull Shark", "Ganges River Shark", "Speartooth Shark", "Irrawaddy River Shark", "Largetooth Sawfish", "Green Sawfish", "Giant Freshwater Stingray", "Pearl Ray", "Black Stingray", "Tiger River Stingray"] },
+    { id: "carpet-crew", name: "Coldwater Charts", color: "#b7a7ff", species: ["Porbeagle Shark", "Spiny Dogfish", "Greenland Shark", "Arctic Skate", "Winter Skate", "Rough Skate", "Pacific Spiny Dogfish", "Barndoor Skate", "Longnose Skate", "White Skate"] },
+    { id: "sting-and-wing", name: "Miniature Marvels", color: "#ff8fab", species: ["Dwarf Lanternshark", "Pygmy Shark", "Velvet Belly Lanternshark", "Chain Catshark", "Smallspotted Catshark", "Bali Catshark", "Lesser Electric Ray", "Shorttail Stingray", "Fanray", "Spotted Torpedo Ray"] },
+    { id: "hammer-time", name: "Seafloor Walkers", color: "#58c7ff", species: ["Epaulette Shark", "Speckled Carpetshark", "Brownbanded Bamboo Shark", "Whitespotted Bamboo Shark", "Arabian Carpetshark", "Ornate Wobbegong", "Guitarfish", "Shovelnose Ray", "Eastern Shovelnose Ray", "Common Skate"] },
+    { id: "rare-finds", name: "Apex Legends", color: "#ffe18a", species: ["Great White Shark", "Tiger Shark", "Bull Shark", "Shortfin Mako", "Longfin Mako", "Dusky Shark", "Silky Shark", "Lemon Shark", "Blacktip Shark", "Sandbar Shark"] }
+];
+const LOST_TREASURES_CARDS_PER_CATEGORY = 10;
+
+function getLostTreasuresCardId(categoryId, cardNumber) {
+    return `${categoryId}-${String(cardNumber).padStart(2, "0")}`;
 }
 
-function removeAnonymousMegalodonEscapeAward(profileData) {
-    if (!profileData || typeof profileData !== "object" || profileData.uid) return profileData || {};
-    const communityBossRewards = profileData.communityBossRewards;
-    if (!communityBossRewards || typeof communityBossRewards !== "object" || !communityBossRewards[MEGALODON_ESCAPE_AWARD_ID]) {
-        return profileData;
+function getLostTreasuresGeneratedCardImage(categoryId, cardNumber) {
+    return `images/lostTreasure/Cards/generated/${getLostTreasuresCardId(categoryId, cardNumber)}.png`;
+}
+
+function getLostTreasuresArtPathPart(value) {
+    return String(value || "").replace(/[^a-z0-9]/gi, "");
+}
+
+function getLostTreasuresSpeciesArtImage(categoryName, speciesName) {
+    const filename = LOST_TREASURES_SPECIES_ART_FILENAMES[`${categoryName}|${speciesName}`] || `${getLostTreasuresArtPathPart(speciesName)}.png`;
+    return `images/lostTreasure/Cards/Sharks/${getLostTreasuresArtPathPart(categoryName)}/${filename}`;
+}
+
+function getLostTreasuresCommonFrameImage(cardNumber) {
+    return [2, 5, 7].includes(cardNumber)
+        ? LOST_TREASURES_CARD_IMAGES.commonWorn
+        : LOST_TREASURES_CARD_IMAGES.common;
+}
+
+function getLostTreasuresRareFrameImage(categoryIndex, cardNumber) {
+    return (categoryIndex + cardNumber) % 2 === 0
+        ? LOST_TREASURES_CARD_IMAGES.rareWorn
+        : LOST_TREASURES_CARD_IMAGES.rare;
+}
+
+function getLostTreasuresCardArtMarkup(card, altText) {
+    if (card.speciesImage) {
+        return `
+            <img class="lost-treasures-frame-card" src="${card.frameImage}" alt="" aria-hidden="true">
+            <img class="lost-treasures-species-card" src="${card.speciesImage}" alt="${altText}" onerror="this.onerror=null; this.remove(); this.closest('.lost-treasures-scroll-art, .lost-treasures-detail-art')?.classList.remove('has-species-art');">
+        `;
     }
+    return `<img class="lost-treasures-frame-card" src="${card.frameImage}" alt="${altText}">`;
+}
 
-    const sanitizedRewards = { ...communityBossRewards };
-    delete sanitizedRewards[MEGALODON_ESCAPE_AWARD_ID];
+function getLostTreasuresAlbum() {
+    return LOST_TREASURES_CATEGORIES.map((category, categoryIndex) => ({
+        ...category,
+        cards: Array.from({ length: LOST_TREASURES_CARDS_PER_CATEGORY }, (_, index) => {
+            const speciesName = category.species[index] || `${category.name} Scroll ${index + 1}`;
+            return {
+            id: getLostTreasuresCardId(category.id, index + 1),
+            number: index + 1,
+            name: speciesName,
+            mark: speciesName
+                .split(/\s+/)
+                .map(part => part[0])
+                .join("")
+                .replace(/[^A-Z]/gi, "")
+                .slice(0, 4)
+                .toUpperCase(),
+            rarity: index >= LOST_TREASURES_CARDS_PER_CATEGORY - 2 ? "rare" : "common",
+            frameImage: index >= LOST_TREASURES_CARDS_PER_CATEGORY - 2
+                ? getLostTreasuresRareFrameImage(categoryIndex, index + 1)
+                : getLostTreasuresCommonFrameImage(index + 1),
+            speciesImage: getLostTreasuresSpeciesArtImage(category.name, speciesName),
+            image: getLostTreasuresGeneratedCardImage(category.id, index + 1)
+            };
+        })
+    }));
+}
 
-    const sanitizedProfile = {
-        ...profileData,
-        communityBossRewards: sanitizedRewards,
-        totalXP: Math.max(0, (Number(profileData.totalXP) || 0) - MEGALODON_ESCAPE_AWARD_XP)
+function getLostTreasuresState(profileData = getCurrentProfileData()) {
+    const raw = profileData.lostTreasures && typeof profileData.lostTreasures === "object" ? profileData.lostTreasures : {};
+    const legacyBottleCount = typeof raw.bottles === "number" ? Math.max(0, Number(raw.bottles) || 0) : 0;
+    const rawBottleInventory = raw.bottles && typeof raw.bottles === "object" ? raw.bottles : raw.bottleInventory;
+    const bottleInventory = LOST_TREASURES_BOTTLES.reduce((inventory, bottle, index) => {
+        const legacyBottleIds = [LOST_TREASURES_LEGACY_BOTTLE_IDS[bottle.id]].flat().filter(Boolean);
+        const savedCount = Number(rawBottleInventory?.[bottle.id]);
+        const hasSavedCount = Number.isFinite(savedCount);
+        const legacyCount = legacyBottleIds.reduce((sum, legacyBottleId) => sum + Math.max(0, Number(rawBottleInventory?.[legacyBottleId]) || 0), 0);
+        inventory[bottle.id] = Math.max(0, hasSavedCount ? savedCount : legacyCount)
+            + (index === 0 ? legacyBottleCount : 0);
+        return inventory;
+    }, {});
+    const selectedBottleId = LOST_TREASURES_BOTTLE_ID_ALIASES[raw.selectedBottleId] || raw.selectedBottleId || LOST_TREASURES_BOTTLES[0].id;
+    return {
+        eventId: raw.eventId || LOST_TREASURES_EVENT_ID,
+        bottles: bottleInventory,
+        collectedCards: Array.isArray(raw.collectedCards) ? [...new Set(raw.collectedCards)] : [],
+        duplicateCards: Math.max(0, Number(raw.duplicateCards) || 0),
+        duplicateCardCounts: raw.duplicateCardCounts && typeof raw.duplicateCardCounts === "object" ? { ...raw.duplicateCardCounts } : {},
+        claimedCategories: Array.isArray(raw.claimedCategories) ? [...new Set(raw.claimedCategories)] : [],
+        recentCards: Array.isArray(raw.recentCards) ? raw.recentCards.slice(0, 8) : [],
+        claimedGrandReward: Boolean(raw.claimedGrandReward),
+        lastOpenedCardId: raw.lastOpenedCardId || "",
+        selectedBottleId: selectedBottleId,
+        dailyBottleDates: Array.isArray(raw.dailyBottleDates) ? [...new Set(raw.dailyBottleDates)] : [],
+        claimedBottleMilestones: Array.isArray(raw.claimedBottleMilestones) ? [...new Set(raw.claimedBottleMilestones)] : []
     };
-    const inventory = normalizeCrateInventory(profileData.crateInventory);
-    inventory[MEGALODON_ESCAPE_AWARD_CRATE_ID] = Math.max(
-        0,
-        (Number(inventory[MEGALODON_ESCAPE_AWARD_CRATE_ID]) || 0) - MEGALODON_ESCAPE_AWARD_CRATE_COUNT
-    );
-    sanitizedProfile.crateInventory = normalizeCrateInventory(inventory);
-    return sanitizedProfile;
 }
 
-function clearAnonymousMegalodonEscapeAwardCache() {
-    let didSanitize = false;
-    let sanitizedTotalXp = null;
-    ["userProfile", "userProfileBackup"].forEach(key => {
-        try {
-            const rawProfile = localStorage.getItem(key);
-            if (!rawProfile) return;
-            const profileData = JSON.parse(rawProfile);
-            const sanitizedProfile = removeAnonymousMegalodonEscapeAward(profileData);
-            if (sanitizedProfile === profileData) return;
-            didSanitize = true;
-            localStorage.setItem(key, JSON.stringify(sanitizedProfile));
-            if (Object.prototype.hasOwnProperty.call(sanitizedProfile, "totalXP")) {
-                const nextTotalXp = Math.max(0, Number(sanitizedProfile.totalXP) || 0);
-                if (key === "userProfile" || sanitizedTotalXp === null) {
-                    sanitizedTotalXp = nextTotalXp;
-                }
-            }
-        } catch (error) {
-            console.warn("Unable to clear anonymous Megalodon award cache:", error);
+function mergeLostTreasuresStates(localProfile = {}, remoteProfile = {}) {
+    const localState = getLostTreasuresState(localProfile);
+    const remoteState = getLostTreasuresState(remoteProfile);
+    const hasRemoteLostTreasures = Boolean(remoteProfile?.lostTreasures && typeof remoteProfile.lostTreasures === "object");
+    const hasLocalLostTreasures = Boolean(localProfile?.lostTreasures && typeof localProfile.lostTreasures === "object");
+    const localUpdatedAt = Number(localProfile?.lostTreasures?.updatedAt) || 0;
+    const remoteUpdatedAt = Number(remoteProfile?.lostTreasures?.updatedAt) || 0;
+    const bottleSourceState = remoteUpdatedAt > localUpdatedAt ? remoteState : localState;
+    return {
+        eventId: LOST_TREASURES_EVENT_ID,
+        bottles: LOST_TREASURES_BOTTLES.reduce((inventory, bottle) => {
+            inventory[bottle.id] = getLostTreasuresBottleCount(bottleSourceState, bottle.id);
+            return inventory;
+        }, {}),
+        collectedCards: [...new Set([...localState.collectedCards, ...remoteState.collectedCards])],
+        duplicateCards: Math.max(localState.duplicateCards, remoteState.duplicateCards),
+        duplicateCardCounts: Object.keys({ ...localState.duplicateCardCounts, ...remoteState.duplicateCardCounts }).reduce((counts, cardId) => {
+            counts[cardId] = Math.max(Number(localState.duplicateCardCounts?.[cardId]) || 0, Number(remoteState.duplicateCardCounts?.[cardId]) || 0);
+            return counts;
+        }, {}),
+        claimedCategories: [...new Set([...localState.claimedCategories, ...remoteState.claimedCategories])],
+        recentCards: [...remoteState.recentCards, ...localState.recentCards].filter(Boolean).slice(0, 8),
+        claimedGrandReward: Boolean(localState.claimedGrandReward || remoteState.claimedGrandReward),
+        dailyBottleDates: [...new Set([...localState.dailyBottleDates, ...remoteState.dailyBottleDates])],
+        claimedBottleMilestones: [...new Set([...localState.claimedBottleMilestones, ...remoteState.claimedBottleMilestones])],
+        lastOpenedCardId: hasRemoteLostTreasures && remoteState.lastOpenedCardId ? remoteState.lastOpenedCardId : localState.lastOpenedCardId || "",
+        selectedBottleId: hasRemoteLostTreasures
+            ? (remoteState.selectedBottleId || localState.selectedBottleId || LOST_TREASURES_BOTTLES[0].id)
+            : hasLocalLostTreasures
+                ? (localState.selectedBottleId || LOST_TREASURES_BOTTLES[0].id)
+                : LOST_TREASURES_BOTTLES[0].id,
+        updatedAt: Math.max(localUpdatedAt, remoteUpdatedAt)
+    };
+}
+
+function setLostTreasuresState(profileData, state, options = {}) {
+    profileData.lostTreasures = {
+        eventId: LOST_TREASURES_EVENT_ID,
+        bottles: LOST_TREASURES_BOTTLES.reduce((inventory, bottle) => {
+            inventory[bottle.id] = Math.max(0, Number(state.bottles?.[bottle.id]) || 0);
+            return inventory;
+        }, {}),
+        collectedCards: [...new Set(state.collectedCards || [])],
+        duplicateCards: Math.max(0, Number(state.duplicateCards) || 0),
+        duplicateCardCounts: state.duplicateCardCounts && typeof state.duplicateCardCounts === "object" ? { ...state.duplicateCardCounts } : {},
+        claimedCategories: [...new Set(state.claimedCategories || [])],
+        recentCards: Array.isArray(state.recentCards) ? state.recentCards.filter(Boolean).slice(0, 8) : [],
+        claimedGrandReward: Boolean(state.claimedGrandReward),
+        lastOpenedCardId: state.lastOpenedCardId || "",
+        selectedBottleId: state.selectedBottleId || LOST_TREASURES_BOTTLES[0].id,
+        dailyBottleDates: Array.isArray(state.dailyBottleDates) ? [...new Set(state.dailyBottleDates)].slice(-30) : [],
+        claimedBottleMilestones: Array.isArray(state.claimedBottleMilestones) ? [...new Set(state.claimedBottleMilestones)] : [],
+        updatedAt: Date.now()
+    };
+    saveUserProfileLocally(profileData, options);
+}
+
+function getLostTreasuresBottleCount(state = getLostTreasuresState(), bottleId = null) {
+    if (bottleId) return Math.max(0, Number(state.bottles?.[bottleId]) || 0);
+    return LOST_TREASURES_BOTTLES.reduce((sum, bottle) => sum + Math.max(0, Number(state.bottles?.[bottle.id]) || 0), 0);
+}
+
+function pickLostTreasuresBottleDrop() {
+    const weightedBottles = LOST_TREASURES_BOTTLES.map(bottle => ({
+        ...bottle,
+        weight: Math.max(0, Number(LOST_TREASURES_BOTTLE_DROP_WEIGHTS[bottle.id]) || 0)
+    })).filter(bottle => bottle.weight > 0);
+    const totalWeight = weightedBottles.reduce((sum, bottle) => sum + bottle.weight, 0);
+    let roll = Math.random() * totalWeight;
+    for (const bottle of weightedBottles) {
+        roll -= bottle.weight;
+        if (roll <= 0) return bottle;
+    }
+    return weightedBottles[0] || LOST_TREASURES_BOTTLES[0];
+}
+
+async function persistLostTreasuresState(profileData) {
+    saveUserProfileLocally(profileData, { skipRemoteSync: true });
+    if (!currentUser || !db) return;
+    await db.collection("userStats").doc(currentUser.uid).set({
+        lostTreasures: profileData.lostTreasures,
+        pearls: getPearlCount(profileData),
+        unlockedBadges: Array.isArray(profileData.unlockedBadges) ? profileData.unlockedBadges : ["starter"],
+        earnedCosmetics: Array.isArray(profileData.earnedCosmetics) ? profileData.earnedCosmetics : [],
+        lastUpdated: new Date()
+    }, { merge: true });
+}
+
+function grantLostTreasuresBottle(profileData, bottleId = "barnacle", amount = 1) {
+    const state = getLostTreasuresState(profileData);
+    const bottle = LOST_TREASURES_BOTTLES.find(item => item.id === bottleId) || LOST_TREASURES_BOTTLES[0];
+    state.bottles[bottle.id] = getLostTreasuresBottleCount(state, bottle.id) + Math.max(1, Math.floor(Number(amount) || 1));
+    state.selectedBottleId = bottle.id;
+    setLostTreasuresState(profileData, state, { skipRemoteSync: true });
+    return { state, bottle };
+}
+
+function getLostTreasuresTodayKey() {
+    return new Date().toISOString().slice(0, 10);
+}
+
+function maybeAwardLostTreasuresBottleDrop(source = "win") {
+    if (!currentUser) return false;
+    const profileData = getCurrentProfileData();
+    const state = getLostTreasuresState(profileData);
+    const todayKey = getLostTreasuresTodayKey();
+    const grants = [];
+
+    if (!state.dailyBottleDates.includes(todayKey)) {
+        state.dailyBottleDates.push(todayKey);
+        grants.push({ bottleId: LOST_TREASURES_DAILY_WIN_BOTTLE_ID, amount: 1, reason: "daily win" });
+    }
+
+    const streak = Math.max(0, Number(profileData.currentStreak) || 0);
+    LOST_TREASURES_STREAK_BOTTLE_REWARDS.forEach(reward => {
+        const milestoneKey = String(reward.streak);
+        if (streak >= reward.streak && !state.claimedBottleMilestones.includes(milestoneKey)) {
+            state.claimedBottleMilestones.push(milestoneKey);
+            grants.push({ ...reward, reason: `${reward.streak}-win streak` });
         }
     });
 
-    if (sanitizedTotalXp !== null) {
-        localStorage.setItem("totalXP", String(sanitizedTotalXp));
+    if (Math.random() <= LOST_TREASURES_BOTTLE_DROP_CHANCE) {
+        const bottle = pickLostTreasuresBottleDrop();
+        grants.push({ bottleId: bottle.id, amount: 1, reason: "washed up" });
     }
-    localStorage.removeItem(MEGALODON_ESCAPE_AWARD_STORAGE_KEY);
-    return didSanitize;
-}
 
-function hasClaimedMegalodonEscapeAward(profileData = getCurrentProfileData()) {
-    if (!getMegalodonEscapeAwardAuthUser()) return false;
-    const rewardClaim = profileData?.communityBossRewards?.[MEGALODON_ESCAPE_AWARD_ID];
-    return Boolean(rewardClaim) || localStorage.getItem(getMegalodonEscapeAwardStorageKey()) === "true";
-}
+    if (!grants.length) return false;
 
-function closeMegalodonEscapeAwardModal() {
-    const modal = document.getElementById("megalodonEscapeAwardModal");
-    if (modal) modal.classList.add("hidden");
-}
-
-async function grantMegalodonEscapeAward() {
-    const authUser = getMegalodonEscapeAwardAuthUser();
-    if (!authUser || !db) return false;
-    if (!(await hasMegalodonEscapeContribution(authUser))) return false;
-
-    const profileData = getCurrentProfileData();
-    if (hasClaimedMegalodonEscapeAward(profileData)) return false;
-
-    profileData.uid = authUser.uid;
-    profileData.email = profileData.email || authUser.email;
-    profileData.username = profileData.username || getStoredPreferredUsername() || authUser.email?.split("@")[0] || "Sharkdle Player";
-
-    const awardCrateCount = isSeasonalCrateThemeActive(MEGALODON_ESCAPE_AWARD_CRATE_ID)
-        ? MEGALODON_ESCAPE_AWARD_CRATE_COUNT
-        : 0;
-    const inventory = getCrateInventory(profileData);
-    if (awardCrateCount > 0) {
-        inventory[MEGALODON_ESCAPE_AWARD_CRATE_ID] = (inventory[MEGALODON_ESCAPE_AWARD_CRATE_ID] || 0) + awardCrateCount;
+    grants.forEach(grant => {
+        const bottle = LOST_TREASURES_BOTTLES.find(item => item.id === grant.bottleId) || LOST_TREASURES_BOTTLES[0];
+        state.bottles[bottle.id] = getLostTreasuresBottleCount(state, bottle.id) + Math.max(1, Math.floor(Number(grant.amount) || 1));
+        state.selectedBottleId = bottle.id;
+    });
+    setLostTreasuresState(profileData, state, { skipRemoteSync: true });
+    persistLostTreasuresState(profileData).catch(error => console.warn("Lost Treasures bottle sync failed:", error));
+    const bestGrant = grants[grants.length - 1];
+    const bestBottle = LOST_TREASURES_BOTTLES.find(item => item.id === bestGrant.bottleId) || LOST_TREASURES_BOTTLES[0];
+    const extraCount = grants.reduce((sum, grant) => sum + Math.max(1, Math.floor(Number(grant.amount) || 1)), 0) - 1;
+    showNotification?.(`${bestBottle.name} earned from your ${source}${extraCount > 0 ? ` +${extraCount} more bottle${extraCount === 1 ? "" : "s"}` : ""}!`, "success", 4200);
+    if (document.getElementById("lost-treasures-modal")) {
+        renderLostTreasuresModal?.();
     }
-    profileData.crateInventory = normalizeCrateInventory(inventory);
-    profileData.totalXP = (Number(profileData.totalXP) || 0) + MEGALODON_ESCAPE_AWARD_XP;
-    profileData.communityBossRewards = {
-        ...(profileData.communityBossRewards && typeof profileData.communityBossRewards === "object" ? profileData.communityBossRewards : {}),
-        [MEGALODON_ESCAPE_AWARD_ID]: {
-            claimedAt: Date.now(),
-            participation: true,
-            xp: MEGALODON_ESCAPE_AWARD_XP,
-            crates: awardCrateCount > 0 ? { [MEGALODON_ESCAPE_AWARD_CRATE_ID]: awardCrateCount } : {},
-            crateId: MEGALODON_ESCAPE_AWARD_CRATE_ID,
-            crateCount: awardCrateCount
-        }
-    };
-    profileData.lastUpdated = Date.now();
-
-    saveUserProfileLocally(profileData);
-    localStorage.setItem(getMegalodonEscapeAwardStorageKey(profileData.uid), "true");
-
-    db.collection("userStats").doc(authUser.uid).set({
-        totalXP: profileData.totalXP,
-        crateInventory: profileData.crateInventory,
-        communityBossRewards: profileData.communityBossRewards,
-        lastUpdated: new Date()
-    }, { merge: true }).catch(error => console.warn("Megalodon participation award sync failed:", error));
-
-    updateProfileDisplay(profileData);
-    updateIndexStats();
-    renderCratesButton();
-    renderHomeCratesModal();
-    showNotification(
-        awardCrateCount > 0
-            ? "Megalodon participation award added: +1 Summer Crate and +1,000 XP."
-            : "Megalodon participation award added: +1,000 XP.",
-        "success",
-        4800
-    );
     return true;
 }
 
-async function maybeShowMegalodonEscapeAwardModal() {
-    if (!getMegalodonEscapeAwardAuthUser()) {
-        if (clearAnonymousMegalodonEscapeAwardCache()) {
-            const profileData = getCurrentProfileData();
-            updateProfileDisplay(profileData);
-            updateIndexStats();
-            renderCratesButton();
-            renderHomeCratesModal();
+function getLostTreasuresProgress(state = getLostTreasuresState()) {
+    const album = getLostTreasuresAlbum();
+    const collected = new Set(state.collectedCards);
+    const totalCards = album.length * LOST_TREASURES_CARDS_PER_CATEGORY;
+    const collectedCount = album.reduce((sum, category) => sum + category.cards.filter(card => collected.has(card.id)).length, 0);
+    return {
+        album,
+        collected,
+        totalCards,
+        collectedCount,
+        percent: totalCards ? Math.round((collectedCount / totalCards) * 100) : 0
+    };
+}
+
+function findLostTreasuresCard(cardId) {
+    return getLostTreasuresAlbum()
+        .flatMap(category => category.cards.map(card => ({ ...card, category })))
+        .find(card => card.id === cardId) || null;
+}
+
+function getLostTreasuresCardDuplicateCount(state, cardId) {
+    return Math.max(0, Number(state.duplicateCardCounts?.[cardId]) || 0);
+}
+
+function addLostTreasuresRecentCard(state, card, alreadyOwned = false) {
+    state.recentCards = [
+        { id: card.id, at: Date.now(), duplicate: Boolean(alreadyOwned) },
+        ...(Array.isArray(state.recentCards) ? state.recentCards : []).filter(item => item?.id !== card.id)
+    ].slice(0, 8);
+}
+
+function ensureLostTreasuresModal() {
+    let modal = document.getElementById("lost-treasures-modal");
+    if (modal) return modal;
+    modal = document.createElement("div");
+    modal.id = "lost-treasures-modal";
+    modal.className = "modal hidden lost-treasures-modal";
+    modal.onclick = event => {
+        if (event.target === modal) closeLostTreasuresModal();
+    };
+    modal.innerHTML = `
+        <div class="lost-treasures-card">
+            <button type="button" class="modal-x-btn lost-treasures-close" onclick="closeLostTreasuresModal()" aria-label="Close Lost Treasures">&times;</button>
+            <section class="lost-treasures-hero">
+                <div class="lost-treasures-copy">
+                    <span>Limited Event</span>
+                    <h2>Lost Treasures</h2>
+                    <p>Open messages in bottles to collect every scroll and earn rewards.</p>
+                    <div class="lost-treasures-progress">
+                        <div><strong id="lost-treasures-collected">0</strong><span>Scrolls</span></div>
+                        <div><strong id="lost-treasures-bottles">0</strong><span>Bottles</span></div>
+                        <div><strong id="lost-treasures-duplicates">0</strong><span>Dupes</span></div>
+                    </div>
+                </div>
+                <div class="lost-treasures-bottle-stage lost-treasures-dock">
+                    <img id="lost-treasures-bottle-img" src="${LOST_TREASURES_BOTTLE_IMAGES[0]}" alt="Message in a bottle">
+                    <div class="lost-treasures-dock-head">
+                        <h3>Bottle Dock</h3>
+                    </div>
+                    <div id="lost-treasures-bottle-list" class="lost-treasures-bottle-list"></div>
+                    <div id="lost-treasures-selected-bottle" class="lost-treasures-selected-bottle">Select a bottle</div>
+                    <div id="lost-treasures-open-amount" class="lost-treasures-open-amount" aria-label="Bottles to open"></div>
+                    <button id="lost-treasures-open-bottle-btn" type="button" onclick="openLostTreasuresBottle()">Open Bottle</button>
+                </div>
+            </section>
+            <div class="lost-treasures-meter"><span id="lost-treasures-meter-fill"></span></div>
+            <section class="lost-treasures-main">
+                <aside class="lost-treasures-side" aria-label="Lost Treasures tools">
+                    <div class="lost-treasures-side-panel lost-treasures-exchange-panel">
+                        <span>Duplicate Exchange</span>
+                        <div id="lost-treasures-exchange" class="lost-treasures-exchange"></div>
+                    </div>
+                </aside>
+                <section class="lost-treasures-album-shell">
+                    <nav id="lost-treasures-categories" class="lost-treasures-categories" aria-label="Lost Treasures categories"></nav>
+                    <section class="lost-treasures-album-head">
+                        <div>
+                            <span id="lost-treasures-active-kicker">Category</span>
+                            <h3 id="lost-treasures-active-title">Reef Relics</h3>
+                            <p id="lost-treasures-active-subtitle"></p>
+                        </div>
+                        <div class="lost-treasures-category-reward">
+                            <div class="lost-treasures-reward-chip pearl">
+                                <b>${LOST_TREASURES_CATEGORY_PEARL_REWARD}</b>
+                                <span>Pearls</span>
+                            </div>
+                            <button id="lost-treasures-claim-category" type="button" onclick="claimLostTreasuresCategory()">Complete Category</button>
+                        </div>
+                    </section>
+                    <div id="lost-treasures-grid" class="lost-treasures-grid"></div>
+                    <section class="lost-treasures-grand">
+                        <div>
+                            <span>Grand Reward</span>
+                    <strong>Complete all 120 scrolls</strong>
+                            <p>Finish the full album to earn ${LOST_TREASURES_GRAND_PEARL_REWARD.toLocaleString()} pearls, the ${LOST_TREASURES_GRAND_BADGE.name} badge, and two Lost Treasures profile icons.</p>
+                            <div class="lost-treasures-grand-rewards" aria-label="Lost Treasures grand reward preview">
+                                <div class="lost-treasures-reward-chip pearl"><b>${LOST_TREASURES_GRAND_PEARL_REWARD.toLocaleString()}</b><span>Pearls</span></div>
+                                <div class="lost-treasures-reward-chip badge"><strong>${LOST_TREASURES_GRAND_BADGE.emoji}</strong><b>${LOST_TREASURES_GRAND_BADGE.name}</b><span>Badge</span></div>
+                                ${LOST_TREASURES_GRAND_PFPS.map(pfp => `
+                                    <div class="lost-treasures-reward-chip pfp">
+                                        <img src="${pfp.imagePath}" alt="${pfp.name}">
+                                        <span>${pfp.name}</span>
+                                    </div>
+                                `).join("")}
+                            </div>
+                        </div>
+                        <button id="lost-treasures-claim-grand" type="button" onclick="claimLostTreasuresGrandReward()">Claim Grand Reward</button>
+                    </section>
+                </section>
+            </section>
+            <div id="lost-treasures-detail" class="lost-treasures-detail hidden" onclick="if(event.target===this) closeLostTreasuresCardDetail()"></div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+    return modal;
+}
+
+let activeLostTreasuresCategoryId = LOST_TREASURES_CATEGORIES[0].id;
+let lostTreasuresOpeningInProgress = false;
+let lostTreasuresOpenBottleCount = 1;
+
+function renderLostTreasuresModal() {
+    const modal = ensureLostTreasuresModal();
+    const state = getLostTreasuresState();
+    const progress = getLostTreasuresProgress(state);
+    const activeCategory = progress.album.find(category => category.id === activeLostTreasuresCategoryId) || progress.album[0];
+    activeLostTreasuresCategoryId = activeCategory.id;
+
+    modal.querySelector("#lost-treasures-collected").textContent = `${progress.collectedCount}/${progress.totalCards}`;
+    const selectedBottle = LOST_TREASURES_BOTTLES.find(bottle => bottle.id === state.selectedBottleId) || LOST_TREASURES_BOTTLES[0];
+    modal.querySelector("#lost-treasures-bottles").textContent = getLostTreasuresBottleCount(state);
+    modal.querySelector("#lost-treasures-duplicates").textContent = state.duplicateCards;
+    modal.querySelector("#lost-treasures-meter-fill").style.width = `${progress.percent}%`;
+    modal.querySelector("#lost-treasures-bottle-img").src = selectedBottle.image;
+    const selectedBottleCount = getLostTreasuresBottleCount(state, selectedBottle.id);
+    lostTreasuresOpenBottleCount = Math.min(Math.max(1, lostTreasuresOpenBottleCount), Math.max(1, selectedBottleCount));
+    const selectedBottleLabel = modal.querySelector("#lost-treasures-selected-bottle");
+    if (selectedBottleLabel) {
+        selectedBottleLabel.textContent = `${selectedBottle.name} selected - opens ${selectedBottle.scrollCount * lostTreasuresOpenBottleCount} scrolls`;
+    }
+    const openAmount = modal.querySelector("#lost-treasures-open-amount");
+    if (openAmount) {
+        const amounts = [1, 3, 5].filter(amount => amount <= selectedBottleCount);
+        if (selectedBottleCount > 1 && !amounts.includes(selectedBottleCount)) amounts.push(selectedBottleCount);
+        const uniqueAmounts = [...new Set(amounts)].sort((a, b) => a - b);
+        openAmount.innerHTML = selectedBottleCount > 1
+            ? uniqueAmounts.map(amount => `<button type="button" class="${amount === lostTreasuresOpenBottleCount ? "active" : ""}" onclick="selectLostTreasuresOpenAmount(${amount})" ${lostTreasuresOpeningInProgress ? "disabled" : ""}>${amount === selectedBottleCount ? "All" : `x${amount}`}</button>`).join("")
+            : "";
+        openAmount.classList.toggle("hidden", selectedBottleCount <= 1);
+    }
+    const openBottleBtn = modal.querySelector("#lost-treasures-open-bottle-btn");
+    if (openBottleBtn) {
+        openBottleBtn.disabled = lostTreasuresOpeningInProgress || selectedBottleCount <= 0;
+        openBottleBtn.textContent = lostTreasuresOpeningInProgress
+            ? "Opening..."
+            : selectedBottleCount > 0
+                ? `Open ${lostTreasuresOpenBottleCount} ${selectedBottle.name}${lostTreasuresOpenBottleCount === 1 ? "" : "s"}`
+                : `No ${selectedBottle.name}s`;
+    }
+    const bottleList = modal.querySelector("#lost-treasures-bottle-list");
+    if (bottleList) {
+        bottleList.innerHTML = LOST_TREASURES_BOTTLES.map(bottle => {
+            const count = getLostTreasuresBottleCount(state, bottle.id);
+            return `<button type="button" class="${bottle.id === selectedBottle.id ? "active" : ""}" aria-pressed="${bottle.id === selectedBottle.id ? "true" : "false"}" onclick="selectLostTreasuresBottle('${bottle.id}')" ${lostTreasuresOpeningInProgress ? "disabled" : ""}>
+                <img src="${bottle.image}" alt="${bottle.name}">
+                <span>${bottle.name}</span>
+                <small>${bottle.rareOnly ? "1 guaranteed rare scroll" : `${bottle.scrollCount} scrolls - ${bottle.rareChance * 100}% rare`}</small>
+                <strong>${count}</strong>
+            </button>`;
+        }).join("");
+    }
+
+    const exchangePanel = modal.querySelector("#lost-treasures-exchange");
+    if (exchangePanel) {
+        exchangePanel.innerHTML = LOST_TREASURES_DUPLICATE_EXCHANGES.map(exchange => {
+            const bottle = LOST_TREASURES_BOTTLES.find(item => item.id === exchange.bottleId);
+            return `
+            <button type="button" onclick="exchangeLostTreasuresDuplicates('${exchange.id}')" ${state.duplicateCards < exchange.cost || lostTreasuresOpeningInProgress ? "disabled" : ""}>
+                ${bottle ? `<img src="${bottle.image}" alt="${bottle.name}">` : ""}
+                <span>
+                    <strong>${exchange.reward}</strong>
+                    <small>${exchange.label}</small>
+                </span>
+            </button>
+        `;
+        }).join("");
+    }
+
+    const categoryNav = modal.querySelector("#lost-treasures-categories");
+    categoryNav.innerHTML = progress.album.map(category => {
+        const owned = category.cards.filter(card => progress.collected.has(card.id)).length;
+        const complete = owned === LOST_TREASURES_CARDS_PER_CATEGORY;
+        const claimed = state.claimedCategories.includes(category.id);
+        return `<button type="button" class="${category.id === activeCategory.id ? "active" : ""} ${complete ? "complete" : ""}" style="--category-color:${category.color}" onclick="showLostTreasuresCategory('${category.id}')">
+            <strong>${category.name}</strong><span>${owned}/${LOST_TREASURES_CARDS_PER_CATEGORY}${claimed ? " Claimed" : ""}</span>
+        </button>`;
+    }).join("");
+
+    modal.querySelector("#lost-treasures-active-kicker").textContent = `${activeCategory.cards.filter(card => progress.collected.has(card.id)).length}/${LOST_TREASURES_CARDS_PER_CATEGORY} scrolls collected`;
+    modal.querySelector("#lost-treasures-active-title").textContent = activeCategory.name;
+    const subtitle = modal.querySelector("#lost-treasures-active-subtitle");
+    if (subtitle) subtitle.textContent = LOST_TREASURES_CATEGORY_SUBTITLES[activeCategory.id] || "Recover every scroll in this set.";
+    const claimCategoryBtn = modal.querySelector("#lost-treasures-claim-category");
+    const categoryComplete = activeCategory.cards.every(card => progress.collected.has(card.id));
+    const categoryClaimed = state.claimedCategories.includes(activeCategory.id);
+    claimCategoryBtn.disabled = !categoryComplete || categoryClaimed;
+    claimCategoryBtn.textContent = categoryClaimed ? "Reward Claimed" : categoryComplete ? `Claim ${LOST_TREASURES_CATEGORY_PEARL_REWARD} Pearls` : "Complete Category";
+
+    modal.querySelector("#lost-treasures-grid").innerHTML = activeCategory.cards.map(card => {
+        const owned = progress.collected.has(card.id);
+        return `<button type="button" class="lost-treasures-slot ${owned ? "owned" : "locked"} rarity-${card.rarity}" style="--category-color:${activeCategory.color}" onclick="openLostTreasuresCardDetail('${card.id}')">
+            <div class="lost-treasures-scroll-art ${card.speciesImage ? "has-species-art" : ""}">
+                ${getLostTreasuresCardArtMarkup(card, card.name)}
+                <span class="lost-treasures-scroll-number">${card.number}</span>
+                <b>${owned ? card.mark : "?"}</b>
+            </div>
+            <strong>${card.name}</strong>
+            <small>${owned ? (card.rarity === "rare" ? "Rare Scroll" : "Recovered") : "Missing"}</small>
+        </button>`;
+    }).join("");
+
+    const grandBtn = modal.querySelector("#lost-treasures-claim-grand");
+    const completeAlbum = progress.collectedCount === progress.totalCards;
+    grandBtn.disabled = !completeAlbum || state.claimedGrandReward;
+    grandBtn.textContent = state.claimedGrandReward ? "Grand Reward Claimed" : completeAlbum ? "Claim Grand Reward" : `${progress.collectedCount}/${progress.totalCards}`;
+}
+
+function openLostTreasuresModal() {
+    renderLostTreasuresModal();
+    ensureLostTreasuresModal().classList.remove("hidden");
+}
+
+function closeLostTreasuresModal() {
+    document.getElementById("lost-treasures-modal")?.classList.add("hidden");
+}
+
+function showLostTreasuresCategory(categoryId) {
+    activeLostTreasuresCategoryId = LOST_TREASURES_CATEGORIES.some(category => category.id === categoryId)
+        ? categoryId
+        : LOST_TREASURES_CATEGORIES[0].id;
+    renderLostTreasuresModal();
+}
+
+function selectLostTreasuresBottle(bottleId) {
+    if (lostTreasuresOpeningInProgress) return;
+    const profileData = getCurrentProfileData();
+    const state = getLostTreasuresState(profileData);
+    state.selectedBottleId = LOST_TREASURES_BOTTLES.some(bottle => bottle.id === bottleId) ? bottleId : LOST_TREASURES_BOTTLES[0].id;
+    lostTreasuresOpenBottleCount = 1;
+    setLostTreasuresState(profileData, state, { skipRemoteSync: true });
+    renderLostTreasuresModal();
+}
+
+function selectLostTreasuresOpenAmount(amount) {
+    if (lostTreasuresOpeningInProgress) return;
+    const state = getLostTreasuresState();
+    const selectedBottle = LOST_TREASURES_BOTTLES.find(bottle => bottle.id === state.selectedBottleId) || LOST_TREASURES_BOTTLES[0];
+    const selectedBottleCount = getLostTreasuresBottleCount(state, selectedBottle.id);
+    lostTreasuresOpenBottleCount = Math.min(Math.max(1, Math.floor(Number(amount) || 1)), Math.max(1, selectedBottleCount));
+    renderLostTreasuresModal();
+}
+
+function getRandomLostTreasuresCard(state, targetRarity = "common") {
+    const allCards = getLostTreasuresAlbum().flatMap(category => category.cards);
+    const rarityPool = allCards.filter(card => card.rarity === targetRarity);
+    const poolByRarity = rarityPool.length ? rarityPool : allCards;
+    const collectedCards = Array.isArray(state.collectedCards) ? state.collectedCards : [];
+    const ownedPool = poolByRarity.filter(card => collectedCards.includes(card.id));
+    const missingPool = poolByRarity.filter(card => !collectedCards.includes(card.id));
+    const completionRatio = poolByRarity.length ? ownedPool.length / poolByRarity.length : 0;
+    const duplicateChance = Math.min(
+        LOST_TREASURES_DUPLICATE_MAX_CHANCE,
+        LOST_TREASURES_DUPLICATE_BASE_CHANCE + completionRatio * LOST_TREASURES_DUPLICATE_PROGRESS_BONUS
+    );
+    const shouldPullDuplicate = ownedPool.length > 0 && (!missingPool.length || Math.random() < duplicateChance);
+    const pool = shouldPullDuplicate ? ownedPool : missingPool.length ? missingPool : poolByRarity;
+    return pool[Math.floor(Math.random() * pool.length)];
+}
+
+function openLostTreasuresScrollsFromBottle(state, bottle) {
+    const opened = [];
+    const scrollCount = Math.max(1, Math.floor(Number(bottle.scrollCount) || 1));
+    const maxRareCards = Math.max(0, Math.floor(Number(bottle.maxRareCards) || 0));
+    let rareCardsOpened = 0;
+    for (let index = 0; index < scrollCount; index += 1) {
+        const shouldRollRare = bottle.rareOnly || (rareCardsOpened < maxRareCards && Math.random() < (Number(bottle.rareChance) || 0));
+        const targetRarity = shouldRollRare ? "rare" : "common";
+        const card = getRandomLostTreasuresCard(state, targetRarity);
+        if (card.rarity === "rare") rareCardsOpened += 1;
+        const alreadyOwned = state.collectedCards.includes(card.id);
+        if (alreadyOwned) {
+            state.duplicateCards += card.rarity === "rare" ? LOST_TREASURES_RARE_DUPLICATE_VALUE : 1;
+            state.duplicateCardCounts = state.duplicateCardCounts && typeof state.duplicateCardCounts === "object" ? state.duplicateCardCounts : {};
+            state.duplicateCardCounts[card.id] = getLostTreasuresCardDuplicateCount(state, card.id) + 1;
+        } else {
+            state.collectedCards.push(card.id);
         }
+        state.lastOpenedCardId = card.id;
+        addLostTreasuresRecentCard(state, card, alreadyOwned);
+        opened.push({ card, alreadyOwned });
+    }
+    return opened;
+}
+
+function getLostTreasuresScrollRevealMarkup(openedItem, index) {
+    const category = LOST_TREASURES_CATEGORIES.find(item => openedItem.card.id.startsWith(item.id)) || LOST_TREASURES_CATEGORIES[0];
+    return `<article class="lost-treasures-opening-scroll ${openedItem.alreadyOwned ? "duplicate" : "new"} rarity-${openedItem.card.rarity}" style="--category-color:${category.color}; --reveal-index:${index}">
+        <div class="lost-treasures-scroll-art ${openedItem.card.speciesImage ? "has-species-art" : ""}">
+            ${getLostTreasuresCardArtMarkup(openedItem.card, openedItem.card.name)}
+            <span class="lost-treasures-scroll-number">${openedItem.card.number}</span>
+            <b>${openedItem.card.mark}</b>
+        </div>
+        <strong>${openedItem.card.name}</strong>
+        <small>${openedItem.alreadyOwned ? "Duplicate" : openedItem.card.rarity === "rare" ? "New Rare" : "New Scroll"}</small>
+    </article>`;
+}
+
+function ensureLostTreasuresOpeningModal() {
+    let opening = document.getElementById("lost-treasures-opening-modal");
+    if (opening) return opening;
+    opening = document.createElement("div");
+    opening.id = "lost-treasures-opening-modal";
+    opening.className = "lost-treasures-opening hidden";
+    opening.setAttribute("aria-live", "polite");
+    document.body.appendChild(opening);
+    return opening;
+}
+
+async function playLostTreasuresOpeningAnimation(bottle, opened) {
+    const opening = ensureLostTreasuresOpeningModal();
+    if (!opening) return;
+    const hasRarePull = opened.some(item => item?.card?.rarity === "rare");
+    opening.classList.remove("hidden", "revealed", "closing", "flash-common", "flash-rare");
+    opening.classList.add(hasRarePull ? "flash-rare" : "flash-common");
+    opening.innerHTML = `
+        <div class="lost-treasures-opening-flash" aria-hidden="true"></div>
+        <div class="lost-treasures-opening-actions">
+            <button type="button" class="lost-treasures-opening-skip">Skip Animation</button>
+            <button type="button" class="lost-treasures-opening-close hidden">Close</button>
+        </div>
+        <div class="lost-treasures-opening-bottle">
+            <img src="${bottle.image}" alt="${bottle.name}">
+            <span>Opening ${bottle.name}</span>
+        </div>
+        <div class="lost-treasures-opening-scrolls"></div>
+    `;
+    await new Promise(resolve => {
+        const skipButton = opening.querySelector(".lost-treasures-opening-skip");
+        const closeButton = opening.querySelector(".lost-treasures-opening-close");
+        const scrollWrap = opening.querySelector(".lost-treasures-opening-scrolls");
+        let revealed = false;
+        let closed = false;
+
+        const revealNow = () => {
+            if (revealed || closed) return;
+            revealed = true;
+            if (scrollWrap) {
+                scrollWrap.innerHTML = opened.map(getLostTreasuresScrollRevealMarkup).join("");
+            }
+            opening.classList.add("revealed");
+            skipButton?.classList.add("hidden");
+            closeButton?.classList.remove("hidden");
+            closeButton?.focus();
+        };
+
+        const closeNow = () => {
+            if (closed) return;
+            closed = true;
+            clearTimeout(revealTimer);
+            opening.classList.add("closing");
+            setTimeout(() => {
+                opening.classList.add("hidden");
+                opening.classList.remove("revealed", "closing", "flash-common", "flash-rare");
+                opening.innerHTML = "";
+                resolve();
+            }, 260);
+        };
+
+        const revealTimer = setTimeout(revealNow, 900);
+        skipButton?.addEventListener("click", revealNow, { once: true });
+        closeButton?.addEventListener("click", closeNow);
+    });
+}
+
+async function openLostTreasuresBottle() {
+    if (lostTreasuresOpeningInProgress) return;
+    if (!currentUser) {
+        openLoginModal?.();
         return;
     }
-    const modal = document.getElementById("megalodonEscapeAwardModal");
-    if (!modal || modal.dataset.awardHandled === "true" || hasClaimedMegalodonEscapeAward()) return;
-
-    const hasBlockingModal = Array.from(document.querySelectorAll(".modal:not(.hidden)"))
-        .some(openModal => openModal.id !== "megalodonEscapeAwardModal");
-
-    if (hasBlockingModal) {
-        if (!megalodonEscapeAwardShowTimer) {
-            megalodonEscapeAwardShowTimer = setTimeout(() => {
-                megalodonEscapeAwardShowTimer = null;
-                maybeShowMegalodonEscapeAwardModal();
-            }, 1200);
-        }
+    const profileData = getCurrentProfileData();
+    const state = getLostTreasuresState(profileData);
+    const bottle = LOST_TREASURES_BOTTLES.find(item => item.id === state.selectedBottleId) || LOST_TREASURES_BOTTLES[0];
+    if (getLostTreasuresBottleCount(state, bottle.id) <= 0) {
+        showNotification?.("No messages in bottles ready yet.", "info", 3200);
         return;
     }
+    lostTreasuresOpeningInProgress = true;
+    renderLostTreasuresModal();
+    const openCount = Math.min(Math.max(1, lostTreasuresOpenBottleCount), getLostTreasuresBottleCount(state, bottle.id));
+    state.bottles[bottle.id] = Math.max(0, Number(state.bottles[bottle.id]) || 0) - openCount;
+    const opened = [];
+    for (let index = 0; index < openCount; index += 1) {
+        opened.push(...openLostTreasuresScrollsFromBottle(state, bottle));
+    }
+    setLostTreasuresState(profileData, state);
+    await persistLostTreasuresState(profileData);
+    const firstNew = opened.find(item => !item.alreadyOwned) || opened[0];
+    const category = LOST_TREASURES_CATEGORIES.find(item => firstNew.card.id.startsWith(item.id)) || LOST_TREASURES_CATEGORIES[0];
+    activeLostTreasuresCategoryId = category.id;
+    renderLostTreasuresModal();
+    await playLostTreasuresOpeningAnimation(bottle, opened);
+    lostTreasuresOpeningInProgress = false;
+    renderLostTreasuresModal();
+}
+
+async function fakePurchaseLostTreasuresBundle() {
+    if (lostTreasuresOpeningInProgress) return;
+    if (!currentUser || !isDeveloperUid(currentUser.uid)) {
+        openLoginModal?.();
+        return;
+    }
+    const profileData = getCurrentProfileData();
+    const grants = [
+        ["barnacle", 5],
+        ["red-sea", 3],
+        ["seafoam", 1],
+        ["celestial", 1]
+    ];
+    grants.forEach(([bottleId, amount]) => grantLostTreasuresBottle(profileData, bottleId, amount));
+    await persistLostTreasuresState(profileData);
+    renderLostTreasuresModal();
+    showNotification?.("Fake purchase added: 5 barnacle, 3 red sea, 1 seafoam, and 1 celestial bottle.", "success", 4200);
+}
+
+async function exchangeLostTreasuresDuplicates(exchangeId) {
+    if (lostTreasuresOpeningInProgress) return;
+    if (!currentUser) {
+        openLoginModal?.();
+        return;
+    }
+    const exchange = LOST_TREASURES_DUPLICATE_EXCHANGES.find(item => item.id === exchangeId);
+    if (!exchange) return;
+    const profileData = getCurrentProfileData();
+    const state = getLostTreasuresState(profileData);
+    if (state.duplicateCards < exchange.cost) {
+        showNotification?.("Not enough duplicate scrolls yet.", "info", 2800);
+        return;
+    }
+    state.duplicateCards -= exchange.cost;
+    state.bottles[exchange.bottleId] = getLostTreasuresBottleCount(state, exchange.bottleId) + exchange.amount;
+    state.selectedBottleId = exchange.bottleId;
+    setLostTreasuresState(profileData, state);
+    await persistLostTreasuresState(profileData);
+    renderLostTreasuresModal();
+    showNotification?.(`Traded duplicates for ${exchange.reward}.`, "success", 3200);
+}
+
+async function resetLostTreasuresBottles() {
+    if (lostTreasuresOpeningInProgress) return;
+    if (!currentUser || !isDeveloperUid(currentUser.uid)) {
+        openLoginModal?.();
+        return;
+    }
+    const profileData = getCurrentProfileData();
+    const state = getLostTreasuresState(profileData);
+    state.bottles = LOST_TREASURES_BOTTLES.reduce((inventory, bottle) => {
+        inventory[bottle.id] = 0;
+        return inventory;
+    }, {});
+    state.selectedBottleId = LOST_TREASURES_BOTTLES[0].id;
+    setLostTreasuresState(profileData, state);
+    await persistLostTreasuresState(profileData);
+    lostTreasuresOpenBottleCount = 1;
+    renderLostTreasuresModal();
+    showNotification?.("Lost Treasures bottles reset.", "success", 3200);
+}
+
+async function resetLostTreasuresProgress() {
+    if (lostTreasuresOpeningInProgress) return;
+    if (!currentUser || !isDeveloperUid(currentUser.uid)) {
+        openLoginModal?.();
+        return;
+    }
+    const profileData = getCurrentProfileData();
+    profileData.lostTreasures = {
+        eventId: LOST_TREASURES_EVENT_ID,
+        bottles: LOST_TREASURES_BOTTLES.reduce((inventory, bottle) => {
+            inventory[bottle.id] = 0;
+            return inventory;
+        }, {}),
+        collectedCards: [],
+        duplicateCards: 0,
+        duplicateCardCounts: {},
+        claimedCategories: [],
+        recentCards: [],
+        claimedGrandReward: false,
+        lastOpenedCardId: "",
+        selectedBottleId: LOST_TREASURES_BOTTLES[0].id,
+        updatedAt: Date.now()
+    };
+    await persistLostTreasuresState(profileData);
+    const opening = document.getElementById("lost-treasures-opening-modal");
+    if (opening) {
+        opening.classList.add("hidden");
+        opening.innerHTML = "";
+    }
+    activeLostTreasuresCategoryId = LOST_TREASURES_CATEGORIES[0].id;
+    renderLostTreasuresModal();
+    showNotification?.("Lost Treasures progress reset.", "success", 3200);
+}
+
+async function claimLostTreasuresCategory() {
+    const profileData = getCurrentProfileData();
+    const state = getLostTreasuresState(profileData);
+    const progress = getLostTreasuresProgress(state);
+    const category = progress.album.find(item => item.id === activeLostTreasuresCategoryId);
+    if (!category || !category.cards.every(card => progress.collected.has(card.id)) || state.claimedCategories.includes(category.id)) return;
+    state.claimedCategories.push(category.id);
+    setLostTreasuresState(profileData, state, { skipRemoteSync: true });
+    addPearls(LOST_TREASURES_CATEGORY_PEARL_REWARD, profileData, { deferSave: true, deferUiUpdate: true });
+    await persistLostTreasuresState(profileData);
+    updateHomeV3Sidebar?.(profileData);
+    showNotification?.(`${category.name} complete: +${LOST_TREASURES_CATEGORY_PEARL_REWARD} pearls.`, "success", 3200);
+    renderLostTreasuresModal();
+}
+
+async function claimLostTreasuresGrandReward() {
+    const profileData = getCurrentProfileData();
+    const state = getLostTreasuresState(profileData);
+    const progress = getLostTreasuresProgress(state);
+    if (progress.collectedCount !== progress.totalCards || state.claimedGrandReward) return;
+    state.claimedGrandReward = true;
+    setLostTreasuresState(profileData, state, { skipRemoteSync: true });
+    addPearls(LOST_TREASURES_GRAND_PEARL_REWARD, profileData, { deferSave: true, deferUiUpdate: true });
+    profileData.unlockedBadges = [...new Set([...(Array.isArray(profileData.unlockedBadges) ? profileData.unlockedBadges : ["starter"]), LOST_TREASURES_GRAND_BADGE.id])];
+    const earnedCosmetics = Array.isArray(profileData.earnedCosmetics) ? [...profileData.earnedCosmetics] : [];
+    LOST_TREASURES_GRAND_PFPS.forEach(pfp => {
+        if (!earnedCosmetics.some(cosmetic => cosmetic?.imagePath === pfp.imagePath || cosmetic?.name === pfp.name)) {
+            earnedCosmetics.push({ ...pfp });
+        }
+    });
+    profileData.earnedCosmetics = earnedCosmetics;
+    await persistLostTreasuresState(profileData);
+    updateHomeV3Sidebar?.(profileData);
+    showNotification?.(`Lost Treasures complete: +${LOST_TREASURES_GRAND_PEARL_REWARD.toLocaleString()} pearls, Treasure Keeper badge, and 2 profile icons.`, "success", 4800);
+    renderLostTreasuresModal();
+}
+
+function openLostTreasuresCardDetail(cardId) {
+    const modal = ensureLostTreasuresModal();
+    const detail = modal.querySelector("#lost-treasures-detail");
+    const state = getLostTreasuresState();
+    const progress = getLostTreasuresProgress(state);
+    const found = progress.album
+        .flatMap(category => category.cards.map(card => ({ ...card, category })))
+        .find(card => card.id === cardId);
+    if (!detail || !found) return;
+    const owned = progress.collected.has(found.id);
+    const categoryOwned = found.category.cards.filter(card => progress.collected.has(card.id)).length;
+    const categoryCards = found.category.cards;
+    const cardIndex = categoryCards.findIndex(card => card.id === found.id);
+    const previousCard = categoryCards[(cardIndex - 1 + categoryCards.length) % categoryCards.length];
+    const nextCard = categoryCards[(cardIndex + 1) % categoryCards.length];
+    detail.innerHTML = `
+        <article class="lost-treasures-detail-card rarity-${found.rarity}">
+            <button type="button" class="modal-x-btn" onclick="closeLostTreasuresCardDetail()" aria-label="Close scroll detail">&times;</button>
+            <button type="button" class="lost-treasures-detail-nav previous" onclick="event.stopPropagation(); openLostTreasuresCardDetail('${previousCard.id}')" aria-label="Previous scroll">&lsaquo;</button>
+            <button type="button" class="lost-treasures-detail-nav next" onclick="event.stopPropagation(); openLostTreasuresCardDetail('${nextCard.id}')" aria-label="Next scroll">&rsaquo;</button>
+            <div class="lost-treasures-detail-art ${found.speciesImage ? "has-species-art" : ""}">
+                ${getLostTreasuresCardArtMarkup(found, found.name)}
+            </div>
+            <div>
+                <span>${found.category.name} · ${found.number}/${LOST_TREASURES_CARDS_PER_CATEGORY}</span>
+                <h3>${found.name}</h3>
+                <p>${LOST_TREASURES_CATEGORY_SUBTITLES[found.category.id] || "Lost Treasures scroll"}</p>
+                <dl>
+                    <div><dt>Status</dt><dd>${owned ? "Recovered" : "Missing"}</dd></div>
+                    <div><dt>Rarity</dt><dd>${found.rarity === "rare" ? "Rare" : "Common"}</dd></div>
+                    <div><dt>Duplicates</dt><dd>${getLostTreasuresCardDuplicateCount(state, found.id)}</dd></div>
+                    <div><dt>Set</dt><dd>${categoryOwned}/${LOST_TREASURES_CARDS_PER_CATEGORY}</dd></div>
+                </dl>
+            </div>
+        </article>
+    `;
+    detail.classList.remove("hidden");
+}
+
+function closeLostTreasuresCardDetail() {
+    const detail = document.getElementById("lost-treasures-detail");
+    if (detail) detail.classList.add("hidden");
+}
+
+window.openLostTreasuresModal = openLostTreasuresModal;
+window.closeLostTreasuresModal = closeLostTreasuresModal;
+window.showLostTreasuresCategory = showLostTreasuresCategory;
+window.selectLostTreasuresBottle = selectLostTreasuresBottle;
+window.selectLostTreasuresOpenAmount = selectLostTreasuresOpenAmount;
+window.openLostTreasuresBottle = openLostTreasuresBottle;
+window.claimLostTreasuresCategory = claimLostTreasuresCategory;
+window.claimLostTreasuresGrandReward = claimLostTreasuresGrandReward;
+window.openLostTreasuresCardDetail = openLostTreasuresCardDetail;
+window.closeLostTreasuresCardDetail = closeLostTreasuresCardDetail;
+window.exchangeLostTreasuresDuplicates = exchangeLostTreasuresDuplicates;
+window.grantLostTreasuresBottle = grantLostTreasuresBottle;
+window.maybeAwardLostTreasuresBottleDrop = maybeAwardLostTreasuresBottleDrop;
+window.fakePurchaseLostTreasuresBundle = fakePurchaseLostTreasuresBundle;
+window.resetLostTreasuresBottles = resetLostTreasuresBottles;
+window.resetLostTreasuresProgress = resetLostTreasuresProgress;
+
+const SHIVER_SEASON_ID = "tide-clash-2026-07";
+const SHIVER_WIN_POINTS = Object.freeze({
+    daily: 5,
+    infinite: 2
+});
+
+function getShiverWinPoints(mode = "infinite") {
+    return mode === "daily" ? SHIVER_WIN_POINTS.daily : SHIVER_WIN_POINTS.infinite;
+}
+
+function getShiverContributionStorageKey(mode, options = {}) {
+    if (!currentUser?.uid || mode !== "daily") return "";
+    const contributionKey = options.contributionKey || getUtcDateKey();
+    return `shiverContribution_${SHIVER_SEASON_ID}_${currentUser.uid}_${mode}_${contributionKey}`;
+}
+
+function resolveShiverProfilePicturePath(path) {
+    const storedPath = String(path || "").trim();
+    if (!storedPath) return "images/pfp/shark1.png";
+    if (/^https?:\/\//i.test(storedPath) || storedPath.startsWith("images/")) return storedPath;
+    if (storedPath.includes("/")) return `images/${storedPath.replace(/^\/+/, "")}`;
+    return `images/pfp/${storedPath}`;
+}
+
+async function contributeShiverWin(mode = "infinite", options = {}) {
+    const normalizedMode = mode === "daily" ? "daily" : "infinite";
+    if (typeof firebase === "undefined" || !db) return { contributed: false, reason: "unavailable" };
+    const authUser = currentUser || firebase.auth?.().currentUser || null;
+    if (!authUser) return { contributed: false, reason: "login-required" };
+
+    const storageKey = getShiverContributionStorageKey(normalizedMode, options);
+    if (storageKey && localStorage.getItem(storageKey) === "true") {
+        return { contributed: false, reason: "already-counted" };
+    }
+
+    const membershipRef = db.collection("userShivers").doc(authUser.uid);
+    const points = getShiverWinPoints(normalizedMode);
+    const modeWinField = normalizedMode === "daily" ? "dailyWins" : "infiniteWins";
+    const modePointField = normalizedMode === "daily" ? "dailyPoints" : "infinitePoints";
+    const now = firebase.firestore.FieldValue.serverTimestamp();
+    let didIncrement = false;
+    let shiverSummary = null;
 
     try {
-        if (!(await grantMegalodonEscapeAward())) return;
-        modal.dataset.awardHandled = "true";
-        modal.classList.remove("hidden");
+        await db.runTransaction(async transaction => {
+            const membershipSnap = await transaction.get(membershipRef);
+            if (!membershipSnap.exists) return;
+
+            const membership = membershipSnap.data() || {};
+            const shiverId = membership.shiverId;
+            if (!shiverId) return;
+
+            const shiverRef = db.collection("shivers").doc(shiverId);
+            const memberRef = shiverRef.collection("members").doc(authUser.uid);
+            const seasonRef = db.collection("shiverSeasons").doc(SHIVER_SEASON_ID).collection("entries").doc(shiverId);
+            const seasonMemberRef = seasonRef.collection("members").doc(authUser.uid);
+
+            const shiverSnap = await transaction.get(shiverRef);
+            const memberSnap = await transaction.get(memberRef);
+            if (!shiverSnap.exists || !memberSnap.exists) return;
+
+            const shiver = shiverSnap.data() || {};
+            if (shiver.status === "disbanded") return;
+
+            const profileData = getCurrentProfileData();
+            const username = String(profileData.username || authUser.email?.split("@")[0] || "Sharkdle Player").slice(0, 32);
+            const profilePicture = resolveShiverProfilePicturePath(profileData.profilePicture || profileData.profilePic);
+            const shiverName = shiver.name || membership.shiverName || "Unnamed Shiver";
+            const shiverTag = shiver.tag || membership.shiverTag || "----";
+            const shiverColor = shiver.color || membership.shiverColor || "reef";
+            const shiverMemberCount = Math.max(1, Number(shiver.memberCount) || 1);
+
+            transaction.update(shiverRef, {
+                totalPoints: firebase.firestore.FieldValue.increment(points),
+                seasonPoints: firebase.firestore.FieldValue.increment(points),
+                battlePoints: firebase.firestore.FieldValue.increment(points),
+                wins: firebase.firestore.FieldValue.increment(1),
+                [modeWinField]: firebase.firestore.FieldValue.increment(1),
+                [modePointField]: firebase.firestore.FieldValue.increment(points),
+                seasonId: SHIVER_SEASON_ID,
+                updatedAt: now,
+                lastContributionAt: now,
+                lastContributionMode: normalizedMode,
+                lastContributionUid: authUser.uid
+            });
+
+            transaction.set(memberRef, {
+                username,
+                profilePicture,
+                points: firebase.firestore.FieldValue.increment(points),
+                wins: firebase.firestore.FieldValue.increment(1),
+                [modeWinField]: firebase.firestore.FieldValue.increment(1),
+                updatedAt: now,
+                lastContributionMode: normalizedMode
+            }, { merge: true });
+
+            transaction.set(membershipRef, {
+                username,
+                profilePicture,
+                shiverName,
+                shiverTag,
+                shiverColor,
+                points: firebase.firestore.FieldValue.increment(points),
+                wins: firebase.firestore.FieldValue.increment(1),
+                [modeWinField]: firebase.firestore.FieldValue.increment(1),
+                updatedAt: now,
+                lastContributionMode: normalizedMode
+            }, { merge: true });
+
+            transaction.set(seasonRef, {
+                shiverId,
+                name: shiverName,
+                tag: shiverTag,
+                color: shiverColor,
+                memberCount: shiverMemberCount,
+                points: firebase.firestore.FieldValue.increment(points),
+                wins: firebase.firestore.FieldValue.increment(1),
+                [modeWinField]: firebase.firestore.FieldValue.increment(1),
+                seasonId: SHIVER_SEASON_ID,
+                updatedAt: now,
+                lastContributionMode: normalizedMode,
+                lastContributionUid: authUser.uid
+            }, { merge: true });
+
+            transaction.set(seasonMemberRef, {
+                uid: authUser.uid,
+                username,
+                profilePicture,
+                points: firebase.firestore.FieldValue.increment(points),
+                wins: firebase.firestore.FieldValue.increment(1),
+                [modeWinField]: firebase.firestore.FieldValue.increment(1),
+                updatedAt: now,
+                lastContributionMode: normalizedMode
+            }, { merge: true });
+
+            shiverSummary = { shiverId, shiverName, shiverTag, shiverColor };
+            didIncrement = true;
+        });
+
+        if (didIncrement) {
+            if (storageKey) localStorage.setItem(storageKey, "true");
+            if (shiverSummary) {
+                const profileData = getCurrentProfileData();
+                profileData.shiverId = shiverSummary.shiverId;
+                profileData.shiverName = shiverSummary.shiverName;
+                profileData.shiverTag = shiverSummary.shiverTag;
+                profileData.shiverColor = shiverSummary.shiverColor;
+                profileData.shiverSeasonId = SHIVER_SEASON_ID;
+                saveUserProfileLocally(profileData, { skipRemoteSync: true });
+            }
+            showNotification(`Shiver +${points} teeth`, "success", 2200);
+            return { contributed: true, points };
+        }
+
+        return { contributed: false, reason: "no-shiver" };
     } catch (error) {
-        console.warn("Unable to show Megalodon participation award:", error);
+        console.warn("Unable to contribute Shiver win:", error);
+        return { contributed: false, reason: "error" };
     }
 }
 
-window.closeMegalodonEscapeAwardModal = closeMegalodonEscapeAwardModal;
-window.maybeShowMegalodonEscapeAwardModal = maybeShowMegalodonEscapeAwardModal;
+window.contributeShiverWin = contributeShiverWin;
 
 const SHARKDLE_SETTINGS_KEY = "sharkdle_qol_settings_v2";
 const SHARKDLE_SETTINGS_DEFAULTS = {
     funMode: false,
     sfx: true,
-    reducedMotion: false,
-    compactUi: false,
-    highContrast: false,
-    animatedOcean: true,
-    ambientAudio: false
+    ambientAudio: false,
+    ambientVolume: 35
 };
 
 let sharkdleSettingsAudioContext = null;
@@ -4771,14 +6348,26 @@ let sharkdleLastBubbleAt = 0;
 function readSharkdleSettings() {
     try {
         const saved = JSON.parse(localStorage.getItem(SHARKDLE_SETTINGS_KEY) || "{}");
-        return { ...SHARKDLE_SETTINGS_DEFAULTS, ...(saved && typeof saved === "object" ? saved : {}) };
+        const normalized = { ...SHARKDLE_SETTINGS_DEFAULTS };
+        if (saved && typeof saved === "object") {
+            Object.keys(normalized).forEach(key => {
+                if (Object.prototype.hasOwnProperty.call(saved, key)) normalized[key] = saved[key];
+            });
+        }
+        return normalized;
     } catch (error) {
         return { ...SHARKDLE_SETTINGS_DEFAULTS };
     }
 }
 
 function writeSharkdleSettings(settings) {
-    localStorage.setItem(SHARKDLE_SETTINGS_KEY, JSON.stringify({ ...SHARKDLE_SETTINGS_DEFAULTS, ...settings }));
+    const normalized = { ...SHARKDLE_SETTINGS_DEFAULTS };
+    if (settings && typeof settings === "object") {
+        Object.keys(normalized).forEach(key => {
+            if (Object.prototype.hasOwnProperty.call(settings, key)) normalized[key] = settings[key];
+        });
+    }
+    localStorage.setItem(SHARKDLE_SETTINGS_KEY, JSON.stringify(normalized));
 }
 
 function getSharkdleAudioContext() {
@@ -4793,6 +6382,27 @@ function getSharkdleAudioContext() {
 
 function isSharkdleSfxEnabled() {
     return Boolean(readSharkdleSettings().sfx);
+}
+
+function getAmbientVolumePercent(settings = readSharkdleSettings()) {
+    const value = Math.round(Number(settings.ambientVolume));
+    if (!Number.isFinite(value)) return SHARKDLE_SETTINGS_DEFAULTS.ambientVolume;
+    return Math.min(100, Math.max(0, value));
+}
+
+function getAmbientVolumeGain(settings = readSharkdleSettings()) {
+    return (getAmbientVolumePercent(settings) / 100) * 0.05;
+}
+
+function updateAmbientAudioVolume(settings = readSharkdleSettings()) {
+    if (!sharkdleAmbientAudioNodes?.gain) return;
+    const ctx = getSharkdleAudioContext();
+    const nextGain = getAmbientVolumeGain(settings);
+    if (ctx && typeof sharkdleAmbientAudioNodes.gain.gain.setTargetAtTime === "function") {
+        sharkdleAmbientAudioNodes.gain.gain.setTargetAtTime(nextGain, ctx.currentTime, 0.04);
+    } else {
+        sharkdleAmbientAudioNodes.gain.gain.value = nextGain;
+    }
 }
 
 function playSfx(name = "click") {
@@ -4852,7 +6462,7 @@ function startAmbientAudio() {
     highOsc.frequency.value = 166;
     filter.type = "lowpass";
     filter.frequency.value = 420;
-    gain.gain.value = 0.018;
+    gain.gain.value = getAmbientVolumeGain();
 
     lowOsc.connect(filter);
     highOsc.connect(filter);
@@ -4862,6 +6472,7 @@ function startAmbientAudio() {
     highOsc.start();
 
     sharkdleAmbientAudioNodes = { lowOsc, highOsc, gain, filter };
+    updateAmbientAudioVolume();
 }
 
 function stopAmbientAudio() {
@@ -4955,19 +6566,11 @@ function ensureSharkCursorAnimation() {
 function applySharkdleSettings() {
     const settings = readSharkdleSettings();
     document.body.classList.toggle("fun-mode", Boolean(settings.funMode));
-    document.body.classList.toggle("reduced-motion", Boolean(settings.reducedMotion));
-    document.body.classList.toggle("compact-ui", Boolean(settings.compactUi));
-    document.body.classList.toggle("high-contrast", Boolean(settings.highContrast));
-    document.body.classList.toggle("ocean-static", !settings.animatedOcean);
     document.body.classList.toggle("ambient-audio-on", Boolean(settings.ambientAudio));
 
     const pairs = {
         "fun-mode-toggle": settings.funMode,
         "sfx-toggle": settings.sfx,
-        "reduced-motion-toggle": settings.reducedMotion,
-        "compact-ui-toggle": settings.compactUi,
-        "high-contrast-toggle": settings.highContrast,
-        "animated-ocean-toggle": settings.animatedOcean,
         "ambient-audio-toggle": settings.ambientAudio
     };
 
@@ -4976,8 +6579,18 @@ function applySharkdleSettings() {
         if (input) input.checked = Boolean(value);
     });
 
+    const volumePercent = getAmbientVolumePercent(settings);
+    const volumeInput = document.getElementById("bg-volume-slider");
+    const volumeValue = document.getElementById("bg-volume-value");
+    if (volumeInput) {
+        volumeInput.value = String(volumePercent);
+        volumeInput.disabled = !settings.ambientAudio;
+    }
+    if (volumeValue) volumeValue.textContent = `${volumePercent}%`;
+
     if (settings.ambientAudio) {
         startAmbientAudio();
+        updateAmbientAudioVolume(settings);
     } else {
         stopAmbientAudio();
     }
@@ -4995,6 +6608,13 @@ function setSharkdleSetting(key, value) {
     writeSharkdleSettings(settings);
     applySharkdleSettings();
     playSfx("toggle");
+}
+
+function setSharkdleAmbientVolume(value) {
+    const settings = readSharkdleSettings();
+    settings.ambientVolume = getAmbientVolumePercent({ ambientVolume: value });
+    writeSharkdleSettings(settings);
+    applySharkdleSettings();
 }
 
 function resetSharkdleSettings() {
@@ -5019,10 +6639,6 @@ function bindSharkdleSettings() {
     const bindings = [
         ["fun-mode-toggle", "funMode"],
         ["sfx-toggle", "sfx"],
-        ["reduced-motion-toggle", "reducedMotion"],
-        ["compact-ui-toggle", "compactUi"],
-        ["high-contrast-toggle", "highContrast"],
-        ["animated-ocean-toggle", "animatedOcean"],
         ["ambient-audio-toggle", "ambientAudio"]
     ];
 
@@ -5032,6 +6648,13 @@ function bindSharkdleSettings() {
         input.dataset.settingsBound = "true";
         input.addEventListener("change", () => setSharkdleSetting(key, input.checked));
     });
+
+    const volumeInput = document.getElementById("bg-volume-slider");
+    if (volumeInput && volumeInput.dataset.settingsBound !== "true") {
+        volumeInput.dataset.settingsBound = "true";
+        volumeInput.addEventListener("input", () => setSharkdleAmbientVolume(volumeInput.value));
+        volumeInput.addEventListener("change", () => setSharkdleAmbientVolume(volumeInput.value));
+    }
 
     const test = document.getElementById("settings-test-sound");
     if (test && test.dataset.settingsBound !== "true") {
@@ -5055,6 +6678,7 @@ window.applySharkdleSettings = applySharkdleSettings;
 window.resetSharkdleSettings = resetSharkdleSettings;
 window.testSharkdleSound = testSharkdleSound;
 window.playSfx = playSfx;
+window.setSharkdleAmbientVolume = setSharkdleAmbientVolume;
 
 let consumablesPageInterval = null;
 
@@ -5191,9 +6815,673 @@ function applyIndexTheme(themeId = "default", force = false) {
         if (disk && typeof buildSpinWheelGradient === "function") disk.style.background = buildSpinWheelGradient();
         if (typeof renderSpinWheelLegend === "function") renderSpinWheelLegend();
     }
+    applySeasonalDecorationLayout(null, appliedThemeId);
 
     return appliedThemeId;
 }
+
+const HALLOWEEN_WEB_LAYOUT_STORAGE_KEY = "sharkdle_halloween_web_layout_v1";
+const CHRISTMAS_DECORATION_LAYOUT_STORAGE_KEY = "sharkdle_christmas_decoration_layout_v1";
+const SEASONAL_DECORATION_EDITOR_POSITION_STORAGE_KEY = "sharkdle_seasonal_decoration_editor_position_v1";
+const HALLOWEEN_WEB_TEXTURE_IDS = [
+    "1",
+    "2",
+    "3",
+    "4",
+    "web-cobweb",
+    "ghost",
+    "pumpkin",
+    "bats",
+    "bats-wide",
+    "cauldron",
+    "cat",
+    "candle",
+    "potion",
+    "tombstone",
+    "coffin",
+    "skull",
+    "owl",
+    "broom",
+    "haunted-house"
+];
+const CHRISTMAS_DECORATION_TEXTURE_IDS = [
+    "santa-hat",
+    "santa-cap",
+    "snowman",
+    "snowman-scarf",
+    "tree",
+    "tree-alt",
+    "gift",
+    "present",
+    "snowflake",
+    "wreath",
+    "stocking",
+    "candy-cane",
+    "ornament",
+    "bell",
+    "star",
+    "ball",
+    "santa",
+    "hills"
+];
+const HALLOWEEN_DECORATION_TEXTURE_OPTIONS = [
+    ["1", "Cobweb 1"],
+    ["2", "Cobweb 2"],
+    ["3", "Cobweb 3"],
+    ["4", "Cobweb 4"],
+    ["web-cobweb", "Cobweb 5"],
+    ["ghost", "Ghost"],
+    ["pumpkin", "Pumpkin"],
+    ["bats", "Bats"],
+    ["bats-wide", "Bats Wide"],
+    ["cauldron", "Cauldron"],
+    ["cat", "Cat"],
+    ["candle", "Candle"],
+    ["potion", "Potion"],
+    ["tombstone", "Tombstone"],
+    ["coffin", "Coffin"],
+    ["skull", "Skull"],
+    ["owl", "Owl"],
+    ["broom", "Broom"],
+    ["haunted-house", "Haunted House"]
+];
+const CHRISTMAS_DECORATION_TEXTURE_OPTIONS = [
+    ["santa-hat", "Santa Hat"],
+    ["santa-cap", "Santa Cap"],
+    ["snowman", "Snowman"],
+    ["snowman-scarf", "Snowman Scarf"],
+    ["tree", "Christmas Tree"],
+    ["tree-alt", "Tree Alt"],
+    ["gift", "Gift"],
+    ["present", "Present"],
+    ["snowflake", "Snowflake"],
+    ["wreath", "Wreath"],
+    ["stocking", "Stocking"],
+    ["candy-cane", "Candy Cane"],
+    ["ornament", "Ornament"],
+    ["bell", "Bell"],
+    ["star", "Star"],
+    ["ball", "Christmas Ball"],
+    ["santa", "Santa"],
+    ["hills", "Hills"]
+];
+const DEFAULT_HALLOWEEN_WEB_LAYOUT = [
+    { id: "web-1", texture: "1", x: -2.8, y: -4.4, size: 11.8, rotate: 0, opacity: 0.12 },
+    { id: "web-2", texture: "2", x: 64.5, y: -3.8, size: 9.2, rotate: 0, opacity: 0.12 },
+    { id: "web-3", texture: "3", x: 91.5, y: 27.5, size: 13.6, rotate: 90, opacity: 0.11 },
+    { id: "web-4", texture: "4", x: 12.5, y: 81.5, size: 10.4, rotate: 180, opacity: 0.1 }
+];
+const DEFAULT_CHRISTMAS_DECORATION_LAYOUT = [
+    { id: "christmas-1", texture: "santa-cap", x: 2.8, y: 8.8, size: 7.6, rotate: -18, opacity: 0.86 },
+    { id: "christmas-2", texture: "snowflake", x: 70.5, y: -1.4, size: 10.2, rotate: 14, opacity: 0.28 },
+    { id: "christmas-3", texture: "snowman", x: 84.5, y: 61.5, size: 10.8, rotate: -4, opacity: 0.54 },
+    { id: "christmas-4", texture: "gift", x: 12.5, y: 78.5, size: 8.8, rotate: -9, opacity: 0.58 },
+    { id: "christmas-5", texture: "wreath", x: 91.5, y: 28.5, size: 8.4, rotate: 10, opacity: 0.46 },
+    { id: "christmas-6", texture: "candy-cane", x: 54.5, y: 76.5, size: 7.2, rotate: 18, opacity: 0.34 },
+    { id: "christmas-hills", texture: "hills", x: -5, y: 48, size: 112, rotate: 0, opacity: 0.86 }
+];
+const SEASONAL_DECORATION_THEMES = {
+    halloween: {
+        id: "halloween",
+        label: "Halloween",
+        itemLabel: "Decoration",
+        storageKey: HALLOWEEN_WEB_LAYOUT_STORAGE_KEY,
+        remoteKey: "halloweenWebLayout",
+        textureIds: HALLOWEEN_WEB_TEXTURE_IDS,
+        textureOptions: HALLOWEEN_DECORATION_TEXTURE_OPTIONS,
+        defaults: DEFAULT_HALLOWEEN_WEB_LAYOUT
+    },
+    christmas: {
+        id: "christmas",
+        label: "Christmas",
+        itemLabel: "Decoration",
+        storageKey: CHRISTMAS_DECORATION_LAYOUT_STORAGE_KEY,
+        remoteKey: "christmasDecorationLayout",
+        textureIds: CHRISTMAS_DECORATION_TEXTURE_IDS,
+        textureOptions: CHRISTMAS_DECORATION_TEXTURE_OPTIONS,
+        defaults: DEFAULT_CHRISTMAS_DECORATION_LAYOUT
+    }
+};
+let activeHalloweenWebEditId = "web-1";
+let halloweenWebEditorDrag = null;
+let seasonalDecorationEditorDrag = null;
+let activeHalloweenWebLayout = null;
+let globalHalloweenWebLayout = null;
+let globalChristmasDecorationLayout = null;
+let activeSeasonalDecorationThemeId = "halloween";
+
+function clampHalloweenLayoutNumber(value, min, max, fallback) {
+    const number = Number(value);
+    if (!Number.isFinite(number)) return fallback;
+    return Math.min(max, Math.max(min, number));
+}
+
+function roundHalloweenLayoutNumber(value) {
+    return Math.round(Number(value) * 10) / 10;
+}
+
+function getSeasonalDecorationTheme(themeId = null) {
+    const resolvedThemeId = normalizeIndexThemeId(themeId || activeSeasonalDecorationThemeId || "halloween");
+    return SEASONAL_DECORATION_THEMES[resolvedThemeId] || null;
+}
+
+function getGlobalSeasonalDecorationLayout(themeId = null) {
+    return normalizeIndexThemeId(themeId) === "christmas" ? globalChristmasDecorationLayout : globalHalloweenWebLayout;
+}
+
+function setGlobalSeasonalDecorationLayout(themeId = null, layout = null) {
+    if (normalizeIndexThemeId(themeId) === "christmas") {
+        globalChristmasDecorationLayout = layout;
+    } else {
+        globalHalloweenWebLayout = layout;
+    }
+}
+
+function getVisibleSeasonalDecorationThemeId(themeId = null) {
+    const resolvedThemeId = normalizeIndexThemeId(themeId || localStorage.getItem("globalIndexThemeId") || "default");
+    return SEASONAL_DECORATION_THEMES[resolvedThemeId] ? resolvedThemeId : null;
+}
+
+function getEditableSeasonalDecorationThemeId() {
+    const themeSelect = document.getElementById("admin-index-theme-select");
+    const selectedThemeId = normalizeIndexThemeId(themeSelect?.value || "");
+    if (SEASONAL_DECORATION_THEMES[selectedThemeId]) return selectedThemeId;
+    return getVisibleSeasonalDecorationThemeId() || activeSeasonalDecorationThemeId || "halloween";
+}
+
+function normalizeHalloweenWebItem(item = {}, fallback = DEFAULT_HALLOWEEN_WEB_LAYOUT[0], index = 0, themeId = null) {
+    const theme = getSeasonalDecorationTheme(themeId) || SEASONAL_DECORATION_THEMES.halloween;
+    const id = String(item.id || fallback.id || `decoration-${Date.now()}-${index}`).slice(0, 40);
+    const texture = theme.textureIds.includes(String(item.texture)) ? String(item.texture) : fallback.texture || theme.textureIds[0];
+    const maxSize = theme.id === "christmas" && texture === "hills" ? 160 : 42;
+    return {
+        id,
+        texture,
+        x: roundHalloweenLayoutNumber(clampHalloweenLayoutNumber(item.x, -45, 115, fallback.x)),
+        y: roundHalloweenLayoutNumber(clampHalloweenLayoutNumber(item.y, -45, 115, fallback.y)),
+        size: roundHalloweenLayoutNumber(clampHalloweenLayoutNumber(item.size, 6, maxSize, fallback.size)),
+        rotate: roundHalloweenLayoutNumber(clampHalloweenLayoutNumber(item.rotate, -180, 180, fallback.rotate)),
+        opacity: Math.round(clampHalloweenLayoutNumber(item.opacity, 0, 0.92, fallback.opacity) * 100) / 100
+    };
+}
+
+function normalizeHalloweenWebLayout(layout = null, themeId = null) {
+    const theme = getSeasonalDecorationTheme(themeId) || SEASONAL_DECORATION_THEMES.halloween;
+    let list = [];
+    if (Array.isArray(layout)) {
+        list = layout;
+    } else if (layout && typeof layout === "object") {
+        list = Object.entries(layout).map(([id, item], index) => ({
+            ...(item || {}),
+            id: String(id).startsWith("web-") ? String(id) : `web-${id}`,
+            texture: item?.texture || String(index + 1)
+        }));
+    }
+    if (!list.length && layout === null) list = theme.defaults;
+    if (theme.id === "christmas" && layout !== null && !list.some(item => String(item.texture) === "hills")) {
+        list = list.slice(0, 23).concat(theme.defaults.filter(item => item.texture === "hills"));
+    }
+    return list.slice(0, 24).map((item, index) => {
+        const fallback = theme.defaults[index % theme.defaults.length];
+        const normalizedItem = normalizeHalloweenWebItem(item, fallback, index, theme.id);
+        if (
+            theme.id === "christmas"
+            && normalizedItem.texture === "hills"
+            && (
+                (normalizedItem.x === 13 && normalizedItem.y === 70.5 && normalizedItem.size === 72)
+                || (normalizedItem.x === -5 && normalizedItem.y === 28 && normalizedItem.size === 112)
+                || (normalizedItem.x === -5 && normalizedItem.y === 43.5 && normalizedItem.size === 112)
+                || (normalizedItem.x === -5 && normalizedItem.y === 48 && normalizedItem.size === 42)
+            )
+        ) {
+            return { ...normalizedItem, x: -5, y: 48, size: 112, opacity: Math.max(normalizedItem.opacity, 0.86) };
+        }
+        return normalizedItem;
+    });
+}
+
+function parseHalloweenWebLayout(value, themeId = null) {
+    if (!value) return null;
+    try {
+        return normalizeHalloweenWebLayout(typeof value === "string" ? JSON.parse(value) : value, themeId);
+    } catch (error) {
+        return null;
+    }
+}
+
+function getPreferredHalloweenWebLayout(themeId = null) {
+    const theme = getSeasonalDecorationTheme(themeId) || SEASONAL_DECORATION_THEMES.halloween;
+    const localLayout = isDeveloperSessionActive() ? parseHalloweenWebLayout(localStorage.getItem(theme.storageKey), theme.id) : null;
+    return normalizeHalloweenWebLayout(localLayout || getGlobalSeasonalDecorationLayout(theme.id) || theme.defaults, theme.id);
+}
+
+function getHalloweenWebLayer() {
+    return document.querySelector(".halloween-web-layer");
+}
+
+function clearChristmasHeroDecorations() {
+    document.querySelectorAll(".christmas-hero-decoration").forEach(element => element.remove());
+}
+
+function getChristmasHeroDecorationHost() {
+    return document.querySelector(".home-v3-hero");
+}
+
+function getHalloweenWebElement(id) {
+    return Array.from(document.querySelectorAll(".halloween-web")).find(web => web.dataset.halloweenWebId === id) || null;
+}
+
+function renderHalloweenWebElements(layout, themeId = null) {
+    const layer = getHalloweenWebLayer();
+    if (!layer) return;
+    const theme = getSeasonalDecorationTheme(themeId) || SEASONAL_DECORATION_THEMES.halloween;
+    layer.replaceChildren();
+    clearChristmasHeroDecorations();
+    layout.forEach((item) => {
+        const web = document.createElement("span");
+        const isChristmasHills = theme.id === "christmas" && item.texture === "hills";
+        web.className = `halloween-web seasonal-decoration-${theme.id} halloween-web-texture-${item.texture}${isChristmasHills ? " christmas-hero-decoration" : ""}`;
+        web.dataset.halloweenWebId = item.id;
+        web.dataset.webTexture = item.texture;
+        web.dataset.decorationTheme = theme.id;
+        web.setAttribute("aria-hidden", "true");
+        web.addEventListener("pointerdown", event => {
+            if (!document.body.classList.contains("halloween-web-editing")) return;
+            event.preventDefault();
+            selectHalloweenWebForEditing(item.id);
+            halloweenWebEditorDrag = {
+                id: item.id,
+                startClientX: event.clientX,
+                startClientY: event.clientY,
+                startX: item.x,
+                startY: item.y
+            };
+            try {
+                web.setPointerCapture(event.pointerId);
+            } catch (error) {
+                // Pointer capture is best effort for older mobile WebViews.
+            }
+        });
+        const host = isChristmasHills ? getChristmasHeroDecorationHost() : layer;
+        (host || layer).appendChild(web);
+    });
+}
+
+function syncHalloweenWebSelectOptions() {
+    const select = document.getElementById("halloween-web-editor-select");
+    if (!select) return;
+    const theme = getSeasonalDecorationTheme(activeSeasonalDecorationThemeId) || SEASONAL_DECORATION_THEMES.halloween;
+    const layout = activeHalloweenWebLayout || getPreferredHalloweenWebLayout(theme.id);
+    select.replaceChildren();
+    layout.forEach((item, index) => {
+        const option = document.createElement("option");
+        option.value = item.id;
+        option.textContent = `${theme.itemLabel} ${index + 1}`;
+        select.appendChild(option);
+    });
+}
+
+function syncSeasonalDecorationAssetOptions(themeId = null) {
+    const texture = document.getElementById("halloween-web-texture-select");
+    if (!texture) return;
+    const theme = getSeasonalDecorationTheme(themeId) || SEASONAL_DECORATION_THEMES.halloween;
+    const currentValue = texture.value;
+    texture.replaceChildren();
+    theme.textureOptions.forEach(([value, label]) => {
+        const option = document.createElement("option");
+        option.value = value;
+        option.textContent = label;
+        texture.appendChild(option);
+    });
+    if (theme.textureIds.includes(currentValue)) texture.value = currentValue;
+}
+
+function syncSeasonalDecorationEditorLabels(themeId = null) {
+    const theme = getSeasonalDecorationTheme(themeId);
+    if (!theme) return;
+    const title = document.querySelector("#halloweenWebEditor .halloween-web-editor-head strong");
+    const itemLabel = document.querySelector('label[for="halloween-web-editor-select"]');
+    if (title) title.textContent = `${theme.label} Layout`;
+    if (itemLabel) itemLabel.textContent = theme.itemLabel;
+}
+
+function applySeasonalDecorationLayout(layout = null, themeId = null) {
+    const theme = getSeasonalDecorationTheme(themeId || activeSeasonalDecorationThemeId);
+    const layer = getHalloweenWebLayer();
+    if (!theme) {
+        if (!document.body.classList.contains("halloween-web-editing")) activeHalloweenWebLayout = null;
+        if (layer) layer.replaceChildren();
+        return null;
+    }
+    const previousThemeId = activeSeasonalDecorationThemeId;
+    activeSeasonalDecorationThemeId = theme.id;
+    const existingLayout = previousThemeId === theme.id ? activeHalloweenWebLayout : null;
+    activeHalloweenWebLayout = normalizeHalloweenWebLayout(layout || existingLayout || getPreferredHalloweenWebLayout(theme.id), theme.id);
+    if (!activeHalloweenWebLayout.some(item => item.id === activeHalloweenWebEditId)) {
+        activeHalloweenWebEditId = activeHalloweenWebLayout[0]?.id || "";
+    }
+    renderHalloweenWebElements(activeHalloweenWebLayout, theme.id);
+    activeHalloweenWebLayout.forEach(item => {
+        const web = getHalloweenWebElement(item.id);
+        if (!web) return;
+        const isChristmasHills = theme.id === "christmas" && item.texture === "hills";
+        web.style.left = isChristmasHills ? `${item.x}%` : `${item.x}vw`;
+        web.style.top = isChristmasHills ? `${item.y}%` : `${item.y}vh`;
+        web.style.right = "auto";
+        web.style.bottom = "auto";
+        web.style.width = isChristmasHills
+            ? `clamp(720px, ${item.size}%, 2600px)`
+            : `clamp(70px, ${item.size}vw, 640px)`;
+        web.style.opacity = String(item.opacity);
+        web.style.transform = `rotate(${item.rotate}deg)`;
+        web.classList.toggle("is-editing", document.body.classList.contains("halloween-web-editing") && item.id === activeHalloweenWebEditId);
+    });
+    syncSeasonalDecorationAssetOptions(theme.id);
+    syncSeasonalDecorationEditorLabels(theme.id);
+    syncHalloweenWebSelectOptions();
+    syncHalloweenWebEditorControls();
+    return activeHalloweenWebLayout;
+}
+
+function applyHalloweenWebLayout(layout = null, themeId = null) {
+    return applySeasonalDecorationLayout(layout, themeId);
+}
+
+function setAdminCobwebStatus(message, isError = false) {
+    const status = document.getElementById("admin-cobweb-status");
+    if (!status) return;
+    status.textContent = message;
+    status.classList.toggle("error", Boolean(isError));
+}
+
+function syncHalloweenWebEditorControls() {
+    const theme = getSeasonalDecorationTheme(activeSeasonalDecorationThemeId) || SEASONAL_DECORATION_THEMES.halloween;
+    const layout = activeHalloweenWebLayout || getPreferredHalloweenWebLayout(theme.id);
+    const item = layout.find(web => web.id === activeHalloweenWebEditId);
+    const select = document.getElementById("halloween-web-editor-select");
+    const texture = document.getElementById("halloween-web-texture-select");
+    const size = document.getElementById("halloween-web-size-input");
+    const rotate = document.getElementById("halloween-web-rotate-input");
+    const opacity = document.getElementById("halloween-web-opacity-input");
+    if (select) select.value = activeHalloweenWebEditId;
+    [texture, size, rotate, opacity].forEach(input => {
+        if (input) input.disabled = !item;
+    });
+    if (!item) return;
+    if (texture) texture.value = item.texture;
+    if (size) size.value = item.size;
+    if (rotate) rotate.value = item.rotate;
+    if (opacity) opacity.value = item.opacity;
+}
+
+function bindHalloweenWebEditor() {
+    if (document.body.dataset.halloweenWebEditorBound === "true") return;
+    document.body.dataset.halloweenWebEditorBound = "true";
+    document.querySelector("#halloweenWebEditor .halloween-web-editor-head")?.addEventListener("pointerdown", event => {
+        if (event.target.closest("button, input, select, textarea")) return;
+        const editor = document.getElementById("halloweenWebEditor");
+        if (!editor || editor.classList.contains("hidden")) return;
+        event.preventDefault();
+        const rect = editor.getBoundingClientRect();
+        seasonalDecorationEditorDrag = {
+            startClientX: event.clientX,
+            startClientY: event.clientY,
+            startLeft: rect.left,
+            startTop: rect.top
+        };
+        document.body.classList.add("seasonal-decoration-editor-dragging");
+        try {
+            event.currentTarget.setPointerCapture(event.pointerId);
+        } catch (error) {
+            // Pointer capture is best effort for older mobile WebViews.
+        }
+    });
+    document.addEventListener("pointermove", event => {
+        if (seasonalDecorationEditorDrag) {
+            const nextPosition = clampSeasonalDecorationEditorPosition({
+                left: seasonalDecorationEditorDrag.startLeft + (event.clientX - seasonalDecorationEditorDrag.startClientX),
+                top: seasonalDecorationEditorDrag.startTop + (event.clientY - seasonalDecorationEditorDrag.startClientY)
+            });
+            setSeasonalDecorationEditorPosition(nextPosition);
+            return;
+        }
+        if (!halloweenWebEditorDrag || !document.body.classList.contains("halloween-web-editing")) return;
+        const layout = activeHalloweenWebLayout || getPreferredHalloweenWebLayout(activeSeasonalDecorationThemeId);
+        const item = layout.find(web => web.id === halloweenWebEditorDrag.id);
+        if (!item) return;
+        const isChristmasHills = activeSeasonalDecorationThemeId === "christmas" && item.texture === "hills";
+        const heroRect = isChristmasHills ? getChristmasHeroDecorationHost()?.getBoundingClientRect() : null;
+        const dragWidth = heroRect?.width || window.innerWidth;
+        const dragHeight = heroRect?.height || window.innerHeight;
+        const deltaX = ((event.clientX - halloweenWebEditorDrag.startClientX) / dragWidth) * 100;
+        const deltaY = ((event.clientY - halloweenWebEditorDrag.startClientY) / dragHeight) * 100;
+        item.x = roundHalloweenLayoutNumber(halloweenWebEditorDrag.startX + deltaX);
+        item.y = roundHalloweenLayoutNumber(halloweenWebEditorDrag.startY + deltaY);
+        applyHalloweenWebLayout(layout);
+    });
+    document.addEventListener("pointerup", () => {
+        halloweenWebEditorDrag = null;
+        if (seasonalDecorationEditorDrag) {
+            localStorage.setItem(SEASONAL_DECORATION_EDITOR_POSITION_STORAGE_KEY, JSON.stringify(getSeasonalDecorationEditorPosition()));
+        }
+        seasonalDecorationEditorDrag = null;
+        document.body.classList.remove("seasonal-decoration-editor-dragging");
+    });
+}
+
+function clampSeasonalDecorationEditorPosition(position = {}) {
+    const editor = document.getElementById("halloweenWebEditor");
+    const width = editor?.offsetWidth || 320;
+    const height = editor?.offsetHeight || 320;
+    const margin = 10;
+    const maxLeft = Math.max(margin, window.innerWidth - width - margin);
+    const maxTop = Math.max(margin, window.innerHeight - height - margin);
+    return {
+        left: Math.round(clampHalloweenLayoutNumber(position.left, margin, maxLeft, maxLeft)),
+        top: Math.round(clampHalloweenLayoutNumber(position.top, margin, maxTop, maxTop))
+    };
+}
+
+function getSeasonalDecorationEditorPosition() {
+    const editor = document.getElementById("halloweenWebEditor");
+    if (!editor) return null;
+    const rect = editor.getBoundingClientRect();
+    return clampSeasonalDecorationEditorPosition({ left: rect.left, top: rect.top });
+}
+
+function setSeasonalDecorationEditorPosition(position = null) {
+    const editor = document.getElementById("halloweenWebEditor");
+    if (!editor) return;
+    const safePosition = clampSeasonalDecorationEditorPosition(position || getSeasonalDecorationEditorPosition() || {});
+    editor.style.left = `${safePosition.left}px`;
+    editor.style.top = `${safePosition.top}px`;
+    editor.style.right = "auto";
+    editor.style.bottom = "auto";
+}
+
+function restoreSeasonalDecorationEditorPosition() {
+    const editor = document.getElementById("halloweenWebEditor");
+    if (!editor) return;
+    try {
+        const savedPosition = JSON.parse(localStorage.getItem(SEASONAL_DECORATION_EDITOR_POSITION_STORAGE_KEY) || "null");
+        if (savedPosition && Number.isFinite(Number(savedPosition.left)) && Number.isFinite(Number(savedPosition.top))) {
+            setSeasonalDecorationEditorPosition(savedPosition);
+        }
+    } catch (error) {
+        localStorage.removeItem(SEASONAL_DECORATION_EDITOR_POSITION_STORAGE_KEY);
+    }
+}
+
+function selectHalloweenWebForEditing(id = "web-1") {
+    const layout = activeHalloweenWebLayout || getPreferredHalloweenWebLayout(activeSeasonalDecorationThemeId);
+    activeHalloweenWebEditId = layout.some(item => item.id === String(id)) ? String(id) : layout[0]?.id || "web-1";
+    applySeasonalDecorationLayout(layout, activeSeasonalDecorationThemeId);
+}
+
+function updateSelectedHalloweenWebSetting(key, value) {
+    const theme = getSeasonalDecorationTheme(activeSeasonalDecorationThemeId) || SEASONAL_DECORATION_THEMES.halloween;
+    const layout = activeHalloweenWebLayout || getPreferredHalloweenWebLayout(theme.id);
+    const item = layout.find(web => web.id === activeHalloweenWebEditId);
+    if (!item) return;
+    if (key === "texture") item.texture = theme.textureIds.includes(String(value)) ? String(value) : item.texture;
+    if (key === "size") item.size = roundHalloweenLayoutNumber(clampHalloweenLayoutNumber(value, 6, 42, item.size));
+    if (key === "rotate") item.rotate = roundHalloweenLayoutNumber(clampHalloweenLayoutNumber(value, -180, 180, item.rotate));
+    if (key === "opacity") item.opacity = Math.round(clampHalloweenLayoutNumber(value, 0, 0.92, item.opacity) * 100) / 100;
+    applySeasonalDecorationLayout(layout, theme.id);
+}
+
+function createHalloweenWebId() {
+    return `web-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
+}
+
+function addHalloweenWeb() {
+    if (!currentUser || !isDeveloperUid(currentUser.uid)) return;
+    if (!document.body.classList.contains("halloween-web-editing")) {
+        toggleHalloweenWebEditor(true);
+    }
+    const theme = getSeasonalDecorationTheme(activeSeasonalDecorationThemeId) || SEASONAL_DECORATION_THEMES.halloween;
+    const layout = activeHalloweenWebLayout || getPreferredHalloweenWebLayout(theme.id);
+    if (layout.length >= 24) {
+        showNotification("Maximum decoration count reached.", "error", 2400);
+        return;
+    }
+    const texture = theme.textureIds[String(layout.length % theme.textureIds.length)] || theme.textureIds[0];
+    const newWeb = normalizeHalloweenWebItem({
+        id: createHalloweenWebId(),
+        texture,
+        x: 46,
+        y: 36,
+        size: 10,
+        rotate: 0,
+        opacity: theme.id === "christmas" ? 0.48 : 0.12
+    }, theme.defaults[0], layout.length, theme.id);
+    layout.push(newWeb);
+    activeHalloweenWebEditId = newWeb.id;
+    applySeasonalDecorationLayout(layout, theme.id);
+    setAdminCobwebStatus("Added a decoration. Drag it into place.");
+}
+
+function removeSelectedHalloweenWeb() {
+    if (!currentUser || !isDeveloperUid(currentUser.uid)) return;
+    const layout = activeHalloweenWebLayout || getPreferredHalloweenWebLayout(activeSeasonalDecorationThemeId);
+    const nextLayout = layout.filter(item => item.id !== activeHalloweenWebEditId);
+    activeHalloweenWebEditId = nextLayout[0]?.id || "";
+    applySeasonalDecorationLayout(nextLayout, activeSeasonalDecorationThemeId);
+    setAdminCobwebStatus("Removed selected decoration.");
+}
+
+function toggleHalloweenWebEditor(forceOpen = null) {
+    if (!currentUser || !isDeveloperUid(currentUser.uid)) {
+        showNotification("Developer access is required for decoration editing.", "error", 3200);
+        return;
+    }
+    const editor = document.getElementById("halloweenWebEditor");
+    if (!editor) return;
+    const shouldOpen = forceOpen === null ? editor.classList.contains("hidden") : Boolean(forceOpen);
+    editor.classList.toggle("hidden", !shouldOpen);
+    editor.setAttribute("aria-hidden", String(!shouldOpen));
+    document.body.classList.toggle("halloween-web-editing", shouldOpen);
+    if (shouldOpen) {
+        const themeId = getEditableSeasonalDecorationThemeId();
+        document.getElementById("adminAbuseModal")?.classList.add("hidden");
+        applyIndexTheme(themeId, true);
+        bindHalloweenWebEditor();
+        restoreSeasonalDecorationEditorPosition();
+        applySeasonalDecorationLayout(getPreferredHalloweenWebLayout(themeId), themeId);
+        const theme = getSeasonalDecorationTheme(themeId) || SEASONAL_DECORATION_THEMES.halloween;
+        setAdminCobwebStatus(`${theme.label} editor opened.`);
+        showNotification(`${theme.label} editor opened.`, "success", 2200);
+    } else {
+        applySeasonalDecorationLayout(null, getVisibleSeasonalDecorationThemeId());
+        setAdminCobwebStatus("Seasonal editor closed.");
+    }
+}
+
+function saveHalloweenWebLayout() {
+    if (!currentUser || !isDeveloperUid(currentUser.uid)) return;
+    const theme = getSeasonalDecorationTheme(activeSeasonalDecorationThemeId) || SEASONAL_DECORATION_THEMES.halloween;
+    const layout = normalizeHalloweenWebLayout(activeHalloweenWebLayout || getPreferredHalloweenWebLayout(theme.id), theme.id);
+    localStorage.setItem(theme.storageKey, JSON.stringify(layout));
+    activeHalloweenWebLayout = layout;
+    setAdminCobwebStatus("Saved on this device only.");
+    showNotification(`${theme.label} layout saved on this device.`, "success", 2200);
+}
+
+async function saveHalloweenWebLayoutForEveryone() {
+    if (!currentUser || !isDeveloperUid(currentUser.uid)) return;
+    if (!db) {
+        showNotification("Firestore is not ready yet.", "error", 2600);
+        return;
+    }
+    const selectedThemeId = document.body.classList.contains("halloween-web-editing")
+        ? (getSeasonalDecorationTheme(activeSeasonalDecorationThemeId)?.id || getEditableSeasonalDecorationThemeId())
+        : getEditableSeasonalDecorationThemeId();
+    const theme = getSeasonalDecorationTheme(selectedThemeId) || SEASONAL_DECORATION_THEMES.halloween;
+    const candidateLayout = activeSeasonalDecorationThemeId === theme.id ? activeHalloweenWebLayout : null;
+    const layout = normalizeHalloweenWebLayout(candidateLayout || getPreferredHalloweenWebLayout(theme.id), theme.id);
+    const themeMeta = INDEX_THEME_OPTIONS.find(option => option.id === selectedThemeId) || INDEX_THEME_OPTIONS[0];
+    const payload = {
+        themeId: selectedThemeId,
+        themeName: themeMeta?.name || selectedThemeId,
+        enabled: true,
+        [theme.remoteKey]: JSON.stringify(layout),
+        updatedAt: Date.now(),
+        updatedBy: currentUser.uid
+    };
+    try {
+        await db.collection(GLOBAL_INDEX_THEME_CONFIG_PATH.collection)
+            .doc(GLOBAL_INDEX_THEME_CONFIG_PATH.doc)
+            .set(payload, { merge: true });
+        setGlobalSeasonalDecorationLayout(theme.id, layout);
+        localStorage.setItem(theme.storageKey, JSON.stringify(layout));
+        applySeasonalDecorationLayout(layout, theme.id);
+        setAdminCobwebStatus("Saved for everyone.");
+        showNotification(`${theme.label} layout saved for everyone.`, "success", 2600);
+    } catch (error) {
+        console.warn("Unable to save global seasonal decoration layout:", error);
+        setAdminCobwebStatus(`Global save failed: ${error.message || error}`, true);
+        showNotification(`Could not save ${theme.label} layout globally.`, "error", 3200);
+    }
+}
+
+function resetHalloweenWebLayout() {
+    if (!currentUser || !isDeveloperUid(currentUser.uid)) return;
+    const theme = getSeasonalDecorationTheme(activeSeasonalDecorationThemeId) || SEASONAL_DECORATION_THEMES.halloween;
+    localStorage.removeItem(theme.storageKey);
+    activeHalloweenWebLayout = normalizeHalloweenWebLayout(getGlobalSeasonalDecorationLayout(theme.id) || theme.defaults, theme.id);
+    activeHalloweenWebEditId = activeHalloweenWebLayout[0]?.id || "";
+    applySeasonalDecorationLayout(activeHalloweenWebLayout, theme.id);
+    setAdminCobwebStatus(`${theme.label} layout reset.`);
+    showNotification(`${theme.label} layout reset.`, "success", 2200);
+}
+
+async function exportHalloweenWebLayout() {
+    if (!currentUser || !isDeveloperUid(currentUser.uid)) return;
+    const theme = getSeasonalDecorationTheme(activeSeasonalDecorationThemeId) || SEASONAL_DECORATION_THEMES.halloween;
+    const layout = normalizeHalloweenWebLayout(activeHalloweenWebLayout || getPreferredHalloweenWebLayout(theme.id), theme.id);
+    try {
+        await navigator.clipboard.writeText(JSON.stringify(layout));
+        setAdminCobwebStatus(`${theme.label} layout JSON copied.`);
+        showNotification(`${theme.label} layout copied.`, "success", 2400);
+    } catch (error) {
+        window.prompt(`Copy ${theme.label} layout JSON`, JSON.stringify(layout));
+    }
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+    bindHalloweenWebEditor();
+    applySeasonalDecorationLayout();
+});
+
+window.toggleHalloweenWebEditor = toggleHalloweenWebEditor;
+window.selectHalloweenWebForEditing = selectHalloweenWebForEditing;
+window.updateSelectedHalloweenWebSetting = updateSelectedHalloweenWebSetting;
+window.addHalloweenWeb = addHalloweenWeb;
+window.removeSelectedHalloweenWeb = removeSelectedHalloweenWeb;
+window.saveHalloweenWebLayout = saveHalloweenWebLayout;
+window.saveHalloweenWebLayoutForEveryone = saveHalloweenWebLayoutForEveryone;
+window.resetHalloweenWebLayout = resetHalloweenWebLayout;
+window.exportHalloweenWebLayout = exportHalloweenWebLayout;
 
 function setupGlobalIndexThemeListener() {
     if (!db) return;
@@ -5209,11 +7497,22 @@ function setupGlobalIndexThemeListener() {
         .collection(GLOBAL_INDEX_THEME_CONFIG_PATH.collection)
         .doc(GLOBAL_INDEX_THEME_CONFIG_PATH.doc)
         .onSnapshot(snapshot => {
-            const remoteThemeId = snapshot.exists ? snapshot.data()?.themeId : "default";
+            const themeData = snapshot.exists ? (snapshot.data() || {}) : {};
+            const remoteThemeId = themeData.themeId || "default";
+            globalHalloweenWebLayout = parseHalloweenWebLayout(themeData.halloweenWebLayout, "halloween");
+            globalChristmasDecorationLayout = parseHalloweenWebLayout(themeData.christmasDecorationLayout, "christmas");
+            if (!document.body.classList.contains("halloween-web-editing")) {
+                activeHalloweenWebLayout = getPreferredHalloweenWebLayout(remoteThemeId);
+            }
             setActiveSeasonalCrateTheme(remoteThemeId || "default");
             applyIndexTheme(remoteThemeId || "default");
         }, error => {
             console.warn("Global index theme listener failed:", error);
+            globalHalloweenWebLayout = null;
+            globalChristmasDecorationLayout = null;
+            if (!document.body.classList.contains("halloween-web-editing")) {
+                activeHalloweenWebLayout = getPreferredHalloweenWebLayout("halloween");
+            }
             setActiveSeasonalCrateTheme("default");
             applyIndexTheme("default");
         });
@@ -5232,7 +7531,7 @@ function getCrateRewardPreviewMarkup(reward) {
         const badge = getBadgeMeta(reward.badgeId);
         return `
             <div class="crate-reward-preview">
-                <div style="display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,0.04);padding:10px;font-size:34px;line-height:1;">${badge.emoji || "🦈"}</div>
+                <div style="display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,0.04);padding:10px;font-size:34px;line-height:1;">${badge.emoji || "\u{1F988}"}</div>
             </div>
         `;
     }
@@ -5242,7 +7541,7 @@ function getCrateRewardPreviewMarkup(reward) {
         return `
             <div class="crate-reward-preview">
                 <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(255,255,255,0.04);padding:10px;line-height:1;">
-                    <div style="font-size:34px;">${reward.emoji || "🛡️"}</div>
+                    <div style="font-size:34px;">${reward.emoji || "\u{1F6E1}\uFE0F"}</div>
                     <div style="margin-top:6px;font-size:13px;font-weight:700;color:#dffaff;">${quantityLabel}</div>
                 </div>
             </div>
@@ -5341,7 +7640,7 @@ function openCraftingModalFromHome() {
     closeCratesModal?.();
     const modal = document.getElementById("craftingModal");
     if (modal) {
-        updateSummerCrateCraftingUI?.();
+        updateSeasonalCrateCraftingUI?.();
         modal.classList.remove("hidden");
     }
 }
@@ -5354,15 +7653,12 @@ function renderCratesModal() {
     const profileData = getCurrentProfileData();
     const inventory = getCrateInventory(profileData);
     const crateCount = inventory.reef;
-    const summerCrateCount = inventory.summer || 0;
     const christmasCrateCount = inventory.christmas || 0;
     const halloweenCrateCount = inventory.halloween || 0;
 
     const countValue = document.getElementById("crate-count-value");
     if (countValue) countValue.textContent = crateCount;
 
-    const summerCountEl = document.getElementById("summer-crate-count-value");
-    if (summerCountEl) summerCountEl.textContent = summerCrateCount;
     const christmasCountEl = document.getElementById("christmas-crate-count-value");
     if (christmasCountEl) christmasCountEl.textContent = christmasCrateCount;
     const halloweenCountEl = document.getElementById("halloween-crate-count-value");
@@ -5370,7 +7666,7 @@ function renderCratesModal() {
 
     renderCratesButton();
     updateSeasonalCratePanels(profileData);
-    updateSummerCrateCraftingUI(profileData);
+    updateSeasonalCrateCraftingUI(profileData);
 
     const statusCopy = document.getElementById("crate-status-copy");
     const instantToggle = document.getElementById("crate-instant-toggle");
@@ -5387,13 +7683,13 @@ function renderCratesModal() {
         ? "Next crate is guaranteed legendary."
         : `${cratesUntilPity} crate${cratesUntilPity === 1 ? "" : "s"} until guaranteed legendary.`;
     if (streakShieldCopy) {
-        streakShieldCopy.textContent = `🛡️ Streak Shields: ${streakShieldCount} / 3 (max)`;
+        streakShieldCopy.textContent = `\u{1F6E1}\uFE0F Streak Shields: ${streakShieldCount} / 3 (max)`;
     }
 
-    const totalCrateCount = crateCount + summerCrateCount + christmasCrateCount + halloweenCrateCount;
+    const totalCrateCount = crateCount + christmasCrateCount + halloweenCrateCount;
     if (!currentUser) {
         statusCopy.textContent = "Login to open crates, save rewards, and keep cosmetic unlocks synced.";
-        ["open-crate-btn", "open-summer-crate-btn", "open-christmas-crate-btn", "open-halloween-crate-btn", "craft-summer-crate-btn"].forEach(id => {
+        ["open-crate-btn", "open-christmas-crate-btn", "open-halloween-crate-btn", "craft-summer-crate-btn"].forEach(id => {
             const btn = document.getElementById(id);
             if (btn) {
                 btn.disabled = true;
@@ -5403,7 +7699,6 @@ function renderCratesModal() {
     } else {
         const labelMap = {
             "open-crate-btn": "Open Cosmetic Crate",
-            "open-summer-crate-btn": "Open Summer Crate",
             "open-christmas-crate-btn": "Open Christmas Crate",
             "open-halloween-crate-btn": "Open Halloween Crate"
         };
@@ -5496,7 +7791,7 @@ function closeCratesModal() {
     if (modal) modal.classList.add("hidden");
     closeCrateUnboxOverlay();
     crateOpeningInProgress = false;
-    updateSummerCrateCraftingUI();
+    updateSeasonalCrateCraftingUI();
 }
 
 function closeCrateDropsModal() {
@@ -5594,13 +7889,13 @@ function getCrateUnboxCopy(crateId, phase = "opening", rewardName = "") {
     if (isSeasonalCrateId(crateId)) {
         const crateLabel = crateName.toLowerCase();
         if (phase === "reward") return `You found ${itemLabel} in the ${crateLabel}!`;
-        if (phase === "duplicate") return `You found ${itemLabel} in the ${crateLabel}! (Already owned - converted to XP.)`;
+        if (phase === "duplicate") return `You found ${itemLabel} in the ${crateLabel}! (Already owned \u2014 converted to XP.)`;
         return `The ${crateLabel} is opening...`;
     }
 
     if (crateId === "summer") {
         if (phase === "reward") return `You found ${itemLabel} in the summer crate!`;
-        if (phase === "duplicate") return `You found ${itemLabel} in the summer crate! (Already owned — converted to XP.)`;
+        if (phase === "duplicate") return `You found ${itemLabel} in the summer crate! (Already owned \u2014 converted to XP.)`;
         return "The summer crate is opening...";
     }
     if (phase === "reward") return `${crateName} reward revealed!`;
@@ -5733,7 +8028,7 @@ function finalizeCrateRewardPresentation(reward, duplicateReward, duplicateXpAwa
             subtitle: `${reward.name} profile picture`,
             accent: "#ffd47f",
             background: "linear-gradient(135deg, rgba(255, 196, 87, 0.96), rgba(91, 58, 9, 0.96))",
-            icon: "📦"
+            icon: "\u{1F4E6}"
         });
     } else if (reward.type === "theme") {
         showNotification(`${reward.name} profile theme unlocked from a crate!`, "success", 4200);
@@ -5784,7 +8079,7 @@ async function openCrate(crateId = "reef") {
     }
 
     crateOpeningInProgress = true;
-    updateSummerCrateCraftingUI(profileData);
+    updateSeasonalCrateCraftingUI(profileData);
     inventory[crateId] -= 1;
     profileData.crateInventory = normalizeCrateInventory(inventory);
     profileData.cratesOpened = getOpenedCrateCount(profileData) + 1;
@@ -5836,18 +8131,22 @@ async function openCrate(crateId = "reef") {
 
 function maybeAwardCrateDrop(source = "win") {
     if (!currentUser) return false;
-    if (Math.random() > CRATE_DROP_CHANCE) return false;
+    let awarded = false;
 
-    const profileData = getCurrentProfileData();
-    const inventory = getCrateInventory(profileData);
-    // Only award reef crates (normal crates) regardless of theme
-    inventory.reef += 1;
-    showNotification(`Cosmetic Crate dropped from your ${source}!`, "success", 3800);
-    profileData.crateInventory = normalizeCrateInventory(inventory);
-    persistCrateProfileUpdate(profileData).catch(error => console.warn("Crate sync failed:", error));
-    renderCratesButton();
-    renderCratesModal();
-    return true;
+    if (Math.random() <= CRATE_DROP_CHANCE) {
+        const profileData = getCurrentProfileData();
+        const inventory = getCrateInventory(profileData);
+        // Only award reef crates (normal crates) regardless of theme
+        inventory.reef += 1;
+        showNotification(`Cosmetic Crate dropped from your ${source}!`, "success", 3800);
+        profileData.crateInventory = normalizeCrateInventory(inventory);
+        persistCrateProfileUpdate(profileData).catch(error => console.warn("Crate sync failed:", error));
+        renderCratesButton();
+        renderCratesModal();
+        awarded = true;
+    }
+
+    return maybeAwardLostTreasuresBottleDrop(source) || awarded;
 }
 
 window.openCratesModal = openCratesModal;
@@ -5870,12 +8169,6 @@ window.applyLimitedTimeXpBonus = applyLimitedTimeXpBonus;
 window.openPearlShopModal = openPearlShopModal;
 window.closePearlShopModal = closePearlShopModal;
 window.buyPearlShopItem = buyPearlShopItem;
-window.openHomeQuickAccessModal = openHomeQuickAccessModal;
-window.closeHomeQuickAccessModal = closeHomeQuickAccessModal;
-window.resetHomeQuickAccess = resetHomeQuickAccess;
-window.openHomeQuickStatsModal = openHomeQuickStatsModal;
-window.closeHomeQuickStatsModal = closeHomeQuickStatsModal;
-window.resetHomeQuickStats = resetHomeQuickStats;
 window.renderPearlShop = renderPearlShop;
 window.renderConsumablesPage = renderConsumablesPage;
 window.ensureConsumablesPageTimer = ensureConsumablesPageTimer;
@@ -5894,13 +8187,14 @@ function getCardThemeMeta(themeId) {
 }
 
 function getBadgeMeta(badgeId) {
+    badgeId = normalizeBadgeId(badgeId);
     const builtInBadge = allBadges.find(badge => badge.id === badgeId);
     const passReward = sharkPassRewards.find(reward => reward.type === "badge" && reward.badgeId === badgeId);
     if (passReward) {
         return {
             id: badgeId,
             name: builtInBadge?.name || passReward.name,
-            emoji: builtInBadge?.emoji || sharkPassBadgeMeta[badgeId]?.emoji || "🦈",
+            emoji: builtInBadge?.emoji || sharkPassBadgeMeta[badgeId]?.emoji || "\u{1F988}",
             tier: sharkPassBadgeTiers[badgeId] || 1,
             description: builtInBadge?.description || passReward.blurb || `${passReward.name} Shark Pass badge.`,
             rarity: passReward.rarity || "common"
@@ -5911,7 +8205,7 @@ function getBadgeMeta(badgeId) {
         return {
             id: badgeId,
             name: builtInBadge?.name || crateReward.name,
-            emoji: builtInBadge?.emoji || sharkPassBadgeMeta[badgeId]?.emoji || "🦈",
+            emoji: builtInBadge?.emoji || sharkPassBadgeMeta[badgeId]?.emoji || "\u{1F988}",
             tier: sharkPassBadgeTiers[badgeId] || 1,
             description: builtInBadge?.description || crateReward.blurb || `${crateReward.name} crate badge.`,
             rarity: crateReward.rarity || "common"
@@ -5992,17 +8286,24 @@ function getUnlockedCardThemeIds(profileData = getCurrentProfileData()) {
     return getUnlockedCardThemes(profileData).map(theme => theme.id);
 }
 
+function sanitizeProfilePicturePath(path, fallback = "") {
+    const normalized = String(path || "").replace(/\\/g, "/").replace(/^\.?\//, "").trim();
+    if (!normalized || /^(?:images\/)?profileThemes\//i.test(normalized)) return fallback;
+    return normalized;
+}
+
 function buildCosmeticSyncPayload(profileData = getCurrentProfileData()) {
-    const profilePic = profileData.profilePicture || profileData.profilePic || "images/pfp/shark1.png";
+    const profilePic = sanitizeProfilePicturePath(profileData.profilePicture || profileData.profilePic, "images/pfp/shark1.png");
     return {
         profilePicture: profilePic,
         profilePic: profilePic,
-        equippedBadge: profileData.equippedBadge || "starter",
+        equippedBadge: normalizeBadgeId(profileData.equippedBadge || "starter"),
         equippedCardTheme: profileData.equippedCardTheme || "default",
         equippedTitle: getEquippedProfileTitle(profileData),
         unlockedBadges: getUnlockedBadgeIds(profileData),
         unlockedCardThemes: getUnlockedCardThemeIds(profileData),
         unlockedTitles: getUnlockedProfileTitleIds(profileData),
+        showcasedAchievements: getProfileShowcasedAchievementIds(profileData),
         lastUpdated: profileData.lastUpdated || Date.now()
     };
 }
@@ -6041,6 +8342,10 @@ function applyProfileCardTheme(themeId = getEquippedCardTheme()) {
             radial-gradient(circle at 92% 12%, rgba(104,226,240,.18), transparent 32%),
             ${theme.preview}
         `, "important");
+        const avatarOrb = profileHero.querySelector(".profile-avatar-orb");
+        if (avatarOrb) {
+            avatarOrb.style.removeProperty("background");
+        }
     }
 }
 
@@ -6051,9 +8356,9 @@ function applyThemeToProfileCard(elementId, themeId = "default") {
 }
 
 function getLeaderboardRankLabel(rank) {
-    if (rank === 1) return "🏆 #1";
-    if (rank === 2) return "🥈 #2";
-    if (rank === 3) return "🥉 #3";
+    if (rank === 1) return "\u{1F3C6} #1";
+    if (rank === 2) return "\u{1F948} #2";
+    if (rank === 3) return "\u{1F949} #3";
     return "Outside Top 3";
 }
 
@@ -6116,14 +8421,10 @@ function renderThemeSelection() {
     const unlockedThemes = getUnlockedCardThemes();
     const equippedTheme = getEquippedCardTheme();
     container.innerHTML = "";
-    unlockedThemes
+    sortCosmeticsForLocker(unlockedThemes
         .map(theme => ({ ...theme, ...getThemeCosmeticMeta(theme) }))
         .filter(theme => shouldShowCosmetic(theme, profileInventoryFilters.themes))
-        .sort((a, b) => {
-            const rarityDiff = getCosmeticRaritySortRank(a.rarity) - getCosmeticRaritySortRank(b.rarity);
-            if (rarityDiff !== 0) return rarityDiff;
-            return String(a.name || "").localeCompare(String(b.name || ""));
-        })
+        .filter(theme => matchesCosmeticSearch(theme)))
         .forEach(theme => {
         const button = document.createElement("button");
         button.className = `theme-option rarity-${theme.rarity} ${theme.id === equippedTheme ? "active" : ""}`;
@@ -6141,26 +8442,31 @@ function renderThemeSelection() {
     applyProfileCardTheme(equippedTheme);
 }
 const allBadges = [
-    { id: "starter", name: "Starter", emoji: "🦈", description: "Default badge for all players." },
-    { id: "dev", name: "Developer", emoji: "🖥️", description: "Awarded only to the developer.", devOnly: true },
-    { id: "tester", name: "Tester", emoji: "🎮", description: "Awarded for testing via code redeem.", codeUnlock: true },
-    { id: "anniversary", name: "Anniversary", emoji: "🎉", description: "Awarded for redeeming the Anniversary code.", codeUnlock: true },
-    { id: "lucky-fin", name: "Lucky Fin", emoji: "🍀", description: "Awarded from the daily win wheel.", codeUnlock: true },
-    { id: "extinction", name: "Extinction", emoji: "☄️", description: "Awarded for defeating a summer community boss.", rarity: "legendary", codeUnlock: true },
-    { id: "spiral-hunter", name: "Spiral Hunter", emoji: "🌀", description: "Awarded for defeating the Halloween Helicoprion community boss.", rarity: "legendary", codeUnlock: true },
-    { id: "frost-anvil", name: "Frost Anvil", emoji: "❄️", description: "Awarded for defeating the Christmas Stethacanthus community boss.", rarity: "legendary", codeUnlock: true }
+    { id: "starter", name: "Starter", emoji: "\u{1F988}", description: "Default badge for all players." },
+    { id: "dev", name: "Developer", emoji: "\u{1F5A5}\uFE0F", description: "Awarded only to the developer.", devOnly: true },
+    { id: "tester", name: "Tester", emoji: "\u{1F3AE}", description: "Awarded for testing via code redeem.", codeUnlock: true },
+    { id: "anniversary", name: "Anniversary", emoji: "\u{1F389}", description: "Awarded for redeeming the Anniversary code.", codeUnlock: true },
+    { id: "lucky-fin", name: "Lucky Fin", emoji: "\u{1F340}", description: "Awarded from the daily win wheel.", codeUnlock: true },
+    { id: "extinction", name: "Extinction", emoji: "\u{2604}\uFE0F", description: "Awarded for defeating a summer community boss.", rarity: "legendary", codeUnlock: true },
+    { id: "spiral-hunter", name: "Spiral Hunter", emoji: "\u{1F300}", description: "Awarded for defeating the Halloween Helicoprion community boss.", rarity: "legendary", codeUnlock: true },
+    { id: "frost-anvil", name: "Frost Anvil", emoji: "\u{2744}\uFE0F", description: "Awarded for defeating the Christmas Stethacanthus community boss.", rarity: "legendary", codeUnlock: true },
+    { id: "treasure-keeper", name: "Treasure Keeper", emoji: "\u{1F5FA}\uFE0F", description: "Awarded for completing every Lost Treasures scroll.", rarity: "legendary", codeUnlock: true }
 ];
 
 const currentPassBadgeDefs = [
-    { id: "reef-scout", name: "Shiver", emoji: "🐟", description: "A Shark Pass badge for reaching level 3.", passLevel: 3 },
-    { id: "bronze-fin", name: "Pup", emoji: "🪸", description: "A Shark Pass badge for reaching level 5.", passLevel: 5 },
-    { id: "night-diver", name: "Juvenile", emoji: "🌙", description: "A Shark Pass badge for reaching level 8.", passLevel: 8 },
-    { id: "abyss-explorer", name: "Oceanic", emoji: "💙", description: "A Shark Pass badge for reaching level 10.", passLevel: 10 },
-    { id: "open-water-ace", name: "Subadult", emoji: "✨", description: "A Shark Pass badge for reaching level 12.", passLevel: 12 },
-    { id: "storm-tracker", name: "Prime", emoji: "⚡", description: "A Shark Pass badge for reaching level 18.", passLevel: 18 },
-    { id: "apex-voyager", name: "Apex", emoji: "👑", description: "A Shark Pass badge for reaching level 20.", passLevel: 20 },
-    { id: "current-rider", name: "Current Rider", emoji: "🌊", description: "A Shark Pass badge for reaching level 22.", passLevel: 22 },
-    { id: "tidebreaker", name: "Tidebreaker", emoji: "💫", description: "A Shark Pass badge for reaching level 26.", passLevel: 26 }
+    { id: "shallow-scout", name: "Shallow Scout", emoji: "\u{1F9ED}", description: "A Shark Pass badge for reaching level 3 in Tidal Horizons.", passLevel: 3 },
+    { id: "reef-roamer", name: "Reef Roamer", emoji: "\u{1FAB8}", description: "A Shark Pass badge for reaching level 6 in Tidal Horizons.", passLevel: 6 },
+    { id: "bluewater-bold", name: "Bluewater Bold", emoji: "\u{1F30A}", description: "A Shark Pass badge for reaching level 15 in Tidal Horizons.", passLevel: 15 },
+    { id: "tide-turner", name: "Tide Turner", emoji: "\u{1F300}", description: "A Shark Pass badge for reaching level 24 in Tidal Horizons.", passLevel: 24 },
+    { id: "reef-scout", name: "Shiver", emoji: "\u{1F41F}", description: "A Shark Pass badge for reaching level 3.", passLevel: 3 },
+    { id: "bronze-fin", name: "Pup", emoji: "\u{1FAB8}", description: "A Shark Pass badge for reaching level 5.", passLevel: 5 },
+    { id: "night-diver", name: "Juvenile", emoji: "\u{1F319}", description: "A Shark Pass badge for reaching level 8.", passLevel: 8 },
+    { id: "abyss-explorer", name: "Oceanic", emoji: "\u{1F499}", description: "A Shark Pass badge for reaching level 10.", passLevel: 10 },
+    { id: "open-water-ace", name: "Subadult", emoji: "\u{2728}", description: "A Shark Pass badge for reaching level 12.", passLevel: 12 },
+    { id: "storm-tracker", name: "Prime", emoji: "\u{26A1}", description: "A Shark Pass badge for reaching level 18.", passLevel: 18 },
+    { id: "apex-voyager", name: "Apex", emoji: "\u{1F451}", description: "A Shark Pass badge for reaching level 20.", passLevel: 20 },
+    { id: "current-rider", name: "Current Rider", emoji: "\u{1F30A}", description: "A Shark Pass badge for reaching level 22.", passLevel: 22 },
+    { id: "tidebreaker", name: "Tidebreaker", emoji: "\u{1F4AB}", description: "A Shark Pass badge for reaching level 26.", passLevel: 26 }
 ];
 
 for (let i = allBadges.length - 1; i >= 0; i--) {
@@ -6170,22 +8476,36 @@ for (let i = allBadges.length - 1; i >= 0; i--) {
 }
 allBadges.push(...currentPassBadgeDefs);
 allBadges.push(
-    { id: "reef-glint", name: "Driftwood", emoji: "🪵", description: "A badge found in Cosmetic Crates." },
-    { id: "kelp-warden", name: "Smelly Boot", emoji: "🥾", description: "A badge found in Cosmetic Crates." },
-    { id: "trench-myth", name: "Message Bottle", emoji: "🍾", description: "A badge found in Cosmetic Crates." },
-    { id: "aurora-fin", name: "Doubloon", emoji: "🪙", description: "A badge found in Cosmetic Crates." },
-    { id: "Tidepool", name: "Tidepool", emoji: "🌀", description: "A summer crate badge." },
-    { id: "Ice Cream", name: "Ice Cream", emoji: "🍦", description: "A summer crate badge." },
-    { id: "Horizon", name: "Horizon", emoji: "🌅", description: "A summer crate badge." },
-    { id: "Paradise", name: "Paradise", emoji: "🌴", description: "A summer crate badge." },
-    { id: "Christmas", name: "Christmas", emoji: "🎄", description: "A christmas crate badge." },
-    { id: "Present", name: "Present", emoji: "🎁", description: "A christmas crate badge." },
-    { id: "Snowflake", name: "Snowflake", emoji: "❄️", description: "A christmas crate badge." },
-    { id: "Santa", name: "Santa", emoji: "🎅", description: "A christmas crate badge." },
-    { id: "Pumpkin", name: "Pumpkin", emoji: "🎃", description: "A halloween crate badge." },
-    { id: "Bat", name: "Bat", emoji: "🦇", description: "A halloween crate badge." },
-    { id: "Ghost", name: "Ghost", emoji: "👻", description: "A halloween crate badge." },
-    { id: "Vampire", name: "Vampire", emoji: "🧛", description: "A halloween crate badge." }
+    { id: "rollin", name: "Rollin'", emoji: "\u{1F3B2}", description: "Keep rollin', rollin', rollin', rollin'.", rarity: "special" },
+    { id: "arrow-to-the-knee", name: "Arrow to the Knee", emoji: "\u{1F3F9}", description: "Awarded for losing a win streak.", rarity: "special" },
+    { id: "im-not-okay", name: "I'm Not Okay (I Promise)", emoji: "\u{1F494}", description: "Awarded for losing 6 games in a row.", rarity: "special" },
+    { id: "one-shot-oracle", name: "One-Shot Oracle", emoji: "\u{1F3AF}", description: "Awarded for claiming the One-Shot Oracle achievement.", rarity: "rare", achievementReward: true },
+    { id: "crate-connoisseur", name: "Crate Connoisseur", emoji: "\u{1F9F0}", description: "Awarded for claiming the Crate Collector achievement.", rarity: "rare", achievementReward: true },
+    { id: "rival-breaker", name: "Rival Breaker", emoji: "\u{1F947}", description: "Awarded for claiming the Rival Breaker achievement.", rarity: "epic", achievementReward: true },
+    { id: "deep-cartographer", name: "Deep Cartographer", emoji: "\u{1F5FA}\uFE0F", description: "Awarded for claiming the Japan Mastered achievement.", rarity: "legendary", achievementReward: true },
+    { id: "social-current", name: "Social Current", emoji: "\u{1F310}", description: "Awarded for claiming the Social Current achievement.", rarity: "legendary", achievementReward: true },
+    { id: "abyssal-legend", name: "Abyssal Legend", emoji: "\u{1F30C}", description: "Awarded for claiming the Abyssal Legend achievement.", rarity: "legendary", achievementReward: true },
+    { id: "marathon-fin", name: "Marathon Fin", emoji: "\u{1F3C1}", description: "Awarded for claiming the Marathon Fin achievement.", rarity: "legendary", achievementReward: true },
+    { id: "reef-glint", name: "Driftwood", emoji: "\u{1FAB5}", description: "A retired Cosmetic Crate 1 badge." },
+    { id: "kelp-warden", name: "Smelly Boot", emoji: "\u{1F97E}", description: "A retired Cosmetic Crate 1 badge." },
+    { id: "trench-myth", name: "Message Bottle", emoji: "\u{1F37E}", description: "A retired Cosmetic Crate 1 badge." },
+    { id: "aurora-fin", name: "Doubloon", emoji: "\u{1FA99}", description: "A retired Cosmetic Crate 1 badge." },
+    { id: "tide-glass", name: "Tide Glass", emoji: "\u{1FAE7}", description: "A badge found in Cosmetic Crates." },
+    { id: "fossil-tooth", name: "Fossil Tooth", emoji: "\u{1F9B7}", description: "A badge found in Cosmetic Crates." },
+    { id: "deep-anchor", name: "Deep Anchor", emoji: "\u{2693}", description: "A badge found in Cosmetic Crates." },
+    { id: "royal-pearl", name: "Royal Pearl", emoji: "\u{1F9AA}", description: "A badge found in Cosmetic Crates." },
+    { id: "Tidepool", name: "Tidepool", emoji: "\u{1F300}", description: "A summer crate badge." },
+    { id: "Ice Cream", name: "Ice Cream", emoji: "\u{1F366}", description: "A summer crate badge." },
+    { id: "Horizon", name: "Horizon", emoji: "\u{1F305}", description: "A summer crate badge." },
+    { id: "Paradise", name: "Paradise", emoji: "\u{1F334}", description: "A summer crate badge." },
+    { id: "Christmas", name: "Christmas", emoji: "\u{1F384}", description: "A christmas crate badge." },
+    { id: "Present", name: "Present", emoji: "\u{1F381}", description: "A christmas crate badge." },
+    { id: "Snowflake", name: "Snowflake", emoji: "\u{2744}\uFE0F", description: "A christmas crate badge." },
+    { id: "Santa", name: "Santa", emoji: "\u{1F385}", description: "A christmas crate badge." },
+    { id: "Pumpkin", name: "Pumpkin", emoji: "\u{1F383}", description: "A halloween crate badge." },
+    { id: "Bat", name: "Bat", emoji: "\u{1F987}", description: "A halloween crate badge." },
+    { id: "Ghost", name: "Ghost", emoji: "\u{1F47B}", description: "A halloween crate badge." },
+    { id: "Vampire", name: "Vampire", emoji: "\u{1F9DB}", description: "A halloween crate badge." }
 );
 
 function getUnlockedBadges(uid, profileData = getCurrentProfileData()) {
@@ -6231,7 +8551,7 @@ function getUnlockedBadges(uid, profileData = getCurrentProfileData()) {
 }
 
 function getEquippedBadge(profileData = getCurrentProfileData()) {
-    const equipped = profileData.equippedBadge || "starter";
+    const equipped = normalizeBadgeId(profileData.equippedBadge || "starter");
     // Only allow equipped badge if it's unlocked
     const unlocked = getUnlockedBadges(profileData.uid || (currentUser && currentUser.uid), profileData);
     if (unlocked.some(b => b.id === equipped)) {
@@ -6242,7 +8562,7 @@ function getEquippedBadge(profileData = getCurrentProfileData()) {
 
 function setEquippedBadge(badgeId) {
     const profileData = getCurrentProfileData();
-    profileData.equippedBadge = badgeId;
+    profileData.equippedBadge = normalizeBadgeId(badgeId);
     saveUserProfileLocally(profileData);
     // Save to Firestore if logged in
     if (currentUser && db) {
@@ -6284,7 +8604,7 @@ function updateProfileBadgeUI() {
         emblem.className = 'profile-badge-emblem';
         emblem.style.borderColor = borderColor;
         emblem.style.background = bgColor;
-        emblem.textContent = badge.emoji || "🦈";
+        emblem.textContent = badge.emoji || "\u{1F988}";
         badgeImg.parentNode.insertBefore(emblem, badgeImg.nextSibling);
     }
     if (badgeLabel) {
@@ -6342,7 +8662,7 @@ function renderBadgeSelection() {
         div.onclick = () => setEquippedBadge(badge.id);
         div.innerHTML = `
           <span class="badge-option-kicker">Shark Badge</span>
-          <span class="badge-option-emoji" style="background:${bgColor};border-color:${borderColor};color:${textColor};">${badge.emoji || "🦈"}</span>
+          <span class="badge-option-emoji" style="background:${bgColor};border-color:${borderColor};color:${textColor};">${badge.emoji || "\u{1F988}"}</span>
           <span class="badge-option-name" style="color:${textColor};">${badge.name}</span>
           <span class="badge-option-rarity rarity-${rarityMeta.className}">${rarityMeta.label}</span>
         `;
@@ -6468,7 +8788,7 @@ function showCosmeticUnlockToast(cosmetic, options = {}) {
         accent = '#00b4d8',
         background = 'linear-gradient(135deg, rgba(0, 180, 216, 0.96), rgba(0, 62, 82, 0.96))',
         duration = 4200,
-        icon = '🎨'
+        icon = '\u{1F3A8}'
     } = options;
 
     const notification = document.createElement('div');
@@ -6619,17 +8939,17 @@ function initializeFirebase() {
         }
         return;
     }
-    
+
     if (!firebase.apps.length) {
         firebase.initializeApp(firebaseConfig);
     }
-    
+
     auth = firebase.auth();
     db = firebase.firestore();
     setupGlobalXpEventListener();
     setupGlobalIndexThemeListener();
     setupCommunityBossEventListener();
-    
+
     // Set up offline support detection
     window.addEventListener('online', () => {
         console.log('Connection restored');
@@ -6640,7 +8960,7 @@ function initializeFirebase() {
         console.warn('Offline - changes will sync when connection returns');
         showNotification('Offline - changes will sync when connection returns', 'info', 5000);
     });
-    
+
     // Set up auth state listener after Firebase is initialized
     setupAuthStateListener();
 }
@@ -6666,8 +8986,8 @@ const APP_ROUTE_MAP = Object.freeze({
     "Story/": "Story/index.html",
     "rng.html": "Minigames/SharkRNG/index.html",
     "Minigames/SharkRNG/": "Minigames/SharkRNG/index.html",
-    "slots.html": "Minigames/SharkSlots/index.html",
-    "Minigames/SharkSlots/": "Minigames/SharkSlots/index.html",
+    "lagoon.html": "Minigames/SharkLagoon/index.html",
+    "Minigames/SharkLagoon/": "Minigames/SharkLagoon/index.html",
     "secret.html": "shark-rescue/index.html",
     "shark-rescue/": "shark-rescue/index.html",
     "updates.html": "Updates/index.html",
@@ -6746,9 +9066,10 @@ const redeemCodes = {
     'UPDATE2': { xp: 1500, cosmetics: [{ imagePath: 'images/codePfp/Shark19.png', name: 'Goblin Shark' }], description: '1.5k XP + Goblin Shark Profile Icon' },
     'TIKTOK2026': { xp: 2000, cosmetics: [{ imagePath: 'images/codePfp/MantaRay.png', name: 'Manta Ray' }], description: '2k XP + Manta Ray Profile Icon' },
     'INSTAGRAM2026': { xp: 2000, cosmetics: [{ imagePath: 'images/codePfp/WhitespottedEagleRay.png', name: 'Whitespotted Eagle Ray' }], description: '2k XP + Whitespotted Eagle Ray Profile Icon' },
+    'SHARKG33K': { xp: 2000, cosmetics: [{ imagePath: 'images/codePfp/creators/SharkG33k.png', name: 'SharkG33k Creator' }], description: '2k XP + SharkG33k Creator Profile Icon' },
     'SUMMER2026': { xp: 3000, crates: { summer: 1 }, description: '3k XP + 1 Summer Crate' },
     'SORRY': { xp: 5000, description: '5k XP apology reward' },
-    'TESTER': { badge: 'tester', description: 'Unlocks the Tester badge (🎮)' }
+    'TESTER': { badge: 'tester', description: 'Unlocks the Tester badge (\u{1F3AE})' }
 };
 
 delete redeemCodes.TESTER;
@@ -6802,11 +9123,11 @@ function hasRedeemedCode(code) {
     // Check localStorage first
     const localRedeemed = getRedeemedCodes();
     if (localRedeemed.includes(codeUpper)) return true;
-    
+
     // Also check if the cosmetic from this code is already in earnedCosmetics (from Firebase)
     const profileData = getCurrentProfileData();
     const earnedCosmetics = Array.isArray(profileData.earnedCosmetics) ? profileData.earnedCosmetics : [];
-    
+
     // Check if any cosmetic from this code is already owned
     if (redeemCodes[codeUpper] && redeemCodes[codeUpper].cosmetics) {
         const codeCosmetics = redeemCodes[codeUpper].cosmetics;
@@ -6816,7 +9137,7 @@ function hasRedeemedCode(code) {
             }
         }
     }
-    
+
     return false;
 }
 
@@ -6984,6 +9305,7 @@ function setupAuthStateListener() {
         unsubscribeFriendNetworkListener();
         unsubscribeAdminCompensationNoticeListener();
         if (user && db) {
+            ensureAuthUserProfile(user).catch(error => console.warn("Auth profile setup failed:", error));
             setupFriendNetworkListener();
             setupAdminCompensationNoticeListener();
         }
@@ -6994,7 +9316,7 @@ function setupAuthStateListener() {
             updateAuthUI();
         }
     });
-    
+
     // Set up profile sync after auth is set up
     setupProfileSync();
 }
@@ -7101,6 +9423,7 @@ async function runPostProfileHydrationTasks(loadedProfile, options = {}) {
 
     await initializeDailyLogin();
     await ensureLoginStreakRewards();
+    await claimGlobalCladoselacheParticipationCrate({ silentIfUnavailable: true });
     syncStatsToFirebase();
     return true;
 }
@@ -7130,7 +9453,7 @@ async function updateAuthUI() {
         if (loginBtn) loginBtn.style.display = "block";
         clearPendingProfileSyncTimeout();
         clearCloudProfileReloadTimeouts();
-        
+
         const profileBtn = document.getElementById("profile-btn-nav");
         if (profileBtn) {
             profileBtn.remove();
@@ -7138,7 +9461,7 @@ async function updateAuthUI() {
         closeAdminAbuseModal();
         // DO NOT clear userProfile
     }
-    
+
 
     // Always update index stats from localStorage
     if (authContainer) {
@@ -7149,7 +9472,6 @@ async function updateAuthUI() {
     ensureXpEventBannerTimer();
     ensureCommunityBossUiTimer();
     renderCommunityBossPanel();
-    maybeShowMegalodonEscapeAwardModal();
     if (typeof renderConsumablesPage === "function") {
         renderConsumablesPage();
     }
@@ -7179,7 +9501,7 @@ async function updateAuthUI() {
             bonusMsg.onclick = () => openDailyLoginModal();
             const cycleNumber = Math.floor((currentLoginDay - 1) / 7) + 1;
             const cycleEndDay = cycleNumber * 7;
-            bonusMsg.innerHTML = `🔥 Login Streak: <strong>${streak} days</strong> - Day ${currentLoginDay}/${cycleEndDay} (Click to view rewards)`;
+            bonusMsg.innerHTML = `\u{1F525} Login Streak: <strong>${streak} days</strong> - Day ${currentLoginDay}/${cycleEndDay} (Click to view rewards)`;
         } else {
             bonusMsg.style.display = "none";
         }
@@ -7209,7 +9531,7 @@ async function updateAuthUI() {
                 border: 2px solid #ff6b6b;
                 background: rgba(255, 107, 107, 0.05);
             `;
-            streakDisplay.innerHTML = `🔥 <span style="color: #ff6b6b;">${streak} days</span> on fire!`;
+            streakDisplay.innerHTML = `\u{1F525} <span style="color: #ff6b6b;">${streak} days</span> on fire!`;
             const statsSection = document.querySelector(".stats");
             if (statsSection) {
                 statsSection.parentElement.insertBefore(streakDisplay, statsSection);
@@ -7235,6 +9557,7 @@ function hasMeaningfulProfileData(profile) {
     return Boolean(
         profile.totalXP ||
         profile.gamesPlayed ||
+        profile.games ||
         profile.wins ||
         profile.losses ||
         profile.totalGuesses ||
@@ -7307,6 +9630,60 @@ function hasRecoverableRemoteProfile(profile) {
 
 function maxNumeric(a, b) {
     return Math.max(Number(a) || 0, Number(b) || 0);
+}
+
+function getProfileRecoveryScore(profile = {}) {
+    if (!profile || typeof profile !== "object") return 0;
+    const numericKeys = [
+        "totalXP", "gamesPlayed", "wins", "losses", "totalGuesses", "duelGames", "duelWins",
+        "games", "xp", "experience",
+        "cratesOpened", "cratesSinceLegendary", "pearls", "tidePearls", "streakShields",
+        "loginStreak", "currentLoginDay", "sharkPassXP"
+    ];
+    const numericScore = numericKeys.reduce((sum, key) => sum + Math.min(10000, Math.max(0, Number(profile[key]) || 0)), 0);
+    const arrayKeys = [
+        "earnedCosmetics", "unlockedBadges", "unlockedCardThemes", "unlockedTitles",
+        "claimedAchievements", "unlockedAchievements", "showcasedAchievements",
+        "redeemedCodes", "sharkPassLevelRewardClaims"
+    ];
+    const arrayScore = arrayKeys.reduce((sum, key) => sum + (Array.isArray(profile[key]) ? profile[key].length * 150 : 0), 0);
+    const crateScore = Object.values(normalizeCrateInventory(profile.crateInventory)).reduce((sum, count) => sum + count * 120, 0);
+    const objectKeys = ["lostTreasures", "sharkPassMissionClaims", "sharkPassSeasonBaselines", "communityBossRewards", "referralRewards"];
+    const objectScore = objectKeys.reduce((sum, key) => {
+        const value = profile[key];
+        return sum + (value && typeof value === "object" ? Object.keys(value).length * 120 : 0);
+    }, 0);
+    const identityScore = hasPersistedProfileIdentity(profile) ? 500 : 0;
+    return numericScore + arrayScore + crateScore + objectScore + identityScore;
+}
+
+function getProfileTotalXPValue(profile = {}) {
+    const explicitTotal = Number(profile.totalXP);
+    if (Number.isFinite(explicitTotal) && explicitTotal > 0) return explicitTotal;
+
+    const legacyTotal = Number(profile.xp ?? profile.experience ?? profile.totalGuesses);
+    if (Number.isFinite(legacyTotal) && legacyTotal > 0) return legacyTotal;
+
+    const level = Math.max(1, Math.floor(Number(profile.currentLevel) || Number(profile.level) || 1));
+    const currentXP = Math.max(0, Math.floor(Number(profile.currentXP) || Number(profile.xpInLevel) || 0));
+    if (level > 1 && typeof getXPForLevel === "function") {
+        return getXPForLevel(level) + currentXP;
+    }
+
+    return 0;
+}
+
+function getProfileSharkPassXPValue(profile = {}) {
+    const explicitPassXP = Number(profile.sharkPassXP);
+    if (Number.isFinite(explicitPassXP) && explicitPassXP > 0) return explicitPassXP;
+
+    const level = Math.max(0, Math.floor(Number(profile.sharkPassLevel ?? profile.passLevel ?? profile.currentLevel ?? profile.level) || 0));
+    const currentXP = Math.max(0, Math.floor(Number(profile.sharkPassCurrentXP ?? profile.currentXP ?? profile.xpInLevel) || 0));
+    if (level > 0 && typeof getXPForLevel === "function") {
+        return getXPForLevel(level) + currentXP;
+    }
+
+    return 0;
 }
 
 function getPreferredUsernameStorageKey() {
@@ -7586,6 +9963,176 @@ async function getUserStatsSnapshot(statsRef) {
     }
 }
 
+async function findRecoverableUserStatsByEmail(authUser) {
+    const rawEmail = String(authUser?.email || "").trim();
+    const normalizedEmail = rawEmail.toLowerCase();
+    if (!authUser || !rawEmail || !db) return null;
+
+    try {
+        let bestMatch = null;
+        const checkedEmails = [...new Set([rawEmail, normalizedEmail])];
+        for (const email of checkedEmails) {
+            const snapshot = await db.collection("userStats")
+                .where("email", "==", email)
+                .limit(10)
+                .get();
+            snapshot.forEach(doc => {
+                if (doc.id === authUser.uid) return;
+                const data = doc.data() || {};
+                if (!hasRecoverableRemoteProfile(data)) return;
+                const score = getProfileRecoveryScore(data);
+                if (!bestMatch || score > bestMatch.score) {
+                    bestMatch = { id: doc.id, data, score };
+                }
+            });
+        }
+        return bestMatch;
+    } catch (error) {
+        console.warn("Unable to look up existing profile by email:", error);
+        return null;
+    }
+}
+
+async function migrateUserStatsDocumentToAuthUser(authUser, sourceProfile) {
+    if (!authUser || !sourceProfile?.data || !db) return null;
+    const migratedProfile = {
+        ...sourceProfile.data,
+        uid: authUser.uid,
+        email: authUser.email || sourceProfile.data.email || "",
+        migratedFromUid: sourceProfile.id,
+        migratedAt: new Date(),
+        lastUpdated: sourceProfile.data.lastUpdated || new Date()
+    };
+    await db.collection("userStats").doc(authUser.uid).set(migratedProfile, { merge: true });
+    return migratedProfile;
+}
+
+function cloneProfileForFullCloud(profile = {}) {
+    try {
+        const cloned = JSON.parse(JSON.stringify(profile || {}));
+        return cloned && typeof cloned === "object" ? cloned : {};
+    } catch (error) {
+        return { ...(profile || {}) };
+    }
+}
+
+function buildFullUserProfileCloudPayload(profileData = {}, authUser = currentUser) {
+    const updatedAtMs = Date.now();
+    const profile = cloneProfileForFullCloud(profileData);
+    profile.uid = authUser?.uid || profile.uid || "";
+    profile.email = authUser?.email || profile.email || "";
+    profile.profilePicture = profile.profilePicture || profile.profilePic || "images/pfp/shark1.png";
+    profile.profilePic = profile.profilePicture;
+    profile.lastUpdated = getProfileTimestampMs(profile.lastUpdated) || updatedAtMs;
+    profile.fullProfileCloudUpdatedAtMs = updatedAtMs;
+
+    const profileJson = JSON.stringify(profile);
+    const chunks = [];
+    for (let index = 0; index < profileJson.length; index += FULL_PROFILE_CHUNK_CHAR_LIMIT) {
+        chunks.push(profileJson.slice(index, index + FULL_PROFILE_CHUNK_CHAR_LIMIT));
+    }
+
+    return {
+        metadata: {
+            uid: profile.uid,
+            email: profile.email,
+            schemaVersion: FULL_PROFILE_SCHEMA_VERSION,
+            chunkCount: chunks.length,
+            profileLength: profileJson.length,
+            profileRecoveryScore: getProfileRecoveryScore(profile),
+            totalXP: Number(profile.totalXP) || 0,
+            gamesPlayed: Number(profile.gamesPlayed ?? profile.games) || 0,
+            wins: Number(profile.wins) || 0,
+            fullProfileCloudUpdatedAtMs: updatedAtMs,
+            updatedAtMs
+        },
+        chunks
+    };
+}
+
+async function getFullUserProfileSnapshot(profileRef) {
+    try {
+        const snapshot = await profileRef.get({ source: "server" });
+        return { snapshot, fromServer: true };
+    } catch (error) {
+        console.warn("Falling back to cached full profile snapshot:", error);
+        const snapshot = await profileRef.get();
+        return { snapshot, fromServer: false };
+    }
+}
+
+async function readFullUserProfileFromFirebase(authUser) {
+    if (!db || !authUser?.uid) return { profile: null, fromServer: false };
+    try {
+        const profileRef = db.collection(FULL_PROFILE_COLLECTION).doc(authUser.uid);
+        const { snapshot, fromServer } = await getFullUserProfileSnapshot(profileRef);
+        if (!snapshot.exists) return { profile: null, fromServer };
+
+        const metadata = snapshot.data() || {};
+        const chunkCount = Math.min(200, Math.max(0, Math.floor(Number(metadata.chunkCount) || 0)));
+        if (!chunkCount) return { profile: null, fromServer };
+
+        const chunkRefs = Array.from({ length: chunkCount }, (_, index) =>
+            profileRef.collection(FULL_PROFILE_CHUNK_COLLECTION).doc(`chunk_${String(index).padStart(4, "0")}`)
+        );
+        const chunkSnapshots = await Promise.all(chunkRefs.map(ref => ref.get()));
+        const profileJson = chunkSnapshots
+            .map((doc, index) => ({
+                index,
+                data: doc.exists && typeof doc.data()?.data === "string" ? doc.data().data : ""
+            }))
+            .sort((a, b) => a.index - b.index)
+            .map(chunk => chunk.data)
+            .join("");
+
+        if (!profileJson) return { profile: null, fromServer };
+        const profile = JSON.parse(profileJson);
+        if (!profile || typeof profile !== "object") return { profile: null, fromServer };
+
+        profile.uid = authUser.uid;
+        profile.email = authUser.email || profile.email || "";
+        profile.fullProfileCloudUpdatedAtMs = Number(metadata.fullProfileCloudUpdatedAtMs) || 0;
+        return { profile, fromServer };
+    } catch (error) {
+        console.warn("Unable to read full cloud profile:", error);
+        return { profile: null, fromServer: false };
+    }
+}
+
+async function syncFullUserProfileToFirebase(profileData = getBestLocalProfile()) {
+    if (!db || typeof firebase === "undefined" || typeof firebase.auth !== "function") return false;
+    const authUser = firebase.auth().currentUser;
+    if (!authUser || !profileData || typeof profileData !== "object") return false;
+    if (currentUser && currentUser.uid !== authUser.uid) return false;
+
+    try {
+        const profileRef = db.collection(FULL_PROFILE_COLLECTION).doc(authUser.uid);
+        const { metadata, chunks } = buildFullUserProfileCloudPayload(profileData, authUser);
+        const batch = db.batch();
+        batch.set(profileRef, {
+            ...metadata,
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        }, { merge: false });
+        chunks.forEach((data, index) => {
+            batch.set(
+                profileRef.collection(FULL_PROFILE_CHUNK_COLLECTION).doc(`chunk_${String(index).padStart(4, "0")}`),
+                {
+                    index,
+                    data,
+                    updatedAtMs: metadata.updatedAtMs,
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                },
+                { merge: false }
+            );
+        });
+        await batch.commit();
+        return true;
+    } catch (error) {
+        console.warn("Unable to sync full cloud profile:", error);
+        return false;
+    }
+}
+
 function getStoredPreferredUsername() {
     const key = getPreferredUsernameStorageKey();
     if (!key) return "";
@@ -7615,6 +10162,21 @@ function scheduleRemoteProfileSync(delayMs = 150) {
 
 function saveUserProfileLocally(profileData, options = {}) {
     if (!profileData || typeof profileData !== "object") return;
+    const parseStoredProfile = raw => {
+        try {
+            const parsed = JSON.parse(raw || "{}");
+            return parsed && typeof parsed === "object" ? parsed : {};
+        } catch (error) {
+            return {};
+        }
+    };
+    if (currentUser?.uid) {
+        profileData.uid = currentUser.uid;
+        if (currentUser.email && !profileData.email) {
+            profileData.email = currentUser.email;
+        }
+    }
+    retireSummerCrates(profileData);
     if (options.preserveLastUpdated) {
         if (!profileData.lastUpdated) profileData.lastUpdated = Date.now();
     } else {
@@ -7625,6 +10187,14 @@ function saveUserProfileLocally(profileData, options = {}) {
     }
     if (profileData.profilePic && !profileData.profilePicture) {
         profileData.profilePicture = profileData.profilePic;
+    }
+    const safeProfilePic = sanitizeProfilePicturePath(
+        profileData.profilePicture || profileData.profilePic,
+        (profileData.profilePicture || profileData.profilePic) ? "images/pfp/shark1.png" : ""
+    );
+    if (safeProfilePic) {
+        profileData.profilePicture = safeProfilePic;
+        profileData.profilePic = safeProfilePic;
     }
     if (profileData.username) {
         cachePreferredUsername(profileData.username, profileData.uid);
@@ -7640,15 +10210,27 @@ function saveUserProfileLocally(profileData, options = {}) {
     setPearlCount(profileData, getPearlCount(profileData));
     profileData.earnedCosmetics = removeLegacyWheelSharkCosmetics(profileData.earnedCosmetics);
     if (!Array.isArray(profileData.unlockedBadges)) profileData.unlockedBadges = ["starter"];
+    profileData.unlockedBadges = [...new Set(["starter", ...profileData.unlockedBadges.map(normalizeBadgeId)])];
+    profileData.currentLossStreak = Math.max(0, Number(profileData.currentLossStreak) || 0);
     if (!Array.isArray(profileData.unlockedCardThemes)) profileData.unlockedCardThemes = ["default"];
     if (!Array.isArray(profileData.unlockedTitles)) profileData.unlockedTitles = [];
     if (!Array.isArray(profileData.claimedAchievements)) profileData.claimedAchievements = [];
     if (!Array.isArray(profileData.unlockedAchievements)) profileData.unlockedAchievements = [];
+    if (!Array.isArray(profileData.showcasedAchievements)) profileData.showcasedAchievements = [];
+    profileData.showcasedAchievements = getProfileShowcasedAchievementIds(profileData);
     if (!Array.isArray(profileData.sharkPassLevelRewardClaims)) profileData.sharkPassLevelRewardClaims = [];
+    if (!profileData.sharkPassProgressSeasonId) profileData.sharkPassProgressSeasonId = SHARK_PASS_ACTIVE_SEASON_ID;
+    profileData.sharkPassXP = Math.max(0, Number(profileData.sharkPassXP) || 0);
+    sanitizeCurrentSharkPassUnlocks(profileData);
+    profileData.lostTreasures = mergeLostTreasuresStates(profileData, {});
     if (!Array.isArray(profileData.redeemedCodes)) profileData.redeemedCodes = getRedeemedCodes();
     if (!profileData.communityBossRewards || typeof profileData.communityBossRewards !== "object") {
         profileData.communityBossRewards = {};
     }
+    if (!profileData.referralRewards || typeof profileData.referralRewards !== "object") {
+        profileData.referralRewards = {};
+    }
+    setClaimedSocialRewards(profileData, profileData.socialRewardsClaimed);
     if (!profileData.sharkPassMissionClaims || typeof profileData.sharkPassMissionClaims !== "object") {
         profileData.sharkPassMissionClaims = {};
     }
@@ -7657,13 +10239,22 @@ function saveUserProfileLocally(profileData, options = {}) {
     }
     const scopedKey = getScopedUserProfileStorageKey(profileData.uid);
     const scopedBackupKey = getScopedUserProfileBackupKey(profileData.uid);
+    const existingGenericBackup = parseStoredProfile(localStorage.getItem("userProfileBackup"));
+    const existingScopedBackup = scopedBackupKey ? parseStoredProfile(localStorage.getItem(scopedBackupKey)) : {};
+    const incomingScore = getProfileRecoveryScore(profileData);
+    const genericBackupScore = getProfileRecoveryScore(existingGenericBackup);
+    const scopedBackupScore = getProfileRecoveryScore(existingScopedBackup);
     localStorage.setItem("userProfile", JSON.stringify(profileData));
-    localStorage.setItem("userProfileBackup", JSON.stringify(profileData));
+    if (incomingScore >= genericBackupScore || !genericBackupScore) {
+        localStorage.setItem("userProfileBackup", JSON.stringify(profileData));
+    }
     if (scopedKey) {
         localStorage.setItem(scopedKey, JSON.stringify(profileData));
     }
     if (scopedBackupKey) {
-        localStorage.setItem(scopedBackupKey, JSON.stringify(profileData));
+        if (incomingScore >= scopedBackupScore || !scopedBackupScore) {
+            localStorage.setItem(scopedBackupKey, JSON.stringify(profileData));
+        }
     }
     localStorage.setItem("games", String(profileData.gamesPlayed || 0));
     localStorage.setItem("wins", String(profileData.wins || 0));
@@ -7688,6 +10279,7 @@ function saveUserProfileLocally(profileData, options = {}) {
     }
     localStorage.setItem("claimedAchievements", JSON.stringify(profileData.claimedAchievements));
     localStorage.setItem("unlockedAchievements", JSON.stringify(profileData.unlockedAchievements));
+    localStorage.setItem("showcasedAchievements", JSON.stringify(profileData.showcasedAchievements));
     localStorage.setItem("redeemedCodes", JSON.stringify(profileData.redeemedCodes));
     if (!options.skipRemoteSync) {
         scheduleRemoteProfileSync();
@@ -7732,6 +10324,7 @@ function clearCachedProfileState() {
     localStorage.removeItem("wins");
     localStorage.removeItem("losses");
     localStorage.removeItem("totalXP");
+    localStorage.removeItem("showcasedAchievements");
     localStorage.removeItem("lastLoginDate");
     localStorage.removeItem("loginStreak");
     localStorage.removeItem("currentLoginDay");
@@ -7748,12 +10341,32 @@ function getBestLocalProfile() {
             return {};
         }
     };
-    const chooseBestCandidate = (primary, backup) => {
-        if (hasMeaningfulProfileData(primary)) return primary;
-        if (hasMeaningfulProfileData(backup)) return backup;
-        if (hasPersistedProfileIdentity(primary)) return primary;
-        if (hasPersistedProfileIdentity(backup)) return backup;
+    const chooseBestCandidate = (...candidates) => {
+        return candidates
+            .filter(candidate => candidate && typeof candidate === "object" && Object.keys(candidate).length)
+            .sort((a, b) => getProfileRecoveryScore(b) - getProfileRecoveryScore(a))[0] || {};
+    };
+    const isUsableForCurrentUser = profile => {
+        if (!currentUser || !profile || !Object.keys(profile).length) return true;
+        if (!profile.uid || profile.uid === currentUser.uid) return true;
+        return Boolean(profile.email && currentUser.email && String(profile.email).toLowerCase() === String(currentUser.email).toLowerCase());
+    };
+    const chooseBestForCurrentUser = candidates => {
+        const usable = candidates.filter(isUsableForCurrentUser);
+        const meaningful = usable.filter(profile => hasMeaningfulProfileData(profile) || hasPersistedProfileIdentity(profile));
+        if (meaningful.length) return chooseBestCandidate(...meaningful);
+        if (usable.length) return chooseBestCandidate(...usable);
         return {};
+    };
+    const hasUnclaimedLocalProgress = profile =>
+        !profile?.uid && (hasMeaningfulProfileData(profile) || hasPersistedProfileIdentity(profile));
+    const attachProfileToCurrentUser = profile => {
+        if (!currentUser || !profile || !Object.keys(profile).length) return profile;
+        return {
+            ...profile,
+            uid: currentUser.uid,
+            email: profile.email || currentUser.email || ""
+        };
     };
 
     const scopedPrimary = parseStoredProfile(scopedPrimaryKey ? localStorage.getItem(scopedPrimaryKey) : "{}");
@@ -7762,24 +10375,27 @@ function getBestLocalProfile() {
     const genericBackup = parseStoredProfile(localStorage.getItem("userProfileBackup"));
 
     if (currentUser) {
-        let selectedProfile = chooseBestCandidate(scopedPrimary, scopedBackup);
+        let selectedProfile = chooseBestForCurrentUser([scopedPrimary, scopedBackup]);
         if (!Object.keys(selectedProfile).length) {
             const genericMatchesCurrentUser =
                 genericPrimary?.uid === currentUser.uid || genericBackup?.uid === currentUser.uid;
-            if (genericMatchesCurrentUser) {
+            const genericHasUnclaimedProgress =
+                hasUnclaimedLocalProgress(genericPrimary) || hasUnclaimedLocalProgress(genericBackup);
+            if (genericMatchesCurrentUser || genericHasUnclaimedProgress) {
                 selectedProfile = chooseBestCandidate(genericPrimary, genericBackup);
             }
         }
-        if (selectedProfile?.uid && selectedProfile.uid !== currentUser.uid) {
+        if (selectedProfile?.uid && selectedProfile.uid !== currentUser.uid && !isUsableForCurrentUser(selectedProfile)) {
             return {};
         }
-        return selectedProfile;
+        return attachProfileToCurrentUser(selectedProfile);
     }
 
     return chooseBestCandidate(genericPrimary, genericBackup);
 }
 
-function mergeProfilesSafely(localProfile, firebaseData) {
+function mergeProfilesSafely(localProfile, firebaseData, options = {}) {
+    const preferRemote = Boolean(options.preferRemote);
     const cachedPreferredUsername = getStoredPreferredUsername();
     const fallbackUsername = cachedPreferredUsername || localProfile.username || firebaseData.username || currentUser.email.split("@")[0];
     const preferredUsername = cachedPreferredUsername
@@ -7791,48 +10407,72 @@ function mergeProfilesSafely(localProfile, firebaseData) {
             : fallbackUsername;
     const localUpdatedMs = getProfileTimestampMs(localProfile.lastUpdated);
     const firebaseUpdatedMs = getProfileTimestampMs(firebaseData.lastUpdated);
-    const preferredCrateInventory = mergeCrateInventory(localProfile.crateInventory, firebaseData.crateInventory);
-    const preferredCratesOpened = maxNumeric(localProfile.cratesOpened, firebaseData.cratesOpened);
-    const preferredPearls = maxNumeric(localProfile.pearls ?? localProfile.tidePearls, firebaseData.pearls ?? firebaseData.tidePearls);
-    const preferredCratesSinceLegendary = localUpdatedMs >= firebaseUpdatedMs
-        ? getCratesSinceLegendary(localProfile)
-        : getCratesSinceLegendary(firebaseData);
-    const preferredInstantCrateOpen = localUpdatedMs >= firebaseUpdatedMs
-        ? getCrateInstantOpenEnabled(localProfile)
-        : getCrateInstantOpenEnabled(firebaseData);
+    const remoteHasRecoverableProfile = hasRecoverableRemoteProfile(firebaseData);
+    const localIsCurrentAccountProfile = Boolean(localProfile?.uid && currentUser?.uid && localProfile.uid === currentUser.uid);
+    const canPreferLocalOverCloud = !remoteHasRecoverableProfile || localIsCurrentAccountProfile;
+    const summerCratesRetired = Math.max(
+        Number(localProfile.summerCrateRetirementVersion) || 0,
+        Number(firebaseData.summerCrateRetirementVersion) || 0
+    ) >= SUMMER_CRATE_RETIREMENT_VERSION;
+    const preferRemoteNumber = (localValue, remoteValue) => {
+        const remoteNumber = Number(remoteValue);
+        if (preferRemote && Number.isFinite(remoteNumber)) return Math.max(0, remoteNumber);
+        return maxNumeric(localValue, remoteValue);
+    };
+    const preferredCrateInventory = preferRemote && firebaseData.crateInventory
+        ? normalizeCrateInventory(firebaseData.crateInventory)
+        : mergeCrateInventory(localProfile.crateInventory, firebaseData.crateInventory, summerCratesRetired);
+    const preferredCratesOpened = preferRemoteNumber(localProfile.cratesOpened, firebaseData.cratesOpened);
+    const preferredPearls = preferRemoteNumber(localProfile.pearls ?? localProfile.tidePearls, firebaseData.pearls ?? firebaseData.tidePearls);
+    const preferredTotalXP = preferRemote && getProfileTotalXPValue(firebaseData) > 0
+        ? getProfileTotalXPValue(firebaseData)
+        : maxNumeric(getProfileTotalXPValue(localProfile), getProfileTotalXPValue(firebaseData));
+    const preferredCurrentLevel = getLevelFromXP(preferredTotalXP);
+    const preferredCurrentXP = getXPInCurrentLevel(preferredTotalXP);
+    const preferredXPToNextLevel = getXPToNextLevel(preferredTotalXP);
+    const preferredCratesSinceLegendary = Math.max(getCratesSinceLegendary(localProfile), getCratesSinceLegendary(firebaseData));
+    const preferredInstantCrateOpen = getCrateInstantOpenEnabled(localProfile) || getCrateInstantOpenEnabled(firebaseData);
     const preferredPearlBoostExpiresAt = maxNumeric(localProfile.pearlBoostExpiresAt, firebaseData.pearlBoostExpiresAt);
     const preferredSeasonXpBoosts = {
         ...(localProfile.seasonXpBoosts && typeof localProfile.seasonXpBoosts === "object" ? localProfile.seasonXpBoosts : {}),
         ...(firebaseData.seasonXpBoosts && typeof firebaseData.seasonXpBoosts === "object" ? firebaseData.seasonXpBoosts : {})
     };
-    const preferredStreakShields = localUpdatedMs >= firebaseUpdatedMs
-        ? getStreakShieldCount(localProfile)
-        : getStreakShieldCount(firebaseData);
-    const preferredDailySpinBonusSpins = localUpdatedMs >= firebaseUpdatedMs
-        ? normalizeDailySpinBonusCount(localProfile.dailySpinBonusSpins)
-        : normalizeDailySpinBonusCount(firebaseData.dailySpinBonusSpins);
-    const preferLocalProfileFields = localUpdatedMs > firebaseUpdatedMs;
+    const preferredStreakShields = Math.max(getStreakShieldCount(localProfile), getStreakShieldCount(firebaseData));
+    const preferredDailySpinBonusSpins = Math.max(
+        normalizeDailySpinBonusCount(localProfile.dailySpinBonusSpins),
+        normalizeDailySpinBonusCount(firebaseData.dailySpinBonusSpins)
+    );
+    const preferLocalProfileFields = canPreferLocalOverCloud && localUpdatedMs > firebaseUpdatedMs;
     const localProfilePic = localProfile.profilePicture || localProfile.profilePic;
     const remoteProfilePic = firebaseData.profilePicture || firebaseData.profilePic;
+    const getCustomProfilePic = (path) => {
+        const normalized = String(path || "").replace(/\\/g, "/").replace(/^\.?\//, "").toLowerCase();
+        return normalized && normalized !== "images/pfp/shark1.png" ? path : "";
+    };
     const preferredProfilePic = preferLocalProfileFields
-        ? (localProfilePic || remoteProfilePic || "images/pfp/shark1.png")
-        : (remoteProfilePic || localProfilePic || "images/pfp/shark1.png");
+        ? (getCustomProfilePic(localProfilePic) || remoteProfilePic || localProfilePic || "images/pfp/shark1.png")
+        : (getCustomProfilePic(remoteProfilePic) || localProfilePic || remoteProfilePic || "images/pfp/shark1.png");
     const preferredAvatar = preferLocalProfileFields
-        ? (localProfile.avatar || firebaseData.avatar || "🦈")
-        : (firebaseData.avatar || localProfile.avatar || "🦈");
+        ? (localProfile.avatar || firebaseData.avatar || "\u{1F988}")
+        : (firebaseData.avatar || localProfile.avatar || "\u{1F988}");
+    const getCustomValue = (value, defaultValue) => value && value !== defaultValue ? value : "";
     const preferredEquippedBadge = preferLocalProfileFields
-        ? (localProfile.equippedBadge || firebaseData.equippedBadge || "starter")
-        : (firebaseData.equippedBadge || localProfile.equippedBadge || "starter");
+        ? (getCustomValue(localProfile.equippedBadge, "starter") || firebaseData.equippedBadge || localProfile.equippedBadge || "starter")
+        : (getCustomValue(firebaseData.equippedBadge, "starter") || localProfile.equippedBadge || firebaseData.equippedBadge || "starter");
     const preferredEquippedCardTheme = preferLocalProfileFields
-        ? (localProfile.equippedCardTheme || firebaseData.equippedCardTheme || "default")
-        : (firebaseData.equippedCardTheme || localProfile.equippedCardTheme || "default");
+        ? (getCustomValue(localProfile.equippedCardTheme, "default") || firebaseData.equippedCardTheme || localProfile.equippedCardTheme || "default")
+        : (getCustomValue(firebaseData.equippedCardTheme, "default") || localProfile.equippedCardTheme || firebaseData.equippedCardTheme || "default");
     const preferredEquippedTitle = preferLocalProfileFields
         ? (localProfile.equippedTitle || firebaseData.equippedTitle || "")
         : (firebaseData.equippedTitle || localProfile.equippedTitle || "");
     const mergedLoginProgress = mergeLoginProgress(getLoginProgressFromLocalStorage(currentUser?.uid), firebaseData);
     const mergedClaimedAchievements = getMergedUniqueIds(localProfile.claimedAchievements, firebaseData.claimedAchievements);
     const mergedUnlockedAchievements = getMergedUniqueIds(localProfile.unlockedAchievements, firebaseData.unlockedAchievements);
+    const mergedShowcasedAchievements = getMergedUniqueIds(localProfile.showcasedAchievements, firebaseData.showcasedAchievements)
+        .filter(achievementId => mergedClaimedAchievements.includes(achievementId))
+        .slice(0, PROFILE_ACHIEVEMENT_SHOWCASE_LIMIT);
     const mergedRedeemedCodes = getMergedUniqueIds(localProfile.redeemedCodes, firebaseData.redeemedCodes, getRedeemedCodes());
+    const mergedSocialRewardsClaimed = getMergedUniqueIds(localProfile.socialRewardsClaimed, firebaseData.socialRewardsClaimed);
 
     const localDailyWinsDate = normalizeStoredUtcDateValue(localProfile.dailyWinsUtcDate || localProfile.dailyWinsDate);
     const remoteDailyWinsDate = normalizeStoredUtcDateValue(firebaseData.dailyWinsUtcDate || firebaseData.dailyWinsDate);
@@ -7864,11 +10504,12 @@ function mergeProfilesSafely(localProfile, firebaseData) {
         profilePicture: preferredProfilePic,
         profilePic: preferredProfilePic,
         avatar: preferredAvatar,
-        totalGuesses: maxNumeric(localProfile.totalGuesses, firebaseData.totalGuesses),
-        gamesPlayed: maxNumeric(localProfile.gamesPlayed, firebaseData.gamesPlayed),
-        wins: maxNumeric(localProfile.wins, firebaseData.wins),
-        losses: maxNumeric(localProfile.losses, firebaseData.losses),
-        averageGuesses: maxNumeric(localProfile.averageGuesses, firebaseData.averageGuesses),
+        totalGuesses: preferRemoteNumber(localProfile.totalGuesses, firebaseData.totalGuesses),
+        gamesPlayed: preferRemoteNumber(localProfile.gamesPlayed ?? localProfile.games, firebaseData.gamesPlayed ?? firebaseData.games),
+        wins: preferRemoteNumber(localProfile.wins, firebaseData.wins),
+        losses: preferRemoteNumber(localProfile.losses, firebaseData.losses),
+        currentLossStreak: preferRemoteNumber(localProfile.currentLossStreak, firebaseData.currentLossStreak),
+        averageGuesses: preferRemoteNumber(localProfile.averageGuesses, firebaseData.averageGuesses),
         bestGame: (() => {
             const localBest = Number(localProfile.bestGame) || 0;
             const firebaseBest = Number(firebaseData.bestGame) || 0;
@@ -7876,8 +10517,8 @@ function mergeProfilesSafely(localProfile, firebaseData) {
             if (!firebaseBest) return localBest;
             return Math.min(localBest, firebaseBest);
         })(),
-        currentStreak: maxNumeric(localProfile.currentStreak, firebaseData.currentStreak),
-        highestStreak: maxNumeric(localProfile.highestStreak, firebaseData.highestStreak),
+        currentStreak: preferRemoteNumber(localProfile.currentStreak, firebaseData.currentStreak),
+        highestStreak: preferRemoteNumber(localProfile.highestStreak, firebaseData.highestStreak),
         dailyWins: mergedDailyWins,
         dailyWinsDate: mergedDailyWinsDate,
         dailyWinsUtcDate: mergedDailyWinsDate,
@@ -7885,9 +10526,12 @@ function mergeProfilesSafely(localProfile, firebaseData) {
         monthlyWinsKey: mergedMonthlyWinsKey,
         monthlyWinsUtcKey: mergedMonthlyWinsKey,
         winPeriodVersion: Math.max(Number(localProfile.winPeriodVersion) || 0, Number(firebaseData.winPeriodVersion) || 0),
-        totalXP: maxNumeric(localProfile.totalXP, firebaseData.totalXP || firebaseData.totalGuesses),
-        duelGames: maxNumeric(localProfile.duelGames, firebaseData.duelGames),
-        duelWins: maxNumeric(localProfile.duelWins, firebaseData.duelWins),
+        totalXP: preferredTotalXP,
+        currentLevel: preferredCurrentLevel,
+        currentXP: preferredCurrentXP,
+        xpToNextLevel: preferredXPToNextLevel,
+        duelGames: preferRemoteNumber(localProfile.duelGames, firebaseData.duelGames),
+        duelWins: preferRemoteNumber(localProfile.duelWins, firebaseData.duelWins),
         cratesOpened: preferredCratesOpened,
         cratesSinceLegendary: preferredCratesSinceLegendary,
         streakShields: preferredStreakShields,
@@ -7907,6 +10551,12 @@ function mergeProfilesSafely(localProfile, firebaseData) {
             ...(localProfile.communityBossRewards && typeof localProfile.communityBossRewards === "object" ? localProfile.communityBossRewards : {}),
             ...(firebaseData.communityBossRewards && typeof firebaseData.communityBossRewards === "object" ? firebaseData.communityBossRewards : {})
         },
+        referralRewards: {
+            ...(localProfile.referralRewards && typeof localProfile.referralRewards === "object" ? localProfile.referralRewards : {}),
+            ...(firebaseData.referralRewards && typeof firebaseData.referralRewards === "object" ? firebaseData.referralRewards : {})
+        },
+        socialRewardsClaimed: mergedSocialRewardsClaimed,
+        lostTreasures: mergeLostTreasuresStates(localProfile, firebaseData),
         sharkPassMissionClaims: {
             ...(localProfile.sharkPassMissionClaims && typeof localProfile.sharkPassMissionClaims === "object" ? localProfile.sharkPassMissionClaims : {}),
             ...(firebaseData.sharkPassMissionClaims && typeof firebaseData.sharkPassMissionClaims === "object" ? firebaseData.sharkPassMissionClaims : {})
@@ -7916,10 +10566,25 @@ function mergeProfilesSafely(localProfile, firebaseData) {
             ...(firebaseData.sharkPassSeasonBaselines && typeof firebaseData.sharkPassSeasonBaselines === "object" ? firebaseData.sharkPassSeasonBaselines : {})
         },
         sharkPassLevelRewardClaims: getMergedUniqueIds(localProfile.sharkPassLevelRewardClaims, firebaseData.sharkPassLevelRewardClaims, []),
+        sharkPassProgressSeasonId: firebaseData.sharkPassProgressSeasonId || localProfile.sharkPassProgressSeasonId || SHARK_PASS_ACTIVE_SEASON_ID,
+        sharkPassXP: (() => {
+            const activeSeasonId = getActiveSharkPassSeason()?.id || SHARK_PASS_ACTIVE_SEASON_ID;
+            const localSeasonId = localProfile.sharkPassProgressSeasonId || localProfile.sharkPassSeasonId;
+            const remoteSeasonId = firebaseData.sharkPassProgressSeasonId || firebaseData.sharkPassSeasonId;
+            if (localSeasonId === activeSeasonId && remoteSeasonId === activeSeasonId) {
+                return maxNumeric(getProfileSharkPassXPValue(localProfile), getProfileSharkPassXPValue(firebaseData));
+            }
+            if (remoteSeasonId === activeSeasonId) return getProfileSharkPassXPValue(firebaseData);
+            if (localSeasonId === activeSeasonId) return getProfileSharkPassXPValue(localProfile);
+            if (preferRemote && getProfileSharkPassXPValue(firebaseData) > 0) return getProfileSharkPassXPValue(firebaseData);
+            return 0;
+        })(),
         sharkPassSeasonId: firebaseData.sharkPassSeasonId || localProfile.sharkPassSeasonId || SHARK_PASS_ACTIVE_SEASON_ID,
         crateInventory: preferredCrateInventory,
+        summerCrateRetirementVersion: summerCratesRetired ? SUMMER_CRATE_RETIREMENT_VERSION : 0,
         claimedAchievements: mergedClaimedAchievements,
         unlockedAchievements: mergedUnlockedAchievements,
+        showcasedAchievements: mergedShowcasedAchievements,
         redeemedCodes: mergedRedeemedCodes,
         loginStreak: mergedLoginProgress.loginStreak,
         currentLoginDay: mergedLoginProgress.currentLoginDay,
@@ -7946,18 +10611,46 @@ async function loadUserProfile(options = {}) {
         const statsRef = db.collection("userStats").doc(authUser.uid);
         const { snapshot: statsSnap, fromServer } = await getUserStatsSnapshot(statsRef);
         const statsData = statsSnap.exists ? (statsSnap.data() || {}) : {};
-        const remoteHasData = statsSnap.exists && Object.keys(statsData).length > 0;
-        if (fromServer) {
+        const { profile: fullCloudProfile, fromServer: fullCloudFromServer } = await readFullUserProfileFromFirebase(authUser);
+        let remoteHasData = statsSnap.exists && Object.keys(statsData).length > 0;
+        if (fromServer || fullCloudFromServer) {
             lastServerHydratedProfileUid = authUser.uid;
         }
         let userData = {};
         let firebaseData = null;
-        // If Firestore doc exists and has at least one stat field, use it as source of truth
+        if (fromServer) {
+            const existingEmailProfile = await findRecoverableUserStatsByEmail(authUser);
+            const currentRemoteScore = remoteHasData ? getProfileRecoveryScore(statsData) : 0;
+            if (existingEmailProfile && (!remoteHasData || existingEmailProfile.score > currentRemoteScore)) {
+                firebaseData = await migrateUserStatsDocumentToAuthUser(authUser, existingEmailProfile);
+                remoteHasData = Boolean(firebaseData);
+                console.info("Recovered existing Firestore profile for account login:", existingEmailProfile.id);
+            }
+        }
+        if (fullCloudProfile && hasRecoverableRemoteProfile(fullCloudProfile)) {
+            const baseRemoteProfile = remoteHasData ? (firebaseData || statsData) : {};
+            firebaseData = hasRecoverableRemoteProfile(baseRemoteProfile)
+                ? mergeProfilesSafely(baseRemoteProfile, fullCloudProfile, { preferRemote: false })
+                : fullCloudProfile;
+            remoteHasData = true;
+        }
+        // If Firestore has a profile, hydrate from it unless this device has stronger unsynced progress.
         if (remoteHasData) {
-            firebaseData = statsData;
-            userData = mergeProfilesSafely(localProfile, firebaseData);
+            firebaseData = firebaseData || statsData;
+            const localHasRecoverableProfile = hasRecoverableRemoteProfile(localProfile);
+            const localRecoveryScore = getProfileRecoveryScore(localProfile);
+            const remoteRecoveryScore = getProfileRecoveryScore(firebaseData);
+            const localLooksNewer = localHasRecoverableProfile && localRecoveryScore > remoteRecoveryScore;
+            const localMergeSource = localLooksNewer ? localProfile : {};
+            userData = mergeProfilesSafely(localMergeSource, firebaseData, { preferRemote: !localLooksNewer });
             storeLoginProgressLocally(userData, authUser.uid);
             saveUserProfileLocally(userData, { skipRemoteSync: true, preserveLastUpdated: true });
+            if (localLooksNewer && fromServer) {
+                scheduleRemoteProfileSync(250);
+            }
+            if ((fromServer || fullCloudFromServer) && (!fullCloudProfile || localLooksNewer) && hasRecoverableRemoteProfile(userData)) {
+                syncFullUserProfileToFirebase(userData).catch(error => console.warn("Full profile backup refresh failed:", error));
+            }
             // Ensure legacy localStorage keys are updated for compatibility with other parts of the app
             localStorage.setItem("games", String(userData.gamesPlayed || 0));
             localStorage.setItem("wins", String(userData.wins || 0));
@@ -7965,12 +10658,9 @@ async function loadUserProfile(options = {}) {
             if (userData.totalXP !== undefined) {
                 localStorage.setItem("totalXP", String(userData.totalXP || 0));
             }
-            const mergedRedeemedCodes = getMergedUniqueIds(
-                JSON.parse(localStorage.getItem("redeemedCodes") || "[]"),
-                firebaseData.redeemedCodes
-            );
-            localStorage.setItem("redeemedCodes", JSON.stringify(mergedRedeemedCodes));
-            userData.redeemedCodes = mergedRedeemedCodes;
+            const loadedRedeemedCodes = Array.isArray(userData.redeemedCodes) ? userData.redeemedCodes : [];
+            localStorage.setItem("redeemedCodes", JSON.stringify(loadedRedeemedCodes));
+            userData.redeemedCodes = loadedRedeemedCodes;
             const mergedLoginProgressPayload = buildLoginProgressSyncPayload(userData);
             if (loginProgressDiffers(firebaseData, mergedLoginProgressPayload)) {
                 await statsRef.set(mergedLoginProgressPayload, { merge: true });
@@ -7993,28 +10683,12 @@ async function loadUserProfile(options = {}) {
             } else {
                 localStorage.removeItem(getDailySpinBonusStorageKey(currentUser.uid));
             }
-            // Merge achievements instead of letting a stale Firestore snapshot clear local claims.
-            const mergedClaimedAchievements = getMergedUniqueIds(
-                JSON.parse(localStorage.getItem("claimedAchievements") || "[]"),
-                firebaseData.claimedAchievements
-            );
-            const mergedUnlockedAchievements = getMergedUniqueIds(
-                JSON.parse(localStorage.getItem("unlockedAchievements") || "[]"),
-                firebaseData.unlockedAchievements
-            );
-            localStorage.setItem("claimedAchievements", JSON.stringify(mergedClaimedAchievements));
-            localStorage.setItem("unlockedAchievements", JSON.stringify(mergedUnlockedAchievements));
-            if (
-                mergedClaimedAchievements.length !== (Array.isArray(firebaseData.claimedAchievements) ? firebaseData.claimedAchievements.length : 0)
-                || mergedUnlockedAchievements.length !== (Array.isArray(firebaseData.unlockedAchievements) ? firebaseData.unlockedAchievements.length : 0)
-                || mergedRedeemedCodes.length !== (Array.isArray(firebaseData.redeemedCodes) ? firebaseData.redeemedCodes.length : 0)
-            ) {
-                await statsRef.set({
-                    claimedAchievements: mergedClaimedAchievements,
-                    unlockedAchievements: mergedUnlockedAchievements,
-                    redeemedCodes: mergedRedeemedCodes
-                }, { merge: true });
-            }
+            const loadedClaimedAchievements = Array.isArray(userData.claimedAchievements) ? userData.claimedAchievements : [];
+            const loadedUnlockedAchievements = Array.isArray(userData.unlockedAchievements) ? userData.unlockedAchievements : [];
+            const loadedShowcasedAchievements = Array.isArray(userData.showcasedAchievements) ? userData.showcasedAchievements : [];
+            localStorage.setItem("claimedAchievements", JSON.stringify(loadedClaimedAchievements));
+            localStorage.setItem("unlockedAchievements", JSON.stringify(loadedUnlockedAchievements));
+            localStorage.setItem("showcasedAchievements", JSON.stringify(loadedShowcasedAchievements));
         } else if (hasMeaningfulProfileData(localProfile)) {
             userData = mergeProfilesSafely(localProfile, {});
             storeLoginProgressLocally(userData, authUser.uid);
@@ -8026,69 +10700,19 @@ async function loadUserProfile(options = {}) {
                 console.warn("Skipped seeding userStats from local profile because snapshot was cache-fallback.");
             }
             saveUserProfileLocally(userData, { skipRemoteSync: true, preserveLastUpdated: true });
+            if (fromServer) {
+                await syncFullUserProfileToFirebase(userData);
+            }
         } else {
             if (!fromServer) {
                 console.warn("Skipped creating a default profile because userStats was not confirmed empty from the server.");
                 return null;
             }
-            const cachedPreferredUsername = getStoredPreferredUsername();
-            const localLoginProgress = getLoginProgressFromLocalStorage(authUser.uid);
-            const parseStoredAchievementIds = key => {
-                try {
-                    const parsed = JSON.parse(localStorage.getItem(key) || "[]");
-                    return Array.isArray(parsed) ? parsed : [];
-                } catch (error) {
-                    return [];
-                }
-            };
-            userData = {
-                uid: authUser.uid,
-                username: cachedPreferredUsername || localProfile.username || authUser.email.split("@")[0],
-                email: authUser.email,
-                profilePicture: "images/pfp/shark1.png",
-                avatar: "🦈",
-                totalGuesses: 0,
-                gamesPlayed: 0,
-                wins: 0,
-                losses: 0,
-                averageGuesses: 0,
-                bestGame: 0,
-                currentStreak: 0,
-                highestStreak: 0,
-                totalXP: 0,
-                duelGames: 0,
-                duelWins: 0,
-                cratesOpened: 0,
-                cratesSinceLegendary: 0,
-                streakShields: 0,
-                pearls: 0,
-                pearlBoostExpiresAt: 0,
-                seasonXpBoosts: {},
-                instantCrateOpen: false,
-                earnedCosmetics: [],
-                testerBadgeUnlocked: false,
-                equippedBadge: "starter",
-                equippedCardTheme: "default",
-                unlockedBadges: ["starter"],
-                unlockedCardThemes: ["default"],
-                unlockedTitles: [],
-                equippedTitle: "",
-                loginStreak: localLoginProgress.loginStreak,
-                currentLoginDay: localLoginProgress.currentLoginDay,
-                lastLoginDate: localLoginProgress.lastLoginDate,
-                dailyLoginModalShownToday: localLoginProgress.dailyLoginModalShownToday,
-                claimedAchievements: parseStoredAchievementIds("claimedAchievements"),
-                unlockedAchievements: parseStoredAchievementIds("unlockedAchievements"),
-                redeemedCodes: getRedeemedCodes(),
-                communityBossRewards: {},
-                sharkPassMissionClaims: {},
-                sharkPassSeasonBaselines: {},
-                sharkPassLevelRewardClaims: [],
-                sharkPassSeasonId: SHARK_PASS_ACTIVE_SEASON_ID,
-                crateInventory: normalizeCrateInventory()
-            };
+            userData = buildInitialUserProfileForAuthUser(authUser, getStoredPreferredUsername() || localProfile.username || "");
+            await statsRef.set(userData, { merge: true });
             storeLoginProgressLocally(userData, authUser.uid);
             saveUserProfileLocally(userData, { skipRemoteSync: true, preserveLastUpdated: true });
+            await syncFullUserProfileToFirebase(userData);
         }
         const themeSyncResult = syncAchievementThemeUnlocks(userData);
         userData = themeSyncResult.profileData;
@@ -8115,7 +10739,7 @@ async function loadUserProfile(options = {}) {
         maybeShowAdminCompensationNotice(userData);
         return userData;
     } catch (error) {
-        console.error("Error loading profile:", error);
+        console.error("\u{274C} Error loading profile:", error);
         if (rethrowErrors) throw error;
         return null;
     }
@@ -8155,6 +10779,7 @@ function updateProfileDisplay(userData) {
     applyProfileCardTheme(userData.equippedCardTheme || "default");
     updateProfileTitleUI(userData);
     renderTitleSelection();
+    renderProfileAchievementShowcase(userData);
 
     const profileUid = userData.uid || currentUser?.uid;
     if (profileUid) {
@@ -8201,11 +10826,15 @@ function updateHomeV3Sidebar(profileData = getCurrentProfileData()) {
     const fill = document.getElementById("home-v3-xp-fill");
     if (fill) fill.style.width = isLoggedIn ? `${xpPercent}%` : "0%";
 
+    setText("home-v3-games", isLoggedIn ? gamesPlayed : 0);
+    setText("home-v3-winrate", isLoggedIn ? `${winRate}%` : "0%");
+    setText("home-v3-best-streak", isLoggedIn ? (data.highestStreak || 0) : 0);
+    setText("home-v3-total-xp", isLoggedIn ? totalXP : 0);
+
     const shieldCount = typeof getStreakShieldCount === "function" ? getStreakShieldCount(data) : (Number(data.streakShields) || 0);
     setText("home-v3-shields", isLoggedIn ? `${shieldCount}/3` : "0/3");
     const pearls = typeof getPearlCount === "function" ? getPearlCount(data) : (Number(data.pearls ?? data.tidePearls) || 0);
     setText("home-v3-pearls", isLoggedIn ? pearls.toLocaleString() : "0");
-    renderHomeQuickStats(data);
     renderPearlShop(data);
 }
 
@@ -8317,6 +10946,26 @@ function closePearlShopModal() {
     document.getElementById("pearlShopModal")?.classList.add("hidden");
 }
 
+function openSocialRewardsModal() {
+    const modal = document.getElementById("socialRewardsModal");
+    if (!modal) return;
+    modal.classList.remove("hidden");
+    try {
+        renderSocialRewards(getCurrentProfileData());
+    } catch (error) {
+        console.warn("Unable to render social rewards:", error);
+        const list = document.getElementById("social-rewards-list");
+        if (list) list.innerHTML = '<div class="profile-empty-card">Rewards could not load. Please try again.</div>';
+    }
+}
+
+function closeSocialRewardsModal() {
+    document.getElementById("socialRewardsModal")?.classList.add("hidden");
+}
+
+window.openSocialRewardsModal = openSocialRewardsModal;
+window.closeSocialRewardsModal = closeSocialRewardsModal;
+
 function grantPearlShopItem(profileData, itemId) {
     if (!profileData || typeof profileData !== "object") return { success: false, message: "Profile not ready." };
 
@@ -8340,6 +10989,16 @@ function grantPearlShopItem(profileData, itemId) {
         inventory[crateId] = (inventory[crateId] || 0) + 1;
         profileData.crateInventory = normalizeCrateInventory(inventory);
         return { success: true, message: `${getCrateDefinition(crateId).name} added.` };
+    }
+
+    if (itemId === "message-bottle-pack") {
+        const state = getLostTreasuresState(profileData);
+        state.bottles.barnacle = (state.bottles.barnacle || 0) + 5;
+        state.bottles["red-sea"] = (state.bottles["red-sea"] || 0) + 3;
+        state.bottles.seafoam = (state.bottles.seafoam || 0) + 1;
+        state.bottles.celestial = (state.bottles.celestial || 0) + 1;
+        setLostTreasuresState(profileData, state, { skipRemoteSync: true });
+        return { success: true, message: "Message in a Bottle Pack added." };
     }
 
     if (itemId === "season-xp") {
@@ -8375,6 +11034,7 @@ async function persistPearlShopPurchase(profileData, itemId, item) {
                 pearlBoostExpiresAt: getPearlBoostExpiresAt(nextProfile),
                 streakShields: getStreakShieldCount(nextProfile),
                 crateInventory: normalizeCrateInventory(nextProfile.crateInventory),
+                lostTreasures: getLostTreasuresState(nextProfile),
                 seasonXpBoosts: getSeasonXpBoosts(nextProfile),
                 sharkPassSeasonId: nextProfile.sharkPassSeasonId || SHARK_PASS_ACTIVE_SEASON_ID,
                 lastPearlShopPurchase: {
@@ -8428,444 +11088,8 @@ async function buyPearlShopItem(itemId) {
     renderCratesButton();
     renderCratesModal();
     updateSeasonalCratePanels(nextProfile);
+    renderLostTreasuresModal();
     showNotification(`${grant.message} -${item.price} pearls`, "success", 3400);
-}
-
-const SHARK_FACTS_OF_THE_DAY = [
-    "Sharks have existed for more than 400 million years.",
-    "Some sharks replace thousands of teeth in their lifetime.",
-    "Whale sharks are the largest fish alive today.",
-    "Dwarf lantern sharks are small enough to fit in an adult human hand.",
-    "Hammerhead sharks' wide heads help them scan the seafloor for prey.",
-    "Many sharks can sense tiny electric fields through ampullae of Lorenzini.",
-    "Greenland sharks can live for centuries and are among the longest-lived vertebrates.",
-    "Nurse sharks can rest motionless on the seafloor.",
-    "Some shark species lay egg cases often called mermaid's purses.",
-    "Great white sharks are warm-bodied compared with the surrounding water.",
-    "Whale sharks feed by filtering plankton and small fish from the water.",
-    "Basking sharks are filter feeders, despite their giant mouths.",
-    "Thresher sharks use their long tail fins to stun schooling fish.",
-    "Cookiecutter sharks leave round bite marks on larger animals.",
-    "Sawsharks have tooth-lined snouts that help them detect and slash at prey.",
-    "Angel sharks ambush prey while partly buried in sand.",
-    "Zebra sharks are born striped and become spotted as adults.",
-    "Lemon sharks can form social groups in shallow coastal water.",
-    "Some reef sharks return to the same resting caves for long periods.",
-    "Sharks do not have bones; their skeletons are made of cartilage.",
-    "Shark skin feels rough because it is covered in tiny tooth-like scales.",
-    "The scales on shark skin are called dermal denticles.",
-    "Many sharks have a powerful sense of smell.",
-    "Some sharks must keep swimming to move water over their gills.",
-    "Other sharks can pump water over their gills while resting.",
-    "Frilled sharks have long, eel-like bodies and six pairs of gill slits.",
-    "Mako sharks are among the fastest shark species.",
-    "Tiger sharks eat a wide variety of prey and are known as generalist feeders.",
-    "Bull sharks can tolerate fresh water better than most sharks.",
-    "Some bull sharks have traveled far up rivers.",
-    "Port Jackson sharks can crush shelled prey with blunt rear teeth.",
-    "Horn sharks use strong fins to crawl along rocky seabeds.",
-    "Wobbegong sharks use camouflage patterns to blend with reefs and sand.",
-    "Epaulette sharks can move across shallow tide pools using their fins.",
-    "Megamouth sharks are rare filter-feeding sharks discovered in 1976.",
-    "Sharks play important roles as ocean predators and scavengers.",
-    "Not all sharks are top predators; some eat plankton or small invertebrates.",
-    "Female sharks of some species can store sperm for months or years.",
-    "Some sharks have live births, while others lay eggs.",
-    "Shark pups are usually independent as soon as they are born or hatch.",
-    "Blue sharks are known for long migrations across open oceans.",
-    "Sharks use lateral lines to sense movement and vibration in water.",
-    "The largest known ancient shark was megalodon, which is extinct.",
-    "Many deep-sea sharks have large eyes suited to dim light.",
-    "Lantern sharks can produce light through organs called photophores.",
-    "Some sharks use countershading, with darker backs and lighter bellies.",
-    "Shark teeth vary by diet, from pointed grasping teeth to flat crushing teeth.",
-    "The smallest sharks live in deep water and may be less than a foot long.",
-    "Reef sharks help keep coral reef food webs balanced.",
-    "Scientists identify individual whale sharks by their unique spot patterns.",
-    "Rays and sharks belong to the class Chondrichthyes, meaning they have skeletons made of cartilage.",
-    "Giant manta rays are the largest rays in the world.",
-    "Giant manta rays have shown mirror-checking behaviors that may suggest self-recognition.",
-    "Devil rays can leap around two metres out of the water.",
-    "Stingrays use electroreception to locate prey hidden beneath the sand.",
-    "Electric rays can generate powerful electric shocks to stun prey and defend themselves.",
-    "Guitarfishes are rays that have bodies shaped like a mix between a shark and a ray.",
-    "Sawfishes are rays, not sharks.",
-    "Smalltooth sawfish are listed as endangered under the U.S. Endangered Species Act.",
-    "Cownose rays often migrate in large schools containing hundreds of individuals.",
-    "Eagle rays use flattened teeth to crush shellfish and crustaceans.",
-    "Many skates lay egg cases known as mermaid's purses.",
-    "Unlike stingrays, skates do not have venomous tail spines.",
-    "Only three living shark species are filter feeders: whale sharks, basking sharks, and megamouth sharks.",
-    "The largest confirmed whale shark measured 18.8 metres long.",
-    "Basking sharks swim with their mouths open to filter tiny plankton from the water.",
-    "Sharks can detect low-frequency vibrations with their ears and lateral line systems.",
-    "Sharks can detect very diluted scent cues, but sound and movement also help guide their hunting.",
-    "Most sharks have five gill slits, but some species have six or seven.",
-    "The bluntnose sixgill shark has six gill slits instead of the usual five.",
-    "The broadnose sevengill shark has seven gill slits.",
-    "Goblin sharks have jaws that can rapidly extend forward to catch prey.",
-    "Goblin sharks are sometimes called living fossils because of their ancient lineage.",
-    "Oceanic whitetip sharks spend most of their lives in the open ocean.",
-    "Blacktip reef sharks are commonly found in shallow tropical reefs.",
-    "Grey reef sharks often patrol the edges of coral reefs.",
-    "Silky sharks are one of the most abundant pelagic shark species.",
-    "Whitetip reef sharks often rest on the seafloor during the day.",
-    "Some deep-sea sharks have glowing organs that help camouflage them from predators below.",
-    "Sharks have been found in every ocean on Earth.",
-    "Greenland sharks can withstand Arctic waters year-round.",
-    "The Greenland shark is one of the slowest swimming sharks.",
-    "Greenland sharks mainly feed on fish, squid and carrion.",
-    "The cookiecutter shark gets its name from the circular wounds it leaves behind.",
-    "Some shark embryos develop functional teeth before they are born.",
-    "Sand tiger shark embryos may eat their siblings before birth, a behaviour called intrauterine cannibalism.",
-    "The whale shark has over 3,000 tiny teeth, but they are not used for feeding.",
-    "Many rays bury themselves beneath the sand to avoid predators.",
-    "Blue-spotted ribbontail rays have bright blue spots that help distinguish them from similar species.",
-    "Spotted eagle rays are capable of powerful leaps above the water.",
-    "Manta rays have the biggest brains known among fish.",
-    "Some sharks use Earth's magnetic field to help navigate during migrations.",
-    "Juvenile lemon sharks often use mangrove forests as nursery habitats.",
-    "Many shark nursery areas are located in shallow coastal waters.",
-    "Overfishing is one of the biggest threats facing many shark and ray species.",
-    "More than one-third of shark and ray species are threatened with extinction.",
-    "Healthy shark populations help maintain balanced marine ecosystems.",
-    "Sixgill sharks closely resemble fossil shark forms from around 200 million years ago.",
-    "The epaulette shark can survive short periods with very little oxygen.",
-    "Shark and ray conservation helps protect entire ocean ecosystems."
-];
-
-function getDailySharkFactIndex(date = new Date()) {
-    const utcDay = Math.floor(date.getTime() / 86400000);
-    return ((utcDay % SHARK_FACTS_OF_THE_DAY.length) + SHARK_FACTS_OF_THE_DAY.length) % SHARK_FACTS_OF_THE_DAY.length;
-}
-
-function renderFactOfTheDay() {
-    const factEl = document.getElementById("home-v3-daily-fact");
-    if (!factEl) return;
-    factEl.textContent = SHARK_FACTS_OF_THE_DAY[getDailySharkFactIndex()];
-}
-
-const HOME_QUICK_ACCESS_STORAGE_KEY = "sharkdle_home_quick_access_v1";
-const HOME_QUICK_ACCESS_LIMIT = 2;
-const HOME_QUICK_ACCESS_DEFAULTS = ["sharchive", "leaderboard"];
-const HOME_QUICK_ACCESS_ITEMS = [
-    { id: "sharchive", label: "Sharchive", meta: "Archive", href: "Library/index.html", icon: "fa-book-open" },
-    { id: "story", label: "Story Map", meta: "Explore", href: "Story/index.html", icon: "fa-map-location-dot" },
-    { id: "sharkpass", label: "Shark Pass", meta: "Rewards", href: "Sharkpass/index.html", icon: "fa-ticket" },
-    { id: "achievements", label: "Achievements", meta: "Progress", href: "Achievements/index.html", icon: "fa-trophy" },
-    { id: "leaderboard", label: "Leaderboards", meta: "Ranks", href: "Leaderboard/index.html", icon: "fa-ranking-star" },
-    { id: "updates", label: "Updates", meta: "News", href: "Updates/index.html", icon: "fa-newspaper" }
-];
-
-function getHomeQuickAccessItem(id) {
-    return HOME_QUICK_ACCESS_ITEMS.find(item => item.id === id) || null;
-}
-
-function normalizeHomeQuickAccessSelection(selection) {
-    const validIds = new Set(HOME_QUICK_ACCESS_ITEMS.map(item => item.id));
-    const normalized = [];
-    (Array.isArray(selection) ? selection : HOME_QUICK_ACCESS_DEFAULTS).forEach(id => {
-        if (validIds.has(id) && !normalized.includes(id) && normalized.length < HOME_QUICK_ACCESS_LIMIT) {
-            normalized.push(id);
-        }
-    });
-    if (!normalized.length) return [...HOME_QUICK_ACCESS_DEFAULTS];
-    return normalized;
-}
-
-function readHomeQuickAccessSelection() {
-    try {
-        const saved = JSON.parse(localStorage.getItem(HOME_QUICK_ACCESS_STORAGE_KEY) || "null");
-        const normalized = normalizeHomeQuickAccessSelection(saved);
-        if (JSON.stringify(saved) !== JSON.stringify(normalized)) {
-            localStorage.setItem(HOME_QUICK_ACCESS_STORAGE_KEY, JSON.stringify(normalized));
-        }
-        return normalized;
-    } catch (error) {
-        return [...HOME_QUICK_ACCESS_DEFAULTS];
-    }
-}
-
-function writeHomeQuickAccessSelection(selection) {
-    const normalized = normalizeHomeQuickAccessSelection(selection);
-    localStorage.setItem(HOME_QUICK_ACCESS_STORAGE_KEY, JSON.stringify(normalized));
-    return normalized;
-}
-
-function renderHomeQuickAccessPanel() {
-    const lists = Array.from(document.querySelectorAll("[data-home-quick-access-list]"));
-    if (!lists.length) return;
-
-    const selectedIds = readHomeQuickAccessSelection();
-    const items = selectedIds.map(getHomeQuickAccessItem).filter(Boolean);
-    const markup = items.map(item => `
-        <a class="home-v3-quick-link" href="${item.href}">
-            <span class="home-v3-quick-icon"><i class="fa-solid ${item.icon}" aria-hidden="true"></i></span>
-            <span class="home-v3-quick-copy">
-                <strong>${escapeHtml(item.label)}</strong>
-                <small>${escapeHtml(item.meta)}</small>
-            </span>
-            <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
-        </a>
-    `).join("");
-
-    lists.forEach(list => {
-        list.innerHTML = markup;
-    });
-}
-
-function renderHomeQuickAccessOptions() {
-    const options = document.getElementById("home-quick-access-options");
-    if (!options) return;
-
-    const selectedIds = readHomeQuickAccessSelection();
-    options.innerHTML = HOME_QUICK_ACCESS_ITEMS.map(item => {
-        const checked = selectedIds.includes(item.id);
-        const disabled = !checked && selectedIds.length >= HOME_QUICK_ACCESS_LIMIT;
-        return `
-            <label class="home-quick-option ${checked ? "active" : ""} ${disabled ? "disabled" : ""}">
-                <input type="checkbox" value="${item.id}" ${checked ? "checked" : ""} ${disabled ? "disabled" : ""}>
-                <span class="home-quick-option-icon"><i class="fa-solid ${item.icon}" aria-hidden="true"></i></span>
-                <span class="home-quick-option-copy">
-                    <strong>${escapeHtml(item.label)}</strong>
-                    <small>${escapeHtml(item.meta)}</small>
-                </span>
-                <span class="home-quick-option-check"><i class="fa-solid fa-check" aria-hidden="true"></i></span>
-            </label>
-        `;
-    }).join("");
-
-    options.querySelectorAll("input[type='checkbox']").forEach(input => {
-        input.addEventListener("change", () => toggleHomeQuickAccessItem(input.value, input.checked));
-    });
-}
-
-function toggleHomeQuickAccessItem(itemId, shouldSelect) {
-    const currentSelection = readHomeQuickAccessSelection();
-    let nextSelection = [...currentSelection];
-
-    if (shouldSelect) {
-        if (!nextSelection.includes(itemId)) nextSelection.push(itemId);
-        if (nextSelection.length > HOME_QUICK_ACCESS_LIMIT) {
-            showNotification(`Quick Access can hold ${HOME_QUICK_ACCESS_LIMIT} shortcuts.`, "info", 2400);
-            nextSelection = currentSelection;
-        }
-    } else {
-        nextSelection = nextSelection.filter(id => id !== itemId);
-        if (!nextSelection.length) {
-            showNotification("Quick Access needs at least one shortcut.", "info", 2400);
-            nextSelection = currentSelection;
-        }
-    }
-
-    writeHomeQuickAccessSelection(nextSelection);
-    renderHomeQuickAccessPanel();
-    renderHomeQuickAccessOptions();
-}
-
-function initHomeQuickAccess() {
-    renderHomeQuickAccessPanel();
-    renderHomeQuickAccessOptions();
-}
-
-function openHomeQuickAccessModal() {
-    renderHomeQuickAccessOptions();
-    const modal = document.getElementById("homeQuickAccessModal");
-    if (modal) modal.classList.remove("hidden");
-}
-
-function closeHomeQuickAccessModal() {
-    document.getElementById("homeQuickAccessModal")?.classList.add("hidden");
-}
-
-function resetHomeQuickAccess() {
-    writeHomeQuickAccessSelection(HOME_QUICK_ACCESS_DEFAULTS);
-    renderHomeQuickAccessPanel();
-    renderHomeQuickAccessOptions();
-    showNotification("Quick Access reset.", "success", 2200);
-}
-
-const HOME_QUICK_STATS_STORAGE_KEY = "sharkdle_home_quick_stats_v1";
-const HOME_QUICK_STATS_LIMIT = 4;
-const HOME_QUICK_STATS_DEFAULTS = ["games", "wins", "winRate", "bestStreak"];
-const HOME_QUICK_STATS_ITEMS = [
-    { id: "games", label: "Games", meta: "Played", icon: "fa-gamepad" },
-    { id: "wins", label: "Wins", meta: "Solved", icon: "fa-trophy" },
-    { id: "losses", label: "Losses", meta: "Misses", icon: "fa-xmark" },
-    { id: "winRate", label: "Win Rate", meta: "Percent", icon: "fa-chart-pie" },
-    { id: "currentStreak", label: "Current Streak", meta: "Run", icon: "fa-fire" },
-    { id: "bestStreak", label: "Best Streak", meta: "Record", icon: "fa-ranking-star" },
-    { id: "totalGuesses", label: "Guesses", meta: "Total", icon: "fa-list-ol" },
-    { id: "avgGuesses", label: "Avg Guesses", meta: "Per Game", icon: "fa-calculator" },
-    { id: "shields", label: "Shields", meta: "Protection", icon: "fa-shield-halved" }
-];
-
-function getHomeQuickStatsItem(id) {
-    return HOME_QUICK_STATS_ITEMS.find(item => item.id === id) || null;
-}
-
-function normalizeHomeQuickStatsSelection(selection) {
-    const validIds = new Set(HOME_QUICK_STATS_ITEMS.map(item => item.id));
-    const normalized = [];
-    const sourceSelection = Array.isArray(selection) ? selection : HOME_QUICK_STATS_DEFAULTS;
-    sourceSelection.forEach(id => {
-        if (validIds.has(id) && !normalized.includes(id) && normalized.length < HOME_QUICK_STATS_LIMIT) {
-            normalized.push(id);
-        }
-    });
-    const droppedSavedStats = sourceSelection.length !== normalized.length;
-    if ((sourceSelection.length >= HOME_QUICK_STATS_LIMIT || droppedSavedStats) && normalized.length < HOME_QUICK_STATS_LIMIT) {
-        HOME_QUICK_STATS_DEFAULTS.forEach(id => {
-            if (validIds.has(id) && !normalized.includes(id) && normalized.length < HOME_QUICK_STATS_LIMIT) {
-                normalized.push(id);
-            }
-        });
-    }
-    if (!normalized.length) return [...HOME_QUICK_STATS_DEFAULTS];
-    return normalized;
-}
-
-function readHomeQuickStatsSelection() {
-    try {
-        const saved = JSON.parse(localStorage.getItem(HOME_QUICK_STATS_STORAGE_KEY) || "null");
-        const normalized = normalizeHomeQuickStatsSelection(saved);
-        if (JSON.stringify(saved) !== JSON.stringify(normalized)) {
-            localStorage.setItem(HOME_QUICK_STATS_STORAGE_KEY, JSON.stringify(normalized));
-        }
-        return normalized;
-    } catch (error) {
-        return [...HOME_QUICK_STATS_DEFAULTS];
-    }
-}
-
-function writeHomeQuickStatsSelection(selection) {
-    const normalized = normalizeHomeQuickStatsSelection(selection);
-    localStorage.setItem(HOME_QUICK_STATS_STORAGE_KEY, JSON.stringify(normalized));
-    return normalized;
-}
-
-function getHomeQuickStatValues(profileData = getCurrentProfileData()) {
-    const isLoggedIn = Boolean(currentUser);
-    const data = profileData || {};
-    const gamesPlayed = Number(data.gamesPlayed ?? data.games) || 0;
-    const wins = Number(data.wins) || 0;
-    const losses = Number(data.losses) || 0;
-    const winRate = gamesPlayed > 0 ? Math.round((wins / gamesPlayed) * 100) : 0;
-    const averageGuesses = Number(data.averageGuesses) || 0;
-    const shieldCount = typeof getStreakShieldCount === "function" ? getStreakShieldCount(data) : (Number(data.streakShields) || 0);
-
-    const loggedOutValues = {
-        games: "0",
-        wins: "0",
-        losses: "0",
-        winRate: "0%",
-        currentStreak: "0",
-        bestStreak: "0",
-        totalGuesses: "0",
-        avgGuesses: "0.0",
-        shields: "0/3"
-    };
-
-    if (!isLoggedIn) return loggedOutValues;
-
-    return {
-        games: gamesPlayed.toLocaleString(),
-        wins: wins.toLocaleString(),
-        losses: losses.toLocaleString(),
-        winRate: `${winRate}%`,
-        currentStreak: (Number(data.currentStreak) || 0).toLocaleString(),
-        bestStreak: (Number(data.highestStreak) || 0).toLocaleString(),
-        totalGuesses: (Number(data.totalGuesses) || 0).toLocaleString(),
-        avgGuesses: averageGuesses > 0 ? averageGuesses.toFixed(1) : "0.0",
-        shields: `${shieldCount}/3`
-    };
-}
-
-function renderHomeQuickStats(profileData = getCurrentProfileData()) {
-    const list = document.getElementById("home-v3-quick-stats-list");
-    if (!list) return;
-
-    const values = getHomeQuickStatValues(profileData);
-    const selectedIds = readHomeQuickStatsSelection();
-    const items = selectedIds.map(getHomeQuickStatsItem).filter(Boolean);
-
-    list.innerHTML = items.map(item => `
-        <div class="home-v3-stat-row" data-home-quick-stat="${item.id}">
-            <span><i class="fa-solid ${item.icon}" aria-hidden="true"></i>${escapeHtml(item.label)}</span>
-            <strong>${escapeHtml(values[item.id] ?? "0")}</strong>
-        </div>
-    `).join("");
-}
-
-function renderHomeQuickStatsOptions() {
-    const options = document.getElementById("home-quick-stats-options");
-    if (!options) return;
-
-    const selectedIds = readHomeQuickStatsSelection();
-    options.innerHTML = HOME_QUICK_STATS_ITEMS.map(item => {
-        const checked = selectedIds.includes(item.id);
-        const disabled = !checked && selectedIds.length >= HOME_QUICK_STATS_LIMIT;
-        return `
-            <label class="home-quick-option home-stat-option ${checked ? "active" : ""} ${disabled ? "disabled" : ""}">
-                <input type="checkbox" value="${item.id}" ${checked ? "checked" : ""} ${disabled ? "disabled" : ""}>
-                <span class="home-quick-option-icon"><i class="fa-solid ${item.icon}" aria-hidden="true"></i></span>
-                <span class="home-quick-option-copy">
-                    <strong>${escapeHtml(item.label)}</strong>
-                    <small>${escapeHtml(item.meta)}</small>
-                </span>
-                <span class="home-quick-option-check"><i class="fa-solid fa-check" aria-hidden="true"></i></span>
-            </label>
-        `;
-    }).join("");
-
-    options.querySelectorAll("input[type='checkbox']").forEach(input => {
-        input.addEventListener("change", () => toggleHomeQuickStat(input.value, input.checked));
-    });
-}
-
-function toggleHomeQuickStat(itemId, shouldSelect) {
-    const currentSelection = readHomeQuickStatsSelection();
-    let nextSelection = [...currentSelection];
-
-    if (shouldSelect) {
-        if (!nextSelection.includes(itemId)) nextSelection.push(itemId);
-        if (nextSelection.length > HOME_QUICK_STATS_LIMIT) {
-            showNotification(`Quick Stats can hold ${HOME_QUICK_STATS_LIMIT} numbers.`, "info", 2400);
-            nextSelection = currentSelection;
-        }
-    } else {
-        nextSelection = nextSelection.filter(id => id !== itemId);
-        if (!nextSelection.length) {
-            showNotification("Quick Stats needs at least one number.", "info", 2400);
-            nextSelection = currentSelection;
-        }
-    }
-
-    writeHomeQuickStatsSelection(nextSelection);
-    renderHomeQuickStats();
-    renderHomeQuickStatsOptions();
-}
-
-function initHomeQuickStats() {
-    renderHomeQuickStats();
-    renderHomeQuickStatsOptions();
-}
-
-function openHomeQuickStatsModal() {
-    renderHomeQuickStatsOptions();
-    const modal = document.getElementById("homeQuickStatsModal");
-    if (modal) modal.classList.remove("hidden");
-}
-
-function closeHomeQuickStatsModal() {
-    document.getElementById("homeQuickStatsModal")?.classList.add("hidden");
-}
-
-function resetHomeQuickStats() {
-    writeHomeQuickStatsSelection(HOME_QUICK_STATS_DEFAULTS);
-    renderHomeQuickStats();
-    renderHomeQuickStatsOptions();
-    showNotification("Quick Stats reset.", "success", 2200);
 }
 
 function switchHomeV3Tab(tabId = "play") {
@@ -9062,7 +11286,7 @@ function renderRecentGames() {
     }
     recentGamesDiv.innerHTML = recentGames.slice(0, 10).map(game => `
         <div class="recent-game-item">
-            <div class="game-result">${game.result === 'Win' ? '🏆 Win' : '❌ Loss'}</div>
+            <div class="game-result">${game.result === 'Win' ? '\u{1F3C6} Win' : '\u{274C} Loss'}</div>
             <div class="game-date">${game.date} ${game.time}</div>
             <div class="game-shark">Shark: <b>${game.sharkName || 'Unknown'}</b></div>
             <div>Guesses: <b>${game.guesses}</b></div>
@@ -9076,19 +11300,20 @@ function enableUsernameEdit() {
     const profileUsernameEl = document.getElementById("profile-username");
     const input = document.getElementById("username-input");
     const editBtn = document.getElementById("edit-profile-btn");
+    const editContainer = document.getElementById("username-edit-container");
     const shell = document.querySelector(".username-editor-shell");
 
     if (profileUsernameEl && input) {
         input.value = profileUsernameEl.textContent.trim();
     }
-    document.getElementById("username-edit-container").classList.remove("hidden");
+    if (editContainer) editContainer.classList.remove("hidden");
     if (editBtn) editBtn.disabled = true;
     if (shell) shell.classList.add("editing");
     if (input) setTimeout(() => input.focus(), 0);
 }
 
 function cancelUsernameEdit() {
-    document.getElementById("username-edit-container").classList.add("hidden");
+    document.getElementById("username-edit-container")?.classList.add("hidden");
     const editBtn = document.getElementById("edit-profile-btn");
     const shell = document.querySelector(".username-editor-shell");
     if (editBtn) editBtn.disabled = false;
@@ -9096,7 +11321,8 @@ function cancelUsernameEdit() {
 }
 
 async function saveUsername() {
-    const newName = document.getElementById("username-input").value.trim();
+    const input = document.getElementById("username-input");
+    const newName = input ? input.value.trim() : "";
     if (!newName) {
         alert("Username cannot be empty.");
         return;
@@ -9124,12 +11350,163 @@ async function updateUsername(newUsername) {
     }
 }
 
+const SIGN_UP_BONUS_PEARLS = 300;
+
+function buildInitialUserProfileForAuthUser(user, usernameOverride = "") {
+    const rawLocalProfile = JSON.parse(localStorage.getItem("userProfile") || "{}");
+    const localProfile = rawLocalProfile && !rawLocalProfile.uid ? rawLocalProfile : {};
+    const totalXP = localProfile.totalXP || parseInt(localStorage.getItem("totalXP")) || 0;
+    const gamesPlayed = localProfile.gamesPlayed || parseInt(localStorage.getItem("games")) || 0;
+    const wins = localProfile.wins || parseInt(localStorage.getItem("wins")) || 0;
+    const losses = localProfile.losses || parseInt(localStorage.getItem("losses")) || 0;
+    const loginProgress = getLoginProgressFromLocalStorage(user.uid);
+    let claimedAchievements = [];
+    let unlockedAchievements = [];
+    let showcasedAchievements = [];
+
+    try {
+        claimedAchievements = JSON.parse(localStorage.getItem("claimedAchievements") || "[]");
+        unlockedAchievements = JSON.parse(localStorage.getItem("unlockedAchievements") || "[]");
+        showcasedAchievements = JSON.parse(localStorage.getItem("showcasedAchievements") || "[]");
+    } catch (error) {
+        console.warn("Unable to migrate local achievement cache during account setup:", error);
+    }
+
+    const currentLevel = getLevelFromXP(totalXP);
+    const xpInLevel = getXPInCurrentLevel(totalXP);
+    const xpToNext = getXPToNextLevel(totalXP);
+    const unlockedPfps = levelRewards
+        .filter(r => r.level <= currentLevel)
+        .map(r => ({ level: r.level, name: r.name || r.imagePath }));
+    const fallbackUsername = usernameOverride
+        || user.displayName
+        || user.email?.split("@")[0]
+        || "Sharkdle Player";
+
+    return {
+        uid: user.uid,
+        profilePicture: localProfile.profilePicture || user.photoURL || "images/pfp/shark1.png",
+        profilePic: localProfile.profilePicture || user.photoURL || "images/pfp/shark1.png",
+        equippedBadge: localProfile.equippedBadge || "starter",
+        equippedCardTheme: localProfile.equippedCardTheme || "default",
+        equippedTitle: localProfile.equippedTitle || "",
+        unlockedTitles: Array.isArray(localProfile.unlockedTitles) ? localProfile.unlockedTitles : [],
+        unlockedBadges: Array.isArray(localProfile.unlockedBadges) ? localProfile.unlockedBadges : ["starter"],
+        unlockedCardThemes: Array.isArray(localProfile.unlockedCardThemes) ? localProfile.unlockedCardThemes : ["default"],
+        earnedCosmetics: Array.isArray(localProfile.earnedCosmetics) ? localProfile.earnedCosmetics : [],
+        testerBadgeUnlocked: Boolean(localProfile.testerBadgeUnlocked),
+        communityBossRewards: localProfile.communityBossRewards && typeof localProfile.communityBossRewards === "object" ? localProfile.communityBossRewards : {},
+        referralRewards: localProfile.referralRewards && typeof localProfile.referralRewards === "object" ? localProfile.referralRewards : {},
+        sharkPassMissionClaims: localProfile.sharkPassMissionClaims && typeof localProfile.sharkPassMissionClaims === "object" ? localProfile.sharkPassMissionClaims : {},
+        sharkPassSeasonBaselines: localProfile.sharkPassSeasonBaselines && typeof localProfile.sharkPassSeasonBaselines === "object" ? localProfile.sharkPassSeasonBaselines : {},
+        sharkPassLevelRewardClaims: Array.isArray(localProfile.sharkPassLevelRewardClaims) ? localProfile.sharkPassLevelRewardClaims : [],
+        sharkPassProgressSeasonId: localProfile.sharkPassProgressSeasonId || SHARK_PASS_ACTIVE_SEASON_ID,
+        sharkPassXP: Math.max(0, Number(localProfile.sharkPassXP) || 0),
+        sharkPassSeasonId: localProfile.sharkPassSeasonId || SHARK_PASS_ACTIVE_SEASON_ID,
+        crateInventory: normalizeCrateInventory(localProfile.crateInventory),
+        cratesOpened: Math.max(0, Number(localProfile.cratesOpened) || 0),
+        streakShields: getStreakShieldCount(localProfile),
+        instantCrateOpen: getCrateInstantOpenEnabled(localProfile),
+        pearls: getPearlCount(localProfile) + SIGN_UP_BONUS_PEARLS,
+        signUpBonusPearls: SIGN_UP_BONUS_PEARLS,
+        signUpBonusClaimed: true,
+        pearlBoostExpiresAt: getPearlBoostExpiresAt(localProfile),
+        seasonXpBoosts: getSeasonXpBoosts(localProfile),
+        username: String(fallbackUsername).slice(0, 24),
+        email: user.email || "",
+        avatar: "\u{1F988}",
+        totalXP,
+        gamesPlayed,
+        wins,
+        losses,
+        totalGuesses: localProfile.totalGuesses || 0,
+        averageGuesses: localProfile.averageGuesses || 0,
+        bestGame: localProfile.bestGame || 0,
+        currentStreak: localProfile.currentStreak || 0,
+        highestStreak: localProfile.highestStreak || 0,
+        currentLevel,
+        currentXP: xpInLevel,
+        xpToNextLevel: xpToNext,
+        unlockedPfps,
+        claimedAchievements: Array.isArray(claimedAchievements) ? claimedAchievements : [],
+        unlockedAchievements: Array.isArray(unlockedAchievements) ? unlockedAchievements : [],
+        showcasedAchievements: Array.isArray(showcasedAchievements) ? showcasedAchievements : [],
+        redeemedCodes: getRedeemedCodes(),
+        loginStreak: loginProgress.loginStreak,
+        currentLoginDay: loginProgress.currentLoginDay,
+        lastLoginDate: loginProgress.lastLoginDate,
+        dailyLoginModalShownToday: loginProgress.dailyLoginModalShownToday,
+        createdAt: new Date(),
+        lastUpdated: new Date()
+    };
+}
+
+async function ensureAuthUserProfile(user, usernameOverride = "") {
+    if (!user || !db) return false;
+    const userRef = db.collection("userStats").doc(user.uid);
+    const { snapshot, fromServer } = await getUserStatsSnapshot(userRef);
+    if (snapshot.exists) return false;
+    if (!fromServer) {
+        console.warn("Skipped initial profile creation because userStats was not confirmed empty from the server.");
+        return false;
+    }
+    const existingEmailProfile = await findRecoverableUserStatsByEmail(user);
+    if (existingEmailProfile) {
+        await migrateUserStatsDocumentToAuthUser(user, existingEmailProfile);
+        return false;
+    }
+    const { profile: fullCloudProfile } = await readFullUserProfileFromFirebase(user);
+    if (fullCloudProfile && hasRecoverableRemoteProfile(fullCloudProfile)) {
+        const recoveredProfile = mergeProfilesSafely({}, fullCloudProfile, { preferRemote: true });
+        await userRef.set(recoveredProfile, { merge: true });
+        await syncFullUserProfileToFirebase(recoveredProfile);
+        return false;
+    }
+    const initialProfile = buildInitialUserProfileForAuthUser(user, usernameOverride);
+    await userRef.set(initialProfile);
+    await syncFullUserProfileToFirebase(initialProfile);
+    return true;
+}
+
+function shouldRepairMissingSignUpBonus(profile = {}) {
+    if (profile.signUpBonusClaimed === true) return false;
+    if ((Number(profile.pearls) || 0) >= SIGN_UP_BONUS_PEARLS) return false;
+
+    const hasProgress = ["gamesPlayed", "wins", "losses", "totalXP", "totalGuesses", "cratesOpened"]
+        .some(key => Number(profile[key]) > 0);
+    const hasCollections = [profile.redeemedCodes, profile.earnedCosmetics, profile.claimedAchievements, profile.unlockedAchievements]
+        .some(value => Array.isArray(value) && value.length > 0);
+
+    return !hasProgress && !hasCollections;
+}
+
+function getFriendlyAuthErrorMessage(error, fallback = "Something went wrong. Please try again.") {
+    const supportEmail = "sharkdle.online@gmail.com";
+    const code = String(error?.code || "").toLowerCase();
+    if (code.includes("invalid-credential") || code.includes("wrong-password") || code.includes("user-not-found")) {
+        return "Incorrect email or password. If this account used Google before, use Forgot password to set an email password.";
+    }
+    if (code.includes("invalid-email")) return "Enter a valid email address.";
+    if (code.includes("too-many-requests")) return "Too many login attempts. Wait a bit, then try again.";
+    if (code.includes("network-request-failed")) return "Network error. Check your connection and try again.";
+    if (code.includes("email-already-in-use")) return "This email is already registered. Please log in instead.";
+    if (code.includes("weak-password")) return "Password must be at least 6 characters.";
+    if (code.includes("operation-not-allowed")) return `Email login is not enabled in Firebase. Email ${supportEmail} for help.`;
+    return error?.message || fallback;
+}
+
 function loginUser() {
-    const email = document.getElementById("login-email").value.trim();
-    const password = document.getElementById("login-password").value.trim();
+    const emailInput = document.getElementById("login-email");
+    const passwordInput = document.getElementById("login-password");
     const errorEl = document.getElementById("auth-error");
-    const loginSubmitBtn = document.querySelector("#login-form button[type='submit']") || 
-                           document.querySelector("#login-form button:last-of-type");
+    const loginSubmitBtn = document.querySelector(".login-form .modal-primary-btn");
+    const email = emailInput ? emailInput.value.trim() : "";
+    const password = passwordInput ? passwordInput.value : "";
+
+    if (!emailInput || !passwordInput || !errorEl) {
+        showNotification("Login form is unavailable right now.", "error");
+        return;
+    }
 
     if (!email || !password) {
         errorEl.textContent = "Please fill in all fields.";
@@ -9150,9 +11527,10 @@ function loginUser() {
             closeLoginModal();
         })
         .catch(error => {
-            errorEl.textContent = error.message || "Login failed. Please check your credentials.";
+            const message = getFriendlyAuthErrorMessage(error, "Login failed. Please check your credentials.");
+            errorEl.textContent = message;
             errorEl.style.display = "block";
-            showNotification('Login failed: ' + (error.message || 'Unknown error'), 'error');
+            showNotification(message, 'error');
         })
         .finally(() => {
             // Re-enable button
@@ -9167,6 +11545,12 @@ async function forgotPassword() {
     const emailInput = document.getElementById("login-email");
     const errorEl = document.getElementById("auth-error");
     const email = emailInput ? emailInput.value.trim() : "";
+    const supportEmail = "sharkdle.online@gmail.com";
+
+    if (!errorEl) {
+        showNotification(`Password reset is unavailable right now. Email ${supportEmail} for help.`, "error");
+        return;
+    }
 
     if (!email) {
         errorEl.textContent = "Enter your email first, then we'll send the reset link.";
@@ -9177,23 +11561,29 @@ async function forgotPassword() {
     try {
         await auth.sendPasswordResetEmail(email);
         errorEl.style.display = "none";
-        showNotification("Password reset email sent. Check your inbox.", "success");
+        showNotification(`Password reset email sent. Check your inbox. If it does not arrive, email ${supportEmail}.`, "success");
     } catch (error) {
         const message = error.message || "Unable to send reset email.";
-        errorEl.textContent = message;
+        errorEl.textContent = `${message} If you need help, email ${supportEmail}.`;
         errorEl.style.display = "block";
-        showNotification("Password reset failed: " + message, "error");
+        showNotification(`Password reset failed. Email ${supportEmail} for help.`, "error");
     }
 }
 
 async function signupUser() {
-    const email = document.getElementById("signup-email").value.trim();
-    const password = document.getElementById("signup-password").value.trim();
-    const username = document.getElementById("signup-username").value.trim();
+    const emailInput = document.getElementById("signup-email");
+    const passwordInput = document.getElementById("signup-password");
+    const usernameInput = document.getElementById("signup-username");
     const errorEl = document.getElementById("auth-error");
-    const signupSubmitBtn = document.querySelector("#signup-form button[type='submit']") || 
-                            document.querySelectorAll("#signup-form button")[1] || 
-                            document.querySelector("#signup-form button:last-of-type");
+    const signupSubmitBtn = document.querySelector(".signup-form .modal-primary-btn");
+    const email = emailInput ? emailInput.value.trim() : "";
+    const password = passwordInput ? passwordInput.value : "";
+    const username = usernameInput ? usernameInput.value.trim() : "";
+
+    if (!emailInput || !passwordInput || !usernameInput || !errorEl) {
+        showNotification("Signup form is unavailable right now.", "error");
+        return;
+    }
 
     if (!email || !password || !username) {
         errorEl.textContent = "Please fill in all fields.";
@@ -9236,13 +11626,8 @@ async function signupUser() {
 
         // Migrate local offline stats - check both new and old storage locations
         const rawLocalProfile = JSON.parse(localStorage.getItem("userProfile") || "{}");
-        const localProfile = rawLocalProfile && !rawLocalProfile.uid
-            ? removeAnonymousMegalodonEscapeAward(rawLocalProfile)
-            : {};
-        const hasLocalProfileTotalXp = Object.prototype.hasOwnProperty.call(localProfile, "totalXP");
-        const _totalXP = hasLocalProfileTotalXp
-            ? Math.max(0, Number(localProfile.totalXP) || 0)
-            : parseInt(localStorage.getItem("totalXP")) || 0;
+        const localProfile = rawLocalProfile && !rawLocalProfile.uid ? rawLocalProfile : {};
+        const _totalXP = localProfile.totalXP || parseInt(localStorage.getItem("totalXP")) || 0;
         const _gamesPlayed = localProfile.gamesPlayed || parseInt(localStorage.getItem("games")) || 0;
         const _wins = localProfile.wins || parseInt(localStorage.getItem("wins")) || 0;
         const _losses = localProfile.losses || parseInt(localStorage.getItem("losses")) || 0;
@@ -9254,13 +11639,15 @@ async function signupUser() {
         const _loginProgress = getLoginProgressFromLocalStorage(result.user.uid);
         let _claimedAchievements = [];
         let _unlockedAchievements = [];
+        let _showcasedAchievements = [];
         try {
             _claimedAchievements = JSON.parse(localStorage.getItem("claimedAchievements") || "[]");
             _unlockedAchievements = JSON.parse(localStorage.getItem("unlockedAchievements") || "[]");
+            _showcasedAchievements = JSON.parse(localStorage.getItem("showcasedAchievements") || "[]");
         } catch (error) {
             console.warn("Unable to migrate local achievement cache during signup:", error);
         }
-        
+
         const _currentLevel = getLevelFromXP(_totalXP);
         const _xpInLevel = getXPInCurrentLevel(_totalXP);
         const _xpToNext = getXPToNextLevel(_totalXP);
@@ -9269,7 +11656,9 @@ async function signupUser() {
             .map(r => ({ level: r.level, name: r.name || r.imagePath }));
 
         const newProfile = {
+            uid: result.user.uid,
             profilePicture: localProfile.profilePicture || "images/pfp/shark1.png",
+            profilePic: localProfile.profilePicture || "images/pfp/shark1.png",
             equippedBadge: localProfile.equippedBadge || "starter",
             equippedCardTheme: localProfile.equippedCardTheme || "default",
             equippedTitle: localProfile.equippedTitle || "",
@@ -9281,6 +11670,9 @@ async function signupUser() {
             communityBossRewards: localProfile.communityBossRewards && typeof localProfile.communityBossRewards === "object"
                 ? localProfile.communityBossRewards
                 : {},
+            referralRewards: localProfile.referralRewards && typeof localProfile.referralRewards === "object"
+                ? localProfile.referralRewards
+                : {},
             sharkPassMissionClaims: localProfile.sharkPassMissionClaims && typeof localProfile.sharkPassMissionClaims === "object"
                 ? localProfile.sharkPassMissionClaims
                 : {},
@@ -9288,17 +11680,21 @@ async function signupUser() {
                 ? localProfile.sharkPassSeasonBaselines
                 : {},
             sharkPassLevelRewardClaims: Array.isArray(localProfile.sharkPassLevelRewardClaims) ? localProfile.sharkPassLevelRewardClaims : [],
+            sharkPassProgressSeasonId: localProfile.sharkPassProgressSeasonId || SHARK_PASS_ACTIVE_SEASON_ID,
+            sharkPassXP: Math.max(0, Number(localProfile.sharkPassXP) || 0),
             sharkPassSeasonId: localProfile.sharkPassSeasonId || SHARK_PASS_ACTIVE_SEASON_ID,
             crateInventory: normalizeCrateInventory(localProfile.crateInventory),
             cratesOpened: Math.max(0, Number(localProfile.cratesOpened) || 0),
             streakShields: getStreakShieldCount(localProfile),
             instantCrateOpen: getCrateInstantOpenEnabled(localProfile),
-            pearls: getPearlCount(localProfile),
+            pearls: getPearlCount(localProfile) + SIGN_UP_BONUS_PEARLS,
+            signUpBonusPearls: SIGN_UP_BONUS_PEARLS,
+            signUpBonusClaimed: true,
             pearlBoostExpiresAt: getPearlBoostExpiresAt(localProfile),
             seasonXpBoosts: getSeasonXpBoosts(localProfile),
             username: username,
             email: email,
-            avatar: "🦈",
+            avatar: "\u{1F988}",
             totalXP: _totalXP,
             gamesPlayed: _gamesPlayed,
             wins: _wins,
@@ -9314,22 +11710,26 @@ async function signupUser() {
             unlockedPfps: _unlockedPfps,
             claimedAchievements: Array.isArray(_claimedAchievements) ? _claimedAchievements : [],
             unlockedAchievements: Array.isArray(_unlockedAchievements) ? _unlockedAchievements : [],
+            showcasedAchievements: Array.isArray(_showcasedAchievements) ? _showcasedAchievements : [],
             redeemedCodes: getRedeemedCodes(),
             loginStreak: _loginProgress.loginStreak,
             currentLoginDay: _loginProgress.currentLoginDay,
             lastLoginDate: _loginProgress.lastLoginDate,
             dailyLoginModalShownToday: _loginProgress.dailyLoginModalShownToday,
-            createdAt: new Date()
+            createdAt: new Date(),
+            lastUpdated: new Date()
         };
         await userRef.set(newProfile);
 
         errorEl.style.display = "none";
+        showNotification(`Account created! +${SIGN_UP_BONUS_PEARLS} pearls signup bonus.`, "success");
         closeLoginModal();
         loadUserProfile();
     } catch (error) {
-        errorEl.textContent = error.message || "Account creation failed. Please try again.";
+        const message = getFriendlyAuthErrorMessage(error, "Account creation failed. Please try again.");
+        errorEl.textContent = message;
         errorEl.style.display = "block";
-        showNotification('Signup failed: ' + (error.message || 'Unknown error'), 'error');
+        showNotification(message, 'error');
     } finally {
         if (signupSubmitBtn) {
             signupSubmitBtn.disabled = false;
@@ -9352,6 +11752,7 @@ function logoutUser() {
 function openLoginModal() {
     const loginModal = document.getElementById("loginModal");
     if (loginModal) {
+        switchToLogin();
         loginModal.classList.remove("hidden");
     }
 }
@@ -9388,7 +11789,7 @@ async function openProfileModal() {
         return;
     }
     // Reload profile data when opening modal
-    await loadUserProfile().catch(err => console.error("Error loading profile:", err));
+    await loadUserProfile().catch(err => console.error("\u{274C} Error loading profile:", err));
     if (document.getElementById("username-edit-container")) {
         cancelUsernameEdit();
     }
@@ -9407,13 +11808,18 @@ window.openProfileModal = openProfileModal;
 
 async function openUserProfileModal(uid) {
     if (!uid || !currentUser) return;
+    const modal = document.getElementById("friendProfileModal");
+    if (!modal) {
+        showNotification("Friend profiles are unavailable on this page.", "error", 3000);
+        return;
+    }
     const profileData = await getUserProfileForUid(uid);
     if (!profileData) {
         showNotification('Unable to load user profile', 'error', 3000);
         return;
     }
     updateFriendProfileDisplay(profileData, uid);
-    document.getElementById("friendProfileModal").classList.remove("hidden");
+    modal.classList.remove("hidden");
 }
 
 function updateFriendProfileDisplay(profileData, uid) {
@@ -9504,16 +11910,21 @@ function closeAdminAbuseModal() {
 
 function openBadgeModal() {
     if (!currentUser) return;
+    const modal = document.getElementById("badgeModal");
+    if (!modal) {
+        showNotification("Badges are unavailable on this page.", "error", 3000);
+        return;
+    }
     renderBadgeSelection();
-    document.getElementById("badgeModal").classList.remove("hidden");
+    modal.classList.remove("hidden");
 }
 
 function closeBadgeModal() {
-    document.getElementById("badgeModal").classList.add("hidden");
+    document.getElementById("badgeModal")?.classList.add("hidden");
 }
 
 function closeFriendProfileModal() {
-    document.getElementById("friendProfileModal").classList.add("hidden");
+    document.getElementById("friendProfileModal")?.classList.add("hidden");
 }
 
 async function refreshProfilePicPicker() {
@@ -9551,7 +11962,7 @@ function openProfilePicModal() {
 }
 
 function closeProfilePicModal() {
-    document.getElementById("profilePicModal").classList.add("hidden");
+    document.getElementById("profilePicModal")?.classList.add("hidden");
 }
 
 function switchToLogin() {
@@ -9570,35 +11981,36 @@ function switchToSignup() {
 
 async function setProfilePicture(picturePath) {
     if (!currentUser) return;
+    const safePicturePath = sanitizeProfilePicturePath(picturePath, "images/pfp/shark1.png");
 
     try {
         // Update localStorage immediately
         const profileData = getCurrentProfileData();
-        profileData.profilePicture = picturePath;
-        profileData.profilePic = picturePath;
+        profileData.profilePicture = safePicturePath;
+        profileData.profilePic = safePicturePath;
         saveUserProfileLocally(profileData);
 
         // Update UI immediately
         const profilePic = document.getElementById("profile-pic");
-        if (profilePic) profilePic.src = picturePath;
+        if (profilePic) profilePic.src = safePicturePath;
         const navProfilePic = document.getElementById("nav-profile-pic");
-        if (navProfilePic) navProfilePic.src = picturePath;
+        if (navProfilePic) navProfilePic.src = safePicturePath;
 
         // Save to Firebase
         const statsRef = db.collection("userStats").doc(currentUser.uid);
         await statsRef.set({
-            profilePicture: picturePath,
-            profilePic: picturePath,
+            profilePicture: safePicturePath,
+            profilePic: safePicturePath,
             lastUpdated: Date.now()
         }, { merge: true });
 
-        updateProfilePicPickerPreview(picturePath);
+        updateProfilePicPickerPreview(safePicturePath);
         renderProfilePicPicker();
         renderProfileInventoryUI(profileData);
-        const equippedEntry = findProfilePicCatalogEntry(buildProfilePicPickerCatalog(), picturePath);
+        const equippedEntry = findProfilePicCatalogEntry(buildProfilePicPickerCatalog(), safePicturePath);
         showNotification(`${equippedEntry?.name || "Portrait"} equipped.`, "success", 2400);
     } catch (error) {
-        console.error("Error setting profile picture:", error);
+        console.error("\u{274C} Error setting profile picture:", error);
         showNotification("Could not update profile picture. Try again.", "error", 3200);
     }
 }
@@ -9619,6 +12031,7 @@ let pfpPickerControlsBound = false;
 function inferPfpRarityFromPath(imagePath = "") {
     if (/leaderPfp\/Shark19\.png$/i.test(imagePath)) return "legendary";
     if (/leaderPfp\/(Daily|Monthly)\//i.test(imagePath)) return "rare";
+    if (/loginPfp\/Login2\/BarndoorSkate\.png$/i.test(imagePath)) return "rare";
     if (/loginPfp/i.test(imagePath) || imagePath === SPIN_WHEEL_LEGENDARY_PFP.imagePath) return "legendary";
     if (/codePfp/i.test(imagePath)) return "special";
     if (/levelPfp\/Shark16\.png$/i.test(imagePath)) return "legendary";
@@ -9628,6 +12041,10 @@ function inferPfpRarityFromPath(imagePath = "") {
     if (seasonalMatch) {
         return ({ 1: "common", 2: "rare", 3: "epic", 4: "legendary" })[Number(seasonalMatch[1])] || "common";
     }
+    if (/cratePfp\/cosmeticCrate2\/CobblerWobbegong\.png$/i.test(imagePath)) return "common";
+    if (/cratePfp\/cosmeticCrate2\/JapaneseSawShark\.png$/i.test(imagePath)) return "rare";
+    if (/cratePfp\/cosmeticCrate2\/PelagicStingray\.png$/i.test(imagePath)) return "epic";
+    if (/cratePfp\/cosmeticCrate2\/WhiptailStingray\.png$/i.test(imagePath)) return "legendary";
     if (/cratePfp\/Shark24\.png$/i.test(imagePath)) return "common";
     if (/cratePfp\/Shark25\.png$/i.test(imagePath)) return "rare";
     if (/cratePfp\/Shark23\.png$/i.test(imagePath)) return "epic";
@@ -9657,16 +12074,70 @@ function getPfpCategoryLabel(category) {
     })[category] || "Portrait";
 }
 
+function getSharkPassRewardSourceLabel(reward = null, fallbackLevel = null) {
+    const level = reward?.level ?? fallbackLevel;
+    const levelCopy = Number.isFinite(Number(level)) ? ` Lv. ${level}` : "";
+    if (reward && sharkPassRewards.includes(reward)) return `Shark Pass 2${levelCopy}`;
+    return `Shark Pass 1${levelCopy}`;
+}
+
+function getPassNumberFromSource(source = "") {
+    const lower = String(source || "").toLowerCase();
+    if (lower.includes("shark pass 2") || lower.includes("pass 2")) return 2;
+    if (lower.includes("shark pass 1") || lower.includes("pass 1")) return 1;
+    return 99;
+}
+
+function getCosmeticPassSortMeta(item = {}) {
+    const source = item.source || "";
+    const parsedLevel = String(source).match(/(?:lv\.?|level)\s*(\d+)/i);
+    const passLevel = Number(item.passLevel ?? item.levelRequired ?? item.level ?? parsedLevel?.[1]);
+    const passNumber = Number(item.passNumber ?? getPassNumberFromSource(source));
+    return {
+        passLevel: Number.isFinite(passLevel) ? passLevel : Number.MAX_SAFE_INTEGER,
+        passNumber: Number.isFinite(passNumber) ? passNumber : 99
+    };
+}
+
+function isPassCosmetic(item = {}) {
+    return normalizeCosmeticFilterValue(item.category) === "pass" || String(item.source || "").toLowerCase().includes("pass");
+}
+
+function getCrateSourceLabelFromPath(imagePath = "") {
+    const path = String(imagePath || "");
+    if (/cratePfp\/SummerPfp/i.test(path)) return "Summer Crate";
+    if (/cratePfp\/ChristmasPfp/i.test(path)) return "Christmas Crate";
+    if (/cratePfp\/HalloweenPfp/i.test(path)) return "Halloween Crate";
+    if (/cratePfp\/cosmeticCrate2/i.test(path)) return "Cosmetic Crate 2";
+    if (/cratePfp/i.test(path)) return "Cosmetic Crate 1";
+    return "Cosmetic Crate";
+}
+
+function getCrateRewardSourceLabel(reward = {}) {
+    const id = String(reward?.id || "");
+    if (/summer/i.test(id)) return "Summer Crate";
+    if (/christmas/i.test(id)) return "Christmas Crate";
+    if (/halloween/i.test(id)) return "Halloween Crate";
+    if (reward?.imagePath) return getCrateSourceLabelFromPath(reward.imagePath);
+    if (legacyCrate1RewardPool.some(crateReward => crateReward.id === id)) return "Cosmetic Crate 1";
+    if (summerCrateRewardPool.some(crateReward => crateReward.id === id)) return "Summer Crate";
+    if (christmasCrateRewardPool.some(crateReward => crateReward.id === id)) return "Christmas Crate";
+    if (halloweenCrateRewardPool.some(crateReward => crateReward.id === id)) return "Halloween Crate";
+    if (crateRewardPool.some(crateReward => crateReward.id === id)) return "Cosmetic Crate 2";
+    return "Cosmetic Crate";
+}
+
 function getCosmeticSourceLabel(cosmetic = {}) {
     if (cosmetic.source) return cosmetic.source;
     if (isLeaderRewardPfp(cosmetic) || cosmetic.name === "Port Jackson Shark") return "All-time leaderboard top 3";
     if (/leaderPfp\/Daily/i.test(cosmetic.imagePath || "")) return "Daily leaderboard #1";
     if (/leaderPfp\/Monthly/i.test(cosmetic.imagePath || "")) return "Monthly leaderboard #1";
     if (/codePfp/i.test(cosmetic.imagePath || "")) return "Redeem code reward";
-    if (/loginPfp/i.test(cosmetic.imagePath || "")) return "Day 7 login reward";
+    if (/loginPfp\/Login2/i.test(cosmetic.imagePath || "")) return "Login Reward 2";
+    if (/loginPfp/i.test(cosmetic.imagePath || "")) return "Login Reward 1";
     if ((cosmetic.imagePath || "") === SPIN_WHEEL_LEGENDARY_PFP.imagePath || cosmetic.spinReward) return "Daily win wheel";
-    if (/cratePfp/i.test(cosmetic.imagePath || "")) return "Cosmetic crate";
-    if (cosmetic.level) return `Shark Pass level ${cosmetic.level}`;
+    if (/cratePfp/i.test(cosmetic.imagePath || "")) return getCrateSourceLabelFromPath(cosmetic.imagePath);
+    if (cosmetic.level) return getSharkPassRewardSourceLabel(null, cosmetic.level);
     return "Special reward";
 }
 
@@ -9680,10 +12151,11 @@ function isCosmeticUnlocked(earnedCosmetics, imagePath, name) {
 function buildProfilePicPickerCatalog() {
     const profileData = getCurrentProfileData();
     const earnedCosmetics = Array.isArray(profileData.earnedCosmetics) ? profileData.earnedCosmetics : [];
-    const totalXP = profileData.totalXP !== undefined
+    const accountXP = profileData.totalXP !== undefined
         ? profileData.totalXP
         : parseInt(localStorage.getItem("totalXP"), 10) || parseInt(localStorage.getItem("totalGuesses"), 10) || 0;
-    const userLevel = getLevelFromXP(totalXP);
+    const accountLevel = getLevelFromXP(accountXP);
+    const passLevel = getCurrentPlayerLevel(profileData);
     const catalog = [];
     const seen = new Set();
 
@@ -9697,6 +12169,8 @@ function buildProfilePicPickerCatalog() {
             source: entry.source || getCosmeticSourceLabel(entry),
             unlocked: entry.unlocked !== false,
             levelRequired: entry.levelRequired || null,
+            passLevel: entry.passLevel ?? entry.levelRequired ?? entry.level ?? null,
+            passNumber: entry.passNumber ?? getPassNumberFromSource(entry.source),
             rarity: entry.rarity || inferPfpRarityFromPath(entry.imagePath),
             isLeader: Boolean(entry.isLeader)
         });
@@ -9720,9 +12194,11 @@ function buildProfilePicPickerCatalog() {
                 imagePath: reward.imagePath,
                 name: reward.name,
                 category: "pass",
-                source: `Shark Pass level ${reward.level}`,
-                unlocked: userLevel >= reward.level || isCosmeticUnlocked(earnedCosmetics, reward.imagePath, reward.name),
+                source: getSharkPassRewardSourceLabel(reward),
+                unlocked: passLevel >= reward.level || isCosmeticUnlocked(earnedCosmetics, reward.imagePath, reward.name),
                 levelRequired: reward.level,
+                passLevel: reward.level,
+                passNumber: 2,
                 rarity: reward.rarity || inferPfpRarityFromPath(reward.imagePath)
             });
         });
@@ -9732,9 +12208,11 @@ function buildProfilePicPickerCatalog() {
             imagePath: reward.imagePath,
             name: reward.name,
             category: "pass",
-            source: `Shark Pass level ${reward.level}`,
-            unlocked: userLevel >= reward.level || isCosmeticUnlocked(earnedCosmetics, reward.imagePath, reward.name),
+            source: getSharkPassRewardSourceLabel(null, reward.level),
+            unlocked: accountLevel >= reward.level || isCosmeticUnlocked(earnedCosmetics, reward.imagePath, reward.name),
             levelRequired: reward.level,
+            passLevel: reward.level,
+            passNumber: 1,
             rarity: inferPfpRarityFromPath(reward.imagePath)
         });
     });
@@ -9750,7 +12228,8 @@ function buildProfilePicPickerCatalog() {
         { imagePath: "images/leaderPfp/Monthly/Shark1.png", name: "Whitetip Reef Shark", source: "Monthly leaderboard #1" },
         { imagePath: "images/leaderPfp/Shark19.png", name: "Port Jackson Shark", source: "All-time leaderboard top 3", isLeader: true },
         { imagePath: SPIN_WHEEL_LEGENDARY_PFP.imagePath, name: SPIN_WHEEL_LEGENDARY_PFP.name, source: "Daily win wheel" },
-        { imagePath: "images/loginPfp/Shark20.png", name: "Bull Shark", source: "Day 7 login reward" }
+        { imagePath: "images/loginPfp/Login2/BarndoorSkate.png", name: "Barndoor Skate", source: "Login Reward 2" },
+        { imagePath: "images/loginPfp/Shark20.png", name: "Bull Shark", source: "Login Reward 1" }
     ];
 
     specialRewardDefs.forEach(def => {
@@ -9772,7 +12251,7 @@ function buildProfilePicPickerCatalog() {
                 imagePath: reward.imagePath,
                 name: reward.name,
                 category: "crate",
-                source: `${reward.name.includes("Summer") || reward.imagePath.includes("SummerPfp") ? "Summer" : reward.imagePath.includes("ChristmasPfp") ? "Christmas" : reward.imagePath.includes("HalloweenPfp") ? "Halloween" : "Cosmetic"} crate`,
+                source: getCrateRewardSourceLabel(reward),
                 unlocked: true,
                 rarity: reward.rarity || inferPfpRarityFromPath(reward.imagePath)
             });
@@ -9891,15 +12370,15 @@ function renderProfilePicPicker() {
         card.className = `pfp-option rarity-${entry.rarity}${entry.unlocked ? "" : " pfp-option-locked"}`;
         if (entry.imagePath === equippedPath) card.classList.add("active");
         card.title = entry.unlocked
-            ? `${entry.name} — ${entry.source}`
+            ? `${entry.name} \u2014 ${entry.source}`
             : `Unlock at Shark Pass level ${entry.levelRequired}`;
 
         card.innerHTML = `
             <span class="pfp-option-kicker">${getPfpCategoryLabel(entry.category)}</span>
             <span class="pfp-option-frame rarity-${entry.rarity}${entry.isLeader ? " is-leader" : ""}">
-                ${entry.isLeader ? '<span class="pfp-option-crown">👑</span>' : ""}
+                ${entry.isLeader ? '<span class="pfp-option-crown">\u{1F451}</span>' : ""}
                 <img src="${entry.imagePath}" alt="${entry.name}" loading="lazy" onerror="this.onerror=null;this.src='images/pfp/shark1.png';">
-                ${entry.unlocked ? "" : '<span class="pfp-option-lock" aria-hidden="true">🔒</span>'}
+                ${entry.unlocked ? "" : '<span class="pfp-option-lock" aria-hidden="true">\u{1F512}</span>'}
             </span>
             <span class="pfp-option-name">${entry.name}</span>
             <span class="pfp-option-rarity rarity-${entry.rarity}">${entry.unlocked ? getPfpRarityLabel(entry.rarity) : `Lv. ${entry.levelRequired}`}</span>
@@ -10002,7 +12481,7 @@ async function loadEarnedCosmetics() {
             renderProfilePicPicker();
         }
     } catch (error) {
-        console.error("Error loading earned cosmetics:", error);
+        console.error("\u{274C} Error loading earned cosmetics:", error);
     }
 }
 
@@ -10054,11 +12533,11 @@ async function syncEarnedCosmetics() {
                 subtitle: `${cosmetic.name} profile picture`,
                 accent: "#61e7ff",
                 background: "linear-gradient(135deg, rgba(0, 180, 216, 0.96), rgba(9, 49, 74, 0.96))",
-                icon: "🦈"
+                icon: "\u{1F988}"
             });
         });
     } catch (error) {
-        console.error("Error syncing earned cosmetics:", error);
+        console.error("\u{274C} Error syncing earned cosmetics:", error);
     }
 }
 
@@ -10108,11 +12587,25 @@ async function syncStatsToFirebase() {
             return;
         }
 
-        // Never let a fresh/blank local cache clobber a real Firestore profile.
-        if (!hasMeaningfulProfileData(profileData) && hasRecoverableRemoteProfile(remoteData)) {
-            const recoveredProfile = mergeProfilesSafely(profileData, remoteData);
+        const localRecoveryScore = getProfileRecoveryScore(profileData);
+        const remoteRecoveryScore = getProfileRecoveryScore(remoteData);
+        if (fromServer && remoteHasData && remoteRecoveryScore > Math.max(localRecoveryScore + 1000, localRecoveryScore * 2)) {
+            console.warn("Skipping sync: Firestore profile is stronger than local cache. Restoring local cache from Firestore.");
+            const recoveredProfile = mergeProfilesSafely({}, remoteData, { preferRemote: true });
             storeLoginProgressLocally(recoveredProfile, authUser.uid);
             saveUserProfileLocally(recoveredProfile, { skipRemoteSync: true, preserveLastUpdated: true });
+            await syncFullUserProfileToFirebase(recoveredProfile);
+            updateProfileDisplay(recoveredProfile);
+            updateIndexStats();
+            return;
+        }
+
+        // Never let a fresh/blank local cache clobber a real Firestore profile.
+        if (!hasMeaningfulProfileData(profileData) && hasRecoverableRemoteProfile(remoteData)) {
+            const recoveredProfile = mergeProfilesSafely({}, remoteData, { preferRemote: true });
+            storeLoginProgressLocally(recoveredProfile, authUser.uid);
+            saveUserProfileLocally(recoveredProfile, { skipRemoteSync: true, preserveLastUpdated: true });
+            await syncFullUserProfileToFirebase(recoveredProfile);
             updateProfileDisplay(recoveredProfile);
             updateIndexStats();
             return;
@@ -10124,7 +12617,8 @@ async function syncStatsToFirebase() {
             return;
         }
 
-        const mergedProfile = mergeProfilesSafely(profileData, remoteData);
+        // Local profile is the candidate being synced; remote-only preference here would discard fresh wins/progress before upload.
+        const mergedProfile = mergeProfilesSafely(profileData, remoteData, { preferRemote: false });
         const mergedClaimedAchievements = getMergedUniqueIds(
             JSON.parse(localStorage.getItem("claimedAchievements") || "[]"),
             remoteData.claimedAchievements
@@ -10133,15 +12627,22 @@ async function syncStatsToFirebase() {
             JSON.parse(localStorage.getItem("unlockedAchievements") || "[]"),
             remoteData.unlockedAchievements
         );
+        const mergedShowcasedAchievements = getMergedUniqueIds(
+            JSON.parse(localStorage.getItem("showcasedAchievements") || "[]"),
+            remoteData.showcasedAchievements,
+            mergedProfile.showcasedAchievements
+        ).filter(achievementId => mergedClaimedAchievements.includes(achievementId)).slice(0, PROFILE_ACHIEVEMENT_SHOWCASE_LIMIT);
         const mergedLoginProgress = mergeLoginProgress(getLoginProgressFromLocalStorage(authUser.uid), remoteData);
         storeLoginProgressLocally(mergedLoginProgress, authUser.uid);
-        
+        mergedProfile.showcasedAchievements = mergedShowcasedAchievements;
+
         // base stats
         const stats = {
             uid: authUser.uid,
             email: authUser.email,
-            avatar: mergedProfile.avatar || "🦈",
+            avatar: mergedProfile.avatar || "\u{1F988}",
             totalXP: mergedProfile.totalXP || 0,
+            games: mergedProfile.gamesPlayed || 0,
             // keep totalGuesses for backwards compatibility/analytics
             totalGuesses: mergedProfile.totalGuesses || 0,
             gamesPlayed: mergedProfile.gamesPlayed || 0,
@@ -10150,6 +12651,7 @@ async function syncStatsToFirebase() {
             averageGuesses: mergedProfile.averageGuesses || 0,
             bestGame: mergedProfile.bestGame || 0,
             currentStreak: mergedProfile.currentStreak || 0,
+            currentLossStreak: mergedProfile.currentLossStreak || 0,
             highestStreak: mergedProfile.highestStreak || 0,
             duelGames: mergedProfile.duelGames || 0,
             duelWins: mergedProfile.duelWins || 0,
@@ -10170,6 +12672,11 @@ async function syncStatsToFirebase() {
             communityBossRewards: mergedProfile.communityBossRewards && typeof mergedProfile.communityBossRewards === "object"
                 ? mergedProfile.communityBossRewards
                 : {},
+            referralRewards: mergedProfile.referralRewards && typeof mergedProfile.referralRewards === "object"
+                ? mergedProfile.referralRewards
+                : {},
+            socialRewardsClaimed: getClaimedSocialRewards(mergedProfile),
+            lostTreasures: mergeLostTreasuresStates(mergedProfile, remoteData),
             sharkPassMissionClaims: mergedProfile.sharkPassMissionClaims && typeof mergedProfile.sharkPassMissionClaims === "object"
                 ? mergedProfile.sharkPassMissionClaims
                 : {},
@@ -10179,6 +12686,8 @@ async function syncStatsToFirebase() {
             sharkPassLevelRewardClaims: Array.isArray(mergedProfile.sharkPassLevelRewardClaims)
                 ? mergedProfile.sharkPassLevelRewardClaims
                 : [],
+            sharkPassProgressSeasonId: mergedProfile.sharkPassProgressSeasonId || SHARK_PASS_ACTIVE_SEASON_ID,
+            sharkPassXP: Math.max(0, Number(mergedProfile.sharkPassXP) || 0),
             sharkPassSeasonId: mergedProfile.sharkPassSeasonId || SHARK_PASS_ACTIVE_SEASON_ID,
             crateInventory: normalizeCrateInventory(mergedProfile.crateInventory),
             lastUpdated: new Date()
@@ -10224,7 +12733,7 @@ async function syncStatsToFirebase() {
         stats.winPeriodVersion = 2;
 
         Object.assign(stats, buildCosmeticSyncPayload(mergedProfile));
-        
+
         // shark pass related values
         const totalXP = mergedProfile.totalXP || 0;
         const currentLevel = getLevelFromXP(totalXP);
@@ -10243,6 +12752,7 @@ async function syncStatsToFirebase() {
         // Sync achievements to Firebase
         stats.claimedAchievements = mergedClaimedAchievements;
         stats.unlockedAchievements = mergedUnlockedAchievements;
+        stats.showcasedAchievements = mergedShowcasedAchievements;
         stats.redeemedCodes = getRedeemedCodes();
         stats.loginStreak = mergedLoginProgress.loginStreak;
         stats.currentLoginDay = mergedLoginProgress.currentLoginDay;
@@ -10266,11 +12776,13 @@ async function syncStatsToFirebase() {
 
         // Save stats to userStats collection
         await statsRef.set(stats, { merge: true });
-        
+
         Object.assign(mergedProfile, stats);
+        await syncFullUserProfileToFirebase(mergedProfile);
         saveUserProfileLocally(mergedProfile, { skipRemoteSync: true });
         localStorage.setItem("claimedAchievements", JSON.stringify(mergedClaimedAchievements));
         localStorage.setItem("unlockedAchievements", JSON.stringify(mergedUnlockedAchievements));
+        localStorage.setItem("showcasedAchievements", JSON.stringify(mergedShowcasedAchievements));
                 // Update navbar profile pic if it exists
         const navProfilePic = document.getElementById("nav-profile-pic");
         if (navProfilePic) navProfilePic.src = mergedProfile.profilePicture;
@@ -10282,7 +12794,7 @@ async function syncStatsToFirebase() {
         // Update the main page stats display after syncing
         updateIndexStats();
     } catch (error) {
-        console.error("Error syncing stats:", error);
+        console.error("\u{274C} Error syncing stats:", error);
         if (!navigator.onLine) {
             console.log('Sync failed: offline');
         } else {
@@ -10321,30 +12833,26 @@ async function syncAllFirestoreData() {
     }
 }
 
-// Navigation
-function navigate(page){
-    window.location.href = typeof resolveAppPath === "function" ? resolveAppPath(page) : page;
-}
-
 // ===== DAILY LOGIN & XP SYSTEM =====
 
 // Daily login rewards - 7 day cycle
 const DAY_7_LOGIN_PFP = {
-    name: "Bull Shark",
-    imagePath: "images/loginPfp/Shark20.png",
+    id: "login-pfp-barndoor-skate",
+    name: "Barndoor Skate",
+    imagePath: "images/loginPfp/Login2/BarndoorSkate.png",
     loginReward: true,
     day: 7,
     rarity: "rare"
 };
 
 const dailyRewards = [
-    { day: 1, xp: 50, emoji: '1️⃣' },
-    { day: 2, xp: 60, emoji: '2️⃣' },
-    { day: 3, xp: 70, emoji: '3️⃣' },
-    { day: 4, xp: 80, emoji: '4️⃣' },
-    { day: 5, xp: 90, emoji: '5️⃣' },
-    { day: 6, xp: 100, emoji: '6️⃣' },
-    { day: 7, xp: 500, emoji: '🏆', isBig: true, cosmetics: [DAY_7_LOGIN_PFP] }
+    { day: 1, xp: 50, emoji: "1\uFE0F\u20E3" },
+    { day: 2, xp: 60, emoji: "2\uFE0F\u20E3" },
+    { day: 3, xp: 70, emoji: "3\uFE0F\u20E3" },
+    { day: 4, xp: 80, emoji: "4\uFE0F\u20E3" },
+    { day: 5, xp: 90, emoji: "5\uFE0F\u20E3" },
+    { day: 6, xp: 100, emoji: "6\uFE0F\u20E3" },
+    { day: 7, xp: 500, emoji: "\u{1F3C6}", isBig: true, cosmetics: [DAY_7_LOGIN_PFP] }
 ];
 
 async function ensureLoginStreakRewards() {
@@ -10359,6 +12867,7 @@ async function ensureLoginStreakRewards() {
         : JSON.parse(localStorage.getItem("userProfile") || "{}");
     const earnedCosmetics = Array.isArray(profileData.earnedCosmetics) ? [...profileData.earnedCosmetics] : [];
     const alreadyUnlocked = earnedCosmetics.some(cosmetic =>
+        cosmetic?.id === DAY_7_LOGIN_PFP.id ||
         cosmetic?.name === DAY_7_LOGIN_PFP.name || cosmetic?.imagePath === DAY_7_LOGIN_PFP.imagePath
     );
 
@@ -10390,7 +12899,7 @@ async function ensureLoginStreakRewards() {
         subtitle: `${DAY_7_LOGIN_PFP.name} profile picture`,
         accent: "#ffd700",
         background: "linear-gradient(135deg, rgba(255, 215, 0, 0.96), rgba(112, 83, 0, 0.96))",
-        icon: "🏆"
+        icon: "\u{1F3C6}"
     });
 
     return true;
@@ -10421,10 +12930,10 @@ async function initializeDailyLogin() {
         // Calculate next day (keeps incrementing)
         let nextDay = currentLoginDay;
         let streak = 1;
-        
+
         if (lastLoginDate) {
             const daysDiff = getCalendarDayDifference(lastLoginDate, today);
-            
+
             if (daysDiff === 1) {
                 // User logged in yesterday, advance the day
                 nextDay = currentLoginDay + 1;
@@ -10511,7 +13020,7 @@ function showDailyLoginModal(currentDay, xpGained) {
     const modal = document.getElementById("dailyLoginModal");
     const grid = document.getElementById("daily-rewards-grid");
     const day7Container = document.getElementById("day-7-reward");
-    
+
     if (!modal || !grid || !day7Container) return; // Element doesn't exist on this page
 
     grid.innerHTML = '';
@@ -10523,9 +13032,10 @@ function showDailyLoginModal(currentDay, xpGained) {
     // Calculate position in current 7-day cycle
     const positionInCycle = (currentDay - 1) % 7 + 1;
     const cycleEndDay = currentDay + (7 - positionInCycle);
-    const bullSharkUnlocked = (() => {
+    const day7LoginRewardUnlocked = (() => {
         const profileData = getCurrentProfileData();
         return Array.isArray(profileData.earnedCosmetics) && profileData.earnedCosmetics.some(cosmetic =>
+            cosmetic?.id === DAY_7_LOGIN_PFP.id ||
             cosmetic?.name === DAY_7_LOGIN_PFP.name || cosmetic?.imagePath === DAY_7_LOGIN_PFP.imagePath
         );
     })();
@@ -10535,7 +13045,7 @@ function showDailyLoginModal(currentDay, xpGained) {
         const reward = dailyRewards[i - 1];
         const isClaimed = i < positionInCycle || (i === positionInCycle && !isNewClaim);
         const isAvailable = i === positionInCycle && isNewClaim;
-        
+
         const dayCard = document.createElement("div");
         dayCard.style.cssText = `
             padding: 15px;
@@ -10546,29 +13056,29 @@ function showDailyLoginModal(currentDay, xpGained) {
             cursor: ${isAvailable ? 'pointer' : 'default'};
             transition: all 0.3s ease;
         `;
-        
+
         if (isAvailable) {
             dayCard.style.boxShadow = '0 0 15px rgba(0, 180, 216, 0.5)';
         }
-        
+
         dayCard.innerHTML = `
             <div style="font-size: 24px; margin-bottom: 8px;">${reward.emoji}</div>
             <div style="font-size: 14px; color: #4dd0e1; font-weight: 600;">${reward.xp} XP</div>
-            <div style="font-size: 12px; color: #888; margin-top: 5px;">${isClaimed ? '✓ Claimed' : isAvailable ? 'Available Today!' : 'Locked'}</div>
+            <div style="font-size: 12px; color: #888; margin-top: 5px;">${isClaimed ? '\u2713 Claimed' : isAvailable ? 'Available Today!' : 'Locked'}</div>
         `;
-        
+
         if (isAvailable) {
             dayCard.onclick = () => claimDailyReward(i);
         }
-        
+
         grid.appendChild(dayCard);
     }
 
     const day7Reward = dailyRewards[6];
     const isDay7Claimed = 7 < positionInCycle || (7 === positionInCycle && !isNewClaim);
     const isDay7Available = 7 === positionInCycle && isNewClaim;
-    const shouldShowBullReward = !bullSharkUnlocked && currentDay <= 7;
-    
+    const shouldShowDay7LoginReward = !day7LoginRewardUnlocked && currentDay <= 7;
+
     const day7Card = document.createElement("div");
     day7Card.style.cssText = `
         padding: 25px;
@@ -10580,13 +13090,13 @@ function showDailyLoginModal(currentDay, xpGained) {
         transition: all 0.3s ease;
         min-width: 150px;
     `;
-    
+
     if (isDay7Available) {
         day7Card.style.boxShadow = '0 0 25px rgba(255, 215, 0, 0.8)';
         day7Card.style.transform = 'scale(1.05)';
     }
-    
-    const day7BonusMarkup = shouldShowBullReward
+
+    const day7BonusMarkup = shouldShowDay7LoginReward
         ? [
             `<div style="margin: 10px 0 8px;">`,
             `<img src="${DAY_7_LOGIN_PFP.imagePath}" alt="PFP ${DAY_7_LOGIN_PFP.name}" style="width: 58px; height: 58px; border-radius: 12px; object-fit: cover; border: 2px solid ${isDay7Available ? '#001f3f' : '#ffd700'}; box-shadow: 0 6px 16px rgba(0,0,0,0.18);">`,
@@ -10600,15 +13110,15 @@ function showDailyLoginModal(currentDay, xpGained) {
         <div style="font-size: 15px; color: ${isDay7Available ? '#001f3f' : '#ffd700'}; font-weight: 700; margin-bottom: 8px;">Day ${cycleEndDay}</div>
         <div style="font-size: 28px; color: #001f3f; font-weight: 700;">${day7Reward.xp} XP</div>
         ${day7BonusMarkup}
-        <div style="font-size: 14px; color: ${isDay7Available ? '#001f3f' : '#888'}; margin-top: 8px; font-weight: 600;">${isDay7Claimed ? '✓ Claimed' : isDay7Available ? 'MEGA REWARD!' : 'Locked'}</div>
+        <div style="font-size: 14px; color: ${isDay7Available ? '#001f3f' : '#888'}; margin-top: 8px; font-weight: 600;">${isDay7Claimed ? '\u2713 Claimed' : isDay7Available ? 'MEGA REWARD!' : 'Locked'}</div>
     `;
-    
+
     if (isDay7Available) {
         day7Card.onclick = () => claimDailyReward(7);
     }
-    
+
     day7Container.appendChild(day7Card);
-    
+
     modal.classList.remove("hidden");
 }
 
@@ -10640,11 +13150,8 @@ window.closeDailyLoginModal = closeDailyLoginModal;
 
 // Load stats and streaks
 document.addEventListener("DOMContentLoaded", function() {
-    renderFactOfTheDay();
     initHomeV3Tabs();
     initHomeV3CratesButton();
-    initHomeQuickAccess();
-    initHomeQuickStats();
     // Update displayed stats from localStorage
     if (document.getElementById("games")) {
         document.getElementById("games").textContent = localStorage.getItem("games") || 0;
@@ -10679,13 +13186,13 @@ document.addEventListener("DOMContentLoaded", function() {
 });
 
 // ----- REDEEM CODE FUNCTIONS -----
-async function redeemCode() {
+async function redeemCode(inputId = "redeem-code-input", messageId = "redeem-message") {
     if (!currentUser) {
         alert("Please login first to redeem codes.");
         return;
     }
 
-    const codeInput = document.getElementById("redeem-code-input");
+    const codeInput = document.getElementById(inputId) || document.getElementById("redeem-code-input");
     if (!codeInput) {
         showNotification("Code input is unavailable right now.", "error", 3000);
         return;
@@ -10693,20 +13200,20 @@ async function redeemCode() {
     const code = codeInput.value.trim().toUpperCase();
 
     if (!code) {
-        showRedeemMessage("Please enter a code.", false);
+        showRedeemMessage("Please enter a code.", false, messageId);
         return;
     }
 
     // Check if code exists
     if (!redeemCodes[code]) {
-        showRedeemMessage("Invalid code. Please check and try again.", false);
+        showRedeemMessage("Invalid code. Please check and try again.", false, messageId);
         codeInput.value = '';
         return;
     }
 
     // Check if already redeemed
     if (hasRedeemedCode(code)) {
-        showRedeemMessage("This code has already been redeemed.", false);
+        showRedeemMessage("This code has already been redeemed.", false, messageId);
         codeInput.value = '';
         return;
     }
@@ -10795,7 +13302,7 @@ async function redeemCode() {
             rewardLines.push(`${crate.count} ${crate.name}${crate.count === 1 ? "" : "s"}`);
         });
         const rewardSummary = rewardLines.length ? rewardLines.join(" + ") : "Rewards unlocked";
-        showRedeemMessage(`✨ Success! ${rewardSummary}.`, true);
+        showRedeemMessage(`\u{2728} Success! ${rewardSummary}.`, true, messageId);
         codeInput.value = '';
 
         // Refresh profile and cosmetics
@@ -10807,13 +13314,13 @@ async function redeemCode() {
         updateSeasonalCratePanels();
 
     } catch (error) {
-        console.error("Error redeeming code:", error);
-        showRedeemMessage("An error occurred. Please try again.", false);
+        console.error("\u{274C} Error redeeming code:", error);
+        showRedeemMessage("An error occurred. Please try again.", false, messageId);
     }
 }
 
-function showRedeemMessage(message, isSuccess) {
-    const messageEl = document.getElementById("redeem-message");
+function showRedeemMessage(message, isSuccess, messageId = "redeem-message") {
+    const messageEl = document.getElementById(messageId) || document.getElementById("redeem-message");
     if (messageEl) {
         messageEl.textContent = message;
         messageEl.style.display = 'block';
@@ -10823,11 +13330,16 @@ function showRedeemMessage(message, isSuccess) {
 }
 
 function bindLockerRedeemInput() {
-    const redeemInput = document.getElementById("redeem-code-input");
-    if (!redeemInput || redeemInput.dataset.redeemBound === "true") return;
-    redeemInput.dataset.redeemBound = "true";
-    redeemInput.addEventListener("keydown", event => {
-        if (event.key === "Enter") redeemCode();
+    [
+        { inputId: "redeem-code-input", messageId: "redeem-message" },
+        { inputId: "rewards-redeem-code-input", messageId: "rewards-redeem-message" }
+    ].forEach(({ inputId, messageId }) => {
+        const redeemInput = document.getElementById(inputId);
+        if (!redeemInput || redeemInput.dataset.redeemBound === "true") return;
+        redeemInput.dataset.redeemBound = "true";
+        redeemInput.addEventListener("keydown", event => {
+            if (event.key === "Enter") redeemCode(inputId, messageId);
+        });
     });
 }
 
@@ -10841,62 +13353,62 @@ bindLockerRedeemInput();
 
 async function addStats(statsObj) {
     if (!firebase.auth().currentUser || !isDeveloperUid(firebase.auth().currentUser.uid)) {
-        console.log("❌ Access denied. This command is for developers only.");
+        console.log("? Access denied. This command is for developers only.");
         return;
     }
     if (!currentUser) {
-        console.log("❌ Error: User must be logged in");
+        console.log("? Error: User must be logged in");
         return;
     }
 
     try {
         const userProfile = getCurrentProfileData();
-        
+
         // Add to requested stats
         if (statsObj.xp) {
             userProfile.totalXP = (userProfile.totalXP || 0) + statsObj.xp;
-            console.log(`✅ Added ${statsObj.xp} XP. Total: ${userProfile.totalXP}`);
+            console.log(`? Added ${statsObj.xp} XP. Total: ${userProfile.totalXP}`);
         }
         if (statsObj.wins) {
             userProfile.wins = (userProfile.wins || 0) + statsObj.wins;
-            console.log(`✅ Added ${statsObj.wins} wins. Total: ${userProfile.wins}`);
+            console.log(`? Added ${statsObj.wins} wins. Total: ${userProfile.wins}`);
         }
         if (statsObj.losses) {
             userProfile.losses = (userProfile.losses || 0) + statsObj.losses;
-            console.log(`✅ Added ${statsObj.losses} losses. Total: ${userProfile.losses}`);
+            console.log(`? Added ${statsObj.losses} losses. Total: ${userProfile.losses}`);
         }
         if (statsObj.gamesPlayed) {
             userProfile.gamesPlayed = (userProfile.gamesPlayed || 0) + statsObj.gamesPlayed;
-            console.log(`✅ Added ${statsObj.gamesPlayed} games. Total: ${userProfile.gamesPlayed}`);
+            console.log(`? Added ${statsObj.gamesPlayed} games. Total: ${userProfile.gamesPlayed}`);
         }
         if (statsObj.totalGuesses) {
             userProfile.totalGuesses = (userProfile.totalGuesses || 0) + statsObj.totalGuesses;
-            console.log(`✅ Added ${statsObj.totalGuesses} guesses. Total: ${userProfile.totalGuesses}`);
+            console.log(`? Added ${statsObj.totalGuesses} guesses. Total: ${userProfile.totalGuesses}`);
         }
         if (statsObj.currentStreak !== undefined) {
             userProfile.currentStreak = statsObj.currentStreak;
-            console.log(`✅ Set streak to ${statsObj.currentStreak}`);
+            console.log(`? Set streak to ${statsObj.currentStreak}`);
         }
         if (statsObj.highestStreak) {
             userProfile.highestStreak = Math.max(userProfile.highestStreak || 0, statsObj.highestStreak);
-            console.log(`✅ Highest streak: ${userProfile.highestStreak}`);
+            console.log(`? Highest streak: ${userProfile.highestStreak}`);
         }
-        
+
         // Save to localStorage
         saveUserProfileLocally(userProfile);
-        
+
         // Sync to Firebase
         const statsRef = db.collection("userStats").doc(currentUser.uid);
         await statsRef.set(userProfile, { merge: true });
-        
-        console.log("✅ Stats synced to Firebase");
-        
+
+        console.log("? Stats synced to Firebase");
+
         // Refresh UI
         loadUserProfile();
         updateAuthUI();
-        
+
     } catch (error) {
-        console.error("❌ Error adding stats:", error);
+        console.error("? Error adding stats:", error);
     }
 }
 
@@ -10919,17 +13431,17 @@ async function addGuesses(amount) {
 
 async function setLevel(level) {
     if (!firebase.auth().currentUser || !isDeveloperUid(firebase.auth().currentUser.uid)) {
-        console.log("❌ Access denied. This command is for developers only.");
+        console.log("? Access denied. This command is for developers only.");
         return;
     }
     if (!currentUser) {
-        console.log("❌ Error: User must be logged in");
+        console.log("? Error: User must be logged in");
         return;
     }
 
     const targetLevel = Math.floor(Number(level));
     if (!Number.isFinite(targetLevel) || targetLevel < 1) {
-        console.log("❌ Usage: setLevel(10)");
+        console.log("? Usage: setLevel(10)");
         return;
     }
 
@@ -10948,9 +13460,9 @@ async function setLevel(level) {
         await loadUserProfile();
         updateAuthUI();
 
-        console.log(`✅ Set level to ${targetLevel}. Total XP is now ${targetXP}.`);
+        console.log(`? Set level to ${targetLevel}. Total XP is now ${targetXP}.`);
     } catch (error) {
-        console.error("❌ Error setting level:", error);
+        console.error("? Error setting level:", error);
     }
 }
 
@@ -11131,11 +13643,11 @@ async function refreshAdminVisitorInsights() {
     setAdminVisitorMetric("admin-visitors-today", dailyCounts.at(-1) || 0);
     setAdminVisitorMetric(
         "admin-visitors-average-7d",
-        sevenDayAverage.average === null ? "—" : sevenDayAverage.average.toFixed(1)
+        sevenDayAverage.average === null ? "\u2014" : sevenDayAverage.average.toFixed(1)
     );
     setAdminVisitorMetric(
         "admin-visitors-average-30d",
-        thirtyDayAverage.average === null ? "—" : thirtyDayAverage.average.toFixed(1)
+        thirtyDayAverage.average === null ? "\u2014" : thirtyDayAverage.average.toFixed(1)
     );
 
     const onlineMetric = document.getElementById("admin-visitors-online");
@@ -11798,17 +14310,17 @@ function openAdminAbuseMenu() {
 
 async function startGlobalDoubleXpEvent(hours = 72) {
     if (!firebase.auth().currentUser || !isDeveloperUid(firebase.auth().currentUser.uid)) {
-        console.log("❌ Access denied. This command is for developers only.");
+        console.log("? Access denied. This command is for developers only.");
         return null;
     }
     if (!currentUser) {
-        console.log("❌ Error: User must be logged in");
+        console.log("? Error: User must be logged in");
         return null;
     }
 
     const durationHours = Number(hours);
     if (!Number.isFinite(durationHours) || durationHours <= 0) {
-        console.log("❌ Usage: startGlobalDoubleXpEvent(72)");
+        console.log("? Usage: startGlobalDoubleXpEvent(72)");
         return null;
     }
 
@@ -11833,21 +14345,21 @@ async function startGlobalDoubleXpEvent(hours = 72) {
         globalXpEventOverride = eventConfig;
         ensureXpEventBannerTimer();
 
-        console.log(`✅ Started global 2x XP event for ${durationHours} hour${durationHours === 1 ? "" : "s"}.`);
+        console.log(`? Started global 2x XP event for ${durationHours} hour${durationHours === 1 ? "" : "s"}.`);
         return eventConfig;
     } catch (error) {
-        console.error("❌ Error starting global 2x XP event:", error);
+        console.error("? Error starting global 2x XP event:", error);
         return null;
     }
 }
 
 async function stopGlobalDoubleXpEvent() {
     if (!firebase.auth().currentUser || !isDeveloperUid(firebase.auth().currentUser.uid)) {
-        console.log("❌ Access denied. This command is for developers only.");
+        console.log("? Access denied. This command is for developers only.");
         return null;
     }
     if (!currentUser) {
-        console.log("❌ Error: User must be logged in");
+        console.log("? Error: User must be logged in");
         return null;
     }
 
@@ -11868,27 +14380,27 @@ async function stopGlobalDoubleXpEvent() {
         };
         ensureXpEventBannerTimer();
 
-        console.log("✅ Stopped the global 2x XP event.");
+        console.log("? Stopped the global 2x XP event.");
         return update;
     } catch (error) {
-        console.error("❌ Error stopping global 2x XP event:", error);
+        console.error("? Error stopping global 2x XP event:", error);
         return null;
     }
 }
 
 async function addLoginDays(days) {
     if (!firebase.auth().currentUser || !isDeveloperUid(firebase.auth().currentUser.uid)) {
-        console.log("❌ Access denied. This command is for developers only.");
+        console.log("? Access denied. This command is for developers only.");
         return;
     }
     if (!currentUser) {
-        console.log("❌ Error: User must be logged in");
+        console.log("? Error: User must be logged in");
         return;
     }
 
     const amount = Number(days);
     if (!Number.isFinite(amount) || amount <= 0) {
-        console.log("❌ Usage: addLoginDays(7)");
+        console.log("? Usage: addLoginDays(7)");
         return;
     }
 
@@ -11915,28 +14427,28 @@ async function addLoginDays(days) {
         if (typeof loadAvailablePFPs === "function") loadAvailablePFPs();
         if (typeof loadEarnedCosmetics === "function") loadEarnedCosmetics();
 
-        console.log(`✅ Added ${Math.floor(amount)} login day(s). Current login day: ${nextLoginDay}. Login streak: ${nextLoginStreak}.`);
+        console.log(`? Added ${Math.floor(amount)} login day(s). Current login day: ${nextLoginDay}. Login streak: ${nextLoginStreak}.`);
         if (nextLoginDay >= 7 || nextLoginStreak >= 7) {
-            console.log("🦈 Day 7 Bull Shark reward check completed.");
+            console.log("Day 7 Barndoor Skate reward check completed.");
         }
     } catch (error) {
-        console.error("❌ Error adding login days:", error);
+        console.error("? Error adding login days:", error);
     }
 }
 
 async function skipLoginDay(days = 1) {
     if (!firebase.auth().currentUser || !isDeveloperUid(firebase.auth().currentUser.uid)) {
-        console.log("❌ Access denied. This command is for developers only.");
+        console.log("? Access denied. This command is for developers only.");
         return;
     }
     if (!currentUser) {
-        console.log("❌ Error: User must be logged in");
+        console.log("? Error: User must be logged in");
         return;
     }
 
     const amount = Number(days);
     if (!Number.isFinite(amount) || amount <= 0) {
-        console.log("❌ Usage: skipLoginDay(1)");
+        console.log("? Usage: skipLoginDay(1)");
         return;
     }
 
@@ -11949,7 +14461,7 @@ async function skipLoginDay(days = 1) {
         simulatedLastLogin.setDate(simulatedLastLogin.getDate() - (skippedDays + 1));
         const simulatedLastLoginDate = getLocalDateKey(simulatedLastLogin);
         if (!simulatedLastLoginDate) {
-            console.log("❌ Could not generate a valid simulated login date.");
+            console.log("? Could not generate a valid simulated login date.");
             return;
         }
 
@@ -11966,21 +14478,21 @@ async function skipLoginDay(days = 1) {
 
         const currentLoginDay = parseInt(localStorage.getItem("currentLoginDay")) || 1;
         const loginStreak = parseInt(localStorage.getItem("loginStreak")) || 1;
-        console.log(`✅ Simulated skipping ${skippedDays} day(s).`);
+        console.log(`? Simulated skipping ${skippedDays} day(s).`);
         console.log(`   lastLoginDate set to ${simulatedLastLoginDate}`);
         console.log(`   Post-check login day: ${currentLoginDay}, login streak: ${loginStreak}`);
     } catch (error) {
-        console.error("❌ Error skipping login day:", error);
+        console.error("? Error skipping login day:", error);
     }
 }
 
 async function simulateNextLoginDay() {
     if (!firebase.auth().currentUser || !isDeveloperUid(firebase.auth().currentUser.uid)) {
-        console.log("❌ Access denied. This command is for developers only.");
+        console.log("? Access denied. This command is for developers only.");
         return;
     }
     if (!currentUser) {
-        console.log("❌ Error: User must be logged in");
+        console.log("? Error: User must be logged in");
         return;
     }
 
@@ -11990,7 +14502,7 @@ async function simulateNextLoginDay() {
         simulatedLastLogin.setDate(simulatedLastLogin.getDate() - 1);
         const simulatedLastLoginDate = getLocalDateKey(simulatedLastLogin);
         if (!simulatedLastLoginDate) {
-            console.log("❌ Could not generate a valid simulated login date.");
+            console.log("? Could not generate a valid simulated login date.");
             return;
         }
 
@@ -12007,18 +14519,18 @@ async function simulateNextLoginDay() {
 
         const currentLoginDay = parseInt(localStorage.getItem("currentLoginDay")) || 1;
         const loginStreak = parseInt(localStorage.getItem("loginStreak")) || 1;
-        console.log("✅ Simulated a consecutive login day.");
+        console.log("? Simulated a consecutive login day.");
         console.log(`   lastLoginDate set to ${simulatedLastLoginDate}`);
         console.log(`   Post-check login day: ${currentLoginDay}, login streak: ${loginStreak}`);
     } catch (error) {
-        console.error("❌ Error simulating next login day:", error);
+        console.error("? Error simulating next login day:", error);
     }
 }
 
 // Bulk add function for quick testing
 async function addTestStats() {
     if (!firebase.auth().currentUser || !isDeveloperUid(firebase.auth().currentUser.uid)) {
-        console.log("❌ Access denied. This command is for developers only.");
+        console.log("? Access denied. This command is for developers only.");
         return;
     }
     return addStats({
@@ -12032,17 +14544,17 @@ async function addTestStats() {
 
 async function forceRedeemCode(code) {
     if (!firebase.auth().currentUser || !isDeveloperUid(firebase.auth().currentUser.uid)) {
-        console.log("❌ Access denied. This command is for developers only.");
+        console.log("? Access denied. This command is for developers only.");
         return;
     }
     if (!currentUser) {
-        console.log("❌ Error: User must be logged in");
+        console.log("? Error: User must be logged in");
         return;
     }
 
     const codeUpper = (code || "").toUpperCase().trim();
     if (!redeemCodes[codeUpper]) {
-        console.log(`❌ Code "${codeUpper}" does not exist.`);
+        console.log(`? Code "${codeUpper}" does not exist.`);
         return;
     }
 
@@ -12111,7 +14623,7 @@ async function forceRedeemCode(code) {
             await statsRef.set({ redeemedCodes: redeemedCodesList }, { merge: true });
         }
 
-        console.log(`✅ Force-redeemed code "${codeUpper}". Rewards:`);
+        console.log(`? Force-redeemed code "${codeUpper}". Rewards:`);
         if (codeReward.xp) console.log(`   XP: +${xpAward.totalXp} (new total: ${newXP})`);
         if (codeReward.cosmetics) {
             codeReward.cosmetics.forEach(c => console.log(`   Cosmetic: ${c.name}`));
@@ -12127,23 +14639,23 @@ async function forceRedeemCode(code) {
         updateSeasonalCratePanels();
 
     } catch (error) {
-        console.error("❌ Error force-redeeming code:", error);
+        console.error("? Error force-redeeming code:", error);
     }
 }
 
 async function addCrates(amount = 1) {
     if (!firebase.auth().currentUser || !isDeveloperUid(firebase.auth().currentUser.uid)) {
-        console.log("❌ Access denied. This command is for developers only.");
+        console.log("? Access denied. This command is for developers only.");
         return;
     }
     if (!currentUser) {
-        console.log("❌ Error: User must be logged in");
+        console.log("? Error: User must be logged in");
         return;
     }
 
     const count = Math.floor(Number(amount));
     if (!Number.isFinite(count) || count <= 0) {
-        console.log("❌ Usage: addCrates(3)");
+        console.log("? Usage: addCrates(3)");
         return;
     }
 
@@ -12158,25 +14670,25 @@ async function addCrates(amount = 1) {
         }, { merge: true });
         renderCratesButton();
         renderCratesModal();
-        console.log(`✅ Added ${count} Cosmetic Crate${count === 1 ? "" : "s"}. Total: ${profileData.crateInventory.reef}`);
+        console.log(`? Added ${count} Cosmetic Crate${count === 1 ? "" : "s"}. Total: ${profileData.crateInventory.reef}`);
     } catch (error) {
-        console.error("❌ Error adding crates:", error);
+        console.error("? Error adding crates:", error);
     }
 }
 
 async function addStreakShields(amount = 1) {
     if (!firebase.auth().currentUser || !isDeveloperUid(firebase.auth().currentUser.uid)) {
-        console.log("❌ Access denied. This command is for developers only.");
+        console.log("? Access denied. This command is for developers only.");
         return;
     }
     if (!currentUser) {
-        console.log("❌ Error: User must be logged in");
+        console.log("? Error: User must be logged in");
         return;
     }
 
     const count = Math.floor(Number(amount));
     if (!Number.isFinite(count) || count <= 0) {
-        console.log("❌ Usage: addStreakShields(3)");
+        console.log("? Usage: addStreakShields(3)");
         return;
     }
 
@@ -12191,11 +14703,40 @@ async function addStreakShields(amount = 1) {
         if (typeof renderConsumablesPage === "function") {
             renderConsumablesPage();
         }
-        console.log(`✅ Added ${count} Streak Shield${count === 1 ? "" : "s"}. Total: ${getStreakShieldCount(profileData)}`);
+        console.log(`? Added ${count} Streak Shield${count === 1 ? "" : "s"}. Total: ${getStreakShieldCount(profileData)}`);
     } catch (error) {
-        console.error("❌ Error adding streak shields:", error);
+        console.error("? Error adding streak shields:", error);
     }
 }
+
+async function addLostBottles(amount = 1, bottleId = "barnacle") {
+    if (!firebase.auth().currentUser || !isDeveloperUid(firebase.auth().currentUser.uid)) {
+        console.log("\u{274C} Access denied. This command is for developers only.");
+        return;
+    }
+    if (!currentUser) {
+        console.log("\u{274C} Error: User must be logged in");
+        return;
+    }
+
+    const count = Math.floor(Number(amount));
+    if (!Number.isFinite(count) || count <= 0) {
+        console.log("\u{274C} Usage: addLostBottles(5, 'barnacle')");
+        return;
+    }
+
+    try {
+        const profileData = getCurrentProfileData();
+        const result = grantLostTreasuresBottle(profileData, bottleId, count);
+        await persistLostTreasuresState(profileData);
+        renderLostTreasuresModal?.();
+        console.log(`\u{2705} Added ${count} ${result.bottle.name}${count === 1 ? "" : "s"}. Total bottles: ${getLostTreasuresBottleCount(result.state)}`);
+    } catch (error) {
+        console.error("\u{274C} Error adding Lost Treasures bottles:", error);
+    }
+}
+
+window.addLostBottles = addLostBottles;
 
 // Display current stats
 function showStats() {
@@ -12209,6 +14750,7 @@ function showStats() {
     console.log(`Current Streak: ${userProfile.currentStreak || 0}`);
     console.log(`Highest Streak: ${userProfile.highestStreak || 0}`);
     console.log(`Streak Shields: ${Math.max(0, Number(userProfile.streakShields) || 0)}`);
+    console.log(`Lost Treasures Bottles: ${getLostTreasuresBottleCount(getLostTreasuresState(userProfile))}`);
     console.log(`Login Day: ${parseInt(localStorage.getItem("currentLoginDay")) || 1}`);
     console.log(`Login Streak: ${parseInt(localStorage.getItem("loginStreak")) || 1}`);
     console.log(`Level: ${getLevelFromXP(userProfile.totalXP || 0)}`);
@@ -12239,6 +14781,7 @@ function showCommands() {
     console.log("skipLoginDay(1) - Simulate missing 1 day and re-run daily login logic");
     console.log("addCrates(3) - Add Cosmetic Crates for testing");
     console.log("addStreakShields(3) - Add Streak Shields for testing");
+    console.log("addLostBottles(5, 'barnacle') - Add Lost Treasures bottles for testing");
     console.log("giveDailySpin(5) / giveSpin(5) - Grant daily wheel spins for testing");
     console.log("resetDailySpin() - Reset today's daily spin wheel");
     console.log("unlockAllCosmetics() - Unlock all profile icons, badges, and themes");
@@ -12268,11 +14811,213 @@ function syncProfileOverviewStats(profileData = getCurrentProfileData()) {
     if (previewPic) previewPic.src = profileData.profilePicture || "images/pfp/shark1.png";
 }
 
+function renderSocialRewards(profileData = getCurrentProfileData()) {
+    const list = document.getElementById("social-rewards-list");
+    const balance = document.getElementById("social-rewards-pearls");
+    if (!list && !balance) return;
+
+    const isLoggedIn = Boolean(
+        currentUser
+        || window.currentUser
+        || (typeof firebase !== "undefined" && typeof firebase.auth === "function" && firebase.auth().currentUser)
+    );
+    const claimed = getClaimedSocialRewards(profileData);
+    if (balance) balance.textContent = isLoggedIn ? getPearlCount(profileData).toLocaleString() : "0";
+    if (!list) return;
+
+    const groupSummaries = SOCIAL_REWARD_GROUPS.map(group => {
+        const tasks = SOCIAL_REWARD_TASKS.filter(task => task.platform === group.platform);
+        const claimedCount = tasks.filter(task => claimed.includes(task.id)).length;
+        const totalPearls = tasks.reduce((sum, task) => sum + task.pearls, 0);
+        const remainingPearls = tasks
+            .filter(task => !claimed.includes(task.id))
+            .reduce((sum, task) => sum + task.pearls, 0);
+        return { ...group, tasks, claimedCount, totalPearls, remainingPearls };
+    });
+    const totalTasks = groupSummaries.reduce((sum, group) => sum + group.tasks.length, 0);
+    const totalClaimed = groupSummaries.reduce((sum, group) => sum + group.claimedCount, 0);
+    const totalAvailablePearls = groupSummaries.reduce((sum, group) => sum + group.remainingPearls, 0);
+    const firstOpenGroup = groupSummaries.find(group => group.claimedCount < group.tasks.length)?.id || groupSummaries[0]?.id || "";
+
+    list.innerHTML = `
+        <div class="social-rewards-overview">
+            <div class="social-rewards-total-card">
+                <span>Progress</span>
+                <strong>${totalClaimed}/${totalTasks}</strong>
+                <small>${totalAvailablePearls.toLocaleString()} pearls left to claim</small>
+            </div>
+            <div class="social-rewards-platform-grid">
+                ${groupSummaries.map(group => {
+                    const percent = group.tasks.length ? Math.round((group.claimedCount / group.tasks.length) * 100) : 0;
+                    return `
+                        <div class="social-rewards-platform-card social-rewards-platform-${group.id}">
+                            <i class="${group.icon}" aria-hidden="true"></i>
+                            <span>${group.label}</span>
+                            <strong>${group.claimedCount}/${group.tasks.length}</strong>
+                            <div class="social-rewards-progress" aria-hidden="true"><span style="width:${percent}%"></span></div>
+                        </div>
+                    `;
+                }).join("")}
+            </div>
+        </div>
+        ${groupSummaries.map(group => {
+        const openAttr = group.id === firstOpenGroup ? " open" : "";
+        return `
+            <details class="social-reward-group social-reward-group-${group.id}"${openAttr}>
+                <summary>
+                    <span class="social-reward-group-icon"><i class="${group.icon}" aria-hidden="true"></i></span>
+                    <span><strong>${group.label}</strong><small>${group.description}</small></span>
+                    <b>${group.claimedCount}/${group.tasks.length}</b>
+                    <i class="fa-solid fa-chevron-down" aria-hidden="true"></i>
+                </summary>
+                <div class="social-reward-group-meta">
+                    <span>${group.tasks.length} task${group.tasks.length === 1 ? "" : "s"}</span>
+                    <span><i class="fa-solid fa-gem"></i>${group.remainingPearls.toLocaleString()} unclaimed</span>
+                    <span>${group.totalPearls.toLocaleString()} total pearls</span>
+                </div>
+                <div class="social-reward-group-list">
+                    ${group.tasks.map(task => {
+                        const isClaimed = claimed.includes(task.id);
+                        return `
+                            <article class="social-reward-card ${isClaimed ? "claimed" : ""}">
+                                <i class="${task.icon}" aria-hidden="true"></i>
+                                <div class="social-reward-copy">
+                                    <span>${task.platform}</span>
+                                    <strong>${task.action}</strong>
+                                    <small>${task.description}</small>
+                                </div>
+                                <div class="social-reward-card-actions">
+                                    <div class="social-reward-prize"><i class="fa-solid fa-gem"></i>${task.pearls}</div>
+                                    <button type="button" onclick="claimSocialReward('${task.id}')" ${isClaimed || !isLoggedIn ? "disabled" : ""}>
+                                        <i class="fa-solid ${isClaimed ? "fa-check" : "fa-arrow-up-right-from-square"}" aria-hidden="true"></i>
+                                        <span>${isClaimed ? "Claimed" : "Open"}</span>
+                                    </button>
+                                </div>
+                            </article>
+                        `;
+                    }).join("")}
+                </div>
+            </details>
+        `;
+    }).join("")}
+    `;
+}
+
+let pendingSocialRewardTaskId = "";
+
+function openSocialRewardClaimPopup(task) {
+    if (!task) return;
+    pendingSocialRewardTaskId = task.id;
+    const popup = document.getElementById("socialRewardClaimPopup");
+    const icon = document.getElementById("social-reward-claim-icon");
+    const platform = document.getElementById("social-reward-claim-platform");
+    const title = document.getElementById("social-reward-claim-title");
+    const copy = document.getElementById("social-reward-claim-copy");
+    const pearls = document.getElementById("social-reward-claim-pearls");
+    if (icon) icon.className = task.icon;
+    if (platform) platform.textContent = task.platform;
+    if (title) title.textContent = "Claim your pearls?";
+    if (copy) copy.textContent = `Once you have completed "${task.action}", claim your reward here.`;
+    if (pearls) pearls.textContent = String(task.pearls);
+    popup?.classList.remove("hidden");
+}
+
+function closeSocialRewardClaimPopup() {
+    pendingSocialRewardTaskId = "";
+    document.getElementById("socialRewardClaimPopup")?.classList.add("hidden");
+}
+
+async function claimSocialReward(taskId) {
+    const task = SOCIAL_REWARD_TASKS.find(entry => entry.id === taskId);
+    if (!task) return false;
+    const authUser = typeof firebase !== "undefined" && typeof firebase.auth === "function"
+        ? firebase.auth().currentUser
+        : null;
+    if (!authUser && !currentUser && !window.currentUser) {
+        showNotification("Login to claim social rewards.", "error", 3200);
+        openLoginModal?.();
+        return false;
+    }
+
+    const profileData = getCurrentProfileData();
+    const claimed = getClaimedSocialRewards(profileData);
+    if (claimed.includes(task.id)) {
+        showNotification("That social reward is already claimed.", "info", 3000);
+        renderSocialRewards(profileData);
+        return false;
+    }
+
+    try {
+        window.open(task.url, "_blank", "noopener,noreferrer");
+    } catch (error) {
+        window.location.href = task.url;
+    }
+
+    openSocialRewardClaimPopup(task);
+    return true;
+}
+
+async function confirmSocialRewardClaim() {
+    const task = SOCIAL_REWARD_TASKS.find(entry => entry.id === pendingSocialRewardTaskId);
+    if (!task) return false;
+    const authUser = typeof firebase !== "undefined" && typeof firebase.auth === "function"
+        ? firebase.auth().currentUser
+        : null;
+    if (!authUser && !currentUser && !window.currentUser) {
+        showNotification("Login to claim social rewards.", "error", 3200);
+        closeSocialRewardClaimPopup();
+        openLoginModal?.();
+        return false;
+    }
+
+    const profileData = getCurrentProfileData();
+    const claimed = getClaimedSocialRewards(profileData);
+    if (claimed.includes(task.id)) {
+        showNotification("That social reward is already claimed.", "info", 3000);
+        closeSocialRewardClaimPopup();
+        renderSocialRewards(profileData);
+        return false;
+    }
+
+    addPearls(task.pearls, profileData, { deferSave: true, deferUiUpdate: true });
+    setClaimedSocialRewards(profileData, [...claimed, task.id]);
+    saveUserProfileLocally(profileData, { skipRemoteSync: true });
+    updateHomeV3Sidebar?.(profileData);
+    updatePearlShopUI?.();
+    renderSocialRewards(profileData);
+
+    const uid = authUser?.uid || currentUser?.uid || window.currentUser?.uid;
+    if (uid && typeof db !== "undefined") {
+        try {
+            await db.collection("userStats").doc(uid).set({
+                uid,
+                pearls: getPearlCount(profileData),
+                socialRewardsClaimed: getClaimedSocialRewards(profileData),
+                lastUpdated: new Date()
+            }, { merge: true });
+            lastServerHydratedProfileUid = uid;
+        } catch (error) {
+            console.warn("Unable to sync social reward claim:", error);
+            scheduleRemoteProfileSync?.(1200);
+        }
+    }
+
+    showNotification(`Social reward claimed: +${task.pearls} pearls.`, "success", 3600);
+    closeSocialRewardClaimPopup();
+    return true;
+}
+
+window.renderSocialRewards = renderSocialRewards;
+window.claimSocialReward = claimSocialReward;
+window.confirmSocialRewardClaim = confirmSocialRewardClaim;
+window.closeSocialRewardClaimPopup = closeSocialRewardClaimPopup;
+
 const profileInventoryFilters = {
     portraits: "all",
     badges: "all",
     themes: "all",
-    items: "all"
+    items: "all",
+    search: ""
 };
 
 const cosmeticFilterLabels = {
@@ -12313,6 +15058,12 @@ function getShortCosmeticSourceLabel(source = "Reward") {
     const label = String(source || "Reward");
     const lower = label.toLowerCase();
     if (lower.includes("starter")) return "Starter";
+    if (lower.includes("shark pass 2")) return label.replace("Shark Pass 2", "Pass 2");
+    if (lower.includes("shark pass 1")) return label.replace("Shark Pass 1", "Pass 1");
+    if (lower.includes("login reward 2")) return "Login 2";
+    if (lower.includes("login reward 1")) return "Login 1";
+    if (lower.includes("cosmetic crate 2")) return "Crate 2";
+    if (lower.includes("cosmetic crate 1")) return "Crate 1";
     if (lower.includes("summer")) return "Summer";
     if (lower.includes("christmas")) return "Christmas";
     if (lower.includes("halloween")) return "Halloween";
@@ -12333,6 +15084,7 @@ function getThemeCosmeticMeta(theme) {
     const crateReward = getAllCrateRewardPools()
         .flat()
         .find(reward => reward.type === "theme" && reward.themeId === theme.id);
+    const legacyCrate1Reward = getLegacyCrate1RewardByThemeId(theme.id);
     if (theme.id === "default") {
         return { rarity: "core", category: "starter", source: "Starter" };
     }
@@ -12340,15 +15092,15 @@ function getThemeCosmeticMeta(theme) {
         return {
             rarity: passReward?.rarity || (theme.level >= 20 ? "legendary" : theme.level >= 15 ? "epic" : "rare"),
             category: "pass",
-            source: theme.level ? `Pass Lv. ${theme.level}` : "Shark Pass"
+            source: passReward ? getSharkPassRewardSourceLabel(passReward) : getSharkPassRewardSourceLabel(null, theme.level),
+            passLevel: passReward?.level ?? theme.level,
+            passNumber: passReward ? 2 : 1
         };
     }
-    if (crateReward) {
-        const source = crateReward.id?.includes("summer") ? "Summer crate"
-            : crateReward.id?.includes("christmas") ? "Christmas crate"
-            : crateReward.id?.includes("halloween") ? "Halloween crate"
-            : "Cosmetic crate";
-        return { rarity: crateReward.rarity || "rare", category: "crate", source };
+    if (crateReward || legacyCrate1Reward) {
+        const sourceReward = crateReward || legacyCrate1Reward;
+        const source = getCrateRewardSourceLabel(sourceReward);
+        return { rarity: sourceReward.rarity || "rare", category: "crate", source };
     }
     return { rarity: "special", category: "reward", source: "Achievement" };
 }
@@ -12360,9 +15112,18 @@ function getBadgeCosmeticMeta(badge) {
     const passReward = sharkPassRewards.find(reward => reward.type === "badge" && reward.badgeId === badge.id);
     const crateReward = getAllCrateBadgeRewards().find(reward => reward.badgeId === badge.id);
     if (badge.id === "starter") return { rarity: "core", category: "starter", source: "Starter" };
-    if (passReward || badge.passLevel) return { rarity: rarityMeta.className, category: "pass", source: passReward?.level || badge.passLevel ? `Pass Lv. ${passReward?.level || badge.passLevel}` : "Shark Pass" };
-    if (crateReward) return { rarity: rarityMeta.className, category: "crate", source: "Crate" };
+    if (passReward || badge.passLevel) {
+        return {
+            rarity: rarityMeta.className,
+            category: "pass",
+            source: passReward ? getSharkPassRewardSourceLabel(passReward) : getSharkPassRewardSourceLabel(null, badge.passLevel),
+            passLevel: passReward?.level ?? badge.passLevel,
+            passNumber: passReward ? 2 : 1
+        };
+    }
+    if (crateReward) return { rarity: rarityMeta.className, category: "crate", source: getCrateRewardSourceLabel(crateReward) };
     if (badge.codeUnlock) return { rarity: rarityMeta.className, category: "code", source: "Code" };
+    if (badge.achievementReward) return { rarity: rarityMeta.className, category: "reward", source: "Achievement" };
     return { rarity: rarityMeta.className, category: "reward", source: "Reward" };
 }
 
@@ -12374,6 +15135,26 @@ function shouldShowCosmetic(item, activeFilter) {
         || normalizeCosmeticFilterValue(item.source).includes(filter);
 }
 
+function matchesCosmeticSearch(item = {}) {
+    const query = String(profileInventoryFilters.search || "").trim().toLowerCase();
+    if (!query) return true;
+    return [
+        item.name,
+        item.label,
+        item.id,
+        item.source,
+        item.category,
+        item.rarity
+    ].some(value => String(value || "").toLowerCase().includes(query));
+}
+
+function setProfileInventorySearch(query = "") {
+    profileInventoryFilters.search = String(query || "").trim().toLowerCase();
+    renderProfileInventoryUI();
+}
+
+window.setProfileInventorySearch = setProfileInventorySearch;
+
 function getCosmeticRaritySortRank(rarity = "common") {
     const order = ["core", "starter", "common", "rare", "epic", "legendary"];
     const rank = order.indexOf(normalizeCosmeticFilterValue(rarity));
@@ -12382,6 +15163,14 @@ function getCosmeticRaritySortRank(rarity = "common") {
 
 function sortCosmeticsForLocker(items) {
     return [...items].sort((a, b) => {
+        if (isPassCosmetic(a) && isPassCosmetic(b)) {
+            const aPass = getCosmeticPassSortMeta(a);
+            const bPass = getCosmeticPassSortMeta(b);
+            const levelDiff = aPass.passLevel - bPass.passLevel;
+            if (levelDiff !== 0) return levelDiff;
+            const passDiff = aPass.passNumber - bPass.passNumber;
+            if (passDiff !== 0) return passDiff;
+        }
         const rarityDiff = getCosmeticRaritySortRank(a.rarity) - getCosmeticRaritySortRank(b.rarity);
         if (rarityDiff !== 0) return rarityDiff;
         const categoryDiff = normalizeCosmeticFilterValue(a.category).localeCompare(normalizeCosmeticFilterValue(b.category));
@@ -12440,7 +15229,10 @@ function renderProfileInventoryUI(profileData = getCurrentProfileData()) {
         ensureProfileInventoryFilterBar("portraits", ["all", "starter", "pass", "crate", "reward", "common", "rare", "epic", "legendary"]);
         const normalizePath = path => String(path || "").replace(/\\/g, "/").replace(/^\.?\//, "").trim().toLowerCase();
         const equipped = normalizePath(profileData.profilePicture || profileData.profilePic || "images/pfp/shark1.png");
-        const visiblePfps = sortCosmeticsForLocker(pfps.filter(pfp => shouldShowCosmetic(pfp, profileInventoryFilters.portraits))).slice(0, 48);
+        const visiblePfps = sortCosmeticsForLocker(pfps
+            .filter(pfp => shouldShowCosmetic(pfp, profileInventoryFilters.portraits))
+            .filter(pfp => matchesCosmeticSearch(pfp))
+        ).slice(0, 48);
         pfpGrid.innerHTML = visiblePfps.map(pfp => `
             <button class="profile-inventory-card pfp rarity-${pfp.rarity || "common"} ${normalizePath(pfp.imagePath) === equipped ? "equipped" : ""}" onclick="setProfilePicture('${pfp.imagePath.replace(/'/g, "\\'")}')">
                 <img src="${pfp.imagePath}" alt="${pfp.name}">
@@ -12456,10 +15248,11 @@ function renderProfileInventoryUI(profileData = getCurrentProfileData()) {
         const equippedBadge = normalizeId(profileData.equippedBadge || getEquippedBadge?.(profileData) || "starter");
         const visibleBadges = badges
             .map(badge => ({ ...badge, ...getBadgeCosmeticMeta(badge) }))
-            .filter(badge => shouldShowCosmetic(badge, profileInventoryFilters.badges));
+            .filter(badge => shouldShowCosmetic(badge, profileInventoryFilters.badges))
+            .filter(badge => matchesCosmeticSearch(badge));
         badgeGrid.innerHTML = sortCosmeticsForLocker(visibleBadges).map(badge => `
             <button class="profile-inventory-card badge rarity-${badge.rarity} ${normalizeId(badge.id) === equippedBadge ? "equipped" : ""}" onclick="setEquippedBadge('${badge.id}')">
-                <span class="badge-mark">${badge.emoji || "🏅"}</span>
+                <span class="badge-mark">${badge.emoji || "\u{1F988}"}</span>
                 <span>${badge.name}</span>
                 <small class="cosmetic-chip-row"><b class="rarity-chip rarity-${badge.rarity}">${getCosmeticRarityLabel(badge.rarity)}</b><b class="source-chip" title="${badge.source}">${getShortCosmeticSourceLabel(badge.source)}</b></small>
             </button>
@@ -12476,13 +15269,16 @@ function renderProfileInventoryUI(profileData = getCurrentProfileData()) {
     if (crateGrid) {
         ensureProfileInventoryFilterBar("items", ["all", "crate", "item"]);
         const crates = [
-            { id: "reef", label: "Cosmetic", icon: "fa-box-open", category: "crate", rarity: "item", source: "Crate" },
-            { id: "summer", label: "Summer", icon: "fa-umbrella-beach", category: "crate", rarity: "item", source: "Crate" },
-            { id: "christmas", label: "Christmas", icon: "fa-snowflake", category: "crate", rarity: "item", source: "Crate" },
-            { id: "halloween", label: "Halloween", icon: "fa-ghost", category: "crate", rarity: "item", source: "Crate" }
+            { id: "reef", label: "Cosmetic Crate", icon: "fa-box-open", category: "crate", rarity: "item", source: "Cosmetic Crate" },
+            { id: "summer", label: "Summer Crate", icon: "fa-umbrella-beach", category: "crate", rarity: "item", source: "Summer Crate" },
+            { id: "christmas", label: "Christmas Crate", icon: "fa-snowflake", category: "crate", rarity: "item", source: "Christmas Crate" },
+            { id: "halloween", label: "Halloween Crate", icon: "fa-ghost", category: "crate", rarity: "item", source: "Halloween Crate" }
         ];
         const items = [...crates, { id: "shield", label: "Streak Shields", icon: "fa-shield-halved", category: "item", rarity: "epic", source: "Utility", count: shieldCount }];
-        crateGrid.innerHTML = sortCosmeticsForLocker(items.filter(item => shouldShowCosmetic(item, profileInventoryFilters.items))).map(item => `
+        crateGrid.innerHTML = sortCosmeticsForLocker(items
+            .filter(item => shouldShowCosmetic(item, profileInventoryFilters.items))
+            .filter(item => matchesCosmeticSearch(item))
+        ).map(item => `
             <article class="profile-inventory-card utility rarity-${item.rarity}">
                 <i class="fa-solid ${item.icon}"></i>
                 <span>${item.label}</span>
@@ -12503,6 +15299,9 @@ function showProfileInventoryCategory(category = "portraits") {
         const isActive = section.dataset.profileInventorySection === activeCategory;
         section.hidden = !isActive;
         section.classList.toggle("active", isActive);
+    });
+    document.querySelectorAll("[data-profile-inventory-search]").forEach(search => {
+        search.hidden = activeCategory === "codes";
     });
     localStorage.setItem("profileInventoryCategory", activeCategory);
 }
@@ -12534,6 +15333,7 @@ window.showProfileTab = function(tab = "overview") {
         showProfileInventoryCategory(localStorage.getItem("profileInventoryCategory") || "portraits");
     } else if (activeTab === "overview") {
         syncProfileOverviewStats?.();
+        renderProfileAchievementShowcase?.();
         const overviewList = document.getElementById("recent-games-list-overview");
         if (overviewList && typeof renderRecentGames === "function") {
             const mainList = document.getElementById("recent-games-list");
@@ -12549,7 +15349,8 @@ window.openProfileModal = async function() {
     await originalOpenProfileModal?.();
     syncProfileOverviewStats?.();
     renderProfileInventoryUI?.();
-    window.showProfileTab("inventory");
+    renderProfileAchievementShowcase?.();
+    window.showProfileTab("overview");
 };
 
 window.openCraftingModalFromHome = openCraftingModalFromHome;

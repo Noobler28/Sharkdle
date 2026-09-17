@@ -31,6 +31,18 @@
     const RNG_BROADCAST_QUERY_LIMIT = 8;
     let currentGlobalMessagePayload = null;
     let rngBroadcastRestoreTimer = null;
+    const BACKGROUND_MUSIC_TRACKS = [
+        "images/Sounds/Crab's Diner.wav",
+        "images/Sounds/Fish In A Bucket.wav",
+        "images/Sounds/Floating Downstream.wav",
+        "images/Sounds/OceanHome.wav",
+        "images/Sounds/Sea Shaman.wav",
+        "images/Sounds/Submerged.wav",
+        "images/Sounds/Wire Wire Docks.wav"
+    ];
+    const MUSIC_INDEX_KEY = "sharkdleBackgroundMusicIndex";
+    const MUSIC_STARTED_KEY = "__sharkdleBackgroundMusicStarted";
+    const MUSIC_VOLUME = 0.18;
 
     function loadScript(src) {
         return new Promise((resolve, reject) => {
@@ -280,10 +292,62 @@
                 --global-theme-surface-border: rgba(255, 224, 163, 0.28);
             }
             body.${THEME_CLASS_PREFIX}halloween {
-                --global-theme-body-bg: linear-gradient(135deg, #160d2b, #2b153f, #5f2c0a);
-                --global-theme-navbar-bg: #1e1133;
-                --global-theme-surface-bg: linear-gradient(180deg, rgba(35, 19, 54, 0.96), rgba(86, 40, 14, 0.9));
-                --global-theme-surface-border: rgba(255, 193, 142, 0.3);
+                --global-theme-body-bg:
+                    radial-gradient(circle at 82% 12%, rgba(255, 241, 190, 0.15), transparent 15%),
+                    radial-gradient(ellipse 48% 36% at 12% 4%, rgba(111, 255, 90, 0.12), transparent 65%),
+                    radial-gradient(ellipse 70% 58% at 76% 84%, rgba(255, 102, 18, 0.16), transparent 68%),
+                    linear-gradient(150deg, #07040d 0%, #160822 44%, #261033 72%, #160807 100%);
+                --global-theme-navbar-bg: #12071f;
+                --global-theme-surface-bg:
+                    radial-gradient(circle at 100% 0, rgba(184, 255, 95, 0.08), transparent 38%),
+                    linear-gradient(145deg, rgba(35, 15, 48, 0.94), rgba(10, 5, 18, 0.96));
+                --global-theme-surface-border: rgba(255, 138, 37, 0.26);
+            }
+            body.${THEME_CLASS_PREFIX}halloween::before {
+                content: "";
+                position: fixed;
+                inset: 0;
+                pointer-events: none;
+                z-index: 2;
+                background:
+                    linear-gradient(132deg, transparent 0 27%, rgba(238, 231, 220, 0.12) 27.2% 27.6%, transparent 27.8%),
+                    linear-gradient(156deg, transparent 0 18%, rgba(238, 231, 220, 0.09) 18.2% 18.6%, transparent 18.8%),
+                    linear-gradient(24deg, transparent 0 78%, rgba(238, 231, 220, 0.07) 78.2% 78.6%, transparent 78.8%),
+                    radial-gradient(circle at 0 0, transparent 0 74px, rgba(238, 231, 220, 0.13) 75px 76px, transparent 77px 108px, rgba(238, 231, 220, 0.09) 109px 110px, transparent 111px),
+                    radial-gradient(circle at 100% 0, transparent 0 96px, rgba(238, 231, 220, 0.09) 97px 98px, transparent 99px 138px, rgba(238, 231, 220, 0.06) 139px 140px, transparent 141px);
+                opacity: 0.8;
+            }
+            body.${THEME_CLASS_PREFIX}halloween .logo {
+                background: linear-gradient(135deg, #fff3c8, #ff8a25 42%, #b8ff5f 74%, #d49cff);
+                -webkit-background-clip: text;
+                -webkit-text-fill-color: transparent;
+                background-clip: text;
+            }
+            body.${THEME_CLASS_PREFIX}halloween .logo::after {
+                border-color: rgba(184, 255, 95, 0.34);
+                background: rgba(255, 138, 37, 0.12);
+                color: #b8ff5f;
+                -webkit-text-fill-color: #b8ff5f;
+            }
+            body.${THEME_CLASS_PREFIX}halloween .game-card,
+            body.${THEME_CLASS_PREFIX}halloween .modal-content,
+            body.${THEME_CLASS_PREFIX}halloween .picker-section,
+            body.${THEME_CLASS_PREFIX}halloween .timeline-item,
+            body.${THEME_CLASS_PREFIX}halloween .stat-card {
+                position: relative;
+                overflow: hidden;
+            }
+            body.${THEME_CLASS_PREFIX}halloween .game-card::before,
+            body.${THEME_CLASS_PREFIX}halloween .modal-content::before,
+            body.${THEME_CLASS_PREFIX}halloween .picker-section::before {
+                content: "";
+                position: absolute;
+                inset: 0;
+                pointer-events: none;
+                background:
+                    linear-gradient(138deg, transparent 0 70%, rgba(236, 231, 222, 0.12) 70.2% 70.6%, transparent 70.8%),
+                    radial-gradient(circle at 100% 0, transparent 0 36px, rgba(236, 231, 222, 0.14) 37px 38px, transparent 39px 68px, rgba(236, 231, 222, 0.08) 69px 70px, transparent 71px);
+                opacity: 0.72;
             }
             /* North Pole: icy blues + animated snowflakes */
             body.${THEME_CLASS_PREFIX}northpole {
@@ -378,6 +442,58 @@
             }
         `;
         document.head.appendChild(style);
+    }
+
+    function getStoredMusicIndex() {
+        try {
+            const stored = Number(window.localStorage.getItem(MUSIC_INDEX_KEY));
+            return Number.isFinite(stored) ? stored : 0;
+        } catch (error) {
+            return 0;
+        }
+    }
+
+    function storeNextMusicIndex(index) {
+        try {
+            window.localStorage.setItem(MUSIC_INDEX_KEY, String(index % BACKGROUND_MUSIC_TRACKS.length));
+        } catch (error) {
+            // Music rotation should never block the rest of the shared page helper.
+        }
+    }
+
+    function startBackgroundMusic() {
+        if (window[MUSIC_STARTED_KEY] || !BACKGROUND_MUSIC_TRACKS.length) return;
+        window[MUSIC_STARTED_KEY] = true;
+
+        let trackIndex = getStoredMusicIndex() % BACKGROUND_MUSIC_TRACKS.length;
+        const audio = new Audio();
+        audio.preload = "auto";
+        audio.volume = MUSIC_VOLUME;
+        audio.loop = false;
+
+        function bindMusicUnlock() {
+            const unlock = () => {
+                document.removeEventListener("pointerdown", unlock);
+                document.removeEventListener("keydown", unlock);
+                startBackgroundMusic();
+            };
+            document.addEventListener("pointerdown", unlock, { once: true });
+            document.addEventListener("keydown", unlock, { once: true });
+        }
+
+        function playTrack() {
+            audio.src = BACKGROUND_MUSIC_TRACKS[trackIndex];
+            storeNextMusicIndex(trackIndex + 1);
+            trackIndex = (trackIndex + 1) % BACKGROUND_MUSIC_TRACKS.length;
+            audio.play().catch(() => {
+                window[MUSIC_STARTED_KEY] = false;
+                bindMusicUnlock();
+            });
+        }
+
+        audio.addEventListener("ended", playTrack);
+        audio.addEventListener("error", playTrack);
+        playTrack();
     }
 
     function ensureBannerElement() {
@@ -800,6 +916,7 @@
 
     function boot() {
         injectStyles();
+        startBackgroundMusic();
         applyGlobalTheme(readCachedThemeId());
         currentGlobalMessagePayload = readCachedMessagePayload();
         renderBanner(currentGlobalMessagePayload);

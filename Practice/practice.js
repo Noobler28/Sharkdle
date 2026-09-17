@@ -69,13 +69,13 @@ function getSpeciesModeConfig(modeKey) {
         },
         rays: {
             key: "rays",
-            title: "Raydle - Practice",
-            kicker: "Practice Rays",
-            heading: "Guess the Ray",
-            lead: "Think you know this ray? Make your guess below.",
-            placeholder: "Enter ray name...",
-            animal: "ray",
-            animalTitle: "Ray",
+            title: "Relatives - Practice",
+            kicker: "Practice Relatives",
+            heading: "Guess the Relative",
+            lead: "Think you know this shark relative? Make your guess below.",
+            placeholder: "Enter relative name...",
+            animal: "relative",
+            animalTitle: "Relative",
             heroBackground: HERO_ART.manta,
             heroForeground: HERO_ART.manta
         },
@@ -84,8 +84,8 @@ function getSpeciesModeConfig(modeKey) {
             title: "Sharkdle - Mixed Practice",
             kicker: "Mixed Practice",
             heading: "Guess the Species",
-            lead: "Sharks and rays share the board. Make your guess below.",
-            placeholder: "Enter shark or ray name...",
+            lead: "Sharks and relatives share the board. Make your guess below.",
+            placeholder: "Enter shark or relative name...",
             animal: "species",
             animalTitle: "Species",
             heroBackground: HERO_ART.sharkBg,
@@ -337,22 +337,56 @@ document.getElementById("guesses").prepend(card)
 
 document.addEventListener('DOMContentLoaded', () => {
     document.getElementById("guessBtn").onclick = makeGuess;
-    document.getElementById("sharkGuess").addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') {
-            makeGuess();
-        }
-    });
 });
 
 
 const sharkGuessInput = document.getElementById("sharkGuess");
 const suggestionsDiv = document.getElementById("suggestions");
+let highlightedSuggestionIndex = -1;
+
+function getVisibleSuggestionItems() {
+    return Array.from(suggestionsDiv.querySelectorAll(".suggestion-item[data-species-name]"));
+}
+
+function updateHighlightedSuggestion(nextIndex) {
+    const items = getVisibleSuggestionItems();
+    highlightedSuggestionIndex = items.length ? (nextIndex + items.length) % items.length : -1;
+    suggestionsDiv.querySelectorAll(".suggestion-item").forEach(item => item.classList.remove("highlighted"));
+    const highlightedItem = items[highlightedSuggestionIndex];
+    if (highlightedItem) {
+        highlightedItem.classList.add("highlighted");
+        highlightedItem.scrollIntoView({ block: "nearest" });
+    }
+}
+
+sharkGuessInput.addEventListener("keydown", function(event) {
+    if (event.key === "Escape") {
+        suggestionsDiv.classList.remove("active");
+        highlightedSuggestionIndex = -1;
+        return;
+    }
+
+    if ((event.key === "ArrowDown" || event.key === "ArrowUp") && suggestionsDiv.classList.contains("active")) {
+        event.preventDefault();
+        updateHighlightedSuggestion(highlightedSuggestionIndex + (event.key === "ArrowDown" ? 1 : -1));
+        return;
+    }
+
+    if (event.key === "Enter") {
+        const highlightedItem = getVisibleSuggestionItems()[highlightedSuggestionIndex];
+        if (highlightedItem) {
+            selectShark(decodeURIComponent(highlightedItem.dataset.speciesName));
+        }
+        makeGuess();
+    }
+});
 
 sharkGuessInput.addEventListener("input", function() {
     const input = normalizeInput(this.value);
 
     if (input.length === 0) {
         suggestionsDiv.classList.remove("active");
+        highlightedSuggestionIndex = -1;
         return;
     }
 
@@ -363,6 +397,7 @@ sharkGuessInput.addEventListener("input", function() {
 
     if (matches.length === 0) {
         suggestionsDiv.classList.remove("active");
+        highlightedSuggestionIndex = -1;
         return;
     }
 
@@ -376,6 +411,7 @@ sharkGuessInput.addEventListener("input", function() {
     }).join("");
 
     suggestionsDiv.classList.add("active");
+    highlightedSuggestionIndex = -1;
 });
 
 // Close suggestions when clicking outside
@@ -394,6 +430,7 @@ suggestionsDiv.addEventListener("click", function(event) {
 function selectShark(sharkName) {
     document.getElementById("sharkGuess").value = sharkName;
     document.getElementById("suggestions").classList.remove("active");
+    highlightedSuggestionIndex = -1;
 }
 
 function createBubbles() {

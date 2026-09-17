@@ -470,6 +470,48 @@
             background: rgba(76, 175, 80, 0.14);
             color: #9de1a1;
         }
+
+        .achievement-card.rarity-common { --achievement-rarity: #7dd3fc; }
+        .achievement-card.rarity-rare { --achievement-rarity: #60a5fa; }
+        .achievement-card.rarity-epic { --achievement-rarity: #c084fc; }
+        .achievement-card.rarity-legendary { --achievement-rarity: #fbbf24; }
+        .achievement-card.rarity-mythic { --achievement-rarity: #fb7185; }
+
+        .achievement-rarity {
+            font-size: 0.78em;
+            padding: 8px 12px;
+            border-radius: 999px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            border: 1px solid rgba(125, 211, 252, 0.22);
+            background: rgba(125, 211, 252, 0.1);
+            color: #bae6fd;
+        }
+
+        .achievement-rarity.rarity-rare {
+            border-color: rgba(96, 165, 250, 0.28);
+            background: rgba(96, 165, 250, 0.12);
+            color: #bfdbfe;
+        }
+
+        .achievement-rarity.rarity-epic {
+            border-color: rgba(192, 132, 252, 0.32);
+            background: rgba(192, 132, 252, 0.13);
+            color: #e9d5ff;
+        }
+
+        .achievement-rarity.rarity-legendary {
+            border-color: rgba(251, 191, 36, 0.34);
+            background: rgba(251, 191, 36, 0.13);
+            color: #fde68a;
+        }
+
+        .achievement-rarity.rarity-mythic {
+            border-color: rgba(251, 113, 133, 0.36);
+            background: rgba(251, 113, 133, 0.13);
+            color: #fecdd3;
+        }
         
         .achievement-side {
             min-width: 0;
@@ -537,6 +579,34 @@
             transform: translateY(-2px);
             box-shadow: 0 14px 26px rgba(0, 180, 216, 0.28);
             filter: brightness(1.04);
+        }
+
+        .achievement-showcase-btn {
+            width: auto;
+            min-width: 112px;
+            padding: 10px 14px;
+            border-radius: 14px;
+            border: 1px solid rgba(255,255,255,0.12);
+            background: rgba(255,255,255,0.07);
+            color: #dffbff;
+            font-weight: 800;
+            font-size: 0.78em;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            cursor: pointer;
+            transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+        }
+
+        .achievement-showcase-btn:hover {
+            transform: translateY(-2px);
+            border-color: rgba(126, 240, 255, 0.42);
+            background: rgba(126, 240, 255, 0.12);
+        }
+
+        .achievement-showcase-btn.active {
+            border-color: rgba(251, 191, 36, 0.48);
+            background: rgba(251, 191, 36, 0.14);
+            color: #fde68a;
         }
         
         .progress-bar {
@@ -1506,7 +1576,7 @@
             }
         }
     </style>
-    <link rel="stylesheet" href="mobile.css">
+    <link rel="stylesheet" href="../mobile.css">
 </head>
 <body class="achievements-page shell-page">
     <div class="content-wrapper">

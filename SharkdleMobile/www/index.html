@@ -51,6 +51,66 @@ content="Play Sharkdle, the daily shark guessing game. Guess shark species from 
     <div class="ambient-bubble b3"></div>
     <div class="ambient-bubble b4"></div>
 </div>
+<div class="halloween-web-layer" aria-hidden="true"></div>
+<div id="halloweenWebEditor" class="halloween-web-editor hidden" aria-hidden="true">
+    <div class="halloween-web-editor-head">
+        <strong>Seasonal Layout</strong>
+        <button type="button" onclick="toggleHalloweenWebEditor(false)" aria-label="Close seasonal decoration editor">x</button>
+    </div>
+    <div class="halloween-web-editor-row">
+        <label for="halloween-web-editor-select">Decoration</label>
+        <select id="halloween-web-editor-select" onchange="selectHalloweenWebForEditing(this.value)">
+            <option value="1">Web 1</option>
+            <option value="2">Web 2</option>
+            <option value="3">Web 3</option>
+            <option value="4">Web 4</option>
+        </select>
+    </div>
+    <div class="halloween-web-editor-row">
+        <label for="halloween-web-texture-select">Asset</label>
+        <select id="halloween-web-texture-select" onchange="updateSelectedHalloweenWebSetting('texture', this.value)">
+            <option value="1">Cobweb 1</option>
+            <option value="2">Cobweb 2</option>
+            <option value="3">Cobweb 3</option>
+            <option value="4">Cobweb 4</option>
+            <option value="web-cobweb">Cobweb 5</option>
+            <option value="ghost">Ghost</option>
+            <option value="pumpkin">Pumpkin</option>
+            <option value="bats">Bats</option>
+            <option value="bats-wide">Bats Wide</option>
+            <option value="cauldron">Cauldron</option>
+            <option value="cat">Cat</option>
+            <option value="candle">Candle</option>
+            <option value="potion">Potion</option>
+            <option value="tombstone">Tombstone</option>
+            <option value="coffin">Coffin</option>
+            <option value="skull">Skull</option>
+            <option value="owl">Owl</option>
+            <option value="broom">Broom</option>
+            <option value="haunted-house">Haunted House</option>
+        </select>
+    </div>
+    <label class="halloween-web-editor-control" for="halloween-web-size-input">
+        <span>Size</span>
+        <input id="halloween-web-size-input" type="range" min="6" max="42" step="0.5" oninput="updateSelectedHalloweenWebSetting('size', this.value)">
+    </label>
+    <label class="halloween-web-editor-control" for="halloween-web-rotate-input">
+        <span>Rotate</span>
+        <input id="halloween-web-rotate-input" type="range" min="-180" max="180" step="1" oninput="updateSelectedHalloweenWebSetting('rotate', this.value)">
+    </label>
+    <label class="halloween-web-editor-control" for="halloween-web-opacity-input">
+        <span>Opacity</span>
+        <input id="halloween-web-opacity-input" type="range" min="0" max="0.92" step="0.01" oninput="updateSelectedHalloweenWebSetting('opacity', this.value)">
+    </label>
+    <div class="halloween-web-editor-actions">
+        <button type="button" onclick="addHalloweenWeb()">Add</button>
+        <button type="button" onclick="removeSelectedHalloweenWeb()">Remove</button>
+        <button type="button" onclick="saveHalloweenWebLayout()">Save Device</button>
+        <button type="button" onclick="saveHalloweenWebLayoutForEveryone()">Save Everyone</button>
+        <button type="button" onclick="resetHalloweenWebLayout()">Reset</button>
+        <button type="button" onclick="exportHalloweenWebLayout()">Export</button>
+    </div>
+</div>
 
 <main class="home-v3-shell">
     <aside class="home-v3-left">
@@ -67,6 +127,7 @@ content="Play Sharkdle, the daily shark guessing game. Guess shark species from 
             <button type="button" data-home-v3-tab="progress"><i class="fa-solid fa-chart-line"></i><span>Progress</span></button>
             <button type="button" data-home-v3-tab="explore"><i class="fa-solid fa-compass"></i><span>Explore</span></button>
             <button type="button" onclick="openPearlShopModal()"><i class="fa-solid fa-store"></i><span>Shop</span></button>
+            <button type="button" onclick="openSocialRewardsModal()"><i class="fa-solid fa-gift"></i><span>Rewards</span></button>
             <a href="Updates/index.html"><i class="fa-solid fa-newspaper"></i><span>Updates</span></a>
         </nav>
 
@@ -86,6 +147,7 @@ content="Play Sharkdle, the daily shark guessing game. Guess shark species from 
                 <a class="social-link discord-link" href="https://discord.gg/V97Y8545Ve" target="_blank" rel="noopener" aria-label="Discord"><i class="fa-brands fa-discord"></i></a>
             </div>
         </section>
+
     </aside>
 
     <section class="home-v3-center" aria-label="Sharkdle play hub">
@@ -106,7 +168,7 @@ content="Play Sharkdle, the daily shark guessing game. Guess shark species from 
                 </div>
                 <div id="login-warning" class="login-warning hero-alert hidden">
                     You are not logged in. Your stats and XP won't be saved.
-                    <button onclick="openLoginModal()">Login</button>
+                    <button onclick="openLoginModal()">Login or Sign Up</button>
                 </div>
             </div>
         </section>
@@ -147,17 +209,17 @@ content="Play Sharkdle, the daily shark guessing game. Guess shark species from 
                 <p>Track rewards, claim milestones, and compare your rank.</p>
             </div>
             <div class="home-v3-card-grid home-v3-progress-grid">
-                <a class="home-v3-mode-card progress-card" href="Sharkpass/index.html" style="--mode-bg:linear-gradient(135deg, rgba(232,168,34,.24), rgba(6,30,48,.96))">
+                <a class="home-v3-mode-card progress-card" href="Sharkpass/index.html" style="--mode-bg:url('images/home-v3/whale.png')">
                     <span>Season Track</span>
                     <strong>Shark Pass</strong>
                     <p>Level up, unlock portraits, badges, crates, and profile themes.</p>
                 </a>
-                <a class="home-v3-mode-card progress-card" href="Achievements/index.html" style="--mode-bg:linear-gradient(135deg, rgba(44,196,196,.24), rgba(6,30,48,.96))">
+                <a class="home-v3-mode-card progress-card" href="Achievements/index.html" style="--mode-bg:url('images/home-v3/tiger.png')">
                     <span>Milestones</span>
                     <strong>Achievements</strong>
                     <p>Claim rewards for wins, streaks, discoveries, duels, and secrets.</p>
                 </a>
-                <a class="home-v3-mode-card progress-card" href="Leaderboard/index.html" style="--mode-bg:linear-gradient(135deg, rgba(120,119,255,.22), rgba(6,30,48,.96))">
+                <a class="home-v3-mode-card progress-card" href="Leaderboard/index.html" style="--mode-bg:url('images/home-v3/hammerhead.png')">
                     <span>Rankings</span>
                     <strong>Leaderboards</strong>
                     <p>Check daily, monthly, and all-time leaderboard positions.</p>
@@ -171,12 +233,12 @@ content="Play Sharkdle, the daily shark guessing game. Guess shark species from 
                 <p>Move through the story map or browse shark species.</p>
             </div>
             <div class="home-v3-card-grid home-v3-explore-grid">
-                <a class="home-v3-mode-card explore-card" href="Story/index.html" style="--mode-bg:linear-gradient(135deg, rgba(46,160,120,.24), rgba(6,30,48,.96))">
+                <a class="home-v3-mode-card explore-card" href="Story/index.html" style="--mode-bg:url('images/home-v3/mako.png')">
                     <span>Story</span>
                     <strong>World Map</strong>
                     <p>Travel through story areas and clear shark challenges.</p>
                 </a>
-                <a class="home-v3-mode-card explore-card" href="Library/index.html" style="--mode-bg:linear-gradient(135deg, rgba(110,207,246,.24), rgba(6,30,48,.96))">
+                <a class="home-v3-mode-card explore-card" href="Library/index.html" style="--mode-bg:url('images/home-v3/manta-ray.png')">
                     <span>Archive</span>
                     <strong>Sharchive</strong>
                     <p>Browse shark species, classifications, images, and details.</p>
@@ -199,7 +261,7 @@ content="Play Sharkdle, the daily shark guessing game. Guess shark species from 
                     <span class="home-v3-xp-bar" aria-hidden="true"><span id="home-v3-xp-fill"></span></span>
                 </span>
             </button>
-            <button id="login-btn" onclick="openLoginModal()" class="auth-btn">Login / Sign Up</button>
+            <button id="login-btn" onclick="openLoginModal()" class="auth-btn">Login</button>
         </div>
 
         <div class="home-v3-currencies">
@@ -235,10 +297,10 @@ content="Play Sharkdle, the daily shark guessing game. Guess shark species from 
             </div>
         </div>
 
-        <section class="home-v3-event" role="button" tabindex="0" onclick="openCommunityBossEventModal()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openCommunityBossEventModal();}">
+        <section class="home-v3-event lost-treasures-home-card" role="button" tabindex="0" onclick="openLostTreasuresModal()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openLostTreasuresModal();}">
             <span>Current Event</span>
-            <strong>Global Cladoselache</strong>
-            <p id="home-v3-event-copy">Team up with every player to defeat the Cladoselache and unlock shared community milestone rewards.</p>
+            <strong>Lost Treasures</strong>
+            <p id="home-v3-event-copy">Open messages in bottles, collect 120 treasure cards, and complete every album category.</p>
             <div class="home-v3-click-view"><i class="fa-solid fa-arrow-pointer"></i><span>Click to view</span></div>
         </section>
 
@@ -330,6 +392,20 @@ content="Play Sharkdle, the daily shark guessing game. Guess shark species from 
                 </div>
                 <button type="button" onclick="buyPearlShopItem('event-crate')">750p</button>
             </article>
+            <article class="home-v3-shop-item bottle-pack-featured" data-pearl-shop-item="message-bottle-pack">
+                <div class="pearl-shop-sticker">Limited Time</div>
+                <div class="pearl-shop-bottle-stack" aria-hidden="true">
+                    <div><img src="images/lostTreasure/Bottles/Bottle1.png" alt=""><span>x5</span></div>
+                    <div><img src="images/lostTreasure/Bottles/Bottle2.png" alt=""><span>x3</span></div>
+                    <div><img src="images/lostTreasure/Bottles/Bottle3.png" alt=""><span>x1</span></div>
+                    <div><img src="images/lostTreasure/Bottles/BottleRare.png" alt=""><span>x1</span></div>
+                </div>
+                <div class="pearl-shop-bottle-copy">
+                    <strong>Message in a Bottle Pack</strong>
+                    <span>5 x3 bottles, 3 x5 bottles, 1 x7 bottle, and 1 guaranteed rare.</span>
+                </div>
+                <button type="button" onclick="buyPearlShopItem('message-bottle-pack')">300p</button>
+            </article>
             <article class="home-v3-shop-item featured" data-pearl-shop-item="season-xp">
                 <i class="fa-solid fa-bolt" aria-hidden="true"></i>
                 <div>
@@ -338,6 +414,56 @@ content="Play Sharkdle, the daily shark guessing game. Guess shark species from 
                 </div>
                 <button type="button" onclick="buyPearlShopItem('season-xp')">3000p</button>
             </article>
+        </div>
+    </div>
+</div>
+
+<div id="socialRewardsModal" class="modal hidden" onclick="if(event.target===this) closeSocialRewardsModal()">
+    <div class="modal-content social-rewards-modal-content">
+        <button type="button" class="modal-x-btn" onclick="closeSocialRewardsModal()" aria-label="Close rewards modal">×</button>
+        <section class="social-rewards-panel">
+            <div class="social-rewards-head">
+                <div>
+                    <div class="new-modal-kicker">Rewards</div>
+                    <h3>Social Rewards</h3>
+                    <p>Support Sharkdle and claim one-time pearl bonuses.</p>
+                </div>
+                <div class="social-rewards-balance"><i class="fa-solid fa-gem"></i><strong id="social-rewards-pearls">0</strong></div>
+            </div>
+            <div id="social-rewards-list" class="social-rewards-list"></div>
+            <details class="social-reward-group social-reward-codes" open>
+                <summary>
+                    <span class="social-reward-group-icon"><i class="fa-solid fa-ticket"></i></span>
+                    <span><strong>Codes</strong><small>Redeem Sharkdle codes</small></span>
+                    <i class="fa-solid fa-chevron-down"></i>
+                </summary>
+                <div class="rewards-redeem-card">
+                    <div class="rewards-redeem-copy">
+                        <strong>Redeem Code</strong>
+                        <span>Enter creator, event, and update codes for XP, cosmetics, crates, and badges.</span>
+                    </div>
+                    <div class="rewards-redeem-row">
+                        <input type="text" id="rewards-redeem-code-input" placeholder="Enter code">
+                        <button type="button" onclick="redeemCode('rewards-redeem-code-input', 'rewards-redeem-message')">Redeem</button>
+                    </div>
+                    <div id="rewards-redeem-message" class="rewards-redeem-message"></div>
+                </div>
+            </details>
+        </section>
+    </div>
+</div>
+
+<div id="socialRewardClaimPopup" class="social-reward-claim-popup hidden" role="dialog" aria-modal="true" aria-labelledby="social-reward-claim-title">
+    <div class="social-reward-claim-card">
+        <button type="button" class="social-reward-claim-close" onclick="closeSocialRewardClaimPopup()" aria-label="Close claim popup">×</button>
+        <div class="social-reward-claim-icon"><i id="social-reward-claim-icon" class="fa-solid fa-gift"></i></div>
+        <span id="social-reward-claim-platform">Reward</span>
+        <h3 id="social-reward-claim-title">Ready to claim?</h3>
+        <p id="social-reward-claim-copy">Complete the action, then claim your pearls.</p>
+        <div class="social-reward-claim-prize"><i class="fa-solid fa-gem"></i><strong id="social-reward-claim-pearls">0</strong> pearls</div>
+        <div class="social-reward-claim-actions">
+            <button type="button" class="social-reward-claim-primary" onclick="confirmSocialRewardClaim()">Claim Pearls</button>
+            <button type="button" onclick="closeSocialRewardClaimPopup()">Not Yet</button>
         </div>
     </div>
 </div>
@@ -379,6 +505,7 @@ content="Play Sharkdle, the daily shark guessing game. Guess shark species from 
          </div>
          <div class="dev-support-box">
              <p>Support the dev</p>
+             <a href="mailto:sharkdle.online@gmail.com">sharkdle.online@gmail.com</a>
              <a class="coffee-link" href="https://buymeacoffee.com/sharkdle" target="_blank" rel="noopener">Donate</a>
          </div>
          <button class="dev-close-btn" onclick="closeDevModal()">Close</button>
@@ -399,7 +526,7 @@ content="Play Sharkdle, the daily shark guessing game. Guess shark species from 
 <div class="login-form auth-panel active-auth-panel">
 <label class="auth-field"><span>Email</span><input type="email" id="login-email" placeholder="you@example.com"></label>
 <label class="auth-field"><span>Password</span><input type="password" id="login-password" placeholder="Password"></label>
-<button onclick="loginUser()" class="modal-primary-btn">Login</button>
+<button onclick="loginUser()" class="modal-primary-btn">Login with Email</button>
 <p class="auth-switch-copy auth-forgot-copy"><button onclick="forgotPassword()" type="button">Forgot password?</button></p>
 <p class="auth-switch-copy">New here? <button onclick="switchToSignup()">Create an account</button></p>
 </div>
@@ -460,6 +587,16 @@ content="Play Sharkdle, the daily shark guessing game. Guess shark species from 
             <article><span>Best</span><strong id="profile-best-game-overview">0</strong></article>
           </div>
         </div>
+        <section class="profile-game-panel profile-achievement-showcase-panel">
+          <div class="profile-achievement-showcase-head">
+            <div>
+              <span>Showcase</span>
+              <h3>Prized Achievements</h3>
+            </div>
+            <a href="Achievements/index.html">Manage</a>
+          </div>
+          <div class="profile-achievement-showcase" id="profile-achievement-showcase"></div>
+        </section>
         <section class="profile-game-panel">
           <h3>Latest Games</h3>
           <div class="recent-games-list mini" id="recent-games-list-overview"></div>
@@ -513,6 +650,10 @@ content="Play Sharkdle, the daily shark guessing game. Guess shark species from 
           <button type="button" data-profile-inventory-tab="items" onclick="showProfileInventoryCategory('items')">Items</button>
           <button type="button" data-profile-inventory-tab="codes" onclick="showProfileInventoryCategory('codes')">Codes</button>
         </nav>
+
+        <div class="profile-inventory-search" data-profile-inventory-search>
+          <input type="search" id="profile-inventory-search-input" placeholder="Search cosmetics" oninput="setProfileInventorySearch(this.value)">
+        </div>
 
         <div class="profile-inventory-section" data-profile-inventory-section="portraits">
           <h4>Portraits</h4>
@@ -588,7 +729,7 @@ content="Play Sharkdle, the daily shark guessing game. Guess shark species from 
             </div>
             <div class="user-info-compact">
               <div class="friends-code-label">Friend Code</div>
-              <div class="code-display"><span class="code-text" id="user-friend-code">(login required)</span><button onclick="copyFriendCode()" class="copy-btn">Copy</button></div>
+              <div class="code-display"><span class="code-text" id="user-friend-code">(login required)</span><button onclick="copyFriendCode()" class="copy-btn">Copy</button><button onclick="shareFriendCode()" class="copy-btn">Share</button></div>
             </div>
           </div>
           <div class="add-friend-section"><input type="text" id="add-friend-uid" placeholder="Enter friend code" class="friend-input"><button onclick="addFriend()" class="primary-btn">Add Friend</button><div id="add-friend-status" class="status-message"></div></div>
@@ -629,59 +770,24 @@ content="Play Sharkdle, the daily shark guessing game. Guess shark species from 
               </label>
             </section>
 
-            <section class="profile-settings-row">
+            <section class="profile-settings-row profile-settings-audio-row">
               <div class="profile-settings-copy">
-                <strong>Reduced Motion</strong>
-                <span>Reduce hover, modal, bubble, and reveal animation.</span>
+                <strong>Background Audio</strong>
+                <span>Enable or fully remove the looping underwater background sound.</span>
               </div>
-              <label class="toggle-switch" for="reduced-motion-toggle">
-                <input id="reduced-motion-toggle" type="checkbox">
-                <span class="toggle-slider"></span>
-              </label>
-            </section>
-
-            <section class="profile-settings-row">
-              <div class="profile-settings-copy">
-                <strong>Compact UI</strong>
-                <span>Tighten spacing for smaller displays and denser menus.</span>
+              <div class="profile-settings-audio-controls">
+                <label class="toggle-switch" for="ambient-audio-toggle">
+                  <input id="ambient-audio-toggle" type="checkbox">
+                  <span class="toggle-slider"></span>
+                </label>
+                <div class="profile-settings-volume">
+                  <label for="bg-volume-slider">
+                    <span>Volume</span>
+                    <output id="bg-volume-value" for="bg-volume-slider">35%</output>
+                  </label>
+                  <input id="bg-volume-slider" type="range" min="0" max="100" step="1" value="35">
+                </div>
               </div>
-              <label class="toggle-switch" for="compact-ui-toggle">
-                <input id="compact-ui-toggle" type="checkbox">
-                <span class="toggle-slider"></span>
-              </label>
-            </section>
-
-            <section class="profile-settings-row">
-              <div class="profile-settings-copy">
-                <strong>High Contrast</strong>
-                <span>Boost borders and text readability across darker panels.</span>
-              </div>
-              <label class="toggle-switch" for="high-contrast-toggle">
-                <input id="high-contrast-toggle" type="checkbox">
-                <span class="toggle-slider"></span>
-              </label>
-            </section>
-
-            <section class="profile-settings-row">
-              <div class="profile-settings-copy">
-                <strong>Animated Ocean</strong>
-                <span>Toggle background rays, drifting particles, and ocean ambience visuals.</span>
-              </div>
-              <label class="toggle-switch" for="animated-ocean-toggle">
-                <input id="animated-ocean-toggle" type="checkbox">
-                <span class="toggle-slider"></span>
-              </label>
-            </section>
-
-            <section class="profile-settings-row">
-              <div class="profile-settings-copy">
-                <strong>Ocean Audio</strong>
-                <span>Enable a gentle looping underwater bed when the browser allows it.</span>
-              </div>
-              <label class="toggle-switch" for="ambient-audio-toggle">
-                <input id="ambient-audio-toggle" type="checkbox">
-                <span class="toggle-slider"></span>
-              </label>
             </section>
 
           </div>
@@ -1021,6 +1127,18 @@ content="Play Sharkdle, the daily shark guessing game. Guess shark species from 
 </section>
 
 <section class="picker-section admin-abuse-section">
+<h3>Seasonal Layout</h3>
+<div class="admin-abuse-row">
+<button class="admin-abuse-btn" type="button" onclick="toggleHalloweenWebEditor(true)">Edit Decorations</button>
+<button class="admin-abuse-btn" type="button" onclick="saveHalloweenWebLayoutForEveryone()">Save For Everyone</button>
+<button class="admin-abuse-btn admin-abuse-btn-secondary" type="button" onclick="addHalloweenWeb()">Add Decoration</button>
+<button class="admin-abuse-btn admin-abuse-btn-secondary" type="button" onclick="resetHalloweenWebLayout()">Reset</button>
+<button class="admin-abuse-btn admin-abuse-btn-secondary" type="button" onclick="exportHalloweenWebLayout()">Export</button>
+</div>
+<div id="admin-cobweb-status" class="admin-abuse-status">Seasonal layout ready.</div>
+</section>
+
+<section class="picker-section admin-abuse-section">
 <h3>Global Message (All Pages)</h3>
 <textarea id="admin-global-message-input" class="admin-abuse-textarea" maxlength="220" placeholder="Example: Happy Shark Week! 2x XP is live for the next 24 hours."></textarea>
 <div class="admin-abuse-row">
@@ -1035,7 +1153,7 @@ content="Play Sharkdle, the daily shark guessing game. Guess shark species from 
 <div id="admin-message-status" class="admin-abuse-status">No message update yet.</div>
 </section>
 
-<button onclick="closeAdminAbuseModal()" style="width:100%;padding:10px;margin-top:16px;background:#ccc;color:#333;border:none;border-radius:6px;cursor:pointer;font-weight:600;flex-shrink:0;">Close</button>
+<button class="admin-abuse-close-btn" onclick="closeAdminAbuseModal()">Close</button>
 </div>
 </div>
 
@@ -1068,29 +1186,6 @@ content="Play Sharkdle, the daily shark guessing game. Guess shark species from 
 <div class="home-crate-actions">
 <button id="home-open-reef-crate-btn" type="button" onclick="openHomeCrate('reef')">Open Crate</button>
 <button type="button" onclick="openCrateDropsModal('reef')">View Drops</button>
-</div>
-</article>
-
-<article id="home-crate-summer-card" class="home-crate-card summer" style="display:none;">
-<div class="home-crate-topline">
-<div>
-<h3>Summer Crate <span>Limited</span></h3>
-<p>Summer Splash rewards.</p>
-</div>
-<div class="home-crate-count summer"><span id="home-crate-summer-count">0</span> ready</div>
-</div>
-<div class="home-crate-showcase">
-<div class="home-crate-visual summer"><i class="fa-solid fa-umbrella-beach"></i></div>
-<div class="home-crate-odds">
-<div><span>Common</span><strong>58%</strong></div>
-<div><span>Rare</span><strong>28%</strong></div>
-<div><span>Epic</span><strong>10%</strong></div>
-<div><span>Legendary</span><strong>4%</strong></div>
-</div>
-</div>
-<div class="home-crate-actions">
-<button id="home-open-summer-crate-btn" type="button" onclick="openHomeCrate('summer')">Open Crate</button>
-<button type="button" onclick="openCrateDropsModal('summer')">View Drops</button>
 </div>
 </article>
 
@@ -1212,32 +1307,6 @@ content="Play Sharkdle, the daily shark guessing game. Guess shark species from 
        <button id="open-crate-btn" class="primary-btn crate-open-btn" onclick="openCrate('reef')">Open Cosmetic Crate</button>
      </div>
    </section>
-   <!-- Summer Crate Panel: Only show if summer theme is active, displayed beside reef crate -->
-   <section id="summer-crate-panel" class="picker-section crate-inventory-panel" style="display:none;">
-     <div class="crate-panel-topline">
-       <div>
-         <h3>Summer Crate <span style="font-size:14px;color:#ffeb3b;">(Limited!)</span></h3>
-       </div>
-       <button class="crate-inspect-btn" onclick="openCrateDropsModal('summer')" aria-label="View possible drops">
-         <i class="fa-solid fa-umbrella-beach"></i>
-       </button>
-       <div class="crate-count-badge"><span id="summer-crate-count-value">0</span> ready</div>
-     </div>
-     <div class="crate-showcase">
-       <div class="crate-visual">
-         <i class="fa-solid fa-umbrella-beach"></i>
-       </div>
-       <div class="crate-odds">
-        <div class="crate-odds-row"><span>Common</span><strong>58%</strong></div>
-         <div class="crate-odds-row"><span>Rare</span><strong>28%</strong></div>
-         <div class="crate-odds-row"><span>Epic</span><strong>10%</strong></div>
-         <div class="crate-odds-row"><span>Legendary</span><strong>4%</strong></div>
-       </div>
-     </div>
-      <div class="crate-action-row">
-        <button id="open-summer-crate-btn" class="primary-btn crate-open-btn" onclick="openCrate('summer')">Open Summer Crate</button>
-      </div>
-</section>
     <!-- Christmas Crate Panel: Only show if christmas theme is active -->
     <section id="christmas-crate-panel" class="picker-section crate-inventory-panel" style="display:none;">
       <div class="crate-panel-topline">

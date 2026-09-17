@@ -16,6 +16,8 @@
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
     <script src="sharks.js"></script>
     <script src="rays.js"></script>
+
+    <link rel="stylesheet" href="mobile.css" media="(max-width: 820px)">
 </head>
 <body class="rng-page shell-page">
 
@@ -154,28 +156,64 @@
             <select id="rng-collection-filter" class="rng-select">
                 <option value="all">All index entries</option>
                 <option value="base">Base species</option>
-                <option value="Common">Common</option>
-                <option value="Uncommon">Uncommon</option>
-                <option value="Rare">Rare</option>
-                <option value="Epic">Epic</option>
-                <option value="Legendary">Legendary</option>
-                <option value="Mythical">Mythical</option>
-                <option value="Secret">Secret</option>
-                <option value="Ultra">Ultra</option>
-                <option value="Hyper">Hyper</option>
-                <option value="Omega">Omega</option>
-                <option value="Singularity">Singularity</option>
-                <option value="melanistic">Melanistic</option>
-                <option value="albino">Albino</option>
-                <option value="shiny">Shiny</option>
-                <option value="bioluminescent">Bioluminescent</option>
-                <option value="copper">Copper</option>
-                <option value="golden">Golden</option>
-                <option value="spectral">Spectral</option>
-                <option value="abyssal">Abyssal</option>
-                <option value="megatooth">Megatooth</option>
-                <option value="cosmic">Cosmic</option>
-                <option value="apex">Apex</option>
+                <optgroup label="Rarities">
+                    <option value="Common">Common</option>
+                    <option value="Uncommon">Uncommon</option>
+                    <option value="Rare">Rare</option>
+                    <option value="Epic">Epic</option>
+                    <option value="Legendary">Legendary</option>
+                    <option value="Mythical">Mythical</option>
+                    <option value="Secret">Secret</option>
+                    <option value="Ultra">Ultra</option>
+                    <option value="Exotic">Exotic</option>
+                    <option value="Hyper">Hyper</option>
+                    <option value="Celestial">Celestial</option>
+                    <option value="Astral">Astral</option>
+                    <option value="Nebula">Nebula</option>
+                    <option value="Omega">Omega</option>
+                    <option value="Quantum">Quantum</option>
+                    <option value="Eclipse">Eclipse</option>
+                    <option value="Paradox">Paradox</option>
+                    <option value="Singularity">Singularity</option>
+                    <option value="Event Horizon">Event Horizon</option>
+                    <option value="Eternity">Eternity</option>
+                </optgroup>
+                <optgroup label="Mutations">
+                    <option value="melanistic">Melanistic</option>
+                    <option value="obsidian">Obsidian</option>
+                    <option value="albino">Albino</option>
+                    <option value="piebald">Piebald</option>
+                    <option value="shiny">Shiny</option>
+                    <option value="pearl">Pearl</option>
+                    <option value="leucistic">Leucistic</option>
+                    <option value="bioluminescent">Bioluminescent</option>
+                    <option value="sapphire">Sapphire</option>
+                    <option value="copper">Copper</option>
+                    <option value="emerald">Emerald</option>
+                    <option value="ruby">Ruby</option>
+                    <option value="golden">Golden</option>
+                    <option value="amethyst">Amethyst</option>
+                    <option value="frostbite">Frostbite</option>
+                    <option value="neon">Neon</option>
+                    <option value="spectral">Spectral</option>
+                    <option value="tideborn">Tideborn</option>
+                    <option value="coral">Coral</option>
+                    <option value="abyssal">Abyssal</option>
+                    <option value="prism">Prism</option>
+                    <option value="volcanic">Volcanic</option>
+                    <option value="megatooth">Megatooth</option>
+                    <option value="stormcharged">Stormcharged</option>
+                    <option value="chrome">Chrome</option>
+                    <option value="void">Void</option>
+                    <option value="cosmic">Cosmic</option>
+                    <option value="radioactive">Radioactive</option>
+                    <option value="phantom">Phantom</option>
+                    <option value="glitch">Glitch</option>
+                    <option value="apex">Apex</option>
+                    <option value="primordial">Primordial</option>
+                    <option value="leviathan">Leviathan</option>
+                    <option value="eventhorizon">Event Horizon</option>
+                </optgroup>
             </select>
             <div class="search-bar">
                 <i class="fas fa-search" aria-hidden="true"></i>
@@ -220,7 +258,28 @@
             <input id="rng-setting-disable-popups" type="checkbox">
             <div>
                 <strong>Remove popup for rare species</strong>
-                <span>Skips Legendary–Secret cards. Ultra rare (1M+) cutscenes still play.</span>
+                <span>Skips Legendary–Secret cards.</span>
+            </div>
+        </label>
+        <label class="rng-setting-row">
+            <input id="rng-setting-disable-cutscenes" type="checkbox">
+            <div>
+                <strong>Remove cutscenes and popups</strong>
+                <span>Skips every rare popup, ultra rare reveal, mutation reveal, and Apex cutscene.</span>
+            </div>
+        </label>
+        <label class="rng-setting-row">
+            <input id="rng-setting-only-better-cutscenes" type="checkbox">
+            <div>
+                <strong>Only show better cutscenes</strong>
+                <span>Only plays reveal popups when the roll beats your best ever roll.</span>
+            </div>
+        </label>
+        <label class="rng-setting-row">
+            <input id="rng-setting-hide-multi-rolls" type="checkbox">
+            <div>
+                <strong>Hide extra multi rolls</strong>
+                <span>Only shows the best shark when multi-rolls finish.</span>
             </div>
         </label>
         <div class="rng-setting-row rng-setting-column">
@@ -248,7 +307,7 @@
 <div id="rng-toast" class="rng-toast hidden"></div>
 
 <script src="script.js"></script>
-<script src="Minigames/SharkRNG/rng-mode.js"></script>
+<script src="Minigames/SharkRNG/rng-mode.js?v=20260904-better-cutscenes"></script>
 <script src="global-broadcast.js"></script>
 <script>
     document.addEventListener("DOMContentLoaded", () => {
