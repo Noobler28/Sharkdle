@@ -123,13 +123,15 @@ async function grantReferralCratesToUid(uid, pairId, source = "referral") {
             if (rewardedPairs.includes(pairId)) return;
             const inventory = normalizeCrateInventory(data.crateInventory || {});
             inventory.reef = (Number(inventory.reef) || 0) + REFERRAL_REWARD_CRATES;
+            const nowMs = Date.now();
             transaction.set(userRef, {
                 crateInventory: inventory,
+                crateInventoryUpdatedAt: nowMs,
                 referralRewards: {
                     ...rewards,
                     rewardedPairs: [...rewardedPairs, pairId],
                     totalReferralCrates: (Number(rewards.totalReferralCrates) || 0) + REFERRAL_REWARD_CRATES,
-                    lastReferralRewardAt: Date.now(),
+                    lastReferralRewardAt: nowMs,
                     lastReferralRewardSource: source
                 },
                 lastUpdated: new Date()
@@ -185,6 +187,7 @@ async function grantLocalShareReward() {
     const inventory = getCrateInventory(profileData);
     inventory.reef = (Number(inventory.reef) || 0) + SHARE_REWARD_CRATES;
     profileData.crateInventory = normalizeCrateInventory(inventory);
+    markCrateInventoryChanged(profileData);
     profileData.referralRewards = {
         ...rewards,
         claimedShareRewards: [...claimed, SHARE_REWARD_ID],
@@ -194,6 +197,7 @@ async function grantLocalShareReward() {
     saveUserProfileLocally(profileData);
     await db.collection("userStats").doc(currentUser.uid).set({
         crateInventory: profileData.crateInventory,
+        crateInventoryUpdatedAt: getCrateInventoryUpdatedAt(profileData),
         referralRewards: profileData.referralRewards,
         lastUpdated: new Date()
     }, { merge: true });
@@ -722,9 +726,12 @@ window.craftSeasonalCrate = async function() {
     seasonalCrateCraftingInProgress = true;
     updateSeasonalCrateCraftingUI(profileData);
 
+    const rollbackProfileData = JSON.parse(JSON.stringify(profileData));
+    const craftTimestamp = Date.now();
     inventory.reef -= SEASONAL_CRATE_CRAFT_COST;
     inventory[activeCrateId] = (inventory[activeCrateId] || 0) + 1;
     profileData.crateInventory = normalizeCrateInventory(inventory);
+    markCrateInventoryChanged(profileData, craftTimestamp);
 
     try {
         await persistCrateProfileUpdate(profileData);
@@ -732,7 +739,9 @@ window.craftSeasonalCrate = async function() {
         showNotification(`Crafted 1 ${activeCrateName} from 2 Cosmetic Crates!`, "success", 2500);
     } catch (error) {
         console.warn("Crafting sync failed:", error);
-        showNotification("Crafting saved locally but sync failed. Try again later.", "error", 3500);
+        Object.assign(profileData, rollbackProfileData);
+        saveUserProfileLocally(profileData, { skipRemoteSync: true });
+        showNotification("Crafting could not be saved. No crates were spent.", "error", 3500);
         renderCratesModal();
     } finally {
         seasonalCrateCraftingInProgress = false;
@@ -1088,6 +1097,7 @@ async function grantFriendPairReferralRewards(uidA, uidB) {
         const inventory = getCrateInventory(profileData);
         inventory.reef = (Number(inventory.reef) || 0) + REFERRAL_REWARD_CRATES;
         profileData.crateInventory = normalizeCrateInventory(inventory);
+        markCrateInventoryChanged(profileData);
         const rewards = getReferralRewards(profileData);
         const rewardedPairs = Array.isArray(rewards.rewardedPairs) ? rewards.rewardedPairs : [];
         profileData.referralRewards = {
@@ -2097,16 +2107,16 @@ const sharkPassRewards = [
     { level: 30, type: "theme", name: "Abyssal Current", themeId: "abyssal-current", rarity: "legendary", blurb: "The season capstone profile theme." }
 ];
 
-const SHARK_PASS_ACTIVE_SEASON_ID = "reef-rush-2026";
+const SHARK_PASS_ACTIVE_SEASON_ID = "shark-pass-2-2026";
 
 const sharkPassSeasons = [
     {
         id: SHARK_PASS_ACTIVE_SEASON_ID,
-        name: "Reef Rush",
-        subtitle: "Season 1",
-        startsAt: "2026-06-01T00:00:00Z",
-        endsAt: "2026-08-31T23:59:59Z",
-        theme: "Reef Rush",
+        name: "Shark Pass 2",
+        subtitle: "Reef Rush",
+        startsAt: "2026-09-01T00:00:00Z",
+        endsAt: "2026-12-31T23:59:59Z",
+        theme: "Shark Pass 2",
         dailyQuests: [
             { id: "daily-first-fin", title: "First Fin", description: "Play 1 Sharkdle game today.", metric: "gamesPlayed", goal: 1, xp: 180, icon: "fa-gamepad" },
             { id: "daily-clean-catch", title: "Clean Catch", description: "Win 1 daily game today.", metric: "dailyWins", goal: 1, xp: 260, icon: "fa-calendar-check", progressMode: "absolute" },
@@ -2215,10 +2225,87 @@ function getCurrentPlayerLevel(profileData = getCurrentProfileData()) {
     return passXP <= 0 ? 0 : getLevelFromXP(passXP);
 }
 
+function getActiveSharkPassSeasonId() {
+    return getActiveSharkPassSeason()?.id || SHARK_PASS_ACTIVE_SEASON_ID;
+}
+
+function isProfileOnActiveSharkPassSeason(profileData = {}, seasonId = getActiveSharkPassSeasonId()) {
+    const progressSeasonId = profileData.sharkPassProgressSeasonId || profileData.sharkPassSeasonId;
+    return Boolean(seasonId && progressSeasonId === seasonId);
+}
+
+function normalizeSharkPassProgressForActiveSeason(profileData = getCurrentProfileData(), season = getActiveSharkPassSeason()) {
+    if (!profileData || typeof profileData !== "object" || !season?.id) return false;
+    if (isProfileOnActiveSharkPassSeason(profileData, season.id)) {
+        profileData.sharkPassProgressSeasonId = season.id;
+        profileData.sharkPassSeasonId = season.id;
+        profileData.sharkPassXP = Math.max(0, Number(profileData.sharkPassXP) || 0);
+        return false;
+    }
+    profileData.sharkPassProgressSeasonId = season.id;
+    profileData.sharkPassSeasonId = season.id;
+    profileData.sharkPassXP = 0;
+    profileData.sharkPassLevelRewardClaims = [];
+    return true;
+}
+
 function getSharkPassXP(profileData = getCurrentProfileData(), season = getActiveSharkPassSeason()) {
     if (!season?.id || profileData.sharkPassProgressSeasonId !== season.id) return 0;
     return Math.max(0, Number(profileData.sharkPassXP) || 0);
 }
+
+function applySharkPassXpGain(profileData = getCurrentProfileData(), xpAmount = 0, season = getActiveSharkPassSeason()) {
+    if (!profileData || typeof profileData !== "object" || !season?.id) {
+        return { profileData, xpGain: 0, seasonId: season?.id || SHARK_PASS_ACTIVE_SEASON_ID };
+    }
+    const xpGain = Math.max(0, Math.floor(Number(xpAmount) || 0));
+    if (xpGain <= 0) {
+        profileData.sharkPassProgressSeasonId = profileData.sharkPassProgressSeasonId || season.id;
+        profileData.sharkPassSeasonId = profileData.sharkPassSeasonId || season.id;
+        profileData.sharkPassXP = Math.max(0, Number(profileData.sharkPassXP) || 0);
+        return { profileData, xpGain: 0, seasonId: season.id, sharkPassXP: profileData.sharkPassXP };
+    }
+
+    ensureSharkPassSeasonBaseline(profileData, season);
+    profileData.sharkPassProgressSeasonId = season.id;
+    profileData.sharkPassSeasonId = season.id;
+    profileData.sharkPassXP = getSharkPassXP(profileData, season) + xpGain;
+    return { profileData, xpGain, seasonId: season.id, sharkPassXP: profileData.sharkPassXP };
+}
+
+function getSharkPassSyncPayload(profileData = getCurrentProfileData()) {
+    const activeSeason = getActiveSharkPassSeason();
+    if (activeSeason?.id) {
+        normalizeSharkPassProgressForActiveSeason(profileData, activeSeason);
+    }
+    const seasonId = activeSeason?.id || SHARK_PASS_ACTIVE_SEASON_ID;
+    return {
+        sharkPassXP: Math.max(0, Number(profileData.sharkPassXP) || 0),
+        sharkPassProgressSeasonId: seasonId,
+        sharkPassSeasonId: profileData.sharkPassSeasonId || seasonId,
+        sharkPassSeasonBaselines: profileData.sharkPassSeasonBaselines && typeof profileData.sharkPassSeasonBaselines === "object"
+            ? profileData.sharkPassSeasonBaselines
+            : {},
+        sharkPassLevelRewardClaims: Array.isArray(profileData.sharkPassLevelRewardClaims)
+            ? profileData.sharkPassLevelRewardClaims
+            : []
+    };
+}
+
+function buildSharkPassXpGrantPayload(sourceProfile = {}, xpAmount = 0, season = getActiveSharkPassSeason()) {
+    const seasonId = season?.id || SHARK_PASS_ACTIVE_SEASON_ID;
+    const xpGain = Math.max(0, Math.floor(Number(xpAmount) || 0));
+    const sourceSeasonId = sourceProfile.sharkPassProgressSeasonId || sourceProfile.sharkPassSeasonId;
+    const currentPassXP = sourceSeasonId === seasonId ? Math.max(0, Number(sourceProfile.sharkPassXP) || 0) : 0;
+    return {
+        sharkPassXP: currentPassXP + xpGain,
+        sharkPassProgressSeasonId: seasonId,
+        sharkPassSeasonId: seasonId
+    };
+}
+
+window.applySharkPassXpGain = applySharkPassXpGain;
+window.getSharkPassSyncPayload = getSharkPassSyncPayload;
 
 function getSharkPassXPInCurrentLevel(profileData = getCurrentProfileData()) {
     const passXP = getSharkPassXP(profileData);
@@ -2494,20 +2581,15 @@ async function claimSharkPassMission(missionId) {
         : { totalXp: mission.xp, multiplier: 1, baseXp: mission.xp };
 
     profileData.totalXP = (Number(profileData.totalXP) || 0) + xpAward.totalXp;
-    profileData.sharkPassXP = getSharkPassXP(profileData) + xpAward.totalXp;
-    profileData.sharkPassProgressSeasonId = seasonId;
+    applySharkPassXpGain(profileData, xpAward.totalXp, passState.season);
     profileData.sharkPassMissionClaims = claims;
-    profileData.sharkPassSeasonId = seasonId;
     saveUserProfileLocally(profileData, { skipRemoteSync: true });
 
     if (currentUser && db) {
         await db.collection("userStats").doc(currentUser.uid).set({
             totalXP: profileData.totalXP,
-            sharkPassXP: profileData.sharkPassXP,
-            sharkPassProgressSeasonId: profileData.sharkPassProgressSeasonId,
+            ...getSharkPassSyncPayload(profileData),
             sharkPassMissionClaims: claims,
-            sharkPassSeasonBaselines: profileData.sharkPassSeasonBaselines || {},
-            sharkPassSeasonId: seasonId,
             lastUpdated: Date.now()
         }, { merge: true });
     }
@@ -2558,12 +2640,14 @@ async function syncSharkPassLevelRewards(profileData = getCurrentProfileData()) 
     if (!changed) return { changed: false, profileData };
 
     profileData.crateInventory = normalizeCrateInventory(inventory);
+    markCrateInventoryChanged(profileData);
     profileData.sharkPassLevelRewardClaims = claimedRewards;
     saveUserProfileLocally(profileData, { skipRemoteSync: true });
 
     if (currentUser && db) {
         await db.collection("userStats").doc(currentUser.uid).set({
             crateInventory: profileData.crateInventory,
+            crateInventoryUpdatedAt: getCrateInventoryUpdatedAt(profileData),
             sharkPassLevelRewardClaims: claimedRewards,
             lastUpdated: Date.now()
         }, { merge: true });
@@ -2830,9 +2914,45 @@ function normalizeCrateInventory(rawInventory) {
     };
 }
 
-function mergeCrateInventory(localInventory, remoteInventory, summerCratesRetired = false) {
-    const local = normalizeCrateInventory(localInventory);
-    const remote = normalizeCrateInventory(remoteInventory);
+function getCrateInventoryUpdatedAt(profileData = {}) {
+    return getProfileTimestampMs(profileData?.crateInventoryUpdatedAt);
+}
+
+function markCrateInventoryChanged(profileData, timestamp = Date.now()) {
+    if (!profileData || typeof profileData !== "object") return normalizeCrateInventory({});
+    const previousTimestamp = getCrateInventoryUpdatedAt(profileData);
+    const requestedTimestamp = getProfileTimestampMs(timestamp) || Date.now();
+    profileData.crateInventory = normalizeCrateInventory(profileData.crateInventory);
+    profileData.crateInventoryUpdatedAt = Math.max(requestedTimestamp, previousTimestamp + 1);
+    return profileData.crateInventory;
+}
+
+function getCrateInventoryFromProfileOrInventory(source) {
+    return normalizeCrateInventory(
+        source && typeof source === "object" && Object.prototype.hasOwnProperty.call(source, "crateInventory")
+            ? source.crateInventory
+            : source
+    );
+}
+
+function applyRetiredCrateRules(inventory, summerCratesRetired = false) {
+    const normalized = normalizeCrateInventory(inventory);
+    if (summerCratesRetired) normalized.summer = 0;
+    return normalized;
+}
+
+function mergeCrateInventory(localProfileOrInventory, remoteProfileOrInventory, summerCratesRetired = false, options = {}) {
+    const local = getCrateInventoryFromProfileOrInventory(localProfileOrInventory);
+    const remote = getCrateInventoryFromProfileOrInventory(remoteProfileOrInventory);
+    const localUpdatedAt = getCrateInventoryUpdatedAt(localProfileOrInventory);
+    const remoteUpdatedAt = getCrateInventoryUpdatedAt(remoteProfileOrInventory);
+
+    if (localUpdatedAt || remoteUpdatedAt) {
+        if (localUpdatedAt > remoteUpdatedAt) return applyRetiredCrateRules(local, summerCratesRetired);
+        if (remoteUpdatedAt > localUpdatedAt) return applyRetiredCrateRules(remote, summerCratesRetired);
+        return applyRetiredCrateRules(options.preferRemoteOnTie ? remote : local, summerCratesRetired);
+    }
+
     return {
         reef: Math.max(local.reef, remote.reef),
         summer: summerCratesRetired ? 0 : Math.max(local.summer, remote.summer),
@@ -2852,6 +2972,7 @@ function retireSummerCrates(profileData) {
         reef: inventory.reef + convertedCrates,
         summer: 0
     };
+    markCrateInventoryChanged(profileData);
     profileData.summerCrateRetirementVersion = SUMMER_CRATE_RETIREMENT_VERSION;
     return true;
 }
@@ -2869,6 +2990,7 @@ window.repairRetiredSummerCrateConversion = async function repairRetiredSummerCr
     inventory.reef = originalCosmeticCount + Math.floor(originalCount / 2);
     inventory.summer = 0;
     profileData.crateInventory = inventory;
+    markCrateInventoryChanged(profileData);
     profileData.summerCrateRetirementVersion = SUMMER_CRATE_RETIREMENT_VERSION;
     await persistCrateProfileUpdate(profileData);
     renderCratesButton();
@@ -3285,6 +3407,7 @@ function grantSpinWheelReward(profileData, reward) {
             ? window.applyLimitedTimeXpBonus(baseXp)
             : { totalXp: baseXp };
         profileData.totalXP = (Number(profileData.totalXP) || 0) + xpAward.totalXp;
+        applySharkPassXpGain(profileData, xpAward.totalXp);
         message = `${xpAward.totalXp} XP`;
     } else if (reward.type === "crate") {
         const inventory = getCrateInventory(profileData);
@@ -3292,15 +3415,19 @@ function grantSpinWheelReward(profileData, reward) {
         const amount = Math.max(1, Math.floor(Number(reward.amount) || 1));
         inventory[crateId] = (inventory[crateId] || 0) + amount;
         profileData.crateInventory = normalizeCrateInventory(inventory);
+        markCrateInventoryChanged(profileData);
         message = `${amount} ${getCrateDefinition(crateId).name}${amount === 1 ? "" : "s"}`;
     } else if (reward.type === "pass_level") {
-        const currentLevel = getLevelFromXP(profileData.totalXP || 0);
-        const targetXp = getXPForLevel(currentLevel + 1);
-        if ((profileData.totalXP || 0) < targetXp) {
-            profileData.totalXP = targetXp;
-            message = `Free Shark Pass level up! (Level ${currentLevel + 1})`;
+        const currentLevel = getCurrentPlayerLevel(profileData);
+        const nextLevel = Math.max(2, currentLevel + 1);
+        const targetPassXp = getXPForLevel(nextLevel);
+        const passXp = getSharkPassXP(profileData);
+        const xpGain = targetPassXp > passXp ? targetPassXp - passXp : 1500;
+        profileData.totalXP = (Number(profileData.totalXP) || 0) + xpGain;
+        applySharkPassXpGain(profileData, xpGain);
+        if (targetPassXp > passXp) {
+            message = `Free Shark Pass level up! (Level ${nextLevel})`;
         } else {
-            profileData.totalXP = (profileData.totalXP || 0) + 1500;
             message = "Max level reached \u2014 1500 XP instead";
         }
     } else if (reward.type === "item" || reward.type === "badge" || reward.type === "theme" || reward.type === "pfp") {
@@ -3319,6 +3446,7 @@ function grantSpinWheelReward(profileData, reward) {
             message = "Streak Shield (already at max)";
         } else if (duplicate) {
             profileData.totalXP = (profileData.totalXP || 0) + 750;
+            applySharkPassXpGain(profileData, 750);
             message = `${reward.label} (owned) \u2014 750 XP instead`;
         }
     }
@@ -3498,10 +3626,12 @@ async function spinDailyWheel() {
         try {
             await db.collection("userStats").doc(currentUser.uid).set({
                 totalXP: profileData.totalXP,
+                ...getSharkPassSyncPayload(profileData),
                 earnedCosmetics: profileData.earnedCosmetics,
                 unlockedBadges: profileData.unlockedBadges,
                 unlockedCardThemes: profileData.unlockedCardThemes,
                 crateInventory: normalizeCrateInventory(profileData.crateInventory),
+                crateInventoryUpdatedAt: getCrateInventoryUpdatedAt(profileData),
                 streakShields: getStreakShieldCount(profileData),
                 lastSpinWheelDate: profileData.lastSpinWheelDate,
                 dailySpinWinDate: profileData.dailySpinWinDate,
@@ -4976,11 +5106,15 @@ async function claimCommunityBossReward() {
         });
 
         profileData.totalXP = (Number(profileData.totalXP) || 0) + totalXpAwarded;
+        applySharkPassXpGain(profileData, totalXpAwarded);
         const inventory = getCrateInventory(profileData);
         Object.entries(cratesAwarded).forEach(([crateId, count]) => {
             inventory[crateId] = (inventory[crateId] || 0) + count;
         });
         profileData.crateInventory = normalizeCrateInventory(inventory);
+        if (Object.values(cratesAwarded).some(count => Number(count) > 0)) {
+            markCrateInventoryChanged(profileData, claimTime);
+        }
 
         if (shouldGrantBadge) {
             profileData.unlockedBadges = [
@@ -5011,7 +5145,9 @@ async function claimCommunityBossReward() {
         saveUserProfileLocally(profileData);
         await db.collection("userStats").doc(currentUser.uid).set({
             totalXP: profileData.totalXP,
+            ...getSharkPassSyncPayload(profileData),
             crateInventory: profileData.crateInventory,
+            crateInventoryUpdatedAt: getCrateInventoryUpdatedAt(profileData),
             unlockedBadges: getUnlockedBadgeIds(profileData),
             equippedBadge: getEquippedBadge(),
             communityBossRewards: profileData.communityBossRewards,
@@ -5051,11 +5187,15 @@ async function claimCommunityBossReward() {
         : rawRewardCrateCount;
 
     profileData.totalXP = (Number(profileData.totalXP) || 0) + reward.xp;
+    applySharkPassXpGain(profileData, reward.xp);
     const inventory = getCrateInventory(profileData);
     if (rewardCrateCount > 0) {
         inventory[rewardCrateId] = (inventory[rewardCrateId] || 0) + rewardCrateCount;
     }
     profileData.crateInventory = normalizeCrateInventory(inventory);
+    if (rewardCrateCount > 0) {
+        markCrateInventoryChanged(profileData);
+    }
     profileData.unlockedBadges = [
         ...new Set([
             ...(Array.isArray(profileData.unlockedBadges) ? profileData.unlockedBadges : ["starter"]),
@@ -5080,7 +5220,9 @@ async function claimCommunityBossReward() {
     saveUserProfileLocally(profileData);
     await db.collection("userStats").doc(currentUser.uid).set({
         totalXP: profileData.totalXP,
+        ...getSharkPassSyncPayload(profileData),
         crateInventory: profileData.crateInventory,
+        crateInventoryUpdatedAt: getCrateInventoryUpdatedAt(profileData),
         unlockedBadges: getUnlockedBadgeIds(profileData),
         equippedBadge: getEquippedBadge(),
         communityBossRewards: profileData.communityBossRewards,
@@ -5149,6 +5291,7 @@ async function claimGlobalCladoselacheParticipationCrate(options = {}) {
     const inventory = getCrateInventory(profileData);
     inventory.reef = (Number(inventory.reef) || 0) + 1;
     profileData.crateInventory = normalizeCrateInventory(inventory);
+    markCrateInventoryChanged(profileData, claimTime);
 
     claims[CLADOSELACHE_PARTICIPATION_REWARD_ID] = {
         claimedAt: claimTime,
@@ -5176,6 +5319,7 @@ async function claimGlobalCladoselacheParticipationCrate(options = {}) {
     try {
         await db.collection("userStats").doc(currentUser.uid).set({
             crateInventory: profileData.crateInventory,
+            crateInventoryUpdatedAt: getCrateInventoryUpdatedAt(profileData),
             communityBossRewards: profileData.communityBossRewards,
             lastUpdated: new Date()
         }, { merge: true });
@@ -7853,12 +7997,16 @@ function grantCrateReward(profileData, reward) {
 }
 
 async function persistCrateProfileUpdate(profileData) {
+    if (!getCrateInventoryUpdatedAt(profileData)) {
+        markCrateInventoryChanged(profileData);
+    }
     profileData.lastUpdated = Date.now();
     saveUserProfileLocally(profileData, { skipRemoteSync: true });
 
     if (!currentUser || !db) return;
     await db.collection("userStats").doc(currentUser.uid).set({
         crateInventory: normalizeCrateInventory(profileData.crateInventory),
+        crateInventoryUpdatedAt: getCrateInventoryUpdatedAt(profileData),
         cratesOpened: Math.max(0, Number(profileData.cratesOpened) || 0),
         cratesSinceLegendary: getCratesSinceLegendary(profileData),
         streakShields: getStreakShieldCount(profileData),
@@ -7867,6 +8015,7 @@ async function persistCrateProfileUpdate(profileData) {
         pearlBoostExpiresAt: getPearlBoostExpiresAt(profileData),
         seasonXpBoosts: getSeasonXpBoosts(profileData),
         totalXP: Math.max(0, Number(profileData.totalXP) || 0),
+        ...getSharkPassSyncPayload(profileData),
         earnedCosmetics: Array.isArray(profileData.earnedCosmetics) ? profileData.earnedCosmetics : [],
         unlockedBadges: Array.isArray(profileData.unlockedBadges) ? profileData.unlockedBadges : ["starter"],
         unlockedCardThemes: Array.isArray(profileData.unlockedCardThemes) ? profileData.unlockedCardThemes : ["default"],
@@ -8069,6 +8218,10 @@ function toggleCrateInstantOpen(enabled) {
 
 async function openCrate(crateId = "reef") {
     if (crateOpeningInProgress) return;
+    if (!currentUser) {
+        openLoginModal();
+        return;
+    }
     const profileData = getCurrentProfileData();
     const inventory = getCrateInventory(profileData);
     if ((inventory[crateId] || 0) <= 0) {
@@ -8080,8 +8233,11 @@ async function openCrate(crateId = "reef") {
 
     crateOpeningInProgress = true;
     updateSeasonalCrateCraftingUI(profileData);
+    const rollbackProfileData = JSON.parse(JSON.stringify(profileData));
+    const openTimestamp = Date.now();
     inventory[crateId] -= 1;
     profileData.crateInventory = normalizeCrateInventory(inventory);
+    markCrateInventoryChanged(profileData, openTimestamp);
     profileData.cratesOpened = getOpenedCrateCount(profileData) + 1;
     const rewardRarity = pickCrateRewardRarity(profileData);
     const rarityRewards = getCrateRewardsByRarity(rewardRarity, crateId);
@@ -8097,8 +8253,20 @@ async function openCrate(crateId = "reef") {
             ? window.applyLimitedTimeXpBonus(baseDuplicateXp)
             : { totalXp: baseDuplicateXp, baseXp: baseDuplicateXp, bonusXp: 0, multiplier: 1, event: null };
         profileData.totalXP = (profileData.totalXP || 0) + duplicateXpAward.totalXp;
+        applySharkPassXpGain(profileData, duplicateXpAward.totalXp);
     }
-    await persistCrateProfileUpdate(profileData).catch(error => console.warn("Crate sync failed:", error));
+    try {
+        await persistCrateProfileUpdate(profileData);
+    } catch (error) {
+        console.warn("Crate sync failed:", error);
+        Object.assign(profileData, rollbackProfileData);
+        saveUserProfileLocally(profileData, { skipRemoteSync: true });
+        crateOpeningInProgress = false;
+        renderCratesButton();
+        renderCratesModal();
+        showNotification("Crate could not be saved. No crate was opened.", "error", 3600);
+        return;
+    }
     renderCratesButton();
     renderCratesModal();
 
@@ -8140,6 +8308,7 @@ function maybeAwardCrateDrop(source = "win") {
         inventory.reef += 1;
         showNotification(`Cosmetic Crate dropped from your ${source}!`, "success", 3800);
         profileData.crateInventory = normalizeCrateInventory(inventory);
+        markCrateInventoryChanged(profileData);
         persistCrateProfileUpdate(profileData).catch(error => console.warn("Crate sync failed:", error));
         renderCratesButton();
         renderCratesModal();
@@ -9087,6 +9256,7 @@ function applyCodeCrateRewards(profileData, crateRewards = {}) {
     });
     if (granted.length) {
         profileData.crateInventory = normalizeCrateInventory(inventory);
+        markCrateInventoryChanged(profileData);
     }
     return granted;
 }
@@ -10200,6 +10370,7 @@ function saveUserProfileLocally(profileData, options = {}) {
         cachePreferredUsername(profileData.username, profileData.uid);
     }
     profileData.crateInventory = normalizeCrateInventory(profileData.crateInventory);
+    profileData.crateInventoryUpdatedAt = getCrateInventoryUpdatedAt(profileData);
     profileData.cratesOpened = Math.max(0, Number(profileData.cratesOpened) || 0);
     profileData.cratesSinceLegendary = getCratesSinceLegendary(profileData);
     profileData.streakShields = getStreakShieldCount(profileData);
@@ -10219,8 +10390,7 @@ function saveUserProfileLocally(profileData, options = {}) {
     if (!Array.isArray(profileData.showcasedAchievements)) profileData.showcasedAchievements = [];
     profileData.showcasedAchievements = getProfileShowcasedAchievementIds(profileData);
     if (!Array.isArray(profileData.sharkPassLevelRewardClaims)) profileData.sharkPassLevelRewardClaims = [];
-    if (!profileData.sharkPassProgressSeasonId) profileData.sharkPassProgressSeasonId = SHARK_PASS_ACTIVE_SEASON_ID;
-    profileData.sharkPassXP = Math.max(0, Number(profileData.sharkPassXP) || 0);
+    normalizeSharkPassProgressForActiveSeason(profileData);
     sanitizeCurrentSharkPassUnlocks(profileData);
     profileData.lostTreasures = mergeLostTreasuresStates(profileData, {});
     if (!Array.isArray(profileData.redeemedCodes)) profileData.redeemedCodes = getRedeemedCodes();
@@ -10419,9 +10589,11 @@ function mergeProfilesSafely(localProfile, firebaseData, options = {}) {
         if (preferRemote && Number.isFinite(remoteNumber)) return Math.max(0, remoteNumber);
         return maxNumeric(localValue, remoteValue);
     };
-    const preferredCrateInventory = preferRemote && firebaseData.crateInventory
-        ? normalizeCrateInventory(firebaseData.crateInventory)
-        : mergeCrateInventory(localProfile.crateInventory, firebaseData.crateInventory, summerCratesRetired);
+    const preferredCrateInventory = mergeCrateInventory(localProfile, firebaseData, summerCratesRetired, { preferRemoteOnTie: preferRemote });
+    const preferredCrateInventoryUpdatedAt = Math.max(
+        getCrateInventoryUpdatedAt(localProfile),
+        getCrateInventoryUpdatedAt(firebaseData)
+    );
     const preferredCratesOpened = preferRemoteNumber(localProfile.cratesOpened, firebaseData.cratesOpened);
     const preferredPearls = preferRemoteNumber(localProfile.pearls ?? localProfile.tidePearls, firebaseData.pearls ?? firebaseData.tidePearls);
     const preferredTotalXP = preferRemote && getProfileTotalXPValue(firebaseData) > 0
@@ -10565,8 +10737,17 @@ function mergeProfilesSafely(localProfile, firebaseData, options = {}) {
             ...(localProfile.sharkPassSeasonBaselines && typeof localProfile.sharkPassSeasonBaselines === "object" ? localProfile.sharkPassSeasonBaselines : {}),
             ...(firebaseData.sharkPassSeasonBaselines && typeof firebaseData.sharkPassSeasonBaselines === "object" ? firebaseData.sharkPassSeasonBaselines : {})
         },
-        sharkPassLevelRewardClaims: getMergedUniqueIds(localProfile.sharkPassLevelRewardClaims, firebaseData.sharkPassLevelRewardClaims, []),
-        sharkPassProgressSeasonId: firebaseData.sharkPassProgressSeasonId || localProfile.sharkPassProgressSeasonId || SHARK_PASS_ACTIVE_SEASON_ID,
+        sharkPassLevelRewardClaims: (() => {
+            const activeSeasonId = getActiveSharkPassSeasonId();
+            const localSeasonId = localProfile.sharkPassProgressSeasonId || localProfile.sharkPassSeasonId;
+            const remoteSeasonId = firebaseData.sharkPassProgressSeasonId || firebaseData.sharkPassSeasonId;
+            return getMergedUniqueIds(
+                localSeasonId === activeSeasonId ? localProfile.sharkPassLevelRewardClaims : [],
+                remoteSeasonId === activeSeasonId ? firebaseData.sharkPassLevelRewardClaims : [],
+                []
+            );
+        })(),
+        sharkPassProgressSeasonId: getActiveSharkPassSeasonId(),
         sharkPassXP: (() => {
             const activeSeasonId = getActiveSharkPassSeason()?.id || SHARK_PASS_ACTIVE_SEASON_ID;
             const localSeasonId = localProfile.sharkPassProgressSeasonId || localProfile.sharkPassSeasonId;
@@ -10579,8 +10760,9 @@ function mergeProfilesSafely(localProfile, firebaseData, options = {}) {
             if (preferRemote && getProfileSharkPassXPValue(firebaseData) > 0) return getProfileSharkPassXPValue(firebaseData);
             return 0;
         })(),
-        sharkPassSeasonId: firebaseData.sharkPassSeasonId || localProfile.sharkPassSeasonId || SHARK_PASS_ACTIVE_SEASON_ID,
+        sharkPassSeasonId: getActiveSharkPassSeasonId(),
         crateInventory: preferredCrateInventory,
+        crateInventoryUpdatedAt: preferredCrateInventoryUpdatedAt,
         summerCrateRetirementVersion: summerCratesRetired ? SUMMER_CRATE_RETIREMENT_VERSION : 0,
         claimedAchievements: mergedClaimedAchievements,
         unlockedAchievements: mergedUnlockedAchievements,
@@ -10641,14 +10823,25 @@ async function loadUserProfile(options = {}) {
             const localRecoveryScore = getProfileRecoveryScore(localProfile);
             const remoteRecoveryScore = getProfileRecoveryScore(firebaseData);
             const localLooksNewer = localHasRecoverableProfile && localRecoveryScore > remoteRecoveryScore;
-            const localMergeSource = localLooksNewer ? localProfile : {};
-            userData = mergeProfilesSafely(localMergeSource, firebaseData, { preferRemote: !localLooksNewer });
+            const localHasNewerCrateInventory =
+                localHasRecoverableProfile &&
+                getCrateInventoryUpdatedAt(localProfile) > getCrateInventoryUpdatedAt(firebaseData);
+            const localMergeSource = (localLooksNewer || localHasNewerCrateInventory) ? localProfile : {};
+            userData = mergeProfilesSafely(localMergeSource, firebaseData, { preferRemote: !(localLooksNewer || localHasNewerCrateInventory) });
             storeLoginProgressLocally(userData, authUser.uid);
             saveUserProfileLocally(userData, { skipRemoteSync: true, preserveLastUpdated: true });
-            if (localLooksNewer && fromServer) {
+            const activePassSeasonId = getActiveSharkPassSeasonId();
+            if (
+                firebaseData.sharkPassProgressSeasonId !== activePassSeasonId ||
+                firebaseData.sharkPassSeasonId !== activePassSeasonId ||
+                (firebaseData.sharkPassXP && Number(firebaseData.sharkPassXP) !== Number(userData.sharkPassXP))
+            ) {
+                await statsRef.set(getSharkPassSyncPayload(userData), { merge: true });
+            }
+            if ((localLooksNewer || localHasNewerCrateInventory) && fromServer) {
                 scheduleRemoteProfileSync(250);
             }
-            if ((fromServer || fullCloudFromServer) && (!fullCloudProfile || localLooksNewer) && hasRecoverableRemoteProfile(userData)) {
+            if ((fromServer || fullCloudFromServer) && (!fullCloudProfile || localLooksNewer || localHasNewerCrateInventory) && hasRecoverableRemoteProfile(userData)) {
                 syncFullUserProfileToFirebase(userData).catch(error => console.warn("Full profile backup refresh failed:", error));
             }
             // Ensure legacy localStorage keys are updated for compatibility with other parts of the app
@@ -10988,6 +11181,7 @@ function grantPearlShopItem(profileData, itemId) {
         const inventory = getCrateInventory(profileData);
         inventory[crateId] = (inventory[crateId] || 0) + 1;
         profileData.crateInventory = normalizeCrateInventory(inventory);
+        markCrateInventoryChanged(profileData);
         return { success: true, message: `${getCrateDefinition(crateId).name} added.` };
     }
 
@@ -11034,6 +11228,7 @@ async function persistPearlShopPurchase(profileData, itemId, item) {
                 pearlBoostExpiresAt: getPearlBoostExpiresAt(nextProfile),
                 streakShields: getStreakShieldCount(nextProfile),
                 crateInventory: normalizeCrateInventory(nextProfile.crateInventory),
+                crateInventoryUpdatedAt: getCrateInventoryUpdatedAt(nextProfile),
                 lostTreasures: getLostTreasuresState(nextProfile),
                 seasonXpBoosts: getSeasonXpBoosts(nextProfile),
                 sharkPassSeasonId: nextProfile.sharkPassSeasonId || SHARK_PASS_ACTIVE_SEASON_ID,
@@ -11399,11 +11594,12 @@ function buildInitialUserProfileForAuthUser(user, usernameOverride = "") {
         referralRewards: localProfile.referralRewards && typeof localProfile.referralRewards === "object" ? localProfile.referralRewards : {},
         sharkPassMissionClaims: localProfile.sharkPassMissionClaims && typeof localProfile.sharkPassMissionClaims === "object" ? localProfile.sharkPassMissionClaims : {},
         sharkPassSeasonBaselines: localProfile.sharkPassSeasonBaselines && typeof localProfile.sharkPassSeasonBaselines === "object" ? localProfile.sharkPassSeasonBaselines : {},
-        sharkPassLevelRewardClaims: Array.isArray(localProfile.sharkPassLevelRewardClaims) ? localProfile.sharkPassLevelRewardClaims : [],
-        sharkPassProgressSeasonId: localProfile.sharkPassProgressSeasonId || SHARK_PASS_ACTIVE_SEASON_ID,
-        sharkPassXP: Math.max(0, Number(localProfile.sharkPassXP) || 0),
-        sharkPassSeasonId: localProfile.sharkPassSeasonId || SHARK_PASS_ACTIVE_SEASON_ID,
+        sharkPassLevelRewardClaims: [],
+        sharkPassProgressSeasonId: getActiveSharkPassSeasonId(),
+        sharkPassXP: 0,
+        sharkPassSeasonId: getActiveSharkPassSeasonId(),
         crateInventory: normalizeCrateInventory(localProfile.crateInventory),
+        crateInventoryUpdatedAt: getCrateInventoryUpdatedAt(localProfile),
         cratesOpened: Math.max(0, Number(localProfile.cratesOpened) || 0),
         streakShields: getStreakShieldCount(localProfile),
         instantCrateOpen: getCrateInstantOpenEnabled(localProfile),
@@ -11679,11 +11875,12 @@ async function signupUser() {
             sharkPassSeasonBaselines: localProfile.sharkPassSeasonBaselines && typeof localProfile.sharkPassSeasonBaselines === "object"
                 ? localProfile.sharkPassSeasonBaselines
                 : {},
-            sharkPassLevelRewardClaims: Array.isArray(localProfile.sharkPassLevelRewardClaims) ? localProfile.sharkPassLevelRewardClaims : [],
-            sharkPassProgressSeasonId: localProfile.sharkPassProgressSeasonId || SHARK_PASS_ACTIVE_SEASON_ID,
-            sharkPassXP: Math.max(0, Number(localProfile.sharkPassXP) || 0),
-            sharkPassSeasonId: localProfile.sharkPassSeasonId || SHARK_PASS_ACTIVE_SEASON_ID,
+            sharkPassLevelRewardClaims: [],
+            sharkPassProgressSeasonId: getActiveSharkPassSeasonId(),
+            sharkPassXP: 0,
+            sharkPassSeasonId: getActiveSharkPassSeasonId(),
             crateInventory: normalizeCrateInventory(localProfile.crateInventory),
+            crateInventoryUpdatedAt: getCrateInventoryUpdatedAt(localProfile),
             cratesOpened: Math.max(0, Number(localProfile.cratesOpened) || 0),
             streakShields: getStreakShieldCount(localProfile),
             instantCrateOpen: getCrateInstantOpenEnabled(localProfile),
@@ -12690,6 +12887,7 @@ async function syncStatsToFirebase() {
             sharkPassXP: Math.max(0, Number(mergedProfile.sharkPassXP) || 0),
             sharkPassSeasonId: mergedProfile.sharkPassSeasonId || SHARK_PASS_ACTIVE_SEASON_ID,
             crateInventory: normalizeCrateInventory(mergedProfile.crateInventory),
+            crateInventoryUpdatedAt: getCrateInventoryUpdatedAt(mergedProfile),
             lastUpdated: new Date()
         };
 
@@ -12969,6 +13167,7 @@ async function initializeDailyLogin() {
         const nextTotalXp = Math.max(currentProfileXp, currentStoredXp) + xpGain;
 
         profileData.totalXP = nextTotalXp;
+        applySharkPassXpGain(profileData, xpGain);
         profileData.loginStreak = streak;
         profileData.currentLoginDay = nextDay;
         profileData.lastLoginDate = today;
@@ -12993,7 +13192,8 @@ async function initializeDailyLogin() {
                 currentLoginDay: nextDay,
                 loginStreak: streak,
                 dailyLoginModalShownToday: today,
-                totalXP: nextTotalXp
+                totalXP: nextTotalXp,
+                ...getSharkPassSyncPayload(profileData)
             }, { merge: true });
         }
 
@@ -13231,6 +13431,7 @@ async function redeemCode(inputId = "redeem-code-input", messageId = "redeem-mes
             : { totalXp: rewardXp };
         const newXP = currentXP + xpAward.totalXp;
         userProfile.totalXP = newXP;
+        applySharkPassXpGain(userProfile, xpAward.totalXp);
 
         // Add cosmetics if any
         const newlyUnlockedCosmetics = [];
@@ -13271,10 +13472,12 @@ async function redeemCode(inputId = "redeem-code-input", messageId = "redeem-mes
             const statsRef = db.collection("userStats").doc(currentUser.uid);
             await statsRef.set({
                 totalXP: newXP,
+                ...getSharkPassSyncPayload(userProfile),
                 earnedCosmetics: userProfile.earnedCosmetics,
                 unlockedBadges: Array.isArray(userProfile.unlockedBadges) ? userProfile.unlockedBadges : ["starter"],
                 testerBadgeUnlocked: userProfile.testerBadgeUnlocked === true,
-                crateInventory: normalizeCrateInventory(userProfile.crateInventory)
+                crateInventory: normalizeCrateInventory(userProfile.crateInventory),
+                crateInventoryUpdatedAt: getCrateInventoryUpdatedAt(userProfile)
             }, { merge: true });
         }
 
@@ -13367,6 +13570,7 @@ async function addStats(statsObj) {
         // Add to requested stats
         if (statsObj.xp) {
             userProfile.totalXP = (userProfile.totalXP || 0) + statsObj.xp;
+            applySharkPassXpGain(userProfile, statsObj.xp);
             console.log(`? Added ${statsObj.xp} XP. Total: ${userProfile.totalXP}`);
         }
         if (statsObj.wins) {
@@ -13447,14 +13651,17 @@ async function setLevel(level) {
 
     try {
         const userProfile = getCurrentProfileData();
+        const currentXP = Number(userProfile.totalXP) || 0;
         const targetXP = getXPForLevel(targetLevel);
         userProfile.totalXP = targetXP;
+        applySharkPassXpGain(userProfile, Math.max(0, targetXP - currentXP));
 
         saveUserProfileLocally(userProfile);
 
         const statsRef = db.collection("userStats").doc(currentUser.uid);
         await statsRef.set({
-            totalXP: targetXP
+            totalXP: targetXP,
+            ...getSharkPassSyncPayload(userProfile)
         }, { merge: true });
 
         await loadUserProfile();
@@ -13800,6 +14007,7 @@ async function grantGlobalCrates(amount = 1) {
     const nowMs = Date.now();
     return runActiveUserStatsBatch(() => ({
         "crateInventory.reef": firebase.firestore.FieldValue.increment(count),
+        crateInventoryUpdatedAt: nowMs,
         lastUpdated: nowMs
     }));
 }
@@ -13938,7 +14146,7 @@ function buildAdminCompensationPayload(targetUser, type, amount, nowMs) {
         const targetLevel = currentLevel + amount;
         const xpAdded = getXPForLevel(targetLevel) - currentLevelStartXP;
         const nextTotalXP = currentTotalXP + xpAdded;
-        Object.assign(payload, buildAdminLevelSyncPayload(nextTotalXP), {
+        Object.assign(payload, buildAdminLevelSyncPayload(nextTotalXP), buildSharkPassXpGrantPayload(data, xpAdded), {
             lastAdminLevelGrant: {
                 levelsAdded: amount,
                 xpAdded,
@@ -13957,7 +14165,7 @@ function buildAdminCompensationPayload(targetUser, type, amount, nowMs) {
     } else if (normalizedType === "xp") {
         const currentTotalXP = Math.max(0, Math.floor(Number(data.totalXP) || 0));
         const nextTotalXP = currentTotalXP + amount;
-        Object.assign(payload, buildAdminLevelSyncPayload(nextTotalXP));
+        Object.assign(payload, buildAdminLevelSyncPayload(nextTotalXP), buildSharkPassXpGrantPayload(data, amount));
         grant = {
             name: "XP",
             value: formatAdminCompensationValue(amount),
@@ -13978,6 +14186,7 @@ function buildAdminCompensationPayload(targetUser, type, amount, nowMs) {
         const inventory = normalizeCrateInventory(data.crateInventory || {});
         inventory.reef = (Number(inventory.reef) || 0) + amount;
         payload.crateInventory = inventory;
+        payload.crateInventoryUpdatedAt = nowMs;
         grant = {
             name: "Cosmetic Crates",
             value: formatAdminCompensationValue(amount),
@@ -14569,6 +14778,7 @@ async function forceRedeemCode(code) {
             : { totalXp: codeReward.xp };
         const newXP = currentXP + xpAward.totalXp;
         userProfile.totalXP = newXP;
+        applySharkPassXpGain(userProfile, xpAward.totalXp);
 
         // Add cosmetics if any
         const newlyUnlockedCosmetics = [];
@@ -14606,10 +14816,12 @@ async function forceRedeemCode(code) {
             const statsRef = db.collection("userStats").doc(currentUser.uid);
             await statsRef.set({
                 totalXP: newXP,
+                ...getSharkPassSyncPayload(userProfile),
                 earnedCosmetics: userProfile.earnedCosmetics,
                 testerBadgeUnlocked: userProfile.testerBadgeUnlocked,
                 unlockedBadges: userProfile.unlockedBadges,
-                crateInventory: normalizeCrateInventory(userProfile.crateInventory)
+                crateInventory: normalizeCrateInventory(userProfile.crateInventory),
+                crateInventoryUpdatedAt: getCrateInventoryUpdatedAt(userProfile)
             }, { merge: true });
         }
 
@@ -14664,9 +14876,11 @@ async function addCrates(amount = 1) {
         const inventory = getCrateInventory(profileData);
         inventory.reef += count;
         profileData.crateInventory = normalizeCrateInventory(inventory);
+        markCrateInventoryChanged(profileData);
         saveUserProfileLocally(profileData);
         await db.collection("userStats").doc(currentUser.uid).set({
-            crateInventory: profileData.crateInventory
+            crateInventory: profileData.crateInventory,
+            crateInventoryUpdatedAt: getCrateInventoryUpdatedAt(profileData)
         }, { merge: true });
         renderCratesButton();
         renderCratesModal();

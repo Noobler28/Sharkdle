@@ -42,11 +42,11 @@ function getMilestoneLevels() {
 }
 
 function renderPassOverview(profileData) {
-    const totalXP = profileData.totalXP || 0;
+    const totalXP = getSharkPassXP(profileData);
     const userLevel = getCurrentPlayerLevel(profileData);
-    const xpInLevel = getXPInCurrentLevel(totalXP);
-    const xpLevelSize = xpIncrements[userLevel] !== undefined
-        ? xpIncrements[userLevel]
+    const xpInLevel = getSharkPassXPInCurrentLevel(profileData);
+    const xpLevelSize = xpIncrements[Math.max(1, userLevel)] !== undefined
+        ? xpIncrements[Math.max(1, userLevel)]
         : (1000 + (userLevel - 1) * 500);
     const progress = xpLevelSize > 0 ? Math.round((xpInLevel / xpLevelSize) * 100) : 0;
     const nextReward = getNextLockedReward(profileData);
@@ -171,7 +171,7 @@ function renderFocusTrack(profileData) {
 
     const nextReward = getNextLockedReward(profileData);
     const nextTierRewards = nextReward ? sharkPassRewards.filter(reward => reward.level === nextReward.level) : [];
-    const xpNeeded = nextReward ? Math.max(0, getXPForLevel(nextReward.level) - (profileData.totalXP || 0)) : 0;
+    const xpNeeded = nextReward ? Math.max(0, getXPForLevel(nextReward.level) - getSharkPassXP(profileData)) : 0;
 
     focusShell.innerHTML = `
         <article class="pass-focus-card next">
@@ -195,7 +195,7 @@ function renderRewardTrack(profileData) {
     if (!grid) return;
     const nextReward = getNextLockedReward(profileData);
     const userLevel = getCurrentPlayerLevel(profileData);
-    const totalXP = profileData.totalXP || 0;
+    const totalXP = getSharkPassXP(profileData);
     const futureLevels = getMilestoneLevels().filter(level => level > userLevel);
 
     if (!nextReward || !futureLevels.length) {

@@ -820,6 +820,9 @@ if(shark.name === targetShark.name){
 
     // Gain XP and Pearls, then save for Shark Pass/profile progress.
     profileData.totalXP = (profileData.totalXP || 0) + xpGain;
+    if (typeof window.applySharkPassXpGain === 'function') {
+        window.applySharkPassXpGain(profileData, xpGain);
+    }
     const pearlsEarned = typeof window.awardPearlsForWin === 'function'
         ? window.awardPearlsForWin(profileData, { deferSave: true, deferUiUpdate: true })
         : 0;
