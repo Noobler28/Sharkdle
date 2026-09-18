@@ -3074,18 +3074,60 @@ function getPearlCount(profileData = getCurrentProfileData()) {
     return Math.max(0, Math.floor(Number(profileData?.pearls ?? profileData?.tidePearls) || 0));
 }
 
-function setPearlCount(profileData, nextAmount) {
+function hasStoredPearlCount(profileData = {}) {
+    return Boolean(profileData && typeof profileData === "object" && (
+        Object.prototype.hasOwnProperty.call(profileData, "pearls") ||
+        Object.prototype.hasOwnProperty.call(profileData, "tidePearls")
+    ));
+}
+
+function getPearlBalanceUpdatedAt(profileData = {}) {
+    return Math.max(0, Number(profileData?.pearlBalanceUpdatedAt) || 0);
+}
+
+function markPearlBalanceChanged(profileData, timestampMs = Date.now()) {
+    if (!profileData || typeof profileData !== "object") return 0;
+    const normalizedTimestamp = Math.max(0, Number(timestampMs) || Date.now());
+    profileData.pearlBalanceUpdatedAt = Math.max(getPearlBalanceUpdatedAt(profileData), normalizedTimestamp);
+    return profileData.pearlBalanceUpdatedAt;
+}
+
+function getMergedPearlCount(localProfile = {}, firebaseData = {}, preferRemote = false) {
+    const localHasPearls = hasStoredPearlCount(localProfile);
+    const remoteHasPearls = hasStoredPearlCount(firebaseData);
+    const localUpdatedAt = getPearlBalanceUpdatedAt(localProfile);
+    const remoteUpdatedAt = getPearlBalanceUpdatedAt(firebaseData);
+
+    if ((localUpdatedAt || remoteUpdatedAt) && localUpdatedAt !== remoteUpdatedAt) {
+        return localUpdatedAt > remoteUpdatedAt
+            ? (localHasPearls ? getPearlCount(localProfile) : 0)
+            : (remoteHasPearls ? getPearlCount(firebaseData) : 0);
+    }
+
+    if (preferRemote && remoteHasPearls) return getPearlCount(firebaseData);
+    if (!remoteHasPearls && localHasPearls) return getPearlCount(localProfile);
+    if (!localHasPearls && remoteHasPearls) return getPearlCount(firebaseData);
+    return maxNumeric(localProfile.pearls ?? localProfile.tidePearls, firebaseData.pearls ?? firebaseData.tidePearls);
+}
+
+function setPearlCount(profileData, nextAmount, options = {}) {
     if (!profileData || typeof profileData !== "object") return 0;
     const normalizedAmount = Math.max(0, Math.floor(Number(nextAmount) || 0));
     profileData.pearls = normalizedAmount;
     if (Object.prototype.hasOwnProperty.call(profileData, "tidePearls")) {
         delete profileData.tidePearls;
     }
+    if (options.markChanged) {
+        markPearlBalanceChanged(profileData, options.updatedAtMs);
+    }
     return normalizedAmount;
 }
 
 function addPearls(amount, profileData = getCurrentProfileData(), options = {}) {
-    const nextAmount = setPearlCount(profileData, getPearlCount(profileData) + amount);
+    const nextAmount = setPearlCount(profileData, getPearlCount(profileData) + amount, {
+        markChanged: true,
+        updatedAtMs: options.updatedAtMs
+    });
     if (!options.deferSave && typeof saveUserProfileLocally === "function") {
         saveUserProfileLocally(profileData);
     }
@@ -5649,6 +5691,7 @@ async function persistLostTreasuresState(profileData) {
     await db.collection("userStats").doc(currentUser.uid).set({
         lostTreasures: profileData.lostTreasures,
         pearls: getPearlCount(profileData),
+        pearlBalanceUpdatedAt: getPearlBalanceUpdatedAt(profileData),
         unlockedBadges: Array.isArray(profileData.unlockedBadges) ? profileData.unlockedBadges : ["starter"],
         earnedCosmetics: Array.isArray(profileData.earnedCosmetics) ? profileData.earnedCosmetics : [],
         lastUpdated: new Date()
@@ -8033,6 +8076,7 @@ async function persistCrateProfileUpdate(profileData) {
         streakShields: getStreakShieldCount(profileData),
         instantCrateOpen: getCrateInstantOpenEnabled(profileData),
         pearls: getPearlCount(profileData),
+        pearlBalanceUpdatedAt: getPearlBalanceUpdatedAt(profileData),
         pearlBoostExpiresAt: getPearlBoostExpiresAt(profileData),
         seasonXpBoosts: getSeasonXpBoosts(profileData),
         totalXP: Math.max(0, Number(profileData.totalXP) || 0),
@@ -9847,7 +9891,9 @@ function getProfileRecoveryScore(profile = {}) {
 function shouldReplaceProfileBackup(incomingProfile = {}, existingBackup = {}, incomingScore = getProfileRecoveryScore(incomingProfile), backupScore = getProfileRecoveryScore(existingBackup)) {
     const incomingCrateUpdatedAt = getCrateInventoryUpdatedAt(incomingProfile);
     const backupCrateUpdatedAt = getCrateInventoryUpdatedAt(existingBackup);
-    return incomingScore >= backupScore || !backupScore || incomingCrateUpdatedAt > backupCrateUpdatedAt;
+    const incomingPearlUpdatedAt = getPearlBalanceUpdatedAt(incomingProfile);
+    const backupPearlUpdatedAt = getPearlBalanceUpdatedAt(existingBackup);
+    return incomingScore >= backupScore || !backupScore || incomingCrateUpdatedAt > backupCrateUpdatedAt || incomingPearlUpdatedAt > backupPearlUpdatedAt;
 }
 
 function getProfileTotalXPValue(profile = {}) {
@@ -10402,6 +10448,8 @@ function saveUserProfileLocally(profileData, options = {}) {
     profileData.pearlBoostExpiresAt = getPearlBoostExpiresAt(profileData);
     profileData.seasonXpBoosts = getSeasonXpBoosts(profileData);
     setPearlCount(profileData, getPearlCount(profileData));
+    const pearlBalanceUpdatedAt = getPearlBalanceUpdatedAt(profileData);
+    if (pearlBalanceUpdatedAt) profileData.pearlBalanceUpdatedAt = pearlBalanceUpdatedAt;
     profileData.earnedCosmetics = removeLegacyWheelSharkCosmetics(profileData.earnedCosmetics);
     if (!Array.isArray(profileData.unlockedBadges)) profileData.unlockedBadges = ["starter"];
     profileData.unlockedBadges = [...new Set(["starter", ...profileData.unlockedBadges.map(normalizeBadgeId)])];
@@ -10540,6 +10588,8 @@ function getBestLocalProfile() {
             .sort((a, b) => {
                 const crateTimestampDelta = getCrateInventoryUpdatedAt(b) - getCrateInventoryUpdatedAt(a);
                 if (crateTimestampDelta) return crateTimestampDelta;
+                const pearlTimestampDelta = getPearlBalanceUpdatedAt(b) - getPearlBalanceUpdatedAt(a);
+                if (pearlTimestampDelta) return pearlTimestampDelta;
                 return getProfileRecoveryScore(b) - getProfileRecoveryScore(a);
             })[0] || {};
     };
@@ -10622,7 +10672,11 @@ function mergeProfilesSafely(localProfile, firebaseData, options = {}) {
         getCrateInventoryUpdatedAt(firebaseData)
     );
     const preferredCratesOpened = preferRemoteNumber(localProfile.cratesOpened, firebaseData.cratesOpened);
-    const preferredPearls = preferRemoteNumber(localProfile.pearls ?? localProfile.tidePearls, firebaseData.pearls ?? firebaseData.tidePearls);
+    const preferredPearls = getMergedPearlCount(localProfile, firebaseData, preferRemote);
+    const preferredPearlBalanceUpdatedAt = Math.max(
+        getPearlBalanceUpdatedAt(localProfile),
+        getPearlBalanceUpdatedAt(firebaseData)
+    );
     const preferredTotalXP = preferRemote && getProfileTotalXPValue(firebaseData) > 0
         ? getProfileTotalXPValue(firebaseData)
         : maxNumeric(getProfileTotalXPValue(localProfile), getProfileTotalXPValue(firebaseData));
@@ -10736,6 +10790,7 @@ function mergeProfilesSafely(localProfile, firebaseData, options = {}) {
         streakShields: preferredStreakShields,
         instantCrateOpen: preferredInstantCrateOpen,
         pearls: preferredPearls,
+        pearlBalanceUpdatedAt: preferredPearlBalanceUpdatedAt,
         pearlBoostExpiresAt: preferredPearlBoostExpiresAt,
         seasonXpBoosts: preferredSeasonXpBoosts,
         earnedCosmetics: getUnifiedCosmeticList(localProfile.earnedCosmetics, firebaseData.earnedCosmetics, "imagePath"),
@@ -10853,8 +10908,12 @@ async function loadUserProfile(options = {}) {
             const localHasNewerCrateInventory =
                 localHasRecoverableProfile &&
                 getCrateInventoryUpdatedAt(localProfile) > getCrateInventoryUpdatedAt(firebaseData);
-            const localMergeSource = (localLooksNewer || localHasNewerCrateInventory) ? localProfile : {};
-            userData = mergeProfilesSafely(localMergeSource, firebaseData, { preferRemote: !(localLooksNewer || localHasNewerCrateInventory) });
+            const localHasNewerPearlBalance =
+                localHasRecoverableProfile &&
+                getPearlBalanceUpdatedAt(localProfile) > getPearlBalanceUpdatedAt(firebaseData);
+            const localHasNewerMutableState = localLooksNewer || localHasNewerCrateInventory || localHasNewerPearlBalance;
+            const localMergeSource = localHasNewerMutableState ? localProfile : {};
+            userData = mergeProfilesSafely(localMergeSource, firebaseData, { preferRemote: !localHasNewerMutableState });
             storeLoginProgressLocally(userData, authUser.uid);
             saveUserProfileLocally(userData, { skipRemoteSync: true, preserveLastUpdated: true });
             const activePassSeasonId = getActiveSharkPassSeasonId();
@@ -10865,10 +10924,10 @@ async function loadUserProfile(options = {}) {
             ) {
                 await statsRef.set(getSharkPassSyncPayload(userData), { merge: true });
             }
-            if ((localLooksNewer || localHasNewerCrateInventory) && fromServer) {
+            if (localHasNewerMutableState && fromServer) {
                 scheduleRemoteProfileSync(250);
             }
-            if ((fromServer || fullCloudFromServer) && (!fullCloudProfile || localLooksNewer || localHasNewerCrateInventory) && hasRecoverableRemoteProfile(userData)) {
+            if ((fromServer || fullCloudFromServer) && (!fullCloudProfile || localHasNewerMutableState) && hasRecoverableRemoteProfile(userData)) {
                 syncFullUserProfileToFirebase(userData).catch(error => console.warn("Full profile backup refresh failed:", error));
             }
             // Ensure legacy localStorage keys are updated for compatibility with other parts of the app
@@ -11244,6 +11303,9 @@ async function persistPearlShopPurchase(profileData, itemId, item) {
         ...profileData,
         uid: window.currentUser?.uid || authUser?.uid || profileData.uid
     };
+    if (!getPearlBalanceUpdatedAt(nextProfile)) {
+        markPearlBalanceChanged(nextProfile);
+    }
 
     saveUserProfileLocally(nextProfile, { skipRemoteSync: true });
 
@@ -11252,6 +11314,7 @@ async function persistPearlShopPurchase(profileData, itemId, item) {
             await db.collection("userStats").doc(authUser.uid).set({
                 uid: authUser.uid,
                 pearls: getPearlCount(nextProfile),
+                pearlBalanceUpdatedAt: getPearlBalanceUpdatedAt(nextProfile),
                 pearlBoostExpiresAt: getPearlBoostExpiresAt(nextProfile),
                 streakShields: getStreakShieldCount(nextProfile),
                 crateInventory: normalizeCrateInventory(nextProfile.crateInventory),
@@ -11267,6 +11330,7 @@ async function persistPearlShopPurchase(profileData, itemId, item) {
                 },
                 lastUpdated: new Date()
             }, { merge: true });
+            await syncFullUserProfileToFirebase(nextProfile);
         } catch (error) {
             console.warn("Error saving pearl shop purchase:", error);
         }
@@ -11303,7 +11367,7 @@ async function buyPearlShopItem(itemId) {
         return;
     }
 
-    setPearlCount(profileData, pearls - item.price);
+    setPearlCount(profileData, pearls - item.price, { markChanged: true });
     const nextProfile = await persistPearlShopPurchase(profileData, itemId, item);
     updateHomeV3Sidebar(nextProfile);
     renderPearlShop(nextProfile);
@@ -11631,6 +11695,7 @@ function buildInitialUserProfileForAuthUser(user, usernameOverride = "") {
         streakShields: getStreakShieldCount(localProfile),
         instantCrateOpen: getCrateInstantOpenEnabled(localProfile),
         pearls: getPearlCount(localProfile) + SIGN_UP_BONUS_PEARLS,
+        pearlBalanceUpdatedAt: Date.now(),
         signUpBonusPearls: SIGN_UP_BONUS_PEARLS,
         signUpBonusClaimed: true,
         pearlBoostExpiresAt: getPearlBoostExpiresAt(localProfile),
@@ -11912,6 +11977,7 @@ async function signupUser() {
             streakShields: getStreakShieldCount(localProfile),
             instantCrateOpen: getCrateInstantOpenEnabled(localProfile),
             pearls: getPearlCount(localProfile) + SIGN_UP_BONUS_PEARLS,
+            pearlBalanceUpdatedAt: Date.now(),
             signUpBonusPearls: SIGN_UP_BONUS_PEARLS,
             signUpBonusClaimed: true,
             pearlBoostExpiresAt: getPearlBoostExpiresAt(localProfile),
@@ -12813,7 +12879,9 @@ async function syncStatsToFirebase() {
 
         const localRecoveryScore = getProfileRecoveryScore(profileData);
         const remoteRecoveryScore = getProfileRecoveryScore(remoteData);
-        if (fromServer && remoteHasData && remoteRecoveryScore > Math.max(localRecoveryScore + 1000, localRecoveryScore * 2)) {
+        const localHasNewerPearlBalance =
+            getPearlBalanceUpdatedAt(profileData) > getPearlBalanceUpdatedAt(remoteData);
+        if (fromServer && remoteHasData && !localHasNewerPearlBalance && remoteRecoveryScore > Math.max(localRecoveryScore + 1000, localRecoveryScore * 2)) {
             console.warn("Skipping sync: Firestore profile is stronger than local cache. Restoring local cache from Firestore.");
             const recoveredProfile = mergeProfilesSafely({}, remoteData, { preferRemote: true });
             storeLoginProgressLocally(recoveredProfile, authUser.uid);
@@ -12884,6 +12952,7 @@ async function syncStatsToFirebase() {
             streakShields: getStreakShieldCount(mergedProfile),
             instantCrateOpen: getCrateInstantOpenEnabled(mergedProfile),
             pearls: getPearlCount(mergedProfile),
+            pearlBalanceUpdatedAt: getPearlBalanceUpdatedAt(mergedProfile),
             pearlBoostExpiresAt: getPearlBoostExpiresAt(mergedProfile),
             seasonXpBoosts: getSeasonXpBoosts(mergedProfile),
             username: mergedProfile.username || getStoredPreferredUsername() || authUser.email.split("@")[0],
@@ -14203,6 +14272,7 @@ function buildAdminCompensationPayload(targetUser, type, amount, nowMs) {
         const currentPearls = Math.max(0, Math.floor(Number(data.pearls ?? data.tidePearls) || 0));
         const nextPearls = currentPearls + amount;
         payload.pearls = nextPearls;
+        payload.pearlBalanceUpdatedAt = nowMs;
         grant = {
             name: "Pearls",
             value: formatAdminCompensationValue(amount),
@@ -15233,6 +15303,7 @@ async function confirmSocialRewardClaim() {
             await db.collection("userStats").doc(uid).set({
                 uid,
                 pearls: getPearlCount(profileData),
+                pearlBalanceUpdatedAt: getPearlBalanceUpdatedAt(profileData),
                 socialRewardsClaimed: getClaimedSocialRewards(profileData),
                 lastUpdated: new Date()
             }, { merge: true });
