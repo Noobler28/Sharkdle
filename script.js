@@ -2084,22 +2084,25 @@ const FULL_PROFILE_SCHEMA_VERSION = 1;
 const FULL_PROFILE_CHUNK_CHAR_LIMIT = 180000;
 
 const sharkPassRewards = [
-    { level: 2, type: "pfp", name: "Angel Shark", imagePath: "images/levelPfp/Shark6.png", rarity: "common", blurb: "A fresh portrait reward for early progress." },
+    { level: 2, type: "pfp", name: "Zebra Bullhead Shark", imagePath: "images/SharkPass2/ZebraBullheadShark.png", rarity: "common", blurb: "A fresh Shark Pass 2 portrait for early progress." },
     { level: 3, type: "badge", name: "Shiver", badgeId: "reef-scout", rarity: "common", blurb: "Your first Shark Pass badge unlock." },
-    { level: 4, type: "pfp", name: "Blacktip Reef Shark", imagePath: "images/levelPfp/Shark8.png", rarity: "common", blurb: "A sharper reef-side profile picture." },
+    { level: 4, type: "pfp", name: "Brown Stingray", imagePath: "images/SharkPass2/BrownStingray.png", rarity: "common", blurb: "A distinct Pass 2 reef-side profile picture." },
     { level: 5, type: "badge", name: "Pup", badgeId: "bronze-fin", rarity: "common", blurb: "A calm early-pass badge for steady progress." },
-    { level: 6, type: "pfp", name: "Thresher Shark", imagePath: "images/levelPfp/Shark10.png", rarity: "rare", blurb: "A sleeker PFP for your collection." },
+    { level: 6, type: "pfp", name: "Common Guitarfish", imagePath: "images/SharkPass2/CommonGuitarfish.png", rarity: "rare", blurb: "A sleeker Pass 2 PFP for your collection." },
     { level: 7, type: "theme", name: "Tidal Blue", themeId: "tidal-blue", rarity: "rare", blurb: "Unlock a new profile card theme." },
-    { level: 8, type: "pfp", name: "Epaulette Shark", imagePath: "images/levelPfp/Shark12.png", rarity: "rare", blurb: "One of the standout Shark Pass portraits." },
+    { level: 8, type: "pfp", name: "Bottlenose Wedgefish", imagePath: "images/SharkPass2/BottlenoseWedgeFish.png", rarity: "rare", blurb: "One of the standout Shark Pass 2 portraits." },
     { level: 8, type: "badge", name: "Juvenile", badgeId: "night-diver", rarity: "rare", blurb: "A moonlit shark badge for deeper runs." },
-    { level: 10, type: "pfp", name: "Nurse Shark", imagePath: "images/levelPfp/Shark14.png", rarity: "epic", blurb: "A milestone portrait with more weight to it." },
+    { level: 10, type: "pfp", name: "Rusty Carpet Shark", imagePath: "images/SharkPass2/RustyCarpetShark.png", rarity: "epic", blurb: "A Pass 2 milestone portrait with more weight to it." },
     { level: 10, type: "badge", name: "Oceanic", badgeId: "abyss-explorer", rarity: "epic", blurb: "A standout badge for committed players." },
+    { level: 12, type: "pfp", name: "Coffin Ray", imagePath: "images/SharkPass2/CoffinRay.png", rarity: "epic", blurb: "A deep-cut Pass 2 profile reward." },
     { level: 12, type: "badge", name: "Subadult", badgeId: "open-water-ace", rarity: "epic", blurb: "A strong mid-pass badge unlock." },
-    { level: 15, type: "pfp", name: "Oceanic Whitetip", imagePath: "images/levelPfp/Shark15.png", rarity: "legendary", blurb: "A premium-feeling portrait without premium nonsense." },
+    { level: 15, type: "pfp", name: "Copper Shark", imagePath: "images/SharkPass2/CopperShark.png", rarity: "epic", blurb: "A premium-feeling Pass 2 portrait without premium nonsense." },
     { level: 15, type: "theme", name: "Sunken Gold", themeId: "sunken-gold", rarity: "legendary", blurb: "A warmer, trophy-like profile treatment." },
+    { level: 18, type: "pfp", name: "Australian Bull Ray", imagePath: "images/SharkPass2/AustralianBullRay.png", rarity: "legendary", blurb: "A late-pass ray portrait for serious XP runs." },
     { level: 18, type: "badge", name: "Prime", badgeId: "storm-tracker", rarity: "legendary", blurb: "For players who stuck with the grind." },
-    { level: 20, type: "pfp", name: "Mako Shark", imagePath: "images/levelPfp/Shark16.png", rarity: "legendary", blurb: "The capstone Shark Pass portrait." },
+    { level: 20, type: "pfp", name: "Galapagos Shark", imagePath: "images/SharkPass2/GalapagosShark.png", rarity: "legendary", blurb: "A Shark Pass 2 capstone portrait." },
     { level: 20, type: "badge", name: "Apex", badgeId: "apex-voyager", rarity: "legendary", blurb: "The final Shark Pass badge." },
+    { level: 22, type: "pfp", name: "Bluntnose Sixgill Shark", imagePath: "images/SharkPass2/BluntNoseSixGillShark.png", rarity: "legendary", blurb: "A bonus Pass 2 portrait for pushing past the old track." },
     { level: 22, type: "badge", name: "Current Rider", badgeId: "current-rider", rarity: "epic", blurb: "A seasonal Shark Pass badge for pushing past the old track." },
     { level: 24, type: "theme", name: "Reef Rush", themeId: "reef-rush", rarity: "epic", blurb: "A bright profile card theme from the active season." },
     { level: 26, type: "badge", name: "Tidebreaker", badgeId: "tidebreaker", rarity: "legendary", blurb: "A late-season badge for serious XP runs." },
@@ -9817,14 +9820,19 @@ function getProfileRecoveryScore(profile = {}) {
         "redeemedCodes", "sharkPassLevelRewardClaims"
     ];
     const arrayScore = arrayKeys.reduce((sum, key) => sum + (Array.isArray(profile[key]) ? profile[key].length * 150 : 0), 0);
-    const crateScore = Object.values(normalizeCrateInventory(profile.crateInventory)).reduce((sum, count) => sum + count * 120, 0);
     const objectKeys = ["lostTreasures", "sharkPassMissionClaims", "sharkPassSeasonBaselines", "communityBossRewards", "referralRewards"];
     const objectScore = objectKeys.reduce((sum, key) => {
         const value = profile[key];
         return sum + (value && typeof value === "object" ? Object.keys(value).length * 120 : 0);
     }, 0);
     const identityScore = hasPersistedProfileIdentity(profile) ? 500 : 0;
-    return numericScore + arrayScore + crateScore + objectScore + identityScore;
+    return numericScore + arrayScore + objectScore + identityScore;
+}
+
+function shouldReplaceProfileBackup(incomingProfile = {}, existingBackup = {}, incomingScore = getProfileRecoveryScore(incomingProfile), backupScore = getProfileRecoveryScore(existingBackup)) {
+    const incomingCrateUpdatedAt = getCrateInventoryUpdatedAt(incomingProfile);
+    const backupCrateUpdatedAt = getCrateInventoryUpdatedAt(existingBackup);
+    return incomingScore >= backupScore || !backupScore || incomingCrateUpdatedAt > backupCrateUpdatedAt;
 }
 
 function getProfileTotalXPValue(profile = {}) {
@@ -10415,14 +10423,14 @@ function saveUserProfileLocally(profileData, options = {}) {
     const genericBackupScore = getProfileRecoveryScore(existingGenericBackup);
     const scopedBackupScore = getProfileRecoveryScore(existingScopedBackup);
     localStorage.setItem("userProfile", JSON.stringify(profileData));
-    if (incomingScore >= genericBackupScore || !genericBackupScore) {
+    if (shouldReplaceProfileBackup(profileData, existingGenericBackup, incomingScore, genericBackupScore)) {
         localStorage.setItem("userProfileBackup", JSON.stringify(profileData));
     }
     if (scopedKey) {
         localStorage.setItem(scopedKey, JSON.stringify(profileData));
     }
     if (scopedBackupKey) {
-        if (incomingScore >= scopedBackupScore || !scopedBackupScore) {
+        if (shouldReplaceProfileBackup(profileData, existingScopedBackup, incomingScore, scopedBackupScore)) {
             localStorage.setItem(scopedBackupKey, JSON.stringify(profileData));
         }
     }
@@ -10514,7 +10522,11 @@ function getBestLocalProfile() {
     const chooseBestCandidate = (...candidates) => {
         return candidates
             .filter(candidate => candidate && typeof candidate === "object" && Object.keys(candidate).length)
-            .sort((a, b) => getProfileRecoveryScore(b) - getProfileRecoveryScore(a))[0] || {};
+            .sort((a, b) => {
+                const crateTimestampDelta = getCrateInventoryUpdatedAt(b) - getCrateInventoryUpdatedAt(a);
+                if (crateTimestampDelta) return crateTimestampDelta;
+                return getProfileRecoveryScore(b) - getProfileRecoveryScore(a);
+            })[0] || {};
     };
     const isUsableForCurrentUser = profile => {
         if (!currentUser || !profile || !Object.keys(profile).length) return true;
