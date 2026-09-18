@@ -770,6 +770,17 @@ content="Play Sharkdle, the daily shark guessing game. Guess shark species from 
               </label>
             </section>
 
+            <section class="profile-settings-row">
+              <div class="profile-settings-copy">
+                <strong>Hide Crate Animation</strong>
+                <span>Skip crate animations and reveal crate rewards instantly.</span>
+              </div>
+              <label class="toggle-switch" for="crate-instant-settings-toggle">
+                <input id="crate-instant-settings-toggle" type="checkbox">
+                <span class="toggle-slider"></span>
+              </label>
+            </section>
+
             <section class="profile-settings-row profile-settings-audio-row">
               <div class="profile-settings-copy">
                 <strong>Background Audio</strong>
@@ -1365,7 +1376,7 @@ content="Play Sharkdle, the daily shark guessing game. Guess shark species from 
       <input id="crate-instant-toggle" type="checkbox" onchange="toggleCrateInstantOpen(this.checked)">
       <span class="crate-toggle-slider" aria-hidden="true"></span>
       <span class="crate-toggle-copy">
-        <strong>Instant Open</strong>
+        <strong>Hide Animation</strong>
         <small>Skip crate animations and reveal rewards instantly.</small>
       </span>
     </label>

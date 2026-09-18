@@ -1775,10 +1775,10 @@ function isDeveloperUid(uid) {
 }
 const sharkPassCardThemes = [
     { id: "default", name: "Starter Blue", level: 0, preview: "linear-gradient(135deg, rgba(0,180,216,0.16), rgba(11,34,51,0.94))" },
-    { id: "tidal-blue", name: "Tidal Blue", level: 7, preview: "linear-gradient(135deg, rgba(67, 170, 255, 0.24), rgba(8, 23, 48, 0.98))" },
-    { id: "sunken-gold", name: "Sunken Gold", level: 15, preview: "linear-gradient(135deg, rgba(255, 196, 87, 0.22), rgba(20, 27, 56, 0.98))" },
-    { id: "reef-rush", name: "Reef Rush", level: 24, preview: "linear-gradient(135deg, rgba(118, 244, 184, 0.22), rgba(15, 92, 112, 0.96) 44%, rgba(6, 24, 42, 1))" },
-    { id: "abyssal-current", name: "Abyssal Current", level: 30, preview: "linear-gradient(135deg, rgba(117, 202, 255, 0.24), rgba(33, 55, 120, 0.28) 42%, rgba(4, 12, 27, 1))" },
+    { id: "reef-signal", name: "Reef Signal", level: 7, preview: "radial-gradient(circle at 18% 20%, rgba(255, 147, 105, 0.22), transparent 26%), linear-gradient(135deg, rgba(42, 121, 117, 0.34), rgba(9, 30, 55, 0.96) 52%, rgba(5, 13, 28, 1))" },
+    { id: "copper-surge", name: "Copper Surge", level: 15, preview: "radial-gradient(circle at 84% 16%, rgba(255, 197, 105, 0.28), transparent 22%), linear-gradient(135deg, rgba(139, 83, 55, 0.34), rgba(25, 45, 76, 0.96) 50%, rgba(6, 17, 31, 1))" },
+    { id: "raylight-drift", name: "Raylight Drift", level: 24, preview: "radial-gradient(circle at 26% 74%, rgba(137, 255, 221, 0.22), transparent 28%), linear-gradient(140deg, rgba(48, 72, 122, 0.38), rgba(31, 96, 112, 0.9) 48%, rgba(6, 15, 36, 1))" },
+    { id: "sixgill-night", name: "Sixgill Night", level: 30, preview: "radial-gradient(circle at 76% 14%, rgba(248, 239, 164, 0.2), transparent 18%), radial-gradient(circle at 16% 82%, rgba(120, 190, 255, 0.18), transparent 30%), linear-gradient(145deg, rgba(54, 47, 92, 0.38), rgba(14, 25, 57, 0.98) 56%, rgba(3, 8, 22, 1))" },
     { id: "coral-bloom", name: "Coral Bloom", unlockAchievement: "pacific_master", preview: "linear-gradient(135deg, rgba(255, 122, 156, 0.28), rgba(255, 176, 109, 0.2) 38%, rgba(15, 92, 112, 0.96))" },
     { id: "deep-abyss", name: "Deep Abyss", unlockAchievement: "guess_master", preview: "linear-gradient(135deg, rgba(17, 255, 203, 0.14), rgba(5, 18, 34, 0.94) 42%, rgba(1, 6, 15, 0.99))" },
     { id: "storm-current", name: "Storm Current", unlockAchievement: "duel_won", preview: "linear-gradient(135deg, rgba(117, 202, 255, 0.26), rgba(67, 126, 255, 0.2) 34%, rgba(9, 20, 47, 0.98))" },
@@ -2085,29 +2085,29 @@ const FULL_PROFILE_CHUNK_CHAR_LIMIT = 180000;
 
 const sharkPassRewards = [
     { level: 2, type: "pfp", name: "Zebra Bullhead Shark", imagePath: "images/SharkPass2/ZebraBullheadShark.png", rarity: "common", blurb: "A fresh Shark Pass 2 portrait for early progress." },
-    { level: 3, type: "badge", name: "Shiver", badgeId: "reef-scout", rarity: "common", blurb: "Your first Shark Pass badge unlock." },
+    { level: 3, type: "badge", name: "Bullhead Bloom", badgeId: "bullhead-bloom", rarity: "common", blurb: "Your first new Shark Pass 2 badge unlock." },
     { level: 4, type: "pfp", name: "Brown Stingray", imagePath: "images/SharkPass2/BrownStingray.png", rarity: "common", blurb: "A distinct Pass 2 reef-side profile picture." },
-    { level: 5, type: "badge", name: "Pup", badgeId: "bronze-fin", rarity: "common", blurb: "A calm early-pass badge for steady progress." },
+    { level: 5, type: "badge", name: "Ray Drift", badgeId: "ray-drift", rarity: "common", blurb: "A calm Pass 2 badge for steady progress." },
     { level: 6, type: "pfp", name: "Common Guitarfish", imagePath: "images/SharkPass2/CommonGuitarfish.png", rarity: "rare", blurb: "A sleeker Pass 2 PFP for your collection." },
-    { level: 7, type: "theme", name: "Tidal Blue", themeId: "tidal-blue", rarity: "rare", blurb: "Unlock a new profile card theme." },
+    { level: 7, type: "theme", name: "Reef Signal", themeId: "reef-signal", rarity: "rare", blurb: "Unlock a new Pass 2 profile card theme." },
     { level: 8, type: "pfp", name: "Bottlenose Wedgefish", imagePath: "images/SharkPass2/BottlenoseWedgeFish.png", rarity: "rare", blurb: "One of the standout Shark Pass 2 portraits." },
-    { level: 8, type: "badge", name: "Juvenile", badgeId: "night-diver", rarity: "rare", blurb: "A moonlit shark badge for deeper runs." },
+    { level: 8, type: "badge", name: "Guitarfish Glide", badgeId: "guitarfish-glide", rarity: "rare", blurb: "A Pass 2 badge for smooth deeper runs." },
     { level: 10, type: "pfp", name: "Rusty Carpet Shark", imagePath: "images/SharkPass2/RustyCarpetShark.png", rarity: "epic", blurb: "A Pass 2 milestone portrait with more weight to it." },
-    { level: 10, type: "badge", name: "Oceanic", badgeId: "abyss-explorer", rarity: "epic", blurb: "A standout badge for committed players." },
+    { level: 10, type: "badge", name: "Carpet Shadow", badgeId: "carpet-shadow", rarity: "epic", blurb: "A standout Pass 2 badge for committed players." },
     { level: 12, type: "pfp", name: "Coffin Ray", imagePath: "images/SharkPass2/CoffinRay.png", rarity: "epic", blurb: "A deep-cut Pass 2 profile reward." },
-    { level: 12, type: "badge", name: "Subadult", badgeId: "open-water-ace", rarity: "epic", blurb: "A strong mid-pass badge unlock." },
+    { level: 12, type: "badge", name: "Coffin Depths", badgeId: "coffin-depths", rarity: "epic", blurb: "A strong mid-pass badge unlock from the new season." },
     { level: 15, type: "pfp", name: "Copper Shark", imagePath: "images/SharkPass2/CopperShark.png", rarity: "epic", blurb: "A premium-feeling Pass 2 portrait without premium nonsense." },
-    { level: 15, type: "theme", name: "Sunken Gold", themeId: "sunken-gold", rarity: "legendary", blurb: "A warmer, trophy-like profile treatment." },
+    { level: 15, type: "theme", name: "Copper Surge", themeId: "copper-surge", rarity: "legendary", blurb: "A warmer Pass 2 profile treatment." },
     { level: 18, type: "pfp", name: "Australian Bull Ray", imagePath: "images/SharkPass2/AustralianBullRay.png", rarity: "legendary", blurb: "A late-pass ray portrait for serious XP runs." },
-    { level: 18, type: "badge", name: "Prime", badgeId: "storm-tracker", rarity: "legendary", blurb: "For players who stuck with the grind." },
+    { level: 18, type: "badge", name: "Copper Current", badgeId: "copper-current", rarity: "legendary", blurb: "For players who stuck with the new Pass 2 grind." },
     { level: 20, type: "pfp", name: "Galapagos Shark", imagePath: "images/SharkPass2/GalapagosShark.png", rarity: "legendary", blurb: "A Shark Pass 2 capstone portrait." },
-    { level: 20, type: "badge", name: "Apex", badgeId: "apex-voyager", rarity: "legendary", blurb: "The final Shark Pass badge." },
+    { level: 20, type: "badge", name: "Bull Ray Banner", badgeId: "bull-ray-banner", rarity: "legendary", blurb: "A high-tier Pass 2 badge." },
     { level: 22, type: "pfp", name: "Bluntnose Sixgill Shark", imagePath: "images/SharkPass2/BluntNoseSixGillShark.png", rarity: "legendary", blurb: "A bonus Pass 2 portrait for pushing past the old track." },
-    { level: 22, type: "badge", name: "Current Rider", badgeId: "current-rider", rarity: "epic", blurb: "A seasonal Shark Pass badge for pushing past the old track." },
-    { level: 24, type: "theme", name: "Reef Rush", themeId: "reef-rush", rarity: "epic", blurb: "A bright profile card theme from the active season." },
-    { level: 26, type: "badge", name: "Tidebreaker", badgeId: "tidebreaker", rarity: "legendary", blurb: "A late-season badge for serious XP runs." },
-    { level: 28, type: "crate", name: "Event Crate", crateId: "seasonal", crateCount: 1, rarity: "legendary", blurb: "A bonus event cosmetic crate milestone." },
-    { level: 30, type: "theme", name: "Abyssal Current", themeId: "abyssal-current", rarity: "legendary", blurb: "The season capstone profile theme." }
+    { level: 22, type: "badge", name: "Galapagos Guard", badgeId: "galapagos-guard", rarity: "epic", blurb: "A seasonal Shark Pass 2 badge for pushing past the old track." },
+    { level: 24, type: "theme", name: "Raylight Drift", themeId: "raylight-drift", rarity: "epic", blurb: "A bright profile card theme from the active season." },
+    { level: 26, type: "badge", name: "Sixgill Sovereign", badgeId: "sixgill-sovereign", rarity: "legendary", blurb: "A late-season Pass 2 badge for serious XP runs." },
+    { level: 28, type: "crate", name: "Shark Pass 2 Crate", crateId: "seasonal", crateCount: 1, rarity: "legendary", blurb: "A bonus Shark Pass 2 event crate milestone." },
+    { level: 30, type: "theme", name: "Sixgill Night", themeId: "sixgill-night", rarity: "legendary", blurb: "The season capstone profile theme." }
 ];
 
 const SHARK_PASS_ACTIVE_SEASON_ID = "shark-pass-2-2026";
@@ -2146,13 +2146,15 @@ const sharkPassSeasons = [
 ];
 
 const sharkPassBadgeMeta = {
-    "reef-scout": { emoji: "\u{1F988}" },
-    "bronze-fin": { emoji: "\u{1FA78}" },
-    "night-diver": { emoji: "\u{1F319}" },
-    "abyss-explorer": { emoji: "\u{1F499}" },
-    "open-water-ace": { emoji: "\u{2728}" },
-    "storm-tracker": { emoji: "\u{26A1}" },
-    "apex-voyager": { emoji: "\u{1F451}" },
+    "bullhead-bloom": { emoji: "\u{1F33F}" },
+    "ray-drift": { emoji: "\u{1F300}" },
+    "guitarfish-glide": { emoji: "\u{1F3B8}" },
+    "carpet-shadow": { emoji: "\u{1F311}" },
+    "coffin-depths": { emoji: "\u{1F578}\uFE0F" },
+    "copper-current": { emoji: "\u{26A1}" },
+    "bull-ray-banner": { emoji: "\u{1F6A9}" },
+    "galapagos-guard": { emoji: "\u{1F5FF}" },
+    "sixgill-sovereign": { emoji: "\u{1F451}" },
     "tide-glass": { emoji: "\u{1FAE7}" },
     "fossil-tooth": { emoji: "\u{1F9B7}" },
     "deep-anchor": { emoji: "\u{2693}" },
@@ -2179,15 +2181,15 @@ const badgeRarityMeta = {
 };
 
 const sharkPassBadgeTiers = {
-    "reef-scout": 1,
-    "bronze-fin": 2,
-    "night-diver": 2,
-    "abyss-explorer": 3,
-    "open-water-ace": 3,
-    "storm-tracker": 4,
-    "apex-voyager": 5,
-    "current-rider": 4,
-    "tidebreaker": 5,
+    "bullhead-bloom": 1,
+    "ray-drift": 1,
+    "guitarfish-glide": 2,
+    "carpet-shadow": 3,
+    "coffin-depths": 3,
+    "copper-current": 4,
+    "bull-ray-banner": 5,
+    "galapagos-guard": 4,
+    "sixgill-sovereign": 5,
     "tide-glass": 1,
     "fossil-tooth": 2,
     "deep-anchor": 4,
@@ -2195,15 +2197,15 @@ const sharkPassBadgeTiers = {
 };
 
 Object.assign(sharkPassBadgeMeta, {
-    "reef-scout": { emoji: "\u{1F988}" },
-    "bronze-fin": { emoji: "\u{1FA78}" },
-    "night-diver": { emoji: "\u{1F319}" },
-    "abyss-explorer": { emoji: "\u{1F499}" },
-    "open-water-ace": { emoji: "\u{2728}" },
-    "storm-tracker": { emoji: "\u{26A1}" },
-    "apex-voyager": { emoji: "\u{1F451}" },
-    "current-rider": { emoji: "\u{1F30A}" },
-    "tidebreaker": { emoji: "\u{1F4AB}" },
+    "bullhead-bloom": { emoji: "\u{1F33F}" },
+    "ray-drift": { emoji: "\u{1F300}" },
+    "guitarfish-glide": { emoji: "\u{1F3B8}" },
+    "carpet-shadow": { emoji: "\u{1F311}" },
+    "coffin-depths": { emoji: "\u{1F578}\uFE0F" },
+    "copper-current": { emoji: "\u{26A1}" },
+    "bull-ray-banner": { emoji: "\u{1F6A9}" },
+    "galapagos-guard": { emoji: "\u{1F5FF}" },
+    "sixgill-sovereign": { emoji: "\u{1F451}" },
     "tide-glass": { emoji: "\u{1FAE7}" },
     "fossil-tooth": { emoji: "\u{1F9B7}" },
     "deep-anchor": { emoji: "\u{2693}" },
@@ -3181,6 +3183,14 @@ function applyStreakShieldOnLoss(profileData, options = {}) {
 
 function getCrateInstantOpenEnabled(profileData = getCurrentProfileData()) {
     return Boolean(profileData?.instantCrateOpen);
+}
+
+function syncCrateInstantOpenControls(profileData = getCurrentProfileData()) {
+    const enabled = getCrateInstantOpenEnabled(profileData);
+    ["crate-instant-toggle", "crate-instant-settings-toggle"].forEach(id => {
+        const input = document.getElementById(id);
+        if (input) input.checked = enabled;
+    });
 }
 
 function getCratesSinceLegendary(profileData = getCurrentProfileData()) {
@@ -6726,6 +6736,8 @@ function applySharkdleSettings() {
         if (input) input.checked = Boolean(value);
     });
 
+    syncCrateInstantOpenControls();
+
     const volumePercent = getAmbientVolumePercent(settings);
     const volumeInput = document.getElementById("bg-volume-slider");
     const volumeValue = document.getElementById("bg-volume-value");
@@ -6795,6 +6807,12 @@ function bindSharkdleSettings() {
         input.dataset.settingsBound = "true";
         input.addEventListener("change", () => setSharkdleSetting(key, input.checked));
     });
+
+    const crateInstantToggle = document.getElementById("crate-instant-settings-toggle");
+    if (crateInstantToggle && crateInstantToggle.dataset.settingsBound !== "true") {
+        crateInstantToggle.dataset.settingsBound = "true";
+        crateInstantToggle.addEventListener("change", () => toggleCrateInstantOpen(crateInstantToggle.checked));
+    }
 
     const volumeInput = document.getElementById("bg-volume-slider");
     if (volumeInput && volumeInput.dataset.settingsBound !== "true") {
@@ -7816,16 +7834,15 @@ function renderCratesModal() {
     updateSeasonalCrateCraftingUI(profileData);
 
     const statusCopy = document.getElementById("crate-status-copy");
-    const instantToggle = document.getElementById("crate-instant-toggle");
     const pityCopy = document.getElementById("crate-pity-copy");
     const streakShieldCopy = document.getElementById("streak-shield-copy");
-    if (!statusCopy || !instantToggle || !pityCopy) return;
+    if (!statusCopy || !pityCopy) return;
+    syncCrateInstantOpenControls(profileData);
 
     const pityReady = isLegendaryPityReady(profileData);
     const cratesUntilPity = getCratesUntilLegendaryPity(profileData);
     const streakShieldCount = getStreakShieldCount(profileData);
 
-    instantToggle.checked = getCrateInstantOpenEnabled(profileData);
     pityCopy.textContent = pityReady
         ? "Next crate is guaranteed legendary."
         : `${cratesUntilPity} crate${cratesUntilPity === 1 ? "" : "s"} until guaranteed legendary.`;
@@ -7859,7 +7876,7 @@ function renderCratesModal() {
         statusCopy.textContent = "You don't have any crates to open.";
     } else if (currentUser) {
         statusCopy.textContent = getCrateInstantOpenEnabled(profileData)
-            ? "Instant open is enabled."
+            ? "Hide animation is enabled."
             : "Animation reveal is enabled.";
     }
 }
@@ -8216,6 +8233,7 @@ function toggleCrateInstantOpen(enabled) {
     const profileData = getCurrentProfileData();
     profileData.instantCrateOpen = Boolean(enabled);
     saveUserProfileLocally(profileData);
+    syncCrateInstantOpenControls(profileData);
     renderCratesModal();
 }
 
@@ -8626,19 +8644,15 @@ const allBadges = [
 ];
 
 const currentPassBadgeDefs = [
-    { id: "shallow-scout", name: "Shallow Scout", emoji: "\u{1F9ED}", description: "A Shark Pass badge for reaching level 3 in Tidal Horizons.", passLevel: 3 },
-    { id: "reef-roamer", name: "Reef Roamer", emoji: "\u{1FAB8}", description: "A Shark Pass badge for reaching level 6 in Tidal Horizons.", passLevel: 6 },
-    { id: "bluewater-bold", name: "Bluewater Bold", emoji: "\u{1F30A}", description: "A Shark Pass badge for reaching level 15 in Tidal Horizons.", passLevel: 15 },
-    { id: "tide-turner", name: "Tide Turner", emoji: "\u{1F300}", description: "A Shark Pass badge for reaching level 24 in Tidal Horizons.", passLevel: 24 },
-    { id: "reef-scout", name: "Shiver", emoji: "\u{1F41F}", description: "A Shark Pass badge for reaching level 3.", passLevel: 3 },
-    { id: "bronze-fin", name: "Pup", emoji: "\u{1FAB8}", description: "A Shark Pass badge for reaching level 5.", passLevel: 5 },
-    { id: "night-diver", name: "Juvenile", emoji: "\u{1F319}", description: "A Shark Pass badge for reaching level 8.", passLevel: 8 },
-    { id: "abyss-explorer", name: "Oceanic", emoji: "\u{1F499}", description: "A Shark Pass badge for reaching level 10.", passLevel: 10 },
-    { id: "open-water-ace", name: "Subadult", emoji: "\u{2728}", description: "A Shark Pass badge for reaching level 12.", passLevel: 12 },
-    { id: "storm-tracker", name: "Prime", emoji: "\u{26A1}", description: "A Shark Pass badge for reaching level 18.", passLevel: 18 },
-    { id: "apex-voyager", name: "Apex", emoji: "\u{1F451}", description: "A Shark Pass badge for reaching level 20.", passLevel: 20 },
-    { id: "current-rider", name: "Current Rider", emoji: "\u{1F30A}", description: "A Shark Pass badge for reaching level 22.", passLevel: 22 },
-    { id: "tidebreaker", name: "Tidebreaker", emoji: "\u{1F4AB}", description: "A Shark Pass badge for reaching level 26.", passLevel: 26 }
+    { id: "bullhead-bloom", name: "Bullhead Bloom", emoji: "\u{1F33F}", description: "A Shark Pass 2 badge for reaching level 3.", passLevel: 3 },
+    { id: "ray-drift", name: "Ray Drift", emoji: "\u{1F300}", description: "A Shark Pass 2 badge for reaching level 5.", passLevel: 5 },
+    { id: "guitarfish-glide", name: "Guitarfish Glide", emoji: "\u{1F3B8}", description: "A Shark Pass 2 badge for reaching level 8.", passLevel: 8 },
+    { id: "carpet-shadow", name: "Carpet Shadow", emoji: "\u{1F311}", description: "A Shark Pass 2 badge for reaching level 10.", passLevel: 10 },
+    { id: "coffin-depths", name: "Coffin Depths", emoji: "\u{1F578}\uFE0F", description: "A Shark Pass 2 badge for reaching level 12.", passLevel: 12 },
+    { id: "copper-current", name: "Copper Current", emoji: "\u{26A1}", description: "A Shark Pass 2 badge for reaching level 18.", passLevel: 18 },
+    { id: "bull-ray-banner", name: "Bull Ray Banner", emoji: "\u{1F6A9}", description: "A Shark Pass 2 badge for reaching level 20.", passLevel: 20 },
+    { id: "galapagos-guard", name: "Galapagos Guard", emoji: "\u{1F5FF}", description: "A Shark Pass 2 badge for reaching level 22.", passLevel: 22 },
+    { id: "sixgill-sovereign", name: "Sixgill Sovereign", emoji: "\u{1F451}", description: "A Shark Pass 2 badge for reaching level 26.", passLevel: 26 }
 ];
 
 for (let i = allBadges.length - 1; i >= 0; i--) {
