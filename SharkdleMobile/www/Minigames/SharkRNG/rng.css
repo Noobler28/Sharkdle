@@ -496,9 +496,26 @@ body.rng-page {
 }
 
 .rng-mutation-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
     font-weight: 700;
     letter-spacing: 0.06em;
     text-transform: uppercase;
+}
+
+.rng-mutation-sprite {
+    display: inline-block;
+    width: 44px;
+    height: 44px;
+    flex: 0 0 auto;
+    object-fit: contain;
+    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.5));
+}
+
+.rng-mutation-tag-sprite {
+    width: 24px;
+    height: 24px;
 }
 .rng-mutation-tag.melanistic { color: #94a3b8; }
 .rng-mutation-tag.obsidian { color: #9ca3af; }
@@ -569,12 +586,41 @@ body.rng-page {
 .rng-buff-item {
     display: inline-flex;
     align-items: center;
+    gap: 4px;
     min-height: 18px;
     padding: 2px 5px;
     border-radius: 6px;
     background: rgba(255, 255, 255, 0.05);
     border: 1px solid rgba(255, 255, 255, 0.06);
     white-space: nowrap;
+}
+
+.rng-buff-item-potion {
+    min-height: 28px;
+    padding: 2px 7px 2px 4px;
+}
+
+.rng-buff-sprite {
+    display: block;
+    width: 24px;
+    height: 24px;
+    object-fit: contain;
+    flex: 0 0 auto;
+}
+
+.rng-buff-fallback-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    flex: 0 0 auto;
+}
+
+.rng-buff-label {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .rng-action-row {
@@ -981,7 +1027,7 @@ body.rng-page {
 .rng-prestige-banner {
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    justify-content: flex-start;
     gap: 8px;
     padding: 8px;
     border-radius: 8px;
@@ -989,6 +1035,18 @@ body.rng-page {
         linear-gradient(135deg, rgba(250, 204, 21, 0.14), rgba(20, 184, 166, 0.1)),
         rgba(0, 0, 0, 0.18);
     border: 1px solid rgba(250, 204, 21, 0.16);
+}
+
+.rng-prestige-banner em {
+    margin-left: auto;
+}
+
+.rng-prestige-rank-icon {
+    width: 46px;
+    height: 46px;
+    object-fit: contain;
+    flex: 0 0 auto;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.45));
 }
 
 .rng-prestige-banner span {
@@ -1034,16 +1092,12 @@ body.rng-page {
     min-width: 0;
 }
 
-.rng-prestige-title i {
-    width: 28px;
-    height: 28px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 7px;
-    color: #a7f3d0;
-    background: rgba(20, 184, 166, 0.18);
-    border: 1px solid rgba(94, 234, 212, 0.22);
+.rng-prestige-depth-icon {
+    width: 34px;
+    height: 34px;
+    object-fit: contain;
+    flex: 0 0 auto;
+    filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.45));
 }
 
 .rng-prestige-title span,
@@ -1171,18 +1225,23 @@ body.rng-page {
     justify-content: flex-start;
 }
 
-.rng-prestige-upgrade-head i {
-    width: 24px;
-    height: 24px;
+.rng-prestige-upgrade-icon {
+    width: 32px;
+    height: 32px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
     border-radius: 6px;
-    color: #fde047;
     background: rgba(250, 204, 21, 0.12);
     border: 1px solid rgba(250, 204, 21, 0.16);
-    font-size: 0.68rem;
+}
+
+.rng-prestige-upgrade-icon img {
+    width: 30px;
+    height: 30px;
+    object-fit: contain;
+    display: block;
 }
 
 .rng-prestige-upgrade-head div {
@@ -1384,9 +1443,9 @@ body.rng-page {
     min-width: 0;
 }
 
-.rng-upgrade-info i {
-    width: 24px;
-    height: 24px;
+.rng-upgrade-icon {
+    width: 32px;
+    height: 32px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1395,6 +1454,13 @@ body.rng-page {
     color: var(--rng-accent);
     font-size: 0.7rem;
     flex-shrink: 0;
+}
+
+.rng-upgrade-icon img {
+    display: block;
+    width: 30px;
+    height: 30px;
+    object-fit: contain;
 }
 
 .rng-upgrade-info h3 {
@@ -1413,11 +1479,11 @@ body.rng-page {
     overflow: hidden;
 }
 
-/* Potions — 2 column grid */
+/* Potions — single column list */
 .rng-potion-grid {
     display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 5px;
+    grid-template-columns: 1fr;
+    gap: 7px;
     flex: 1;
     min-height: 0;
     max-height: 100%;
@@ -1514,27 +1580,52 @@ body.rng-page {
 }
 
 .rng-potion-card {
-    padding: 6px;
+    padding: 10px;
     background: var(--rng-surface-2);
     border: 1px solid var(--rng-border);
     border-radius: 8px;
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(132px, 0.42fr);
+    align-items: center;
+    gap: 10px;
     min-width: 0;
 }
 
 .rng-potion-top {
     display: flex;
     align-items: center;
-    gap: 4px;
+    gap: 12px;
+    min-width: 0;
 }
 
-.rng-potion-icon { font-size: 1rem; }
+.rng-potion-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 82px;
+    height: 82px;
+    font-size: 2rem;
+    flex-shrink: 0;
+}
+
+/* Show the complete supplied artwork without cropping or colour blending. */
+.rng-potion-sprite {
+    display: block;
+    width: 76px;
+    height: 76px;
+    object-fit: contain;
+}
+
+.rng-potion-copy {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+}
 
 .rng-potion-card h4 {
     margin: 0;
-    font-size: 0.7rem;
+    font-size: 0.82rem;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -1542,7 +1633,7 @@ body.rng-page {
 
 .rng-potion-desc {
     margin: 0;
-    font-size: 0.58rem;
+    font-size: 0.62rem;
     color: var(--rng-muted);
     line-height: 1.25;
     display: -webkit-box;
@@ -1554,19 +1645,21 @@ body.rng-page {
 .rng-potion-actions {
     display: flex;
     flex-wrap: wrap;
-    gap: 4px;
+    gap: 5px;
+    justify-content: flex-end;
+    min-width: 0;
 }
 
 .rng-potion-owned {
-    flex: 1 0 100%;
     color: var(--rng-muted);
     font-size: 0.62rem;
     white-space: nowrap;
 }
 
 .rng-potion-actions .rng-btn {
-    flex: 1 1 calc(33.333% - 4px);
-    padding: 4px 6px;
+    flex: 1 1 calc(50% - 5px);
+    min-width: 58px;
+    padding: 6px 8px;
     font-size: 0.65rem;
 }
 
@@ -1762,33 +1855,13 @@ body.rng-page {
 
 .rng-tier-legend {
     display: grid;
-    grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.08fr);
-    gap: 8px;
+    grid-template-columns: 1fr;
+    grid-auto-rows: max-content;
+    gap: 10px;
     flex: 1;
     min-height: 0;
-    max-height: clamp(260px, 48vh, 540px);
-    overflow: hidden;
-}
-
-.rng-tier-section {
-    min-height: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 5px;
-    padding: 7px;
-    border: 1px solid rgba(77, 208, 225, 0.12);
-    border-radius: 10px;
-    background:
-        radial-gradient(circle at top right, rgba(77, 208, 225, 0.08), transparent 42%),
-        rgba(3, 12, 22, 0.18);
-    overflow: hidden;
-}
-
-.rng-tier-list {
-    display: grid;
-    flex: 1;
-    gap: 4px;
-    min-height: 0;
+    max-height: 100%;
+    overflow-x: hidden;
     overflow-y: auto;
     overscroll-behavior: contain;
     padding-right: 4px;
@@ -1796,24 +1869,43 @@ body.rng-page {
     scrollbar-width: thin;
 }
 
+.rng-tier-section {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    padding: 8px;
+    border: 1px solid rgba(77, 208, 225, 0.12);
+    border-radius: 10px;
+    background:
+        radial-gradient(circle at top right, rgba(77, 208, 225, 0.08), transparent 42%),
+        rgba(3, 12, 22, 0.18);
+    overflow: visible;
+}
+
+.rng-tier-list {
+    display: grid;
+    gap: 6px;
+    min-height: 0;
+}
+
 .rng-rarity-list {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: 1fr;
 }
 
 .rng-mutation-list {
     grid-template-columns: minmax(0, 1fr);
 }
 
-.rng-tier-list::-webkit-scrollbar {
+.rng-tier-legend::-webkit-scrollbar {
     width: 7px;
 }
 
-.rng-tier-list::-webkit-scrollbar-track {
+.rng-tier-legend::-webkit-scrollbar-track {
     background: rgba(8, 47, 73, 0.28);
     border-radius: 999px;
 }
 
-.rng-tier-list::-webkit-scrollbar-thumb {
+.rng-tier-legend::-webkit-scrollbar-thumb {
     background: linear-gradient(180deg, rgba(77, 208, 225, 0.85), rgba(14, 165, 233, 0.55));
     border-radius: 999px;
 }
@@ -1822,13 +1914,13 @@ body.rng-page {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 7px;
+    gap: 10px;
     min-width: 0;
-    min-height: 24px;
-    padding: 5px 7px;
+    min-height: 46px;
+    padding: 6px 9px;
     border-radius: 6px;
     background: var(--rng-surface-2);
-    font-size: 0.64rem;
+    font-size: 0.72rem;
     line-height: 1.2;
     border-left: 2px solid transparent;
 }
@@ -1843,8 +1935,8 @@ body.rng-page {
     text-transform: uppercase;
 }
 
-.rng-tier-row span:first-child,
-.rng-mutation-chance-row span:first-child {
+.rng-tier-row > span:first-child,
+.rng-mutation-chance-row > span:first-child {
     min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -1852,13 +1944,39 @@ body.rng-page {
     font-weight: 800;
 }
 
-.rng-tier-row span:last-child {
+.rng-rarity-row {
+    min-height: 52px;
+    padding-block: 4px;
+}
+
+.rng-rarity-name {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.rng-mutation-name {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.rng-rarity-sprite {
+    display: inline-block;
+    width: 44px;
+    height: 44px;
+    flex: 0 0 auto;
+    object-fit: contain;
+    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.45));
+}
+
+.rng-tier-row > span:last-child {
     flex-shrink: 0;
     color: var(--rng-muted);
     white-space: nowrap;
 }
 
-.rng-mutation-chance-row span:last-child {
+.rng-mutation-chance-row > span:last-child {
     max-width: 58%;
     white-space: normal;
     text-align: right;
@@ -2482,6 +2600,20 @@ body.rng-page {
     cursor: pointer;
 }
 
+.rng-collection-card-header {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    min-width: 0;
+    min-height: 36px;
+    margin-bottom: 2px;
+}
+
+.rng-index-rarity-sprite {
+    width: 36px;
+    height: 36px;
+}
+
 .rng-collection-card.missing {
     opacity: 0.48;
     border-style: dashed;
@@ -2496,13 +2628,40 @@ body.rng-page {
 .rng-collection-card strong {
     display: block;
     font-size: 0.78rem;
-    margin: 2px 0;
+    margin: 3px 0 2px;
 }
 
 .rng-collection-card-tier,
 .rng-collection-card-meta {
     font-size: 0.65rem;
     color: var(--rng-muted);
+}
+
+.rng-collection-card-tier {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.rng-index-mutation-line {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    min-width: 0;
+    color: inherit;
+}
+
+.rng-index-mutation-line > span:last-child {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.rng-index-mutation-sprite {
+    width: 20px;
+    height: 20px;
 }
 
 .rng-index-status {
@@ -4112,8 +4271,6 @@ body.rng-page {
     }
 
     .rng-tier-legend {
-        grid-template-columns: 1fr;
-        grid-template-rows: repeat(2, minmax(0, 1fr));
         max-height: none;
     }
 
@@ -4139,9 +4296,26 @@ body.rng-page {
     .rng-prestige-progress-row em { white-space: normal; }
     .rng-upgrade-list,
     .rng-potion-grid { grid-template-columns: 1fr; }
+    .rng-potion-card {
+        grid-template-columns: minmax(0, 1fr) minmax(108px, 0.35fr);
+        gap: 7px;
+    }
+    .rng-potion-top { gap: 8px; }
+    .rng-potion-icon {
+        width: 68px;
+        height: 68px;
+    }
+    .rng-potion-sprite {
+        width: 64px;
+        height: 64px;
+    }
+    .rng-potion-actions .rng-btn {
+        min-width: 48px;
+        padding-inline: 5px;
+    }
     .rng-multi-roll-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .rng-rarity-list { grid-template-columns: 1fr; }
-    .rng-mutation-chance-row span:last-child { max-width: 52%; }
+    .rng-mutation-chance-row > span:last-child { max-width: 52%; }
 }
 
 @media (max-width: 720px) {

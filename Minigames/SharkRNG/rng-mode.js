@@ -1,4 +1,4 @@
-﻿(function () {
+(function () {
     "use strict";
 
     const STORAGE_KEY = "sharkRngProfile";
@@ -7,6 +7,7 @@
     const BASE_ROLL_COOLDOWN_MS = 1600;
     const BASE_AUTO_INTERVAL_MS = 1800;
     const ULTRA_ONE_IN_THRESHOLD = 1_000_000;
+    const ROLLIN_BADGE_CHANCE = 1 / 250_000;
     const GUARANTEED_ROLL_COIN_MULTIPLIER_CAP = 1.5;
     const GUARANTEED_ROLL_REWARD_RATES = {
         ultraPotion: 0.12,
@@ -337,7 +338,21 @@
     const SHOP_TIER_NAMES = [
         "Bronze", "Silver", "Gold", "Platinum", "Diamond",
         "Mythic", "Abyssal", "Celestial", "Void", "Singularity",
-        "Event Horizon", "Quantum", "Eclipse", "Transcendent"
+        "Event Horizon", "Quantum", "Eclipse", "Transcendent",
+        "Reef", "Kelp", "Lagoon", "Coral", "Breaker",
+        "Current", "Tidepool", "Riptide", "Gulf", "Pelagic",
+        "Bathyal", "Abyss", "Hadal", "Trench", "Thermal Vent",
+        "Blackwater", "Moonpool", "Stormsurge", "Whirlpool", "Maelstrom",
+        "Deep Current", "Siren", "Kraken", "Leviathan", "Apex Tide",
+        "Pearl Vault", "Sunken Crown", "Abyss Crown", "Void Trench", "Final Current",
+        "Deep Core", "Tide Sovereign", "Oceanic", "Titan Wake", "Eternal Reef",
+        "Abyssal Crown", "Hadal Crown", "World Current", "Shark Crown", "Endless Sea",
+        "True Abyss", "Omega Reef", "Primal Tide", "Crown Current", "Last Trench",
+        "Ancient Sea", "Eternal Current", "Final Abyss", "Deep Throne", "Ocean Crown"
+        , "Primordial Reef", "Titan Trench", "Leviathan Crown", "Sunless Kingdom", "Pearl Singularity",
+        "Abyssal Throne", "World Reef", "Godfin Current", "Eternal Maelstrom", "Omega Crown",
+        "Final Tide", "Origin Abyss", "Crown of Teeth", "Endless Current", "True Ocean",
+        "Last Reef", "Depthless Crown", "First Trench", "Shark Singularity", "Beyond Omniversal"
     ];
 
     const PLAYER_RANK_ICON = "\u{1F988}";
@@ -346,6 +361,7 @@
     const PRESTIGE_MIN_BEST_ONE_IN = 1_000_000;
     const PRESTIGE_ROLL_STEP = 750;
     const PRESTIGE_COLLECTION_STEP = 45;
+    const PRESTIGE_TOKEN_REWARD = 5;
     const PRESTIGE_HISTORY_LIMIT = 6;
     const PRESTIGE_LUCK_PER_POINT = 0.035;
     const PRESTIGE_COIN_PER_POINT = 0.025;
@@ -354,6 +370,7 @@
     const POTION_BUY_AMOUNT_MAX = 999_999;
     const INDEX_BUILD_BATCH_SIZE = 80;
     const INDEX_RENDER_BATCH_SIZE = 48;
+    const INDEX_STACKED_CANDIDATE_LIMIT = 2000;
     const PRESTIGE_UPGRADE_DEFS = [
         {
             id: "pearlLuck",
@@ -404,6 +421,14 @@
             format: (level) => `+${Math.round(level * 8)}% mutation odds`
         },
         {
+            id: "chainMemory",
+            name: "Mutagen Memory",
+            icon: "fa-link",
+            desc: "Permanent boost to natural mutation odds.",
+            costs: [3, 5, 8, 13, 21],
+            format: (level) => `+${Math.round(level * 12)}% mutation odds`
+        },
+        {
             id: "apexMemory",
             name: "Apex Memory",
             icon: "fa-crown",
@@ -418,6 +443,14 @@
             desc: "Mutated species pay more coins forever.",
             costs: [2, 4, 7, 11, 16],
             format: (level) => `+${Math.round(level * 10)}% mutated coins`
+        },
+        {
+            id: "stackDividend",
+            name: "Mutagen Dividend",
+            icon: "fa-layer-group",
+            desc: "Mutated species pay extra coins forever.",
+            costs: [3, 6, 10, 15, 22],
+            format: (level) => `+${Math.round(level * 8)}% mutated coins`
         },
         {
             id: "potionSatchel",
@@ -447,9 +480,9 @@
             id: "legacyTide",
             name: "Legacy Tide",
             icon: "fa-water",
-            desc: "Earn more prestige points from each rebirth.",
+            desc: "Prestige depth gives stronger permanent power.",
             costs: [5, 9, 14, 20],
-            format: (level) => `+${Math.round(level * 10)}% prestige gain`
+            format: (level) => `+${Math.round(level * 25)}% depth power`
         },
         {
             id: "surveyCompass",
@@ -554,20 +587,84 @@
             desc: "Long prestige runs slowly build extra luck.",
             costs: [4, 8, 14, 21],
             format: (level) => `+${Math.round(level * 4)}% luck per 250 rolls`
+        },
+        {
+            id: "abyssalLuck",
+            name: "Abyssal Luck",
+            icon: "fa-star-half-stroke",
+            desc: "A deeper permanent luck upgrade for late prestiges.",
+            costs: [8, 14, 22, 32, 45, 60],
+            format: (level) => `+${Math.round(level * 9)}% luck`
+        },
+        {
+            id: "vaultCurrent",
+            name: "Vault Current",
+            icon: "fa-vault",
+            desc: "A deeper permanent coin upgrade for late prestiges.",
+            costs: [8, 14, 22, 32, 45, 60],
+            format: (level) => `+${Math.round(level * 8)}% coins`
+        },
+        {
+            id: "deepResearch",
+            name: "Deep Research",
+            icon: "fa-microscope",
+            desc: "A deeper permanent RNG XP upgrade.",
+            costs: [7, 13, 20, 30, 42, 56],
+            format: (level) => `+${Math.round(level * 7)}% XP`
+        },
+        {
+            id: "comboCartography",
+            name: "Mutagen Cartography",
+            icon: "fa-diagram-project",
+            desc: "Natural mutation odds scale harder forever.",
+            costs: [6, 11, 18, 28, 40],
+            format: (level) => `+${Math.round(level * 15)}% mutation odds`
+        },
+        {
+            id: "apexCartography",
+            name: "Apex Cartography",
+            icon: "fa-location-crosshairs",
+            desc: "Apex rolls become less impossible forever.",
+            costs: [7, 13, 21, 32, 46],
+            format: (level) => `+${Math.round(level * 9)}% Apex odds`
+        },
+        {
+            id: "mutationFoundry",
+            name: "Mutation Foundry",
+            icon: "fa-atom",
+            desc: "Natural mutation odds gain another late-game multiplier.",
+            costs: [7, 12, 20, 31, 44],
+            format: (level) => `+${Math.round(level * 10)}% mutation odds`
+        },
+        {
+            id: "stackRoyalty",
+            name: "Mutagen Royalty",
+            icon: "fa-cubes-stacked",
+            desc: "Mutated species pay even more coins.",
+            costs: [6, 12, 20, 31, 45],
+            format: (level) => `+${Math.round(level * 10)}% mutated coins`
+        },
+        {
+            id: "potionChemistry",
+            name: "Potion Chemistry",
+            icon: "fa-flask-vial",
+            desc: "All potion durations stretch further.",
+            costs: [6, 11, 17, 25, 36],
+            format: (level) => `+${Math.round(level * 10)}% potion duration`
         }
     ];
 
     const UPGRADE_SHOP_DEFS = [
-        { id: "luck", name: "Luck", icon: "fa-clover", levelKey: "luckLevel", listKey: "luck" },
-        { id: "streak", name: "Streak Luck", icon: "fa-fire", levelKey: "streakLuckLevel", listKey: "streak" },
-        { id: "coin", name: "Coin Boost", icon: "fa-coins", levelKey: "coinLevel", listKey: "coin" },
-        { id: "speed", name: "Roll Speed", icon: "fa-bolt", levelKey: "rollSpeedLevel", listKey: "speed" },
-        { id: "auto", name: "Auto Roll", icon: "fa-robot", levelKey: "autoRollLevel", listKey: "auto" },
-        { id: "mutation", name: "Mutation Luck", icon: "fa-dna", levelKey: "mutationLevel", listKey: "mutation" },
-        { id: "apex", name: "Apex Instinct", icon: "fa-crown", levelKey: "apexLevel", listKey: "apex" },
-        { id: "mutationBounty", name: "Mutation Bounty", icon: "fa-sack-dollar", levelKey: "mutationBountyLevel", listKey: "mutationBounty" },
-        { id: "potionRestock", name: "Potion Restock", icon: "fa-hourglass-half", levelKey: "potionRestockLevel", listKey: "potionRestock" },
-        { id: "xp", name: "Research XP", icon: "fa-book-open", levelKey: "xpLevel", listKey: "xp" }
+        { id: "luck", name: "Luck", icon: "fa-clover", sprite: "images/RNG/upgrades/luck.png", levelKey: "luckLevel", listKey: "luck" },
+        { id: "streak", name: "Streak Luck", icon: "fa-fire", sprite: "images/RNG/upgrades/streak_luck.png", levelKey: "streakLuckLevel", listKey: "streak" },
+        { id: "coin", name: "Coin Boost", icon: "fa-coins", sprite: "images/RNG/upgrades/coin_boost.png", levelKey: "coinLevel", listKey: "coin" },
+        { id: "speed", name: "Roll Speed", icon: "fa-bolt", sprite: "images/RNG/upgrades/roll_speed.png", levelKey: "rollSpeedLevel", listKey: "speed" },
+        { id: "auto", name: "Auto Roll", icon: "fa-robot", sprite: "images/RNG/upgrades/autoroll.png", levelKey: "autoRollLevel", listKey: "auto" },
+        { id: "mutation", name: "Mutation Luck", icon: "fa-dna", sprite: "images/RNG/upgrades/mutation_luck.png", levelKey: "mutationLevel", listKey: "mutation" },
+        { id: "apex", name: "Apex Instinct", icon: "fa-crown", sprite: "images/RNG/upgrades/apex_instinct.png", levelKey: "apexLevel", listKey: "apex" },
+        { id: "mutationBounty", name: "Mutation Bounty", icon: "fa-sack-dollar", sprite: "images/RNG/upgrades/mutation_bounty.png", levelKey: "mutationBountyLevel", listKey: "mutationBounty" },
+        { id: "potionRestock", name: "Potion Restock", icon: "fa-hourglass-half", sprite: "images/RNG/upgrades/potion_restock.png", levelKey: "potionRestockLevel", listKey: "potionRestock" },
+        { id: "xp", name: "Research XP", icon: "fa-book-open", sprite: "images/RNG/upgrades/research_xp.png", levelKey: "xpLevel", listKey: "xp" }
     ];
 
     function buildIndexRewardDefs() {
@@ -653,14 +750,71 @@
             rewards.push({ id: `index_${goal}`, goal, title, rewardText, effects });
         }
 
+        const megaGoals = new Set();
+        for (let goal = 20_000; goal <= 1_000_000; goal += 20_000) megaGoals.add(goal);
+        for (let goal = 1_250_000; goal <= 10_000_000; goal += 250_000) megaGoals.add(goal);
+        for (let goal = 11_000_000; goal <= 126_000_000; goal += 1_000_000) megaGoals.add(goal);
+
+        [...megaGoals].sort((a, b) => a - b).forEach((goal) => {
+            let title = "Abyssal Index Grant";
+            let rewardText = "";
+            let effects = [];
+
+            if (goal % 25_000_000 === 0) {
+                const amount = Math.max(1, Math.floor(goal / 25_000_000));
+                title = "Omniversal Survey Bonus";
+                rewardText = `+${amount * 25}% permanent luck`;
+                effects = [{ type: "luckBonus", amount: amount * 0.25 }];
+            } else if (goal % 10_000_000 === 0) {
+                const amount = Math.max(2, Math.floor(goal / 10_000_000) * 2);
+                title = "Deep Mutagen Vault";
+                rewardText = `${amount} Deep Mutagen Potion${amount === 1 ? "" : "s"}`;
+                effects = [{ type: "potion", key: "stackedMutation", amount }];
+            } else if (goal % 5_000_000 === 0) {
+                const amount = Math.max(4, Math.floor(goal / 5_000_000) * 3);
+                title = "Mutation Primer Vault";
+                rewardText = `${amount} Mutation Primer Potion${amount === 1 ? "" : "s"}`;
+                effects = [{ type: "potion", key: "mutationPrimer", amount }];
+            } else if (goal % 2_500_000 === 0) {
+                const amount = Math.max(2, Math.floor(goal / 2_500_000));
+                title = "Omega Deep Cache";
+                rewardText = `${amount} Omega Potion${amount === 1 ? "" : "s"}`;
+                effects = [{ type: "potion", key: "omega", amount }];
+            } else if (goal % 1_000_000 === 0) {
+                const amount = Math.max(3, Math.floor(goal / 1_000_000));
+                title = "Mutagen Deep Cache";
+                rewardText = `${amount} Mutagen Storm Potion${amount === 1 ? "" : "s"}`;
+                effects = [{ type: "potion", key: "randomMutation", amount }];
+            } else if (goal % 250_000 === 0) {
+                const amount = Math.max(2, Math.floor(goal / 250_000));
+                title = "Abyssal Potion Cache";
+                rewardText = `${amount} Abyss Potion${amount === 1 ? "" : "s"}`;
+                effects = [{ type: "potion", key: "ultra", amount }];
+            } else if (goal % 100_000 === 0) {
+                const amount = Math.round((0.04 + Math.log10(goal / 10_000) * 0.02) * 100) / 100;
+                title = "Grand Survey Bonus";
+                rewardText = `+${Math.round(amount * 100)}% permanent luck`;
+                effects = [{ type: "luckBonus", amount }];
+            } else {
+                const scale = Math.max(1, goal / 20_000);
+                const amount = Math.floor(5_000_000_000 * Math.pow(scale, 1.28));
+                title = "Grand Coin Cache";
+                rewardText = `${formatCompactCoins(amount)} coins`;
+                effects = [{ type: "coins", amount }];
+            }
+
+            rewards.push({ id: `index_${goal}`, goal, title, rewardText, effects });
+        });
+
         rewards.push({
             id: "index_complete",
             goal: 15108,
             title: "Complete Index",
-            rewardText: "+25% permanent luck + 5 Omega",
+            rewardText: "+250% permanent luck + 50 Omega + 25 Deep Mutagen",
             effects: [
-                { type: "luckBonus", amount: 0.25 },
-                { type: "potion", key: "omega", amount: 5 }
+                { type: "luckBonus", amount: 2.5 },
+                { type: "potion", key: "omega", amount: 50 },
+                { type: "potion", key: "stackedMutation", amount: 25 }
             ]
         });
 
@@ -688,14 +842,18 @@
 
     function buildLuckUpgrades() {
         const list = [];
-        for (let i = 1; i <= 85; i++) {
+        for (let i = 1; i <= 320; i++) {
             const bonus = i <= 50
                 ? 0.2 + i * 0.28 + Math.floor(i / 10) * 0.8
-                : 18.2 + ((i - 50) * 0.55);
+                : i <= 95
+                    ? 18.2 + ((i - 50) * 0.55)
+                    : i <= 160
+                        ? 42.95 + ((i - 95) * 0.85)
+                        : 98.2 + ((i - 160) * 1.35);
             list.push({
                 level: i,
                 bonus: Math.round(bonus * 100) / 100,
-                cost: getSmoothUpgradeCost(350, 1.22, i),
+                cost: getSmoothUpgradeCost(350, i > 240 ? 1.255 : 1.22, i),
                 shopTier: getShopTierName(i),
                 tierClass: getShopTierClass(i)
             });
@@ -705,14 +863,18 @@
 
     function buildCoinUpgrades() {
         const list = [];
-        for (let i = 1; i <= 80; i++) {
+        for (let i = 1; i <= 310; i++) {
             const bonus = i <= 40
                 ? 0.1 + i * 0.035
-                : 1.5 + ((i - 40) * 0.06);
+                : i <= 90
+                    ? 1.5 + ((i - 40) * 0.06)
+                    : i <= 160
+                        ? 4.5 + ((i - 90) * 0.09)
+                        : 10.8 + ((i - 160) * 0.14);
             list.push({
                 level: i,
                 bonus: Math.round(bonus * 100) / 100,
-                cost: getSmoothUpgradeCost(500, 1.23, i),
+                cost: getSmoothUpgradeCost(500, i > 230 ? 1.265 : 1.23, i),
                 shopTier: getShopTierName(i),
                 tierClass: getShopTierClass(i)
             });
@@ -721,13 +883,17 @@
     }
 
     function buildRollSpeedUpgrades() {
-        const reductions = [80, 90, 100, 105, 110, 115, 120, 125, 130, 135, 145, 155, 70];
+        const reductions = [
+            80, 90, 100, 105, 110, 115, 120, 125, 130, 135,
+            145, 155, 70, 60, 55, 50, 45, 40, 35, 30,
+            ...Array.from({ length: 85 }, (_, index) => Math.max(3, 30 - Math.floor(index / 3)))
+        ];
         return reductions.map((reduction, index) => {
             const level = index + 1;
             return {
                 level,
                 reduction,
-                cost: getSmoothUpgradeCost(650, 1.75, level),
+                cost: getSmoothUpgradeCost(650, level > 75 ? 1.88 : 1.75, level),
                 shopTier: getShopTierName(level),
                 tierClass: getShopTierClass(level)
             };
@@ -735,7 +901,7 @@
     }
 
     function buildAutoRollUpgrades() {
-        const intervals = [2800, 2400, 2100, 1850, 1600, 1400, 1250, 1100, 980, 880, 780, 700, 640, 600, 570, 540, 515, 490, 470, 450];
+        const intervals = [2800, 2400, 2100, 1850, 1600, 1400, 1250, 1100, 980, 880, 780, 700, 640, 600, 570, 540, 515, 490, 470, 450, 430, 410, 390, 370, 350, 330, 310, 290, 270, 250];
 
         return intervals.map((interval, index) => {
             const level = index + 1;
@@ -751,14 +917,18 @@
 
     function buildXpUpgrades() {
         const list = [];
-        for (let i = 1; i <= 60; i++) {
+        for (let i = 1; i <= 290; i++) {
             const bonus = i <= 25
                 ? 0.08 + i * 0.025
-                : 0.75 + ((i - 26) * 0.045);
+                : i <= 70
+                    ? 0.75 + ((i - 26) * 0.045)
+                    : i <= 140
+                        ? 2.73 + ((i - 70) * 0.065)
+                        : 7.28 + ((i - 140) * 0.1);
             list.push({
                 level: i,
                 bonus: Math.round(bonus * 1000) / 1000,
-                cost: getSmoothUpgradeCost(2500, 1.28, i),
+                cost: getSmoothUpgradeCost(2500, i > 210 ? 1.31 : 1.28, i),
                 shopTier: getShopTierName(i),
                 tierClass: getShopTierClass(i)
             });
@@ -768,14 +938,18 @@
 
     function buildStreakUpgrades() {
         const list = [];
-        for (let i = 1; i <= 45; i++) {
+        for (let i = 1; i <= 270; i++) {
             const mult = i <= 15
                 ? 2.5 + (i - 1) * 0.5 + Math.floor(i / 5) * 0.5
-                : 11.5 + ((i - 16) * 0.6);
+                : i <= 50
+                    ? 11.5 + ((i - 16) * 0.6)
+                    : i <= 120
+                        ? 31.9 + ((i - 50) * 0.8)
+                        : 87.9 + ((i - 120) * 1.2);
             list.push({
                 level: i,
                 mult: Math.round(mult * 10) / 10,
-                cost: getSmoothUpgradeCost(6000, 1.32, i),
+                cost: getSmoothUpgradeCost(6000, i > 190 ? 1.35 : 1.32, i),
                 shopTier: getShopTierName(i),
                 tierClass: getShopTierClass(i)
             });
@@ -785,14 +959,16 @@
 
     function buildMutationUpgrades() {
         const list = [];
-        for (let i = 1; i <= 85; i++) {
+        for (let i = 1; i <= 320; i++) {
             const chanceOneIn = i <= 50
                 ? Math.round(50_000 / Math.pow(1.13, i - 1))
-                : Math.round(100 / Math.pow(1.06, i - 50));
+                : i <= 95
+                    ? Math.round(100 / Math.pow(1.06, i - 50))
+                    : Math.round(8 / Math.pow(1.04, i - 95));
             list.push({
                 level: i,
-                chance: Math.max(10, chanceOneIn),
-                cost: getSmoothUpgradeCost(8000, 1.205, i),
+                chance: Math.max(2, chanceOneIn),
+                cost: getSmoothUpgradeCost(8000, i > 240 ? 1.23 : 1.205, i),
                 shopTier: getShopTierName(i + 14),
                 tierClass: getShopTierClass(i + 14)
             });
@@ -801,7 +977,7 @@
     }
 
     const APEX_UPGRADE_BASE_ONE_IN = 12_000_000;
-    const APEX_UPGRADE_MIN_ONE_IN = 150_000;
+    const APEX_UPGRADE_MIN_ONE_IN = 50_000;
     const APEX_PRESTIGE_UNLOCK_ONE_IN = 7_500_000;
     const APEX_SURGE_POTION_ONE_IN = 100_000;
 
@@ -823,12 +999,12 @@
 
     function buildMutationBountyUpgrades() {
         const list = [];
-        for (let i = 1; i <= 45; i++) {
+        for (let i = 1; i <= 240; i++) {
             const extraLevel = i - 1;
             list.push({
                 level: i,
                 bonus: Math.round((0.12 + extraLevel * 0.035) * 1000) / 1000,
-                cost: getSmoothUpgradeCost(2_000_000, 1.32, i),
+                cost: getSmoothUpgradeCost(2_000_000, i > 170 ? 1.36 : 1.32, i),
                 shopTier: getShopTierName(i + 45),
                 tierClass: getShopTierClass(i + 45)
             });
@@ -836,15 +1012,45 @@
         return list;
     }
 
+    function buildMutationStackUpgrades() {
+        const list = [];
+        for (let i = 1; i <= 210; i++) {
+            const mult = 1 + (i * 0.08) + (Math.floor(i / 10) * 0.25) + (i > 60 ? (i - 60) * 0.035 : 0);
+            list.push({
+                level: i,
+                mult: Math.round(mult * 100) / 100,
+                cost: getSmoothUpgradeCost(150_000, 1.27, i),
+                shopTier: getShopTierName(i + 28),
+                tierClass: getShopTierClass(i + 28)
+            });
+        }
+        return list;
+    }
+
+    function buildStackBountyUpgrades() {
+        const list = [];
+        for (let i = 1; i <= 170; i++) {
+            const bonus = 0.08 + ((i - 1) * 0.025) + (i > 40 ? (i - 40) * 0.015 : 0);
+            list.push({
+                level: i,
+                bonus: Math.round(bonus * 1000) / 1000,
+                cost: getSmoothUpgradeCost(5_000_000, 1.33, i),
+                shopTier: getShopTierName(i + 50),
+                tierClass: getShopTierClass(i + 50)
+            });
+        }
+        return list;
+    }
+
     function buildPotionRestockUpgrades() {
         const list = [];
-        for (let i = 1; i <= 25; i++) {
-            const progress = i / 25;
+        for (let i = 1; i <= 220; i++) {
+            const progress = Math.min(1, i / 150);
             list.push({
                 level: i,
                 ultraRestock: Math.max(5, Math.round(20 - (15 * progress))),
                 omegaRestock: Math.max(20, Math.round(80 - (60 * progress))),
-                cost: getSmoothUpgradeCost(3_000_000, 1.34, i),
+                cost: getSmoothUpgradeCost(3_000_000, i > 150 ? 1.38 : 1.34, i),
                 shopTier: getShopTierName(i + 50),
                 tierClass: getShopTierClass(i + 50)
             });
@@ -854,6 +1060,8 @@
 
     const MUTATION_UPGRADES = buildMutationUpgrades();
     const APEX_MUTATION_UPGRADES = buildApexUpgrades();
+    const MUTATION_STACK_UPGRADES = buildMutationStackUpgrades();
+    const STACK_BOUNTY_UPGRADES = buildStackBountyUpgrades();
 
     const UPGRADE_LISTS = {
         luck: buildLuckUpgrades(),
@@ -864,6 +1072,8 @@
         mutation: MUTATION_UPGRADES,
         apex: APEX_MUTATION_UPGRADES,
         mutationBounty: buildMutationBountyUpgrades(),
+        mutationStack: MUTATION_STACK_UPGRADES,
+        stackBounty: STACK_BOUNTY_UPGRADES,
         potionRestock: buildPotionRestockUpgrades(),
         xp: buildXpUpgrades()
     };
@@ -881,6 +1091,7 @@
 
     const POTION_DEFS = {
         luckMinor: {
+            sprite: "images/RNG/potions/Luck1.png",
             name: "Minor Luck Potion",
             icon: "\u{1F343}",
             desc: "1.35\u00d7 luck for 25 rolls",
@@ -890,6 +1101,7 @@
             category: "luck"
         },
         luck: {
+            sprite: "images/RNG/potions/Luck2.png",
             name: "Luck Potion",
             icon: "\u{1F340}",
             desc: "1.8\u00d7 luck for 15 rolls",
@@ -899,6 +1111,7 @@
             category: "luck"
         },
         luckStrong: {
+            sprite: "images/RNG/potions/Luck3.png",
             name: "Strong Luck Potion",
             icon: "\u2728",
             desc: "2.5\u00d7 luck for 12 rolls",
@@ -908,6 +1121,7 @@
             category: "luck"
         },
         luckMega: {
+            sprite: "images/RNG/potions/Luck4.png",
             name: "Mega Luck Potion",
             icon: "\u{1F31F}",
             desc: "4\u00d7 luck for 6 rolls",
@@ -917,6 +1131,7 @@
             category: "luck"
         },
         luckVoid: {
+            sprite: "images/RNG/potions/Luck5.png",
             name: "Ultra Luck Potion",
             icon: "\u{1F300}",
             desc: "8\u00d7 luck for 3 rolls",
@@ -925,7 +1140,18 @@
             luckMult: 8,
             category: "luck"
         },
+        cosmicLuck: {
+            sprite: "images/RNG/potions/Luck6.png",
+            name: "Cosmic Luck Potion",
+            icon: "\u{1F30C}",
+            desc: "12\u00d7 luck for 2 rolls",
+            cost: 3500000,
+            rolls: 2,
+            luckMult: 12,
+            category: "luck"
+        },
         coin: {
+            sprite: "images/RNG/potions/Coin1.png",
             name: "Coin Potion",
             icon: "\u{1F4B0}",
             desc: "2.5\u00d7 coins for 20 rolls",
@@ -934,6 +1160,7 @@
             coinMult: 2.5
         },
         speed: {
+            sprite: "images/RNG/potions/Speed1.png",
             name: "Speed Potion",
             icon: "\u26A1",
             desc: "50% faster roll cooldown for 25 rolls",
@@ -941,6 +1168,7 @@
             rolls: 25
         },
         ultra: {
+            sprite: "images/RNG/potions/Abyss1.png",
             name: "Abyss Potion",
             icon: "\u{1F30A}",
             desc: "Guaranteed 1 in 1M+ species; restocks after 20 normal rolls",
@@ -950,6 +1178,7 @@
             restockRolls: 20
         },
         omega: {
+            sprite: "images/RNG/potions/Omega1.png",
             name: "Omega Potion",
             icon: "\u{1F31F}",
             desc: "Guaranteed 1 in 100M+ species; restocks after 80 normal rolls",
@@ -959,6 +1188,7 @@
             restockRolls: 80
         },
         apexSurge: {
+            sprite: "images/RNG/potions/ApexSurge1.png",
             name: "Apex Surge Potion",
             icon: "\u{1F988}",
             desc: "Apex rolls become 1 in 100,000 for your next roll, not guaranteed",
@@ -967,7 +1197,17 @@
             maxOwned: 1,
             fixedRolls: true
         },
+        mutationPrimer: {
+            sprite: "images/RNG/potions/Mutagen1.png",
+            name: "Mutagen Primer Potion",
+            icon: "\u{1F9EA}",
+            desc: "Guaranteed random mutation for 25 rolls; reduced coin payout",
+            cost: 25000000,
+            rolls: 25,
+            forceRandomMutation: true
+        },
         albino: {
+            sprite: "images/RNG/potions/Albino1.png",
             name: "Albino Potion",
             icon: "\u{1F90D}",
             desc: "Guaranteed albino mutation; reduced coin payout",
@@ -975,6 +1215,7 @@
             rolls: 1
         },
         shiny: {
+            sprite: "images/RNG/potions/Shiny1.png",
             name: "Shiny Potion",
             icon: "\u2728",
             desc: "Guaranteed shiny mutation; reduced coin payout",
@@ -982,6 +1223,7 @@
             rolls: 1
         },
         bioluminescent: {
+            sprite: "images/RNG/potions/Bio1.png",
             name: "Bioluminescent Potion",
             icon: "\u{1F9EC}",
             desc: "Guaranteed bioluminescent mutation; reduced coin payout",
@@ -989,6 +1231,7 @@
             rolls: 1
         },
         megatooth: {
+            sprite: "images/RNG/potions/Megatooth1.png",
             name: "Megatooth Potion",
             icon: "\u{1F9B7}",
             desc: "Guaranteed megatooth mutation; reduced coin payout",
@@ -996,11 +1239,54 @@
             rolls: 1
         },
         randomMutation: {
+            sprite: "images/RNG/potions/Mutagen2.png",
             name: "Mutagen Storm Potion",
             icon: "\u{1F9EC}",
             desc: "Guaranteed random mutation for 50 rolls; reduced coin payout",
             cost: 100000000,
             rolls: 50
+        },
+        stackedMutation: {
+            sprite: "images/RNG/potions/Mutagen3.png",
+            name: "Deep Mutagen Potion",
+            icon: "\u{1F9EC}",
+            desc: "Guaranteed random mutation for 10 rolls; reduced coin payout",
+            cost: 200000000,
+            rolls: 10,
+            forceRandomMutation: true
+        },
+        stackCatalyst: {
+            sprite: "images/RNG/potions/Catalyst1.png",
+            name: "Abyss Catalyst Potion",
+            icon: "\u2697",
+            desc: "Guaranteed random mutation for 5 rolls; reduced coin payout",
+            cost: 900000000,
+            rolls: 5,
+            forceRandomMutation: true
+        },
+        titanium: {
+            sprite: "images/RNG/potions/Titanium1.png",
+            name: "Titanium Potion",
+            icon: "\u25A3",
+            desc: "Guaranteed titanium mutation; reduced coin payout",
+            cost: 500000000,
+            rolls: 1
+        },
+        worldeater: {
+            sprite: "images/RNG/potions/Dark1.png",
+            name: "Dark Matter Potion",
+            icon: "\u25C9",
+            desc: "Guaranteed dark matter mutation; reduced coin payout",
+            cost: 5000000000,
+            rolls: 1
+        },
+        singularity: {
+            sprite: "images/RNG/potions/Singularity1.png",
+            name: "Singularity Mutagen",
+            icon: "\u2737",
+            desc: "Guaranteed singularity mutation; reduced coin payout",
+            cost: 50000000000,
+            rolls: 1
         }
     };
 
@@ -1042,7 +1328,7 @@
             rollWeight: 36
         },
         shiny: {
-            name: "Shiny",
+            name: "Silver",
             icon: "\u2728",
             oneInMult: 7,
             color: "#fde047",
@@ -1050,7 +1336,7 @@
             rollWeight: 28
         },
         pearl: {
-            name: "Pearl",
+            name: "Pearlescent",
             icon: "\u25CE",
             oneInMult: 8,
             color: "#f8fafc",
@@ -1106,7 +1392,7 @@
             rollWeight: 14
         },
         golden: {
-            name: "Golden",
+            name: "Gilded",
             icon: "\u{1F3C6}",
             oneInMult: 20,
             color: "#fbbf24",
@@ -1122,7 +1408,7 @@
             rollWeight: 11
         },
         frostbite: {
-            name: "Frostbite",
+            name: "Frostbitten",
             icon: "\u2744\uFE0F",
             oneInMult: 24,
             color: "#93c5fd",
@@ -1146,7 +1432,7 @@
             rollWeight: 8
         },
         tideborn: {
-            name: "Tideborn",
+            name: "Iridescent",
             icon: "\u{1F30A}",
             oneInMult: 34,
             color: "#2dd4bf",
@@ -1154,7 +1440,7 @@
             rollWeight: 7
         },
         coral: {
-            name: "Coral",
+            name: "Overgrown",
             icon: "\u25D2",
             oneInMult: 38,
             color: "#fb7185",
@@ -1170,7 +1456,7 @@
             rollWeight: 6
         },
         prism: {
-            name: "Prism",
+            name: "Prismatic",
             icon: "\u25C8",
             oneInMult: 45,
             color: "#f0abfc",
@@ -1194,7 +1480,7 @@
             rollWeight: 4
         },
         stormcharged: {
-            name: "Stormcharged",
+            name: "Electrified",
             icon: "\u26C8",
             oneInMult: 58,
             color: "#38bdf8",
@@ -1226,7 +1512,7 @@
             rollWeight: 2
         },
         radioactive: {
-            name: "Radioactive",
+            name: "Toxic",
             icon: "\u2622\uFE0F",
             oneInMult: 90,
             color: "#bef264",
@@ -1242,7 +1528,7 @@
             rollWeight: 1
         },
         glitch: {
-            name: "Glitch",
+            name: "Glitched",
             icon: "\u{1F4A0}",
             oneInMult: 150,
             color: "#f472b6",
@@ -1250,7 +1536,7 @@
             rollWeight: 1
         },
         primordial: {
-            name: "Primordial",
+            name: "Prehistoric",
             icon: "\u{1F9B4}",
             oneInMult: 220,
             color: "#f59e0b",
@@ -1266,7 +1552,7 @@
             rollWeight: 0.56
         },
         abyssbreaker: {
-            name: "Abyssbreaker",
+            name: "Armoured",
             icon: "\u2693",
             oneInMult: 430,
             color: "#60a5fa",
@@ -1274,7 +1560,7 @@
             rollWeight: 0.44
         },
         maelstrom: {
-            name: "Maelstrom",
+            name: "Chaotic",
             icon: "\u{1F300}",
             oneInMult: 510,
             color: "#22d3ee",
@@ -1282,7 +1568,7 @@
             rollWeight: 0.34
         },
         riftborn: {
-            name: "Riftborn",
+            name: "Bloodstained",
             icon: "\u25C9",
             oneInMult: 610,
             color: "#c084fc",
@@ -1290,7 +1576,7 @@
             rollWeight: 0.26
         },
         eventhorizon: {
-            name: "Eventide",
+            name: "Oil Slick",
             icon: "\u25CF",
             oneInMult: 700,
             color: "#f0abfc",
@@ -1298,7 +1584,7 @@
             rollWeight: 0.18
         },
         vortex: {
-            name: "Vortex",
+            name: "Twisted",
             icon: "\u27F3",
             oneInMult: 820,
             color: "#67e8f9",
@@ -1306,7 +1592,7 @@
             rollWeight: 0.13
         },
         oblivion: {
-            name: "Oblivion",
+            name: "Corrosive",
             icon: "\u25C6",
             oneInMult: 980,
             color: "#a78bfa",
@@ -1314,12 +1600,76 @@
             rollWeight: 0.09
         },
         cataclysm: {
-            name: "Cataclysm",
+            name: "Colossal",
             icon: "\u26A0",
             oneInMult: 1120,
             color: "#fb7185",
             scoreBonus: 102,
             rollWeight: 0.06
+        },
+        titanium: {
+            name: "Titanium",
+            icon: "\u25A3",
+            oneInMult: 1450,
+            color: "#cbd5e1",
+            scoreBonus: 120,
+            rollWeight: 0.045
+        },
+        dreamglass: {
+            name: "Crystalline",
+            icon: "\u25C7",
+            oneInMult: 1800,
+            color: "#f0abfc",
+            scoreBonus: 138,
+            rollWeight: 0.035
+        },
+        sunkenstar: {
+            name: "Celestial",
+            icon: "\u2726",
+            oneInMult: 2200,
+            color: "#fde68a",
+            scoreBonus: 156,
+            rollWeight: 0.026
+        },
+        worldeater: {
+            name: "Dark Matter",
+            icon: "\u25C9",
+            oneInMult: 3000,
+            color: "#c084fc",
+            scoreBonus: 180,
+            rollWeight: 0.018
+        },
+        chronoshark: {
+            name: "Temporal",
+            icon: "\u23F3",
+            oneInMult: 4200,
+            color: "#67e8f9",
+            scoreBonus: 210,
+            rollWeight: 0.012
+        },
+        eldritch: {
+            name: "Divine",
+            icon: "\u2739",
+            oneInMult: 5600,
+            color: "#a3e635",
+            scoreBonus: 245,
+            rollWeight: 0.008
+        },
+        godfin: {
+            name: "Corrupted",
+            icon: "\u265B",
+            oneInMult: 7500,
+            color: "#facc15",
+            scoreBonus: 285,
+            rollWeight: 0.005
+        },
+        singularity: {
+            name: "Singularity",
+            icon: "\u2737",
+            oneInMult: 10000,
+            color: "#e879f9",
+            scoreBonus: 340,
+            rollWeight: 0.003
         },
         apex: {
             name: "Apex",
@@ -1336,49 +1686,59 @@
     const STANDARD_MUTATION_KEYS = Object.keys(MUTATION_TYPES)
         .filter((key) => !MUTATION_TYPES[key].naturalOnly);
     const MUTATION_CHANCE_ORDER = [
-        "melanistic",
-        "obsidian",
-        "albino",
-        "piebald",
-        "shiny",
-        "pearl",
-        "leucistic",
-        "bioluminescent",
-        "sapphire",
-        "copper",
-        "emerald",
-        "ruby",
-        "golden",
-        "amethyst",
-        "frostbite",
-        "neon",
-        "spectral",
-        "tideborn",
-        "coral",
-        "abyssal",
-        "prism",
-        "volcanic",
-        "megatooth",
-        "stormcharged",
-        "chrome",
-        "void",
-        "cosmic",
-        "radioactive",
-        "phantom",
-        "glitch",
-        "primordial",
-        "leviathan",
-        "abyssbreaker",
-        "maelstrom",
-        "riftborn",
-        "eventhorizon",
-        "vortex",
-        "oblivion",
-        "cataclysm",
-        "apex"
+        "melanistic",      // Melanistic
+        "obsidian",       // Obsidian
+        "albino",         // Albino
+        "piebald",        // Piebald
+        "shiny",          // Silver
+        "pearl",          // Pearlescent
+        "leucistic",      // Leucistic
+        "bioluminescent", // Bioluminescent
+        "sapphire",       // Sapphire
+        "copper",         // Copper
+        "emerald",        // Emerald
+        "ruby",           // Ruby
+        "golden",         // Gilded
+        "amethyst",       // Amethyst
+        "frostbite",      // Frostbitten
+        "neon",           // Neon
+        "spectral",       // Spectral
+        "tideborn",       // Iridescent
+        "coral",          // Overgrown
+        "abyssal",        // Abyssal
+        "prism",          // Prismatic
+        "volcanic",       // Volcanic
+        "megatooth",      // Megatooth
+        "stormcharged",   // Electrified
+        "chrome",         // Chrome
+        "void",           // Void
+        "cosmic",         // Cosmic
+        "radioactive",    // Toxic
+        "phantom",        // Phantom
+        "glitch",         // Glitched
+        "primordial",     // Prehistoric
+        "leviathan",      // Leviathan
+        "abyssbreaker",   // Armoured
+        "maelstrom",      // Chaotic
+        "riftborn",       // Bloodstained
+        "eventhorizon",   // Oil Slick
+        "vortex",         // Twisted
+        "oblivion",       // Corrosive
+        "cataclysm",      // Colossal
+        "titanium",       // Titanium
+        "dreamglass",     // Crystalline
+        "sunkenstar",     // Celestial
+        "worldeater",     // Dark Matter
+        "chronoshark",    // Temporal
+        "eldritch",       // Divine
+        "godfin",         // Corrupted
+        "singularity",    // Singularity
+        "apex"            // Apex — natural only
     ];
     const NATURAL_ONLY_MUTATION_KEYS = MUTATION_CHANCE_ORDER
         .filter((key) => MUTATION_TYPES[key]?.naturalOnly);
+    const MAX_MUTATION_STACK_SIZE = 1;
+    const STACKED_MUTATION_EXTRA_CHANCE_MULT = 2;
 
     const TIER_ORDER = TIERS.map((tier) => tier.name);
     const TIER_RANK = Object.fromEntries(TIER_ORDER.map((name, index) => [name, index]));
@@ -1414,6 +1774,7 @@ let rollPool = [];
     let collectionGridDirty = false;
     let collectionRenderTimer = null;
     let collectionRenderToken = 0;
+    let indexMutationComboCache = null;
     let localSaveTimer = null;
     let localSaveDirty = false;
     let localSaveFlushBound = false;
@@ -1510,8 +1871,10 @@ let rollPool = [];
             rollSpeedLevel: 0,
             autoRollLevel: 0,
             mutationLevel: 0,
+            mutationStackLevel: 0,
             apexLevel: 0,
             mutationBountyLevel: 0,
+            stackBountyLevel: 0,
             potionRestockLevel: 0,
             xpLevel: 0,
             collection: {},
@@ -1539,7 +1902,9 @@ let rollPool = [];
                 shiny: { remaining: 0 },
                 bioluminescent: { remaining: 0 },
                 megatooth: { remaining: 0 },
-                randomMutation: { remaining: 0 }
+                randomMutation: { remaining: 0 },
+                mutationPrimer: { remaining: 0, mult: 1 },
+                stackedMutation: { remaining: 0, mult: 1 }
             },
             settings: {
                 disableRarePopups: false,
@@ -1806,10 +2171,9 @@ let rollPool = [];
         const user = getRngCurrentUser();
         if (!user?.uid || !rngLeaderboardDb) return;
 
-        const mutationKey = typeof shark.mutation === "string" ? shark.mutation : "";
-        const mutationName = mutationKey && MUTATION_TYPES[mutationKey]?.name
-            ? MUTATION_TYPES[mutationKey].name
-            : "";
+        const mutationKeys = getMutationKeys(shark);
+        const mutationKey = mutationKeys.join("+");
+        const mutationName = getMutationStackLabel(mutationKeys);
         const oneIn = Math.max(0, Math.floor(Number(shark.oneIn) || 0));
         const rollCount = Math.max(1, Math.min(100, Math.floor(Number(rollContext?.rollCount) || 1)));
 
@@ -2810,7 +3174,12 @@ let rollPool = [];
                     { goal: 10000, reward: [{ type: "coins", amount: 3000000 }, { type: "potion", key: "coin", amount: 2 }] },
                     { goal: 25000, reward: [{ type: "coins", amount: 8500000 }, { type: "potion", key: "luckVoid", amount: 1 }] },
                     { goal: 50000, reward: [{ type: "coins", amount: 20000000 }, { type: "potion", key: "omega", amount: 1 }] },
-                    { goal: 100000, reward: [{ type: "coins", amount: 50000000 }, { type: "potion", key: "apexSurge", amount: 1 }] }
+                    { goal: 100000, reward: [{ type: "coins", amount: 50000000 }, { type: "potion", key: "apexSurge", amount: 1 }] },
+                    { goal: 250000, reward: [{ type: "coins", amount: 160000000 }, { type: "potion", key: "mutationPrimer", amount: 2 }] },
+                    { goal: 500000, reward: [{ type: "coins", amount: 420000000 }, { type: "potion", key: "stackedMutation", amount: 1 }] },
+                    { goal: 1000000, reward: [{ type: "coins", amount: 1200000000 }, { type: "potion", key: "cosmicLuck", amount: 1 }] },
+                    { goal: 2500000, reward: [{ type: "coins", amount: 4000000000 }, { type: "potion", key: "stackCatalyst", amount: 1 }] },
+                    { goal: 5000000, reward: [{ type: "coins", amount: 10000000000 }, { type: "potion", key: "worldeater", amount: 1 }] }
                 ]
             },
             collectionMilestone: {
@@ -2825,7 +3194,12 @@ let rollPool = [];
                     { goal: 100, reward: [{ type: "coins", amount: 450000 }, { type: "potion", key: "luckStrong", amount: 1 }] },
                     { goal: 250, reward: [{ type: "coins", amount: 1250000 }, { type: "potion", key: "luckMega", amount: 1 }] },
                     { goal: 500, reward: [{ type: "coins", amount: 4000000 }, { type: "potion", key: "ultra", amount: 1 }] },
-                    { goal: 1000, reward: [{ type: "coins", amount: 12000000 }, { type: "potion", key: "omega", amount: 1 }] }
+                    { goal: 1000, reward: [{ type: "coins", amount: 12000000 }, { type: "potion", key: "omega", amount: 1 }] },
+                    { goal: 2500, reward: [{ type: "coins", amount: 45000000 }, { type: "potion", key: "mutationPrimer", amount: 1 }] },
+                    { goal: 5000, reward: [{ type: "coins", amount: 125000000 }, { type: "potion", key: "stackedMutation", amount: 1 }] },
+                    { goal: 10000, reward: [{ type: "coins", amount: 350000000 }, { type: "potion", key: "titanium", amount: 1 }] },
+                    { goal: 25000, reward: [{ type: "coins", amount: 1200000000 }, { type: "potion", key: "stackCatalyst", amount: 1 }] },
+                    { goal: 50000, reward: [{ type: "coins", amount: 3500000000 }, { type: "potion", key: "singularity", amount: 1 }] }
                 ]
             },
             rarityMilestone: {
@@ -2840,7 +3214,11 @@ let rollPool = [];
                     { goal: 100000, reward: [{ type: "coins", amount: 1800000 }, { type: "potion", key: "luckMega", amount: 1 }] },
                     { goal: 1000000, reward: [{ type: "coins", amount: 6000000 }, { type: "potion", key: "ultra", amount: 1 }] },
                     { goal: 10000000, reward: [{ type: "coins", amount: 18000000 }, { type: "potion", key: "omega", amount: 1 }] },
-                    { goal: 100000000, reward: [{ type: "coins", amount: 65000000 }, { type: "potion", key: "apexSurge", amount: 1 }] }
+                    { goal: 100000000, reward: [{ type: "coins", amount: 65000000 }, { type: "potion", key: "apexSurge", amount: 1 }] },
+                    { goal: 1000000000, reward: [{ type: "coins", amount: 300000000 }, { type: "potion", key: "stackedMutation", amount: 1 }] },
+                    { goal: 10000000000, reward: [{ type: "coins", amount: 1500000000 }, { type: "potion", key: "cosmicLuck", amount: 1 }] },
+                    { goal: 100000000000, reward: [{ type: "coins", amount: 7500000000 }, { type: "potion", key: "stackCatalyst", amount: 1 }] },
+                    { goal: 1000000000000, reward: [{ type: "coins", amount: 25000000000 }, { type: "potion", key: "singularity", amount: 1 }] }
                 ]
             }
         };
@@ -3005,26 +3383,171 @@ let rollPool = [];
         return Math.round(tierMeta.coinReward * (0.95 + ((hash >> 4) % 15) / 100));
     }
 
-    function applyStableMutation(shark, type) {
-        const mutation = MUTATION_TYPES[type];
-        if (!shark || !mutation) return shark;
+    function getMutationSortIndex(key) {
+        const index = MUTATION_CHANCE_ORDER.indexOf(key);
+        return index >= 0 ? index : MUTATION_CHANCE_ORDER.length;
+    }
 
-        const hash = hashString(`${shark.name}:${type}:mutation`);
-        const variant = 0.9 + (hash % 20) / 100;
-        const mutatedOneIn = Math.max(2, Math.floor(shark.oneIn * mutation.oneInMult * variant));
-        const baseTier = getBaseTierName(shark);
+    function getSpriteFileName(label) {
+        return String(label || "")
+            .trim()
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, "_")
+            .replace(/^_+|_+$/g, "");
+    }
+
+    function getMutationSpritePath(key) {
+        const mutation = MUTATION_TYPES[key];
+        return `images/RNG/mutations/${getSpriteFileName(mutation?.name || key)}.png`;
+    }
+
+    function getMutationSpriteHtml(key, className = "") {
+        const classes = ["rng-mutation-sprite", className].filter(Boolean).join(" ");
+        return `<img class="${classes}" src="${getMutationSpritePath(key)}" alt="" loading="lazy" aria-hidden="true">`;
+    }
+
+    function getTierSpritePath(tierName) {
+        const tier = getTierMeta(tierName);
+        return `images/RNG/rarities/${String(tier.className || "common").replace(/-/g, "_")}.png`;
+    }
+
+    function normalizeMutationKeys(keys) {
+        const list = Array.isArray(keys) ? keys : [keys];
+        const unique = [];
+
+        list.forEach((key) => {
+            const normalizedKey = String(key || "").trim();
+            if (!MUTATION_TYPES[normalizedKey] || unique.includes(normalizedKey)) return;
+            unique.push(normalizedKey);
+        });
+
+        return unique.sort((a, b) => getMutationSortIndex(a) - getMutationSortIndex(b));
+    }
+
+    function getMutationComboPower(keys) {
+        return normalizeMutationKeys(keys)
+            .reduce((product, key) => product * Math.max(1, Number(MUTATION_TYPES[key]?.oneInMult) || 1), 1);
+    }
+
+    function buildMutationCombos() {
+        const keys = MUTATION_CHANCE_ORDER.filter((key) => MUTATION_TYPES[key]);
+        const combos = [];
+
+        function walk(startIndex, combo) {
+            if (combo.length) combos.push([...combo]);
+            if (combo.length >= MAX_MUTATION_STACK_SIZE) return;
+
+            for (let i = startIndex; i < keys.length; i++) {
+                combo.push(keys[i]);
+                walk(i + 1, combo);
+                combo.pop();
+            }
+        }
+
+        walk(0, []);
+        return combos.sort((a, b) => {
+            const powerDiff = getMutationComboPower(b) - getMutationComboPower(a);
+            if (powerDiff !== 0) return powerDiff;
+            return getMutationStackLabel(a).localeCompare(getMutationStackLabel(b));
+        });
+    }
+
+    function getIndexMutationCombos() {
+        if (!indexMutationComboCache) {
+            indexMutationComboCache = buildMutationCombos();
+        }
+        return indexMutationComboCache;
+    }
+
+    function getIndexStackedMutationCombos() {
+        return [];
+    }
+
+    function getIndexVariantCountPerSpecies() {
+        return 1 + STANDARD_MUTATION_KEYS.length + NATURAL_ONLY_MUTATION_KEYS.length;
+    }
+
+    function getMutationKeys(shark) {
+        return normalizeMutationKeys([
+            ...(Array.isArray(shark?.mutations) ? shark.mutations : []),
+            shark?.mutation
+        ]);
+    }
+
+    function getPrimaryMutationKeyFromKeys(keys) {
+        const mutationKeys = normalizeMutationKeys(keys);
+        return mutationKeys
+            .slice()
+            .sort((a, b) => {
+                const multDiff = (MUTATION_TYPES[b]?.oneInMult || 1) - (MUTATION_TYPES[a]?.oneInMult || 1);
+                if (multDiff !== 0) return multDiff;
+                return getMutationSortIndex(b) - getMutationSortIndex(a);
+            })[0] || null;
+    }
+
+    function getMutationClassNames(sharkOrKeys) {
+        const keys = Array.isArray(sharkOrKeys) ? sharkOrKeys : getMutationKeys(sharkOrKeys);
+        return normalizeMutationKeys(keys).join(" ");
+    }
+
+    function getMutationStackLabel(keys, options = {}) {
+        return normalizeMutationKeys(keys)
+            .map((key) => {
+                const mutation = MUTATION_TYPES[key];
+                const label = mutation?.name || key;
+                const text = options.uppercase ? label.toUpperCase() : label;
+                return options.icons ? `${mutation?.icon || ""} ${text}`.trim() : text;
+            })
+            .join(" + ");
+    }
+
+    function getMutationTagHtml(shark) {
+        const mutationKeys = getMutationKeys(shark);
+        if (!mutationKeys.length) return "";
+        const classes = getMutationClassNames(mutationKeys);
+        const sprites = mutationKeys.map((key) => getMutationSpriteHtml(key, "rng-mutation-tag-sprite")).join("");
+        return `<span class="rng-mutation-tag ${classes}">${sprites}<span>${getMutationStackLabel(mutationKeys, { uppercase: true })}</span></span>`;
+    }
+
+    function applyStableMutation(shark, type) {
+        return applyStableMutationStack(shark, [type]);
+    }
+
+    function applyStableMutationStack(shark, types) {
+        const mutationKeys = normalizeMutationKeys(types).slice(0, MAX_MUTATION_STACK_SIZE);
+        if (!shark || !mutationKeys.length) return shark;
+
+        const baseShark = getRollPoolEntryByName(shark.name) || shark;
+        const baseOneIn = Math.max(1, Math.floor(Number(baseShark.oneIn || shark.baseOneIn || shark.oneIn) || 1));
+        let mutatedOneIn = baseOneIn;
+
+        mutationKeys.forEach((key) => {
+            const mutation = MUTATION_TYPES[key];
+            const hash = hashString(`${baseShark.name}:${key}:mutation`);
+            const variant = 0.9 + (hash % 20) / 100;
+            mutatedOneIn = Math.max(2, Math.floor(mutatedOneIn * mutation.oneInMult * variant));
+        });
+
+        const baseTier = getBaseTierName(baseShark);
         const oddsTier = tierNameFromOneIn(mutatedOneIn);
         const baseTierMeta = getTierMeta(baseTier);
+        const primaryMutationKey = getPrimaryMutationKeyFromKeys(mutationKeys);
+        const mutationSeed = mutationKeys.join("+");
 
         return {
+            ...baseShark,
             ...shark,
             oneIn: mutatedOneIn,
             tier: baseTier,
             baseTier,
             oddsTier,
             className: baseTierMeta.className,
-            coinReward: getStableTierCoinReward(oddsTier, `${shark.name}:${type}:mutation:coins`),
-            mutation: type
+            coinReward: getStableTierCoinReward(oddsTier, `${baseShark.name}:${mutationSeed}:mutation:coins`),
+            mutation: primaryMutationKey || mutationKeys[0],
+            mutations: mutationKeys,
+            mutationStackSize: mutationKeys.length,
+            mutationLabel: getMutationStackLabel(mutationKeys),
+            baseOneIn
         };
     }
 
@@ -3068,7 +3591,7 @@ let rollPool = [];
         return ["base", ...MUTATION_CHANCE_ORDER].join(", ");
     }
 
-    function resolveRngMutationKey(input = "base") {
+    function resolveSingleRngMutationKey(input = "base") {
         const raw = String(input ?? "base").trim();
         const normalized = normalizeRngLookupText(raw || "base");
         if (!normalized || ["base", "none", "normal", "nomutation", "no mutation"].includes(normalized)) {
@@ -3085,6 +3608,24 @@ let rollPool = [];
         throw new Error(`Unknown mutation "${input}". Use one of: ${getRngMutationOptionsText()}.`);
     }
 
+    function resolveRngMutationKeys(input = "base") {
+        const raw = String(input ?? "base").trim();
+        const normalized = normalizeRngLookupText(raw || "base");
+        if (!normalized || ["base", "none", "normal", "nomutation", "no mutation"].includes(normalized)) {
+            return [];
+        }
+
+        const parts = raw
+            .split(/\s*(?:\+|,|&)\s*/g)
+            .map((part) => part.trim())
+            .filter(Boolean);
+        return normalizeMutationKeys(parts.map(resolveSingleRngMutationKey).filter(Boolean));
+    }
+
+    function resolveRngMutationKey(input = "base") {
+        return resolveRngMutationKeys(input)[0] || null;
+    }
+
     function getRngMutationKeyForCommand(input = "base") {
         try {
             return resolveRngMutationKey(input);
@@ -3094,7 +3635,51 @@ let rollPool = [];
         }
     }
 
+    function getMutationKeysFromCollectionName(name) {
+        const match = String(name || "").match(/\s\(([^()]+)\)$/);
+        if (!match) return [];
+
+        const labels = match[1]
+            .split(/\s+\+\s+/g)
+            .map((label) => normalizeRngLookupText(label))
+            .filter(Boolean);
+        if (!labels.length) return [];
+
+        return normalizeMutationKeys(labels.map((label) => {
+            for (const [key, mutation] of Object.entries(MUTATION_TYPES)) {
+                if (label === normalizeRngLookupText(key) || label === normalizeRngLookupText(mutation?.name)) {
+                    return key;
+                }
+            }
+            return null;
+        }).filter(Boolean));
+    }
+
     function getMutationKeyFromCollectionName(name) {
+        return getMutationKeysFromCollectionName(name)[0] || null;
+    }
+
+    function getStoredMutationKeys(entry, name = "") {
+        return normalizeMutationKeys([
+            ...(Array.isArray(entry?.mutations) ? entry.mutations : []),
+            entry?.mutation,
+            ...getMutationKeysFromCollectionName(name)
+        ]);
+    }
+
+    function getMutationCollectionSuffix(keys) {
+        const label = getMutationStackLabel(keys);
+        return label ? ` (${label})` : "";
+    }
+
+    function getMutationBaseNameFromCollectionName(name, keys) {
+        const suffix = getMutationCollectionSuffix(keys);
+        return suffix && String(name || "").endsWith(suffix)
+            ? String(name).slice(0, -suffix.length)
+            : name;
+    }
+
+    function getLegacyMutationKeyFromCollectionName(name) {
         for (const [key, mutation] of Object.entries(MUTATION_TYPES)) {
             if (String(name || "").endsWith(` (${mutation.name})`)) return key;
         }
@@ -3103,8 +3688,12 @@ let rollPool = [];
 
     function getBaseNameFromCollectionEntry(name, entry) {
         if (entry?.baseName) return entry.baseName;
-        const mutationKey = entry?.mutation || getMutationKeyFromCollectionName(name);
-        const mutationName = MUTATION_TYPES[mutationKey]?.name;
+        const mutationKeys = getStoredMutationKeys(entry, name);
+        const stackedBaseName = getMutationBaseNameFromCollectionName(name, mutationKeys);
+        if (stackedBaseName !== name) return stackedBaseName;
+
+        const legacyMutationKey = entry?.mutation || getLegacyMutationKeyFromCollectionName(name);
+        const mutationName = MUTATION_TYPES[legacyMutationKey]?.name;
         if (mutationName && String(name || "").endsWith(` (${mutationName})`)) {
             return name.slice(0, -(` (${mutationName})`.length));
         }
@@ -3112,17 +3701,18 @@ let rollPool = [];
     }
 
     function getCanonicalCollectionEntry(name, entry) {
-        const mutationKey = entry?.mutation || getMutationKeyFromCollectionName(name);
+        const mutationKeys = getStoredMutationKeys(entry, name);
         const baseName = getBaseNameFromCollectionEntry(name, entry);
         const baseShark = getRollPoolEntryByName(baseName);
         if (!baseShark) return null;
 
-        const canonical = mutationKey
-            ? applyStableMutation(baseShark, mutationKey)
+        const canonical = mutationKeys.length
+            ? applyStableMutationStack(baseShark, mutationKeys)
             : baseShark;
         const canonicalKey = getCollectionKey(canonical);
         const baseTier = getBaseTierName(canonical);
         const oddsTier = getOddsTierName(canonical);
+        const primaryMutationKey = getPrimaryMutationKeyFromKeys(mutationKeys);
 
         return {
             key: canonicalKey,
@@ -3132,8 +3722,9 @@ let rollPool = [];
                 baseTier,
                 oddsTier,
                 oneIn: canonical.oneIn,
-                mutation: mutationKey || undefined,
-                baseName: mutationKey ? baseShark.name : undefined
+                mutation: primaryMutationKey || undefined,
+                mutations: mutationKeys.length ? mutationKeys : undefined,
+                baseName: mutationKeys.length ? baseShark.name : undefined
             }
         };
     }
@@ -3235,7 +3826,7 @@ let rollPool = [];
             .slice(0, player.luckLevel)
             .reduce((sum, upgrade) => sum + upgrade.bonus, 0);
         const potionMult = getLuckPotionMultiplier();
-        return (1 + upgradeBonus) * getRankLuckMultiplier() * getEquippedLuckMultiplier() * getIndexLuckMultiplier() * getPrestigeLuckMultiplier() * getPrestigeRunMomentumMultiplier() * potionMult;
+        return (1 + upgradeBonus) * getRankLuckMultiplier() * getEquippedLuckMultiplier() * getMutationGalleryLuckMultiplier() * getIndexLuckMultiplier() * getPrestigeLuckMultiplier() * getPrestigeRunMomentumMultiplier() * potionMult;
     }
 
     function getRollLuckMultiplier() {
@@ -3267,11 +3858,44 @@ let rollPool = [];
 
     function getEquippedLuckBonus() {
         const entry = getEquippedCollectionEntry();
-        return entry ? (EQUIPPED_LUCK_BONUS_BY_TIER[getBaseTierName(entry)] || 0) : 0;
+        if (!entry) return 0;
+        const tierBonus = EQUIPPED_LUCK_BONUS_BY_TIER[getOddsTierName(entry)] || 0;
+        const depthBonus = 1 + Math.min(1.5, Math.max(0, Number(player.prestigeLevel) || 0) * 0.025);
+        return (tierBonus * 2 * depthBonus) + getEquippedMasteryLuckBonus(entry);
     }
 
     function getEquippedLuckMultiplier() {
         return 1 + getEquippedLuckBonus();
+    }
+
+    function getEquippedMasteryLuckBonus(entry = getEquippedCollectionEntry()) {
+        if (!entry) return 0;
+        const copies = Math.max(0, Math.floor(Number(entry.count) || 0));
+        const copyBonus = Math.min(0.75, Math.log10(copies + 1) * 0.18);
+        const oddsBonus = Math.min(0.75, Math.log10(Math.max(1, Number(entry.oneIn) || 1)) * 0.045);
+        return copyBonus + oddsBonus;
+    }
+
+    function getMutationGalleryStats() {
+        const ownedMutationKeys = new Set();
+        let mutatedEntries = 0;
+        Object.entries(player.collection || {}).forEach(([key, entry]) => {
+            const mutationKeys = getStoredMutationKeys(entry, key);
+            if (!mutationKeys.length) return;
+            mutatedEntries += 1;
+            mutationKeys.forEach((mutationKey) => ownedMutationKeys.add(mutationKey));
+        });
+        return { mutatedEntries, uniqueMutations: ownedMutationKeys.size };
+    }
+
+    function getMutationGalleryLuckMultiplier() {
+        const stats = getMutationGalleryStats();
+        return 1 + Math.min(0.75, stats.mutatedEntries * 0.0025);
+    }
+
+    function getMutationGalleryOddsMultiplier() {
+        const stats = getMutationGalleryStats();
+        return 1 + Math.min(0.6, stats.uniqueMutations * 0.0125);
     }
 
     function getPrestigePoints() {
@@ -3295,7 +3919,7 @@ let rollPool = [];
     }
 
     function getPrestigeStarterPotionTotal(level = getPrestigeUpgradeLevel("potionSatchel")) {
-        const totals = [0, 1, 2, 4, 6];
+        const totals = [0, 1, 2, 4, 7];
         return totals[Math.min(Math.max(0, level), totals.length - 1)] || 0;
     }
 
@@ -3307,7 +3931,7 @@ let rollPool = [];
             { luck: 1 },
             { luck: 1, coin: 1 },
             { luck: 2, coin: 1, speed: 1 },
-            { luck: 2, coin: 2, speed: 1, randomMutation: 1 }
+            { luck: 2, coin: 2, speed: 1, randomMutation: 1, mutationPrimer: 1 }
         ];
         return starterSets[Math.min(level, starterSets.length - 1)] || {};
     }
@@ -3357,7 +3981,7 @@ let rollPool = [];
     }
 
     function getPrestigePotionDurationMultiplier() {
-        return 1 + getPrestigeUpgradeBonus("potionCatalyst", 0.08);
+        return 1 + getPrestigeUpgradeBonus("potionCatalyst", 0.08) + getPrestigeUpgradeBonus("potionChemistry", 0.1);
     }
 
     function getPrestigeRestockReduction() {
@@ -3444,19 +4068,40 @@ let rollPool = [];
     }
 
     function getPrestigeMutationOddsMultiplier() {
-        return 1 + getPrestigeUpgradeBonus("mutagenArchive", 0.08);
+        return 1
+            + (getPrestigeDepthBonus() * 0.5)
+            + (getMutationGalleryOddsMultiplier() - 1)
+            + getPrestigeUpgradeBonus("mutagenArchive", 0.08)
+            + getPrestigeUpgradeBonus("chainMemory", 0.12)
+            + getPrestigeUpgradeBonus("comboCartography", 0.15)
+            + getPrestigeUpgradeBonus("mutationFoundry", 0.1);
+    }
+
+    function getPrestigeMutationStackOddsMultiplier() {
+        return 1 + getPrestigeUpgradeBonus("chainMemory", 0.12) + getPrestigeUpgradeBonus("comboCartography", 0.15);
     }
 
     function getPrestigeApexOddsMultiplier() {
-        return 1 + getPrestigeUpgradeBonus("apexMemory", 0.06);
+        return 1 + (getPrestigeDepthBonus() * 0.35) + ((getMutationGalleryOddsMultiplier() - 1) * 0.35) + getPrestigeUpgradeBonus("apexMemory", 0.06) + getPrestigeUpgradeBonus("apexCartography", 0.09);
     }
 
     function getPrestigeMutationBountyBonus() {
-        return getPrestigeUpgradeBonus("abyssBounty", 0.1);
+        return getPrestigeUpgradeBonus("abyssBounty", 0.1)
+            + getPrestigeUpgradeBonus("stackDividend", 0.08)
+            + getPrestigeUpgradeBonus("stackRoyalty", 0.1);
+    }
+
+    function getPrestigeStackBountyBonus() {
+        return getPrestigeUpgradeBonus("stackDividend", 0.08) + getPrestigeUpgradeBonus("stackRoyalty", 0.1);
     }
 
     function getPrestigeGainMultiplier() {
         return 1 + getPrestigeUpgradeBonus("legacyTide", 0.1);
+    }
+
+    function getPrestigeDepthBonus() {
+        const depth = Math.max(0, Number(player.prestigeLevel) || 0);
+        return depth * 0.02 * (1 + getPrestigeUpgradeBonus("legacyTide", 0.25));
     }
 
     function getPrestigeTitle() {
@@ -3467,6 +4112,14 @@ let rollPool = [];
         if (depth >= 5) return "Deep Current";
         if (depth >= 1) return "Reef Ascendant";
         return "Unawakened";
+    }
+
+    function getPrestigeTitleIconPath(title = getPrestigeTitle()) {
+        return `images/RNG/prestige/${getSpriteFileName(title)}.png`;
+    }
+
+    function getPrestigeUpgradeIconPath(id) {
+        return `images/RNG/upgrades/Prestige/${id}.png`;
     }
 
     function getPrestigeUpgradePowerSummary() {
@@ -3480,57 +4133,61 @@ let rollPool = [];
     }
 
     function getPrestigeLuckMultiplier() {
-        return 1 + (getTotalPrestigePoints() * PRESTIGE_LUCK_PER_POINT) + getPrestigeUpgradeBonus("pearlLuck", 0.06);
+        return 1 + getPrestigeDepthBonus() + (getTotalPrestigePoints() * PRESTIGE_LUCK_PER_POINT) + getPrestigeUpgradeBonus("pearlLuck", 0.06) + getPrestigeUpgradeBonus("abyssalLuck", 0.09);
     }
 
     function getPrestigeCoinMultiplier() {
-        return 1 + (getTotalPrestigePoints() * PRESTIGE_COIN_PER_POINT) + getPrestigeUpgradeBonus("treasureCurrent", 0.05);
+        return 1 + (getPrestigeDepthBonus() * 0.75) + (getTotalPrestigePoints() * PRESTIGE_COIN_PER_POINT) + getPrestigeUpgradeBonus("treasureCurrent", 0.05) + getPrestigeUpgradeBonus("vaultCurrent", 0.08);
     }
 
     function getPrestigeXpMultiplier() {
-        return 1 + (getTotalPrestigePoints() * PRESTIGE_XP_PER_POINT) + getPrestigeUpgradeBonus("researchMemory", 0.04);
+        return 1 + (getPrestigeDepthBonus() * 0.75) + (getTotalPrestigePoints() * PRESTIGE_XP_PER_POINT) + getPrestigeUpgradeBonus("researchMemory", 0.04) + getPrestigeUpgradeBonus("deepResearch", 0.07);
+    }
+
+    function getPrestigeTrialStatus() {
+        const bestOneIn = Math.max(0, Number(player.runBestOneIn) || 0);
+        const rolls = Math.max(0, Number(player.rolls) || 0);
+        const collection = Math.max(0, Number(player.runCollectionFinds) || 0);
+        const bestTarget = Math.max(250_000, Math.round(PRESTIGE_MIN_BEST_ONE_IN / (1 + getPrestigeUpgradeBonus("rareBeacon", 0.1))));
+        const collectionTarget = Math.max(15, Math.round(PRESTIGE_COLLECTION_STEP / (1 + getPrestigeUpgradeBonus("surveyCompass", 0.1))));
+        return {
+            bestOneIn,
+            rolls,
+            collection,
+            bestTarget,
+            rollsTarget: PRESTIGE_ROLL_STEP,
+            collectionTarget,
+            bestReady: bestOneIn >= bestTarget,
+            rollsReady: rolls >= PRESTIGE_ROLL_STEP,
+            collectionReady: collection >= collectionTarget
+        };
     }
 
     function getPrestigePotential() {
-        const bestOneIn = Math.max(0, Number(player.runBestOneIn) || 0);
-        const rolls = Math.max(0, Number(player.rolls) || 0);
-        const collection = Math.max(0, Number(player.runCollectionFinds) || 0);
-        const bestValue = bestOneIn * (1 + getPrestigeUpgradeBonus("rareBeacon", 0.12));
-        const collectionValue = collection * (1 + getPrestigeUpgradeBonus("surveyCompass", 0.12));
-        const bestScore = bestValue >= PRESTIGE_MIN_BEST_ONE_IN
-            ? 1 + Math.floor(Math.log10(bestValue / PRESTIGE_MIN_BEST_ONE_IN) * 3)
-            : 0;
-        const rollScore = Math.floor(rolls / PRESTIGE_ROLL_STEP);
-        const collectionScore = Math.floor(collectionValue / PRESTIGE_COLLECTION_STEP);
-        const baseGain = Math.max(0, bestScore + rollScore + collectionScore);
-
-        return baseGain > 0
-            ? Math.max(baseGain, Math.floor(baseGain * getPrestigeGainMultiplier()))
-            : 0;
+        const trial = getPrestigeTrialStatus();
+        return trial.bestReady && trial.rollsReady && trial.collectionReady ? PRESTIGE_TOKEN_REWARD : 0;
     }
 
     function getPrestigeProgressInfo() {
-        const bestOneIn = Math.max(0, Number(player.runBestOneIn) || 0);
-        const rolls = Math.max(0, Number(player.rolls) || 0);
-        const collection = Math.max(0, Number(player.runCollectionFinds) || 0);
+        const { bestOneIn, rolls, collection, bestTarget, rollsTarget, collectionTarget } = getPrestigeTrialStatus();
         return [
             {
                 label: "Run best",
                 value: bestOneIn ? `1/${formatOneIn(bestOneIn)}` : "No rare pull yet",
-                progress: Math.min(1, bestOneIn / PRESTIGE_MIN_BEST_ONE_IN),
-                target: `1/${formatOneIn(PRESTIGE_MIN_BEST_ONE_IN)}`
+                progress: Math.min(1, bestOneIn / bestTarget),
+                target: `1/${formatOneIn(bestTarget)}`
             },
             {
                 label: "Run rolls",
                 value: formatCompactNumber(rolls),
-                progress: Math.min(1, rolls / PRESTIGE_ROLL_STEP),
-                target: `${formatCompactNumber(PRESTIGE_ROLL_STEP)} per point`
+                progress: Math.min(1, rolls / rollsTarget),
+                target: `${formatCompactNumber(rollsTarget)} required`
             },
             {
                 label: "New finds",
                 value: formatCompactNumber(collection),
-                progress: Math.min(1, collection / PRESTIGE_COLLECTION_STEP),
-                target: `${PRESTIGE_COLLECTION_STEP} per point`
+                progress: Math.min(1, collection / collectionTarget),
+                target: `${collectionTarget} required`
             }
         ];
     }
@@ -3545,12 +4202,14 @@ let rollPool = [];
             const cost = getNextPrestigeUpgradeCost(def);
             const maxed = cost === null;
             const canBuy = !maxed && getPrestigePoints() >= cost;
-            const nextText = maxed ? "MAX" : `${cost} point${cost === 1 ? "" : "s"}`;
+            const nextText = maxed ? "MAX" : `${cost} token${cost === 1 ? "" : "s"}`;
             const progress = Math.round((level / def.costs.length) * 100);
             return `
                 <article class="rng-prestige-upgrade${maxed ? " maxed" : ""}${canBuy ? " can-buy" : ""}">
                     <div class="rng-prestige-upgrade-head">
-                        <i class="fa-solid ${def.icon}"></i>
+                        <span class="rng-prestige-upgrade-icon" aria-hidden="true">
+                            <img src="${getPrestigeUpgradeIconPath(def.id)}" alt="" loading="lazy">
+                        </span>
                         <div>
                             <strong>${def.name}</strong>
                             <span>${def.format(level)}</span>
@@ -3574,12 +4233,58 @@ let rollPool = [];
         return (1 + upgradeBonus) * getPrestigeXpMultiplier();
     }
 
+    function getMutationStackUpgradeMultiplier() {
+        const upgrade = player.mutationStackLevel > 0
+            ? MUTATION_STACK_UPGRADES[Math.min(MUTATION_STACK_UPGRADES.length - 1, player.mutationStackLevel - 1)]
+            : null;
+        return upgrade?.mult || 1;
+    }
+
+    function getMutationStackPotionMultiplier() {
+        let mult = 1;
+        const primer = player.activeEffects.mutationPrimer;
+        const stacked = player.activeEffects.stackedMutation;
+        if (primer?.remaining > 0) mult *= Math.max(1, Number(primer.mult) || 1);
+        if (stacked?.remaining > 0) mult *= Math.max(1, Number(stacked.mult) || 1);
+        return mult;
+    }
+
+    function getMutationStackPotionBaseChance() {
+        return ["mutationPrimer", "stackedMutation"].reduce((best, key) => {
+            if (!(player.activeEffects[key]?.remaining > 0)) return best;
+            const chance = Math.max(1, Math.floor(Number(POTION_DEFS[key]?.stackBaseChance) || 0));
+            if (!chance) return best;
+            return best === null ? chance : Math.min(best, chance);
+        }, null);
+    }
+
+    function getMutationStackBaseChance() {
+        const naturalChance = getMutationChance();
+        const potionChance = getMutationStackPotionBaseChance();
+        if (naturalChance === null) return potionChance;
+        if (potionChance === null) return naturalChance;
+        return Math.min(naturalChance, potionChance);
+    }
+
+    function getMutationStackOddsMultiplier() {
+        return getMutationStackUpgradeMultiplier() * getPrestigeMutationStackOddsMultiplier() * getMutationStackPotionMultiplier();
+    }
+
+    function getStackedMutationCoinBonus(rolled) {
+        const extraLayers = Math.max(0, getMutationKeys(rolled).length - 1);
+        if (!extraLayers) return 0;
+        const upgradeBonus = STACK_BOUNTY_UPGRADES
+            .slice(0, player.stackBountyLevel || 0)
+            .reduce((sum, upgrade) => sum + upgrade.bonus, 0);
+        return extraLayers * (upgradeBonus + getPrestigeStackBountyBonus());
+    }
+
     function getMutationBountyMultiplier(rolled) {
-        if (!rolled?.mutation) return 1;
+        if (!getMutationKeys(rolled).length) return 1;
         const upgradeBonus = MUTATION_BOUNTY_UPGRADES
             .slice(0, player.mutationBountyLevel || 0)
             .reduce((sum, upgrade) => sum + upgrade.bonus, 0);
-        return 1 + upgradeBonus + getPrestigeMutationBountyBonus();
+        return 1 + upgradeBonus + getPrestigeMutationBountyBonus() + getStackedMutationCoinBonus(rolled);
     }
 
     function markGuaranteedPotionRoll(rolled, source) {
@@ -3677,6 +4382,10 @@ let rollPool = [];
     function getActiveForcedMutationEffectKey() {
         const specificType = STANDARD_MUTATION_KEYS.find((key) => player.activeEffects[key]?.remaining > 0);
         if (specificType) return specificType;
+        const forceRandomKey = Object.keys(POTION_DEFS).find((key) => (
+            POTION_DEFS[key]?.forceRandomMutation && player.activeEffects[key]?.remaining > 0
+        ));
+        if (forceRandomKey) return forceRandomKey;
         return player.activeEffects.randomMutation?.remaining > 0 ? "randomMutation" : null;
     }
 
@@ -3700,16 +4409,16 @@ let rollPool = [];
             : getActiveForcedMutationEffectKey();
 
         if (!effectKey) return null;
-        if (effectKey !== "randomMutation") {
+        if (effectKey !== "randomMutation" && !POTION_DEFS[effectKey]?.forceRandomMutation) {
             return { type: effectKey, effectKey };
         }
 
-        if (player.activeEffects.randomMutation?.remaining > 0 || actionContext?.forcedMutationEffectKey === "randomMutation") {
+        if (player.activeEffects[effectKey]?.remaining > 0 || actionContext?.forcedMutationEffectKey === effectKey) {
             const randomType = pickWeightedMutationKey(STANDARD_MUTATION_KEYS);
             if (!randomType) return null;
             return {
                 type: randomType,
-                effectKey: "randomMutation"
+                effectKey
             };
         }
 
@@ -3732,11 +4441,14 @@ let rollPool = [];
     function getRngAdminNextRollCommandId(command) {
         const explicitId = String(command?.commandId || "").trim();
         if (explicitId) return explicitId;
+        const mutationId = Array.isArray(command?.mutations) && command.mutations.length
+            ? command.mutations.join("+")
+            : command?.mutation || "base";
         return [
             command?.targetUid || "",
             command?.createdAtMs || "",
             command?.sharkName || "",
-            command?.mutation || "base"
+            mutationId
         ].join(":");
     }
 
@@ -3781,16 +4493,19 @@ let rollPool = [];
         const baseShark = getRngRollPoolEntryForCommand(command.sharkName || command.shark || command.species);
         if (!baseShark) return null;
 
-        let mutationKey = null;
+        let mutationKeys = [];
+        const commandMutationInput = Array.isArray(command.mutations) && command.mutations.length
+            ? command.mutations.join("+")
+            : command.mutation || "base";
         try {
-            mutationKey = resolveRngMutationKey(command.mutation || "base");
+            mutationKeys = resolveRngMutationKeys(commandMutationInput);
         } catch (error) {
             console.warn("Queued RNG next-roll command has an invalid mutation:", error);
             return null;
         }
 
         return {
-            ...(mutationKey ? applyStableMutation(baseShark, mutationKey) : baseShark),
+            ...(mutationKeys.length ? applyStableMutationStack(baseShark, mutationKeys) : baseShark),
             adminCommandId: getRngAdminNextRollCommandId(command)
         };
     }
@@ -3855,6 +4570,47 @@ let rollPool = [];
         return weightedKeys[weightedKeys.length - 1];
     }
 
+    function pickAdditionalStandardMutationKey(existingKeys = []) {
+        const existing = new Set(normalizeMutationKeys(existingKeys));
+        const availableKeys = STANDARD_MUTATION_KEYS.filter((key) => !existing.has(key));
+        return availableKeys.length ? pickWeightedMutationKey(availableKeys) : null;
+    }
+
+    function getStackedMutationChance(baseChance, currentStackSize) {
+        const stackIndex = Math.max(1, Math.floor(Number(currentStackSize) || 1));
+        return Math.max(1, Math.round(
+            (baseChance * Math.pow(STACKED_MUTATION_EXTRA_CHANCE_MULT, stackIndex)) / getMutationStackOddsMultiplier()
+        ));
+    }
+
+    function rollStandardMutationStack(existingKeys = [], options = {}) {
+        const mutationKeys = normalizeMutationKeys(existingKeys);
+        const mutationChance = getMutationChance();
+
+        if (options.rollInitial && !mutationKeys.length) {
+            if (mutationChance === null || Math.random() >= (1 / mutationChance)) {
+                return mutationKeys;
+            }
+
+            const initialKey = pickAdditionalStandardMutationKey(mutationKeys);
+            if (initialKey) mutationKeys.push(initialKey);
+        }
+
+        const stackMutationChance = getMutationStackBaseChance();
+        if (stackMutationChance === null) return normalizeMutationKeys(mutationKeys);
+
+        while (mutationKeys.length > 0 && mutationKeys.length < MAX_MUTATION_STACK_SIZE) {
+            const nextChance = getStackedMutationChance(stackMutationChance, mutationKeys.length);
+            if (Math.random() >= (1 / nextChance)) break;
+
+            const nextKey = pickAdditionalStandardMutationKey(mutationKeys);
+            if (!nextKey) break;
+            mutationKeys.push(nextKey);
+        }
+
+        return normalizeMutationKeys(mutationKeys);
+    }
+
     function getNaturalMutationChanceOneIn(key) {
         if (NATURAL_ONLY_MUTATION_KEYS.includes(key)) return getApexMutationChance(key);
         if (!STANDARD_MUTATION_KEYS.includes(key)) return null;
@@ -3865,6 +4621,11 @@ let rollPool = [];
         if (baseChance === null || weight <= 0 || totalWeight <= 0) return null;
 
         return Math.round(baseChance * (totalWeight / weight));
+    }
+
+    function getNextStackMutationChanceOneIn(currentStackSize = 1) {
+        const baseChance = getMutationStackBaseChance();
+        return baseChance === null ? null : getStackedMutationChance(baseChance, currentStackSize);
     }
 
     function getNextUpgrade(list, currentLevel) {
@@ -4020,10 +4781,12 @@ let rollPool = [];
         if (player.activeEffects.coin.remaining > 0) player.activeEffects.coin.remaining -= 1;
         if (player.activeEffects.speed.remaining > 0) player.activeEffects.speed.remaining -= 1;
         if (player.activeEffects.apexSurge?.remaining > 0) player.activeEffects.apexSurge.remaining -= 1;
+        if (player.activeEffects.mutationPrimer?.remaining > 0) player.activeEffects.mutationPrimer.remaining -= 1;
     }
 
     function getCollectionKey(shark) {
-        return shark.mutation ? `${shark.name} (${MUTATION_TYPES[shark.mutation]?.name})` : shark.name;
+        const mutationKeys = getMutationKeys(shark);
+        return mutationKeys.length ? `${shark.name}${getMutationCollectionSuffix(mutationKeys)}` : shark.name;
     }
 
     function getCollectionEntryForShark(shark) {
@@ -4053,6 +4816,8 @@ let rollPool = [];
         const baseTier = getBaseTierName(rolled);
         const oddsTier = getOddsTierName(rolled);
         const isNewFind = !player.collection[key];
+        const mutationKeys = getMutationKeys(rolled);
+        const primaryMutationKey = getPrimaryMutationKeyFromKeys(mutationKeys);
         if (!player.collection[key]) {
             player.runCollectionFinds = (player.runCollectionFinds || 0) + 1;
             player.collection[key] = {
@@ -4062,13 +4827,15 @@ let rollPool = [];
                 oneIn: rolled.oneIn,
                 firstRoll: player.rolls,
                 count: 1,
-                mutation: rolled.mutation || undefined,
-                baseName: rolled.mutation ? rolled.name : undefined
+                mutation: primaryMutationKey || undefined,
+                mutations: mutationKeys.length ? mutationKeys : undefined,
+                baseName: mutationKeys.length ? rolled.name : undefined
             };
         } else {
             player.collection[key].count += 1;
-            if (rolled.mutation && !player.collection[key].mutation) {
-                player.collection[key].mutation = rolled.mutation;
+            if (mutationKeys.length && !getStoredMutationKeys(player.collection[key], key).length) {
+                player.collection[key].mutation = primaryMutationKey || undefined;
+                player.collection[key].mutations = mutationKeys;
                 player.collection[key].baseName = rolled.name;
             }
             player.collection[key].tier = player.collection[key].baseTier || baseTier;
@@ -4150,6 +4917,8 @@ let rollPool = [];
                 canonical.entry.tier !== entry.tier ||
                 canonical.entry.baseTier !== entry.baseTier ||
                 canonical.entry.oddsTier !== entry.oddsTier ||
+                canonical.entry.mutation !== entry.mutation ||
+                JSON.stringify(canonical.entry.mutations || []) !== JSON.stringify(entry.mutations || []) ||
                 canonical.entry.baseName !== entry.baseName
             ) {
                 changed = true;
@@ -4248,6 +5017,13 @@ let rollPool = [];
         }
     }
 
+    function maybeAwardRollinBadge() {
+        if (typeof unlockProfileBadge !== "function") return;
+        if (Math.random() < ROLLIN_BADGE_CHANCE) {
+            unlockProfileBadge("rng-mode", "rollin");
+        }
+    }
+
     function updateRankUi() {
         const info = getRankInfo();
         const rankEl = document.getElementById("rng-rank-name");
@@ -4265,10 +5041,6 @@ let rollPool = [];
 
 function rollForShark(actionContext = createRollActionContext(1)) {
     player.rolls += 1;
-
-    if (typeof unlockProfileBadge === "function" && Math.random() < 0.0001) {
-        unlockProfileBadge("rng-mode", "rollin");
-    }
 
     const streakLuckActive = isStreakLuckRoll();
 
@@ -4311,7 +5083,7 @@ function rollForShark(actionContext = createRollActionContext(1)) {
             const picked =
                 rollPool[Math.floor(Math.random() * rollPool.length)];
 
-            rolled = applyStableMutation(picked, apexMutationKey);
+            rolled = applyStableMutationStack(picked, rollStandardMutationStack([apexMutationKey]));
         }
     }
 
@@ -4321,22 +5093,14 @@ function rollForShark(actionContext = createRollActionContext(1)) {
 
     if (!rolled && !hasForcedMutation) {
 
-        const mutationChance = getMutationChance();
+        const mutationKeys = rollStandardMutationStack([], { rollInitial: true });
 
-        if (
-            mutationChance !== null &&
-            Math.random() < (1 / mutationChance)
-        ) {
-
-            const mutationKey = pickWeightedMutationKey(STANDARD_MUTATION_KEYS);
-
+        if (mutationKeys.length) {
             // Pick a normal shark FIRST
             const picked =
                 rollPool[Math.floor(Math.random() * rollPool.length)];
 
-            if (mutationKey) {
-                rolled = applyStableMutation(picked, mutationKey);
-            }
+            rolled = applyStableMutationStack(picked, mutationKeys);
         }
     }
 
@@ -4435,8 +5199,10 @@ function rollForShark(actionContext = createRollActionContext(1)) {
                     parsed.autoRollLevel ?? Math.min(parsed.autoSpeedLevel || 0, 1),
                     AUTO_ROLL_UPGRADES.length
                 ),
+                mutationStackLevel: Math.min(parsed.mutationStackLevel || 0, MUTATION_STACK_UPGRADES.length),
                 apexLevel: Math.min(parsed.apexLevel || 0, APEX_LUCK_UPGRADES.length),
                 mutationBountyLevel: Math.min(parsed.mutationBountyLevel || 0, MUTATION_BOUNTY_UPGRADES.length),
+                stackBountyLevel: Math.min(parsed.stackBountyLevel || 0, STACK_BOUNTY_UPGRADES.length),
                 potionRestockLevel: Math.min(parsed.potionRestockLevel || 0, POTION_RESTOCK_UPGRADES.length),
                 xpLevel: Math.min(parsed.xpLevel || 0, XP_UPGRADES.length),
                 potions: { ...createDefaultPotions(), ...(parsed.potions || {}) },
@@ -4457,7 +5223,9 @@ function rollForShark(actionContext = createRollActionContext(1)) {
                     shiny: { ...createDefaultPlayer().activeEffects.shiny, ...(parsed.activeEffects?.shiny || {}) },
                     bioluminescent: { ...createDefaultPlayer().activeEffects.bioluminescent, ...(parsed.activeEffects?.bioluminescent || {}) },
                     megatooth: { ...createDefaultPlayer().activeEffects.megatooth, ...(parsed.activeEffects?.megatooth || {}) },
-                    randomMutation: { ...createDefaultPlayer().activeEffects.randomMutation, ...(parsed.activeEffects?.randomMutation || {}) }
+                    randomMutation: { ...createDefaultPlayer().activeEffects.randomMutation, ...(parsed.activeEffects?.randomMutation || {}) },
+                    mutationPrimer: { ...createDefaultPlayer().activeEffects.mutationPrimer, ...(parsed.activeEffects?.mutationPrimer || {}) },
+                    stackedMutation: { ...createDefaultPlayer().activeEffects.stackedMutation, ...(parsed.activeEffects?.stackedMutation || {}) }
                 },
                 collection: parsed.collection && typeof parsed.collection === "object" ? parsed.collection : {},
                 claimedIndexRewards: Array.isArray(parsed.claimedIndexRewards) ? parsed.claimedIndexRewards : [],
@@ -4524,7 +5292,7 @@ function rollForShark(actionContext = createRollActionContext(1)) {
     }
 
     function getCollectionTargetCount() {
-        return rollPool.length * (1 + Object.keys(MUTATION_TYPES).length);
+        return rollPool.length * getIndexVariantCountPerSpecies();
     }
 
     function getIndexRewardGoal(reward) {
@@ -4562,7 +5330,9 @@ function rollForShark(actionContext = createRollActionContext(1)) {
             "luck", "coin", "speed", "ultra", "omega",
             "apexSurge",
             ...STANDARD_MUTATION_KEYS,
-            "randomMutation"
+            "randomMutation",
+            "mutationPrimer",
+            "stackedMutation"
         ].reduce((sum, key) => sum + Math.max(0, effects[key]?.remaining || 0), 0);
     }
 
@@ -4940,34 +5710,55 @@ function updateActiveEffectsUi() {
          if (!el) return;
 
          const parts = [];
+         const makePotionPart = (key, label, detail = "") => ({
+             type: "potion",
+             key,
+             label,
+             detail,
+             sprite: POTION_DEFS[key]?.sprite || ""
+         });
+         const findLuckPotionKey = (mult) => Object.keys(POTION_DEFS).find((key) => (
+             POTION_DEFS[key]?.category === "luck"
+             && Number(POTION_DEFS[key]?.luckMult) === Number(mult)
+         )) || "luck";
          const luckStacks = getLuckPotionDisplayStacks();
          if (luckStacks.length) {
              luckStacks.forEach((stack) => {
-                 parts.push(`\u{1F340} Luck x${stack.mult} (${stack.remaining})`);
+                 parts.push(makePotionPart(findLuckPotionKey(stack.mult), `Luck x${stack.mult}`, stack.remaining));
              });
          }
          if (player.activeEffects.coin.remaining > 0) {
-             parts.push(`\u{1F4B0} Coin \u00d7${player.activeEffects.coin.mult} (${player.activeEffects.coin.remaining})`);
+             parts.push(makePotionPart("coin", `Coin \u00d7${player.activeEffects.coin.mult}`, player.activeEffects.coin.remaining));
          }
          if (player.activeEffects.speed.remaining > 0) {
-             parts.push(`\u26A1 Speed (${player.activeEffects.speed.remaining})`);
+             parts.push(makePotionPart("speed", "Speed", player.activeEffects.speed.remaining));
          }
          if (player.activeEffects.ultra.remaining > 0) {
-             parts.push("\u{1F30A} Abyss ready");
+             parts.push(makePotionPart("ultra", "Abyss", "ready"));
          }
          if (player.activeEffects.omega.remaining > 0) {
-             parts.push("\u{1F31F} Omega ready");
+             parts.push(makePotionPart("omega", "Omega", "ready"));
          }
          if (player.activeEffects.apexSurge?.remaining > 0) {
-             parts.push(`\u{1F988} Apex surge (${player.activeEffects.apexSurge.remaining})`);
+             parts.push(makePotionPart("apexSurge", "Apex surge", player.activeEffects.apexSurge.remaining));
          }
          for (const key of STANDARD_MUTATION_KEYS) {
              if (player.activeEffects[key]?.remaining > 0) {
-                 parts.push(`${MUTATION_TYPES[key].icon} ${MUTATION_TYPES[key].name} ready`);
+                 if (POTION_DEFS[key]) {
+                     parts.push(makePotionPart(key, MUTATION_TYPES[key].name, "ready"));
+                 } else {
+                     parts.push(`${MUTATION_TYPES[key].icon} ${MUTATION_TYPES[key].name} ready`);
+                 }
              }
          }
          if (player.activeEffects.randomMutation?.remaining > 0) {
-             parts.push(`\u{1F9EC} Random mutation (${player.activeEffects.randomMutation.remaining})`);
+             parts.push(makePotionPart("randomMutation", "Random mutation", player.activeEffects.randomMutation.remaining));
+         }
+         if (player.activeEffects.mutationPrimer?.remaining > 0) {
+             parts.push(makePotionPart("mutationPrimer", "Mutagen primer", player.activeEffects.mutationPrimer.remaining));
+         }
+         if (player.activeEffects.stackedMutation?.remaining > 0) {
+             parts.push(makePotionPart("stackedMutation", "Deep mutagen", player.activeEffects.stackedMutation.remaining));
          }
          const mChance = getMutationChance();
          if (mChance !== null) {
@@ -4982,7 +5773,29 @@ function updateActiveEffectsUi() {
              el.replaceChildren(...parts.map((part) => {
                  const item = document.createElement("span");
                  item.className = "rng-buff-item";
-                 item.textContent = part;
+                 if (typeof part === "string") {
+                     item.textContent = part;
+                 } else {
+                     item.classList.add("rng-buff-item-potion");
+                     if (part.sprite) {
+                         const img = document.createElement("img");
+                         img.className = "rng-buff-sprite";
+                         img.src = part.sprite;
+                         img.alt = "";
+                         img.width = 24;
+                         img.height = 24;
+                         item.appendChild(img);
+                     } else {
+                         const icon = document.createElement("span");
+                         icon.className = "rng-buff-fallback-icon";
+                         icon.textContent = POTION_DEFS[part.key]?.icon || "\u{1F9EA}";
+                         item.appendChild(icon);
+                     }
+                     const label = document.createElement("span");
+                     label.className = "rng-buff-label";
+                     label.textContent = part.detail ? `${part.label} (${part.detail})` : part.label;
+                     item.appendChild(label);
+                 }
                  return item;
              }));
              el.removeAttribute("data-empty");
@@ -4991,7 +5804,7 @@ function updateActiveEffectsUi() {
              el.setAttribute("data-empty", "true");
          }
      }
- 
+
      function showToast(message, type = "success") {
          const toast = document.getElementById("rng-toast");
          if (!toast) return;
@@ -5002,11 +5815,11 @@ function updateActiveEffectsUi() {
              toast.className = "rng-toast hidden";
          }, 2800);
      }
- 
+
      function updateRollButtonState() {
          const rollBtn = document.getElementById("rng-roll-btn");
          if (!rollBtn) return;
- 
+
          const now = Date.now();
          const remaining = Math.max(0, rollLockedUntil - now);
          const isOnCooldown = remaining > 0;
@@ -5027,7 +5840,7 @@ function updateActiveEffectsUi() {
              rollBtn.classList.remove("rng-btn-cooldown");
          }
      }
- 
+
      function startCooldownTimer() {
          if (cooldownInterval) clearInterval(cooldownInterval);
          cooldownInterval = setInterval(() => {
@@ -5038,7 +5851,7 @@ function updateActiveEffectsUi() {
              }
          }, 100);
      }
- 
+
      function updateStatsUi() {
          const topCoins = document.querySelector("#rng-top-coins span");
          const topPrestige = document.querySelector("#rng-top-prestige span");
@@ -5049,17 +5862,22 @@ function updateActiveEffectsUi() {
          const streakEl = document.getElementById("rng-streak-text");
          const cooldownEl = document.getElementById("rng-cooldown-text");
          const streakInfo = getStreakRollInfo();
- 
+
          if (topCoins) {
              topCoins.textContent = `${formatCompactCoins(player.coins)} (${getCoinMultiplier().toFixed(1)}\u00d7)`;
              topCoins.title = `${player.coins.toLocaleString()} coins`;
          }
          if (topPrestige) {
              topPrestige.textContent = `${formatCompactNumber(getPrestigePoints())} (${formatCompactNumber(player.prestigeLevel || 0)})`;
-             topPrestige.title = `${getPrestigePoints().toLocaleString()} unspent prestige points \u00b7 ${getTotalPrestigePoints().toLocaleString()} earned \u00b7 ${player.prestigeLevel || 0} prestiges`;
+             topPrestige.title = `${getPrestigePoints().toLocaleString()} unspent prestige tokens \u00b7 ${getTotalPrestigePoints().toLocaleString()} earned \u00b7 ${player.prestigeLevel || 0} prestiges`;
          }
          if (topLuck) topLuck.textContent = `x${getLuckMultiplier().toFixed(2)}`;
-         if (topCollection) topCollection.textContent = `${getCollectionCount()}/${getCollectionTargetCount()}`;
+         if (topCollection) {
+             const collectionCount = getCollectionCount();
+             const collectionTarget = getCollectionTargetCount();
+             topCollection.textContent = `${formatCompactNumber(collectionCount)}/${formatCompactNumber(collectionTarget)}`;
+             topCollection.title = `${collectionCount.toLocaleString()} / ${collectionTarget.toLocaleString()} index entries`;
+         }
          if (rollsEl) {
              rollsEl.textContent = formatCompactNumber(player.rolls);
              rollsEl.title = `${player.rolls.toLocaleString()} rolls`;
@@ -5076,7 +5894,7 @@ function updateActiveEffectsUi() {
          if (cooldownEl) cooldownEl.textContent = `${(getRollCooldownMs() / 1000).toFixed(1)}s`;
          updateActiveEffectsUi();
      }
- 
+
      function updateEquippedUi() {
         const equippedEl = document.getElementById("rng-equipped-name");
         const equippedMeta = document.getElementById("rng-equipped-meta");
@@ -5093,10 +5911,11 @@ function updateActiveEffectsUi() {
         const poolEntry = rollPool.find((shark) => shark.name === player.equipped);
         const tier = getBaseTierName(entry || poolEntry);
         const luckBonus = getEquippedLuckBonus();
+        const mutationClasses = getMutationClassNames(entry);
         equippedEl.textContent = player.equipped;
-        equippedEl.className = `rng-equipped-name ${getRarityClass(tier)}`;
+        equippedEl.className = `rng-equipped-name ${getRarityClass(tier)}${mutationClasses ? ' ' + mutationClasses : ''}`;
         equippedMeta.textContent = entry
-            ? `${tier} \u00b7 1 in ${formatOneIn(entry.oneIn)} \u00b7 +${Math.round(luckBonus * 100)}% luck`
+            ? `${tier} \u00b7 x${formatCompactNumber(entry.count || 1)} mastery \u00b7 1 in ${formatOneIn(entry.oneIn)} \u00b7 +${Math.round(luckBonus * 100)}% luck`
             : tier;
     }
 
@@ -5121,11 +5940,17 @@ function updateActiveEffectsUi() {
         if (def.listKey === "mutation") {
             return `Lv.${next.level} \u00b7 1 in ${formatOneIn(next.chance)} chance`;
         }
+        if (def.listKey === "mutationStack") {
+            return `Lv.${next.level} \u00b7 \u00d7${next.mult} extra layer odds`;
+        }
         if (def.listKey === "apex") {
             return `Lv.${next.level} \u00b7 Apex 1 in ${formatOneIn(next.chance)}`;
         }
         if (def.listKey === "mutationBounty") {
             return `Lv.${next.level} \u00b7 +${Math.round(next.bonus * 100)}% mutated roll coins`;
+        }
+        if (def.listKey === "stackBounty") {
+            return `Lv.${next.level} \u00b7 +${Math.round(next.bonus * 100)}% coins per extra mutation`;
         }
         if (def.listKey === "potionRestock") {
             return `Lv.${next.level} \u00b7 Abyss ${next.ultraRestock} rolls \u00b7 Omega ${next.omegaRestock} rolls`;
@@ -5149,6 +5974,7 @@ function updateActiveEffectsUi() {
         const totalPoints = getTotalPrestigePoints();
         const power = getPrestigeUpgradePowerSummary();
         const ready = gain > 0;
+        const trial = getPrestigeTrialStatus();
         const progressRows = getPrestigeProgressInfo().map((item) => `
             <div class="rng-prestige-progress-row">
                 <div>
@@ -5170,9 +5996,10 @@ function updateActiveEffectsUi() {
         panel.innerHTML = `
             <div class="rng-prestige-shell-head">
                 <span>Permanent Progression</span>
-                <strong>${formatCompactNumber(points)} spendable point${points === 1 ? "" : "s"}</strong>
+                <strong>${formatCompactNumber(points)} spendable token${points === 1 ? "" : "s"}</strong>
             </div>
             <div class="rng-prestige-banner">
+                <img class="rng-prestige-rank-icon" src="${getPrestigeTitleIconPath()}" alt="" loading="lazy" aria-hidden="true">
                 <div>
                     <span>Prestige Rank</span>
                     <strong>${getPrestigeTitle()}</strong>
@@ -5181,7 +6008,7 @@ function updateActiveEffectsUi() {
             </div>
             <div class="rng-prestige-head">
                 <div class="rng-prestige-title">
-                    <i class="fa-solid fa-gem"></i>
+                    <img class="rng-prestige-depth-icon" src="${getPrestigeTitleIconPath()}" alt="" loading="lazy" aria-hidden="true">
                     <div>
                         <span>Rebirth Depth</span>
                         <strong>Depth ${player.prestigeLevel || 0}</strong>
@@ -5199,7 +6026,8 @@ function updateActiveEffectsUi() {
                 <div><span>Coins</span><strong>+${Math.round((getPrestigeCoinMultiplier() - 1) * 100)}%</strong></div>
                 <div><span>XP</span><strong>+${Math.round((getPrestigeXpMultiplier() - 1) * 100)}%</strong></div>
                 <div><span>Mutations</span><strong>+${Math.round((getPrestigeMutationOddsMultiplier() - 1) * 100)}%</strong></div>
-                <div><span>Prestige</span><strong>+${Math.round((getPrestigeGainMultiplier() - 1) * 100)}%</strong></div>
+                <div><span>Mutagen</span><strong>+${Math.round((getPrestigeMutationOddsMultiplier() - 1) * 100)}%</strong></div>
+                <div><span>Depth</span><strong>+${Math.round(getPrestigeDepthBonus() * 100)}%</strong></div>
                 <div><span>Start</span><strong>${formatCompactCoins(getPrestigeStartingCoins())}</strong></div>
                 <div><span>Potions</span><strong>${Math.round(getPrestigePotionDiscount() * 100)}% off</strong></div>
                 <div><span>Rank Keep</span><strong>${Math.round(getPrestigeRankKeepPercent() * 100)}%</strong></div>
@@ -5218,7 +6046,7 @@ function updateActiveEffectsUi() {
             </div>
             <div class="rng-prestige-section-head">
                 <span>Next Rebirth Progress</span>
-                <strong>${ready ? `${gain} point${gain === 1 ? "" : "s"} ready` : "Build this run"}</strong>
+                <strong>${ready ? `${gain} token${gain === 1 ? "" : "s"} ready` : "Complete the trial"}</strong>
             </div>
             <div class="rng-prestige-progress-list">${progressRows}</div>
             <p class="rng-prestige-note">${lastRun}</p>
@@ -5230,8 +6058,8 @@ function updateActiveEffectsUi() {
         btn.innerHTML = `<i class="fa-solid fa-arrows-rotate"></i> Prestige`;
         btn.disabled = !ready;
         btn.title = ready
-            ? `Prestige for ${formatCompactNumber(gain)} point${gain === 1 ? "" : "s"}`
-            : `Reach a 1/${formatOneIn(PRESTIGE_MIN_BEST_ONE_IN)} best pull, ${PRESTIGE_ROLL_STEP} run rolls, or more collection progress.`;
+            ? `Prestige for ${formatCompactNumber(gain)} token${gain === 1 ? "" : "s"}`
+            : `Reach 1/${formatOneIn(trial.bestTarget)} best, ${formatCompactNumber(trial.rollsTarget)} rolls, and ${trial.collectionTarget} new finds.`;
         btn.addEventListener("click", prestigeRngRun);
         panel.appendChild(btn);
         panel.querySelectorAll("[data-prestige-upgrade]").forEach((upgradeBtn) => {
@@ -5257,7 +6085,9 @@ function updateActiveEffectsUi() {
             card.innerHTML = `
                 <div class="rng-upgrade-head">
                     <div class="rng-upgrade-info">
-                        <i class="fa-solid ${def.icon}"></i>
+                        <span class="rng-upgrade-icon" aria-hidden="true">${def.sprite
+                            ? `<img src="${def.sprite}" alt="" loading="lazy">`
+                            : `<i class="fa-solid ${def.icon}"></i>`}</span>
                         <div>
                             <h3>${def.name}</h3>
                             <span class="rng-upgrade-tier">${maxed ? getShopTierName(currentLevel) : next.shopTier}</span>
@@ -5368,12 +6198,16 @@ function updateActiveEffectsUi() {
             card.className = "rng-potion-card";
             card.innerHTML = `
                 <div class="rng-potion-top">
-                    <span class="rng-potion-icon">${def.icon}</span>
-                    <h4>${def.name}</h4>
+                    <span class="rng-potion-icon" aria-hidden="true">${def.sprite
+                        ? `<img class="rng-potion-sprite" src="${def.sprite}" alt="" width="72" height="72">`
+                        : def.icon}</span>
+                    <div class="rng-potion-copy">
+                        <h4>${def.name}</h4>
+                        <p class="rng-potion-desc">${def.desc}</p>
+                        <span class="rng-potion-owned" title="${(player.potions[key] || 0).toLocaleString()} owned">Owned: ${formatCompactNumber(player.potions[key] || 0)}</span>
+                    </div>
                 </div>
-                <p class="rng-potion-desc">${def.desc}</p>
                 <div class="rng-potion-actions">
-                    <span class="rng-potion-owned" title="${(player.potions[key] || 0).toLocaleString()} owned">Owned: ${formatCompactNumber(player.potions[key] || 0)}</span>
                 </div>
             `;
 
@@ -5450,11 +6284,24 @@ function updateAllUi(options = {}) {
         const legend = document.getElementById("rng-tier-legend");
         if (!legend) return;
 
-        const examples = TIERS.map((tier) => [tier.name, `1 in ${formatOneIn(tier.baseOneIn)}+`]);
+        const examples = TIERS.map((tier, index) => ({
+            name: tier.name,
+            odds: `1 in ${formatOneIn(tier.baseOneIn)}+`,
+            spriteCol: index % 5,
+            spriteRow: Math.floor(index / 5)
+        }));
 
-        const rarityRows = examples.map(([name, odds]) => {
+        const rarityRows = examples.map(({ name, odds, spriteCol, spriteRow }) => {
             const meta = getTierMeta(name);
-            return `<div class="rng-tier-row ${meta.className}"><span>${name}</span><span>${odds}</span></div>`;
+            return `
+                <div class="rng-tier-row rng-rarity-row ${meta.className}">
+                    <span class="rng-rarity-name">
+                        <img class="rng-rarity-sprite" src="${getTierSpritePath(name)}" alt="" loading="lazy" aria-hidden="true">
+                        <span>${name}</span>
+                    </span>
+                    <span>${odds}</span>
+                </div>
+            `;
         });
 
         const mutationRows = MUTATION_CHANCE_ORDER.map((key) => {
@@ -5472,7 +6319,10 @@ function updateAllUi(options = {}) {
 
             return `
                 <div class="rng-tier-row rng-mutation-chance-row ${key}" style="border-left-color:${mutation.color}">
-                    <span>${mutation.icon} ${mutation.name}</span>
+                    <span class="rng-mutation-name">
+                        ${getMutationSpriteHtml(key)}
+                        <span>${mutation.name}</span>
+                    </span>
                     <span>${chanceText}${pickText} · ${mutation.oneInMult}x</span>
                 </div>
             `;
@@ -5511,6 +6361,8 @@ function updateAllUi(options = {}) {
 
         appendIndexFilterOption(filter, "all", "All index entries");
         appendIndexFilterOption(filter, "base", "Base species");
+        appendIndexFilterOption(filter, "stacked", "Legacy combos");
+        validValues.add("stacked");
 
         const rarityGroup = document.createElement("optgroup");
         rarityGroup.label = "Rarities";
@@ -5540,6 +6392,7 @@ function updateAllUi(options = {}) {
         const collected = getCollectionCount();
         const target = getCollectionTargetCount();
         const progress = target > 0 ? Math.round((collected / target) * 100) : 0;
+        const displayProgress = Math.min(100, progress);
         const luckBonus = Math.round(getIndexLuckBonus() * 100);
         const readyRewards = getReadyIndexRewards();
         summary.innerHTML = `
@@ -5547,9 +6400,9 @@ function updateAllUi(options = {}) {
                 <span class="rng-index-kicker">Index Progress</span>
                 <strong>${formatCompactNumber(collected)} / ${formatCompactNumber(target)}</strong>
             </div>
-            <div class="rng-index-summary-track"><span style="width:${Math.min(100, progress)}%"></span></div>
+            <div class="rng-index-summary-track"><span style="width:${displayProgress}%"></span></div>
             <div class="rng-index-summary-actions">
-                <span class="rng-index-summary-meta">${progress}% complete \u00b7 +${luckBonus}% milestone luck</span>
+                <span class="rng-index-summary-meta">${displayProgress}% complete \u00b7 +${luckBonus}% milestone luck</span>
                 <button id="rng-index-claim-all-btn" class="rng-btn rng-index-claim-all-btn" type="button" ${readyRewards.length ? "" : "disabled"}>Claim All${readyRewards.length ? ` (${readyRewards.length})` : ""}</button>
             </div>
         `;
@@ -5649,16 +6502,18 @@ function updateAllUi(options = {}) {
         return note;
     }
 
-    function getIndexSectionDefs(baseOnlyFilter, mutationFilter) {
+    function getIndexSectionDefs(baseOnlyFilter, mutationFilter, stackedOnlyFilter = false) {
         return [
             { key: "base", title: "Base Species", mutation: null },
             ...MUTATION_CHANCE_ORDER.map((key) => ({
                 key,
                 title: `${MUTATION_TYPES[key]?.icon || ""} ${MUTATION_TYPES[key]?.name || key}`,
                 mutation: key
-            }))
+            })),
+            { key: "stacked", title: "Legacy Mutations", stacked: true }
         ].filter((section) => {
             if (baseOnlyFilter) return section.key === "base";
+            if (stackedOnlyFilter) return section.stacked;
             if (mutationFilter) return section.key === mutationFilter;
             return true;
         });
@@ -5688,26 +6543,41 @@ function updateAllUi(options = {}) {
         return [...parts].join(" ").toLowerCase();
     }
 
-    function getIndexCandidateForSection(section, baseShark, filters) {
-        const { baseOnlyFilter, mutationFilter, tierFilter, ownedOnly, searchTokens } = filters;
-        const canonical = section.mutation ? applyStableMutation(baseShark, section.mutation) : baseShark;
+    function getIndexDisplayTier(source) {
+        return getMutationKeys(source).length ? getOddsTierName(source) : getBaseTierName(source);
+    }
+
+    function createIndexCandidate(canonical, entry, displayName, filters, extraSearchText = "") {
+        const { baseOnlyFilter, mutationFilter, stackedOnlyFilter, tierFilter, ownedOnly, searchTokens } = filters;
         const key = getCollectionKey(canonical);
-        const entry = player.collection[key] || null;
         const source = entry || canonical;
-        const displayName = section.mutation ? baseShark.name : canonical.name;
         const baseTier = getBaseTierName(source);
         const oddsTier = getOddsTierName(source);
+        const displayTier = getIndexDisplayTier(source);
+        const mutationKeys = getMutationKeys(canonical);
+        const mutationLabel = getMutationStackLabel(mutationKeys);
         const searchHaystack = [
+            key,
             displayName,
-            section.title,
+            mutationLabel,
+            extraSearchText,
             baseTier,
             oddsTier,
+            displayTier,
             getIndexOddsSearchText(canonical.oneIn, entry?.oneIn)
         ].join(" ").toLowerCase();
 
-        if (!baseOnlyFilter && !mutationFilter && tierFilter !== "all" && baseTier !== tierFilter) {
+        if (baseOnlyFilter && mutationKeys.length) {
             return null;
         }
+        if (stackedOnlyFilter && mutationKeys.length <= 1) {
+            return null;
+        }
+        if (mutationFilter && !mutationKeys.includes(mutationFilter)) {
+            return null;
+        }
+        if (!baseOnlyFilter && !stackedOnlyFilter && !mutationFilter && tierFilter !== "all" && displayTier !== tierFilter) return null;
+        if ((stackedOnlyFilter || mutationFilter) && isKnownTierName(tierFilter) && displayTier !== tierFilter) return null;
         if (ownedOnly && !entry) {
             return null;
         }
@@ -5722,8 +6592,91 @@ function updateAllUi(options = {}) {
             displayName,
             baseTier,
             oddsTier,
+            displayTier,
             obtained: Boolean(entry)
         };
+    }
+
+    function getIndexCandidateForSection(section, baseShark, filters) {
+        const canonical = section.mutation ? applyStableMutation(baseShark, section.mutation) : baseShark;
+        const key = getCollectionKey(canonical);
+        const entry = player.collection[key] || null;
+        const displayName = section.mutation ? baseShark.name : canonical.name;
+        return createIndexCandidate(canonical, entry, displayName, filters, section.title);
+    }
+
+    function getOwnedStackedIndexCandidates(filters) {
+        return Object.entries(player.collection || {})
+            .map(([key, entry]) => {
+                if (!entry || typeof entry !== "object") return null;
+                const mutationKeys = getStoredMutationKeys(entry, key);
+                if (mutationKeys.length <= 1) return null;
+
+                const baseName = getBaseNameFromCollectionEntry(key, entry);
+                const baseShark = getRollPoolEntryByName(baseName) || { name: baseName };
+                const canonical = applyStableMutationStack(baseShark, mutationKeys);
+                return createIndexCandidate(canonical, entry, baseName, filters, getMutationStackLabel(mutationKeys));
+            })
+            .filter(Boolean);
+    }
+
+    function comboMatchesIndexSearch(combo, searchTokens) {
+        if (!searchTokens.length) return true;
+        const mutationSearchTokens = searchTokens.filter((token) => (
+            MUTATION_CHANCE_ORDER.some((key) => {
+                const mutation = MUTATION_TYPES[key];
+                return [key, mutation?.name || ""].join(" ").toLowerCase().includes(token);
+            })
+        ));
+        if (!mutationSearchTokens.length) return true;
+        const comboText = [
+            combo.join(" "),
+            getMutationStackLabel(combo),
+            ...combo.map((key) => MUTATION_TYPES[key]?.name || key)
+        ].join(" ").toLowerCase();
+        return mutationSearchTokens.every((token) => comboText.includes(token));
+    }
+
+    function getStackedIndexCandidates(filters) {
+        const { baseOnlyFilter, mutationFilter, stackedOnlyFilter, ownedOnly, searchTokens } = filters;
+        if (baseOnlyFilter) return [];
+
+        const candidatesByKey = new Map();
+        getOwnedStackedIndexCandidates(filters).forEach((candidate) => {
+            candidatesByKey.set(candidate.key, { ...candidate, stacked: true });
+        });
+
+        if (ownedOnly || (!stackedOnlyFilter && !mutationFilter && !searchTokens.length)) {
+            return [...candidatesByKey.values()];
+        }
+
+        const combos = getIndexStackedMutationCombos()
+            .filter((combo) => (!mutationFilter || combo.includes(mutationFilter)))
+            .filter((combo) => comboMatchesIndexSearch(combo, searchTokens));
+
+        for (const combo of combos) {
+            const comboLabel = getMutationStackLabel(combo);
+            for (const baseShark of rollPool) {
+                const canonical = applyStableMutationStack(baseShark, combo);
+                const key = getCollectionKey(canonical);
+                if (candidatesByKey.has(key)) continue;
+
+                const candidate = createIndexCandidate(
+                    canonical,
+                    player.collection[key] || null,
+                    baseShark.name,
+                    filters,
+                    comboLabel
+                );
+                if (!candidate) continue;
+                candidatesByKey.set(key, { ...candidate, stacked: true });
+                if (candidatesByKey.size >= INDEX_STACKED_CANDIDATE_LIMIT) {
+                    return [...candidatesByKey.values()];
+                }
+            }
+        }
+
+        return [...candidatesByKey.values()];
     }
 
     function sortIndexCandidates(candidates) {
@@ -5733,8 +6686,8 @@ function updateAllUi(options = {}) {
                 : (a.canonical.oneIn || 0) - (b.canonical.oneIn || 0);
             if (oddsDiff !== 0) return oddsDiff;
             const tierDiff = collectionSortRarestFirst
-                ? (TIER_RANK[b.baseTier] || 0) - (TIER_RANK[a.baseTier] || 0)
-                : (TIER_RANK[a.baseTier] || 0) - (TIER_RANK[b.baseTier] || 0);
+                ? (TIER_RANK[b.displayTier] || 0) - (TIER_RANK[a.displayTier] || 0)
+                : (TIER_RANK[a.displayTier] || 0) - (TIER_RANK[b.displayTier] || 0);
             if (tierDiff !== 0) return tierDiff;
             return a.displayName.localeCompare(b.displayName);
         });
@@ -5755,16 +6708,44 @@ function updateAllUi(options = {}) {
     }
 
     function createIndexCard(candidate) {
-        const { key, entry, canonical, displayName, baseTier, oddsTier, obtained } = candidate;
-        const oddsNote = oddsTier !== baseTier ? ` \u00b7 ${oddsTier} odds` : "";
+        const { key, entry, canonical, displayName, baseTier, displayTier, obtained } = candidate;
+        const baseNote = displayTier !== baseTier ? ` \u00b7 ${baseTier} base` : "";
+        const mutationKeys = getMutationKeys(canonical);
+        const mutationClasses = getMutationClassNames(mutationKeys);
+        const mutationLabel = getMutationStackLabel(mutationKeys);
         const card = document.createElement("button");
         card.type = "button";
         card.disabled = !obtained;
-        card.className = `rng-collection-card ${getRarityClass(baseTier)}${obtained ? " obtained" : " missing"}${player.equipped === key ? " equipped" : ""}${canonical.mutation ? ' ' + canonical.mutation : ""}`;
+        card.className = `rng-collection-card ${getRarityClass(displayTier)}${obtained ? " obtained" : " missing"}${player.equipped === key ? " equipped" : ""}${mutationClasses ? ' ' + mutationClasses : ""}`;
+
+        const header = document.createElement("span");
+        header.className = "rng-collection-card-header";
+        const raritySprite = document.createElement("img");
+        raritySprite.className = "rng-rarity-sprite rng-index-rarity-sprite";
+        raritySprite.src = getTierSpritePath(displayTier);
+        raritySprite.alt = "";
+        raritySprite.loading = "lazy";
+        raritySprite.setAttribute("aria-hidden", "true");
 
         const tier = document.createElement("span");
         tier.className = "rng-collection-card-tier";
-        tier.textContent = `${baseTier}${canonical.mutation ? ' \u00b7 ' + MUTATION_TYPES[canonical.mutation]?.name : ''}`;
+        const tierName = document.createElement("span");
+        tierName.textContent = displayTier;
+        tier.appendChild(tierName);
+        if (mutationKeys.length) {
+            const mutationLine = document.createElement("span");
+            mutationLine.className = "rng-index-mutation-line";
+            mutationKeys.forEach((mutationKey) => {
+                const spriteWrap = document.createElement("span");
+                spriteWrap.innerHTML = getMutationSpriteHtml(mutationKey, "rng-index-mutation-sprite");
+                mutationLine.appendChild(spriteWrap.firstElementChild);
+            });
+            const mutationText = document.createElement("span");
+            mutationText.textContent = mutationLabel;
+            mutationLine.appendChild(mutationText);
+            tier.appendChild(mutationLine);
+        }
+        header.append(raritySprite, tier);
 
         const name = document.createElement("strong");
         name.textContent = displayName;
@@ -5772,14 +6753,14 @@ function updateAllUi(options = {}) {
         const meta = document.createElement("span");
         meta.className = "rng-collection-card-meta";
         meta.textContent = obtained
-            ? `1 in ${formatOneIn(entry.oneIn)}${oddsNote} \u00b7 x${entry.count}`
-            : `Missing \u00b7 1 in ${formatOneIn(canonical.oneIn)}${oddsNote}`;
+            ? `1 in ${formatOneIn(entry.oneIn)}${baseNote} \u00b7 x${entry.count}`
+            : `Missing \u00b7 1 in ${formatOneIn(canonical.oneIn)}${baseNote}`;
 
         const status = document.createElement("span");
         status.className = "rng-index-status";
         status.textContent = obtained ? "Obtained" : "Missing";
 
-        card.append(tier, name, meta, status);
+        card.append(header, name, meta, status);
         if (obtained) {
             card.addEventListener("click", () => {
                 player.equipped = key;
@@ -5807,6 +6788,7 @@ function updateAllUi(options = {}) {
 
         const tierFilter = filter ? filter.value : "all";
         const baseOnlyFilter = tierFilter === "base";
+        const stackedOnlyFilter = tierFilter === "stacked";
         const mutationFilter = MUTATION_TYPES[tierFilter] ? tierFilter : null;
         const ownedOnly = Boolean(ownedOnlyToggle?.checked);
         const searchTerm = (searchInput?.value || "").toLowerCase().trim();
@@ -5824,8 +6806,8 @@ function updateAllUi(options = {}) {
 
         cancelCollectionGridRender();
         const token = collectionRenderToken;
-        const sectionDefs = getIndexSectionDefs(baseOnlyFilter, mutationFilter);
-        const filters = { baseOnlyFilter, mutationFilter, tierFilter, ownedOnly, searchTokens };
+        const sectionDefs = getIndexSectionDefs(baseOnlyFilter, mutationFilter, stackedOnlyFilter);
+        const filters = { baseOnlyFilter, stackedOnlyFilter, mutationFilter, tierFilter, ownedOnly, searchTokens };
         let sectionIndex = 0;
         let sectionState = null;
         let rendered = 0;
@@ -5859,7 +6841,8 @@ function updateAllUi(options = {}) {
                 renderIndex: 0,
                 candidates: [],
                 headerAdded: false,
-                sorted: false
+                sorted: false,
+                stackedBuilt: false
             };
         }
 
@@ -5872,21 +6855,29 @@ function updateAllUi(options = {}) {
                 return;
             }
 
-            let scanned = 0;
-            while (sectionState.scanIndex < rollPool.length && scanned < INDEX_BUILD_BATCH_SIZE) {
-                const candidate = getIndexCandidateForSection(
-                    sectionState.section,
-                    rollPool[sectionState.scanIndex],
-                    filters
-                );
-                if (candidate) sectionState.candidates.push(candidate);
-                sectionState.scanIndex++;
-                scanned++;
-            }
+            if (sectionState.section.stacked) {
+                if (!sectionState.stackedBuilt) {
+                    sectionState.candidates = getStackedIndexCandidates(filters);
+                    sectionState.scanIndex = rollPool.length;
+                    sectionState.stackedBuilt = true;
+                }
+            } else {
+                let scanned = 0;
+                while (sectionState.scanIndex < rollPool.length && scanned < INDEX_BUILD_BATCH_SIZE) {
+                    const candidate = getIndexCandidateForSection(
+                        sectionState.section,
+                        rollPool[sectionState.scanIndex],
+                        filters
+                    );
+                    if (candidate) sectionState.candidates.push(candidate);
+                    sectionState.scanIndex++;
+                    scanned++;
+                }
 
-            if (sectionState.scanIndex < rollPool.length) {
-                scheduleCollectionRenderStep(token, renderStep);
-                return;
+                if (sectionState.scanIndex < rollPool.length) {
+                    scheduleCollectionRenderStep(token, renderStep);
+                    return;
+                }
             }
 
             if (!sectionState.sorted) {
@@ -5954,26 +6945,34 @@ function updateAllUi(options = {}) {
     }
 
     function isApexPull(shark) {
-        return Boolean(shark?.mutation && MUTATION_TYPES[shark.mutation]?.naturalOnly);
+        return getMutationKeys(shark).some((key) => MUTATION_TYPES[key]?.naturalOnly);
+    }
+
+    function getApexPathMutationKey(shark) {
+        return getMutationKeys(shark).find((key) => MUTATION_TYPES[key]?.naturalOnly) || "apex";
     }
 
     function getApexPathMutationDef(shark) {
-        return MUTATION_TYPES[shark?.mutation] || MUTATION_TYPES.apex;
+        return MUTATION_TYPES[getApexPathMutationKey(shark)] || MUTATION_TYPES.apex;
     }
 
     function getApexPathRevealConfig(shark) {
         const mutation = getApexPathMutationDef(shark);
-        if (shark?.mutation === "apex") return APEX_REVEAL_CONFIG;
+        const mutationKeys = getMutationKeys(shark);
+        if (getApexPathMutationKey(shark) === "apex" && mutationKeys.length <= 1) return APEX_REVEAL_CONFIG;
 
         const rarityMult = Math.max(1, Number(mutation.apexChanceMult) || 1);
+        const mutationIcons = mutationKeys.map((key) => MUTATION_TYPES[key]?.icon || "!").filter(Boolean);
         return {
             ...APEX_REVEAL_CONFIG,
-            eyebrow: `${mutation.name} Mutation Detected`,
-            tierLabel: `${mutation.name} Mutation`,
-            particleCount: APEX_REVEAL_CONFIG.particleCount + Math.min(48, Math.round(rarityMult * 2)),
-            ringCount: APEX_REVEAL_CONFIG.ringCount + Math.min(3, Math.floor(rarityMult / 10)),
-            beamCount: APEX_REVEAL_CONFIG.beamCount + Math.min(6, Math.floor(rarityMult / 6)),
-            particleSymbols: [mutation.icon, "!", "A", "X"]
+            eyebrow: mutationKeys.length > 1 ? "Legacy Apex Combo Detected" : `${mutation.name} Mutation Detected`,
+            tierLabel: mutationKeys.length > 1
+                ? `${getMutationStackLabel(mutationKeys, { icons: true })} Mutations`
+                : `${mutation.name} Mutation`,
+            particleCount: APEX_REVEAL_CONFIG.particleCount + Math.min(48, Math.round(rarityMult * 2)) + Math.max(0, mutationKeys.length - 1) * 8,
+            ringCount: APEX_REVEAL_CONFIG.ringCount + Math.min(3, Math.floor(rarityMult / 10)) + Math.min(2, mutationKeys.length - 1),
+            beamCount: APEX_REVEAL_CONFIG.beamCount + Math.min(6, Math.floor(rarityMult / 6)) + Math.max(0, mutationKeys.length - 1),
+            particleSymbols: [...mutationIcons, "!", "A", "X"]
         };
     }
 
@@ -6027,9 +7026,9 @@ function updateAllUi(options = {}) {
 
         return topRolls.map((shark, index) => {
             const label = shark.adminCommandId ? "Queued" : index === 0 ? "Best" : `#${index + 1}`;
-            const mutationIcon = shark.mutation && MUTATION_TYPES[shark.mutation]
-                ? ` ${MUTATION_TYPES[shark.mutation].icon}`
-                : "";
+            const mutationIcon = getMutationKeys(shark)
+                .map((key) => MUTATION_TYPES[key]?.icon || "")
+                .join("");
             return `${label}: ${escapeHtml(shark.name)}${mutationIcon} 1/${formatOneIn(shark.oneIn)}`;
         }).join(" \u00b7 ");
     }
@@ -6104,10 +7103,11 @@ function updateAllUi(options = {}) {
 
         const isFinal = Boolean(options.final);
         const isBest = Boolean(options.best);
+        const mutationClasses = getMutationClassNames(shark);
         const nextClassName = [
             "rng-multi-roll-slot",
             getRarityClass(getOddsTierName(shark)),
-            shark.mutation || "",
+            mutationClasses,
             isFinal ? "revealed" : "spinning",
             isBest ? "best" : ""
         ].filter(Boolean).join(" ");
@@ -6164,8 +7164,9 @@ function updateAllUi(options = {}) {
             await new Promise((resolve) => setTimeout(resolve, frameDelay));
         }
 
+        const finalMutationClasses = getMutationClassNames(finalShark);
         display.textContent = rollCount > 1 ? `Best: ${finalShark.name}` : finalShark.name;
-        display.className = `rng-roll-display ${finalShark.className}${finalShark.mutation ? ' ' + finalShark.mutation : ''}`;
+        display.className = `rng-roll-display ${finalShark.className}${finalMutationClasses ? ' ' + finalMutationClasses : ''}`;
         multiSlots.forEach((slot, index) => {
             const shark = burstRolls[index];
             updateMultiRollSlot(slot, shark, index, {
@@ -6184,9 +7185,8 @@ function updateAllUi(options = {}) {
             const streakNote = finalShark.streakLuckActive
                 ? ` \u00b7 <span class="rng-streak-tag">Streak \u00d7${getStreakLuckMultiplier()}</span>`
                 : "";
-            const mutationNote = finalShark.mutation && MUTATION_TYPES[finalShark.mutation]
-                ? ` \u00b7 <span class="rng-mutation-tag ${finalShark.mutation}">${MUTATION_TYPES[finalShark.mutation].icon} ${finalShark.mutation.toUpperCase()}</span>`
-                : "";
+            const mutationTagHtml = getMutationTagHtml(finalShark);
+            const mutationNote = mutationTagHtml ? ` \u00b7 ${mutationTagHtml}` : "";
             const payoutNote = finalShark.potionSource
                 ? ` \u00b7 Potion payout ${Math.round(finalShark.rewardRate * 100)}%`
                 : "";
@@ -6203,7 +7203,7 @@ function updateAllUi(options = {}) {
                 : "";
             result.classList.toggle("rng-result-multi", rollCount > 1 && !hideExtraMultiRolls);
             result.innerHTML = `
-                <span class="${finalShark.className}${finalShark.mutation ? ' ' + finalShark.mutation : ''}">You rolled: ${finalShark.name}</span>
+                <span class="${finalShark.className}${finalMutationClasses ? ' ' + finalMutationClasses : ''}">You rolled: ${finalShark.name}</span>
                 <span class="rng-result-meta">${burstNote}${baseTier}${oddsNote} \u00b7 1 in ${formatOneIn(finalShark.oneIn)} \u00b7 ${coinNote}${newFindNote}${streakNote}${mutationNote}${payoutNote}</span>
                 ${multiRollLine}
             `;
@@ -6308,18 +7308,22 @@ function updateAllUi(options = {}) {
     function getUltraRevealConfig(shark) {
         if (isApexPull(shark)) return getApexPathRevealConfig(shark);
         const baseReveal = ULTRA_REVEAL_CONFIGS[getOddsTierName(shark)] || ULTRA_REVEAL_CONFIGS.Ultra;
-        const mutation = MUTATION_TYPES[shark?.mutation];
+        const mutationKeys = getMutationKeys(shark);
+        const primaryMutationKey = getPrimaryMutationKeyFromKeys(mutationKeys);
+        const mutation = MUTATION_TYPES[primaryMutationKey];
         if (!mutation) return baseReveal;
 
         const intensity = Math.min(3, Math.max(1, Math.log10(Math.max(10, mutation.oneInMult))));
+        const mutationIcons = mutationKeys.map((key) => MUTATION_TYPES[key]?.icon || "+").filter(Boolean);
+        const mutationLabel = getMutationStackLabel(mutationKeys, { icons: true });
         return {
             ...baseReveal,
-            eyebrow: `${mutation.name} Mutation Detected`,
-            tierLabel: `${mutation.icon} ${mutation.name} Mutation`,
-            particleCount: baseReveal.particleCount + Math.round(10 * intensity),
-            ringCount: baseReveal.ringCount + 1,
-            beamCount: baseReveal.beamCount + Math.round(2 * intensity),
-            particleSymbols: [mutation.icon, ...baseReveal.particleSymbols, "+", "*"]
+            eyebrow: mutationKeys.length > 1 ? "Legacy Mutation Combo Detected" : `${mutation.name} Mutation Detected`,
+            tierLabel: `${mutationLabel} Mutation${mutationKeys.length > 1 ? "s" : ""}`,
+            particleCount: baseReveal.particleCount + Math.round(10 * intensity) + Math.max(0, mutationKeys.length - 1) * 8,
+            ringCount: baseReveal.ringCount + 1 + Math.min(2, mutationKeys.length - 1),
+            beamCount: baseReveal.beamCount + Math.round(2 * intensity) + Math.max(0, mutationKeys.length - 1),
+            particleSymbols: [...mutationIcons, ...baseReveal.particleSymbols, "+", "*"]
         };
     }
 
@@ -6352,15 +7356,20 @@ function updateAllUi(options = {}) {
             const oddsClass = getRarityClass(oddsTier);
             const reveal = getUltraRevealConfig(shark);
             const isApex = isApexPull(shark);
-            const mutationDef = shark.mutation ? MUTATION_TYPES[shark.mutation] : null;
-            const isMutated = Boolean(mutationDef);
+            const mutationKeys = getMutationKeys(shark);
+            const mutationClasses = getMutationClassNames(mutationKeys);
+            const primaryMutationKey = getPrimaryMutationKeyFromKeys(mutationKeys);
+            const mutationDef = primaryMutationKey ? MUTATION_TYPES[primaryMutationKey] : null;
+            const isMutated = mutationKeys.length > 0;
             const apexMutation = isApex ? getApexPathMutationDef(shark) : null;
+            const apexMutationKey = isApex ? getApexPathMutationKey(shark) : null;
+            const mutationTagHtml = getMutationTagHtml(shark);
             const tierLabel = isMutated && !isApex
-                ? `${mutationDef.icon} ${mutationDef.name} Mutation`
+                ? `${getMutationStackLabel(mutationKeys, { icons: true })} Mutation${mutationKeys.length > 1 ? "s" : ""}`
                 : reveal.tierLabel || oddsTier;
             const metaLine = isApex
                 ? `${shark.depth || "Unknown"} \u00b7 ${shark.size || "?"} \u00b7 ${apexMutation.name} mutation sighted \u00b7 ${isNew ? "NEW species!" : "Added to collection"}`
-                : `${shark.depth || "Unknown"} \u00b7 ${shark.size || "?"} \u00b7 ${isNew ? "NEW species!" : "Added to collection"}${shark.mutation ? ' \u00b7 <span class="rng-mutation-tag ' + shark.mutation + '">' + MUTATION_TYPES[shark.mutation]?.icon + ' ' + (MUTATION_TYPES[shark.mutation]?.name || shark.mutation).toUpperCase() + '</span>' : ''}`;
+                : `${shark.depth || "Unknown"} \u00b7 ${shark.size || "?"} \u00b7 ${isNew ? "NEW species!" : "Added to collection"}${mutationTagHtml ? ' \u00b7 ' + mutationTagHtml : ''}`;
             const mutationLayers = isMutated && !isApex ? `
                 <div class="rng-cutscene-mutation-ripple" aria-hidden="true"></div>
                 <div class="rng-cutscene-mutation-shards" aria-hidden="true"></div>
@@ -6373,7 +7382,7 @@ function updateAllUi(options = {}) {
                 <div class="rng-cutscene-apex-mark" aria-hidden="true">${getApexPathCutsceneMark(shark)}</div>
             ` : "";
 
-            cutscene.className = `rng-cutscene visible playing ${oddsClass}${isMutated ? ' mutated' : ''}${isApex && shark.mutation !== "apex" ? ' apex' : ''}${shark.mutation ? ' ' + shark.mutation : ''}`;
+            cutscene.className = `rng-cutscene visible playing ${oddsClass}${isMutated ? ' mutated' : ''}${isApex && apexMutationKey !== "apex" ? ' apex' : ''}${mutationClasses ? ' ' + mutationClasses : ''}`;
             cutscene.style.removeProperty("--mutation-primary");
             cutscene.style.removeProperty("--mutation-secondary");
             if (mutationDef) {
@@ -6393,7 +7402,7 @@ function updateAllUi(options = {}) {
                 <div class="rng-cutscene-content">
                     <p class="rng-cutscene-eyebrow">${reveal.eyebrow}</p>
                     <p class="rng-cutscene-tier">${tierLabel}</p>
-                    <h2 class="rng-cutscene-name${shark.mutation ? ' ' + shark.mutation : ''}">${shark.name}</h2>
+                    <h2 class="rng-cutscene-name${mutationClasses ? ' ' + mutationClasses : ''}">${shark.name}</h2>
                     <p class="rng-cutscene-odds">1 in ${formatOneIn(shark.oneIn)}</p>
                     <p class="rng-cutscene-meta">${metaLine}</p>
                     <button type="button" class="rng-cutscene-btn" id="rng-cutscene-close">Continue</button>
@@ -6442,11 +7451,12 @@ function updateAllUi(options = {}) {
                 }
 
                 // Mutation visual flare
-                if (shark.mutation && MUTATION_TYPES[shark.mutation]) {
-                    const mutDef = MUTATION_TYPES[shark.mutation];
+                if (mutationKeys.length) {
+                    const mutationIcons = mutationKeys.map((key) => MUTATION_TYPES[key]?.icon || "+");
                     for (let i = 0; i < 10; i++) {
+                        const mutDef = MUTATION_TYPES[mutationKeys[i % mutationKeys.length]] || mutationDef;
                         const ms = document.createElement("span");
-                        ms.textContent = mutDef.icon;
+                        ms.textContent = mutationIcons[i % mutationIcons.length] || mutDef.icon;
                         ms.style.setProperty("--x", `${(5 + (hashString(shark.name + 'mut' + i) % 90))}%`);
                         ms.style.setProperty("--y", `${(12 + (hashString(mutDef.name + shark.name + i) % 74))}%`);
                         ms.style.setProperty("--delay", `${(0.72 + i * 0.11).toFixed(2)}s`);
@@ -6460,11 +7470,12 @@ function updateAllUi(options = {}) {
             const mutationShards = cutscene.querySelector(".rng-cutscene-mutation-shards");
             if (mutationShards && mutationDef) {
                 for (let i = 0; i < 14; i++) {
+                    const shardDef = MUTATION_TYPES[mutationKeys[i % mutationKeys.length]] || mutationDef;
                     const shard = document.createElement("span");
-                    shard.textContent = mutationDef.icon;
+                    shard.textContent = shardDef.icon;
                     shard.style.setProperty("--i", String(i));
-                    shard.style.setProperty("--x", `${(8 + (hashString(mutationDef.name + shark.name + i) % 84))}%`);
-                    shard.style.setProperty("--y", `${(10 + (hashString(shark.name + mutationDef.name + i) % 80))}%`);
+                    shard.style.setProperty("--x", `${(8 + (hashString(shardDef.name + shark.name + i) % 84))}%`);
+                    shard.style.setProperty("--y", `${(10 + (hashString(shark.name + shardDef.name + i) % 80))}%`);
                     shard.style.setProperty("--delay", `${(0.18 + i * 0.055).toFixed(2)}s`);
                     mutationShards.appendChild(shard);
                 }
@@ -6504,6 +7515,7 @@ async function performRoll() {
 
          const rollCount = getPrestigeMultiRollCount();
          const rollActionContext = createRollActionContext(rollCount);
+         maybeAwardRollinBadge();
          const burstRolls = Array.from({ length: rollCount }, () => rollForShark(rollActionContext));
          updateRngDailyQuestsForRolls(burstRolls);
          consumeRollActionEffects(rollActionContext);
@@ -6526,7 +7538,7 @@ async function performRoll() {
          isRolling = false;
          flushDeferredCollectionGridRender();
      }
- 
+
      function restartAutoRoll() {
         if (!autoEnabled) return;
         setAutoRoll(false);
@@ -6689,6 +7701,10 @@ async function performRoll() {
             player.activeEffects.omega.remaining += effectRolls;
         } else if (key === "apexSurge") {
             player.activeEffects.apexSurge.remaining += effectRolls;
+        } else if (def.category === "mutationStack" || def.stackMult || def.forceRandomMutation) {
+            if (!player.activeEffects[key]) player.activeEffects[key] = { remaining: 0, mult: 1 };
+            player.activeEffects[key].remaining += effectRolls;
+            player.activeEffects[key].mult = Math.max(player.activeEffects[key].mult || 1, def.stackMult || 1);
         } else if (key === "randomMutation") {
             player.activeEffects.randomMutation.remaining += effectRolls;
         } else if (STANDARD_MUTATION_KEYS.includes(key)) {
@@ -6741,7 +7757,7 @@ async function performRoll() {
             return;
         }
         if (getPrestigePoints() < cost) {
-            showToast("Need more prestige points.", "error");
+            showToast("Need more prestige tokens.", "error");
             return;
         }
 
@@ -6767,7 +7783,7 @@ async function performRoll() {
         }
 
         const message = [
-            `Prestige now for ${formatCompactNumber(gain)} point${gain === 1 ? "" : "s"}?`,
+            `Prestige now for ${formatCompactNumber(gain)} token${gain === 1 ? "" : "s"}?`,
             "",
             "This resets coins, rolls, upgrades, potions, active boosts, and RNG level.",
             "Collection, best pull, equipped species, settings, and quest progress stay."
@@ -6829,7 +7845,7 @@ async function performRoll() {
 
         persistPlayerState();
         updateSettingsUi();
-        showToast(`Prestiged! +${formatCompactNumber(gain)} permanent point${gain === 1 ? "" : "s"}.`);
+        showToast(`Prestiged! +${formatCompactNumber(gain)} prestige token${gain === 1 ? "" : "s"}.`);
         GameFx.play("upgrade");
     }
 
@@ -7015,19 +8031,20 @@ async function performRoll() {
         const args = parseRngNextRollArgs(target, sharkName, mutation);
         const targetUser = await resolveRngAdminTargetUser(args.target);
         const baseShark = resolveRngRollPoolEntry(args.sharkName);
-        const mutationKey = resolveRngMutationKey(args.mutation);
+        const mutationKeys = resolveRngMutationKeys(args.mutation);
         const currentUser = getRngCurrentDevUser();
         const commandId = createRngAdminCommandId();
         const now = Date.now();
-        const mutationLabel = mutationKey ? MUTATION_TYPES[mutationKey]?.name || mutationKey : "Base";
+        const mutationLabel = mutationKeys.length ? getMutationStackLabel(mutationKeys) : "Base";
         const payload = {
             type: "rngNextRoll",
             commandId,
             targetUid: targetUser.uid,
             targetLabel: getRngAdminTargetLabel(targetUser.uid, targetUser.data),
             sharkName: baseShark.name,
-            mutation: mutationKey || "base",
+            mutation: mutationKeys.join("+") || "base",
             mutationName: mutationLabel,
+            mutations: mutationKeys,
             createdBy: currentUser.uid,
             createdAtMs: now,
             expiresAtMs: now + RNG_ADMIN_NEXT_ROLL_EXPIRY_MS,
@@ -7038,7 +8055,7 @@ async function performRoll() {
         if (!commandRef) throw new Error("RNG next-roll command ref is not available.");
 
         await commandRef.set(payload, { merge: false });
-        console.log(`Queued RNG next roll for ${payload.targetLabel} (${targetUser.uid}): ${baseShark.name}${mutationKey ? ` (${mutationLabel})` : ""}.`);
+        console.log(`Queued RNG next roll for ${payload.targetLabel} (${targetUser.uid}): ${baseShark.name}${mutationKeys.length ? ` (${mutationLabel})` : ""}.`);
         console.log(`Command ID: ${commandId}`);
         showToast(`Queued ${baseShark.name} for ${payload.targetLabel}.`);
         return payload;
@@ -7060,6 +8077,8 @@ async function performRoll() {
         function buildRngIndexUnlockEntry(shark) {
             const baseTier = getBaseTierName(shark);
             const oddsTier = getOddsTierName(shark);
+            const mutationKeys = getMutationKeys(shark);
+            const primaryMutationKey = getPrimaryMutationKeyFromKeys(mutationKeys);
             return {
                 tier: baseTier,
                 baseTier,
@@ -7067,8 +8086,9 @@ async function performRoll() {
                 oneIn: shark.oneIn || 0,
                 firstRoll: player.rolls || 0,
                 count: Math.max(1, getCollectionEntryForShark(shark)?.count || 0),
-                mutation: shark.mutation || undefined,
-                baseName: shark.mutation ? shark.name : undefined
+                mutation: primaryMutationKey || undefined,
+                mutations: mutationKeys.length ? mutationKeys : undefined,
+                baseName: mutationKeys.length ? shark.name : undefined
             };
         }
 
