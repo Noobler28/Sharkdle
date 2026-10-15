@@ -2041,6 +2041,7 @@ let rollPool = [];
             settings: {
                 disableRarePopups: false,
                 disableCutscenes: false,
+                afkMode: false,
                 onlyBetterCutscenes: false,
                 hideExtraMultiRolls: false,
                 soundEnabled: true,
@@ -7784,7 +7785,26 @@ function updateAllUi(options = {}) {
         return shark.oneIn >= 2500 || TIER_RANK[getOddsTierName(shark)] >= TIER_RANK.Legendary;
     }
 
+    const AFK_REVEAL_DISMISS_MS = 5000;
+    let afkRarePopupTimer = null;
+    let afkCutsceneTimer = null;
+
+    function syncAfkRevealTimers() {
+        clearTimeout(afkRarePopupTimer);
+        clearTimeout(afkCutsceneTimer);
+        afkRarePopupTimer = afkCutsceneTimer = null;
+        if (!getSettings().afkMode) return;
+        if (document.getElementById("rng-celebration")?.classList.contains("visible")) {
+            afkRarePopupTimer = setTimeout(closeRarePopup, AFK_REVEAL_DISMISS_MS);
+        }
+        if (document.getElementById("rng-cutscene")?.classList.contains("visible")) {
+            afkCutsceneTimer = setTimeout(closeUltraCutscene, AFK_REVEAL_DISMISS_MS);
+        }
+    }
+
     function closeRarePopup() {
+        clearTimeout(afkRarePopupTimer);
+        afkRarePopupTimer = null;
         const overlay = document.getElementById("rng-celebration");
         if (!overlay) return;
         overlay.className = "rng-celebration";
@@ -7810,9 +7830,12 @@ function updateAllUi(options = {}) {
         overlay.onclick = (event) => {
             if (event.target === overlay) closeRarePopup();
         };
+        syncAfkRevealTimers();
     }
 
     function closeUltraCutscene() {
+        clearTimeout(afkCutsceneTimer);
+        afkCutsceneTimer = null;
         const cutscene = document.getElementById("rng-cutscene");
         if (!cutscene) return;
         cutscene.className = "rng-cutscene";
@@ -8039,6 +8062,7 @@ function updateAllUi(options = {}) {
                     closeUltraCutscene();
                 }
             };
+            syncAfkRevealTimers();
         });
     }
 
@@ -8431,12 +8455,14 @@ async function performRoll() {
     }
 
     function updateSettingsUi() {
+        const afkMode = document.getElementById("rng-setting-afk-mode");
         const popups = document.getElementById("rng-setting-disable-popups");
         const cutscenes = document.getElementById("rng-setting-disable-cutscenes");
         const onlyBetterCutscenes = document.getElementById("rng-setting-only-better-cutscenes");
         const hideMultiRolls = document.getElementById("rng-setting-hide-multi-rolls");
         const sound = document.getElementById("rng-setting-sound");
         const settings = getSettings();
+        if (afkMode) afkMode.checked = Boolean(settings.afkMode);
         if (popups) popups.checked = Boolean(settings.disableRarePopups);
         if (cutscenes) cutscenes.checked = Boolean(settings.disableCutscenes);
         if (onlyBetterCutscenes) onlyBetterCutscenes.checked = Boolean(settings.onlyBetterCutscenes);
@@ -8930,6 +8956,12 @@ async function performRoll() {
         document.getElementById("rng-settings-close-btn")?.addEventListener("click", closeSettingsModal);
         document.getElementById("rng-settings-modal")?.addEventListener("click", (event) => {
             if (event.target.id === "rng-settings-modal") closeSettingsModal();
+        });
+        document.getElementById("rng-setting-afk-mode")?.addEventListener("change", (event) => {
+            getSettings().afkMode = event.target.checked;
+            syncAfkRevealTimers();
+            persistPlayerState({ lightUi: true });
+            showToast(event.target.checked ? "AFK mode on: reveals close after 5 seconds. Enable Auto Roll to keep rolling." : "AFK mode off");
         });
         document.getElementById("rng-setting-disable-popups")?.addEventListener("change", (event) => {
             getSettings().disableRarePopups = event.target.checked;
