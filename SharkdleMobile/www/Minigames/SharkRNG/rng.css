@@ -4430,3 +4430,59 @@ body.rng-page img[data-rng-image-ready] {
     .rng-equipped-bar > div { flex: 1 1 100%; }
     .rng-save-status { margin-left: 0; margin-right: auto; }
 }
+
+/* Endgame catch colors. */
+.riftforged, .rarity-riftforged { color: #38bdf8; }
+.rng-collection-card.rarity-riftforged { border-color: #38bdf8; }
+.cosmicsovereign, .rarity-cosmicsovereign { color: #c084fc; }
+.rng-collection-card.rarity-cosmicsovereign { border-color: #c084fc; }
+.genesis, .rarity-genesis { color: #86efac; }
+.rng-collection-card.rarity-genesis { border-color: #86efac; }
+.empyrean, .rarity-empyrean { color: #fde68a; }
+.rng-collection-card.rarity-empyrean { border-color: #fde68a; }
+.boundless, .rarity-boundless { color: #67e8f9; }
+.rng-collection-card.rarity-boundless { border-color: #67e8f9; }
+.absolute, .rarity-absolute { color: #f0abfc; }
+.rng-collection-card.rarity-absolute { border-color: #f0abfc; }
+.primordialvoid, .rarity-primordialvoid { color: #a5b4fc; }
+.rng-collection-card.rarity-primordialvoid { border-color: #a5b4fc; }
+.infiniteabyss, .rarity-infiniteabyss { color: #f8fafc; }
+.rng-collection-card.rarity-infiniteabyss { border-color: #f8fafc; }
+
+/* Intermediate space mutations. */
+.meteor { color: #be89f9; }
+.asteroid { color: #909bf9; }
+.meteoroid { color: #66abf8; }
+.stardust { color: #58aff9; }
+.aurora { color: #7ca1fa; }
+.lunar { color: #9c93fb; }
+.solar { color: #b795ef; }
+.corona { color: #ada8e1; }
+.flare { color: #a3b9d5; }
+.photon { color: #99cbc7; }
+.neutrino { color: #90dcba; }
+.neutron { color: #99eea7; }
+.plasma { color: #aeeca1; }
+.protostar { color: #c1eb9b; }
+.redshift { color: #d5e995; }
+.blueshift { color: #e8e890; }
+.transit { color: #e5e69c; }
+.zenith { color: #cbe7af; }
+.perihelion { color: #b3e7c1; }
+.aphelion { color: #99e7d4; }
+.solstice { color: #81e8e6; }
+.equinox { color: #7ddef9; }
+.apogee { color: #95d4fa; }
+.perigee { color: #aacafa; }
+.exosphere { color: #c2bffb; }
+.heliosphere { color: #d8b6fb; }
+.magnetosphere { color: #e4acfc; }
+.interstellar { color: #d7aefc; }
+.intergalactic { color: #cbaffc; }
+.galaxy { color: #beb1fc; }
+.andromeda { color: #b2b2fc; }
+.supercluster { color: #b2bffc; }
+.laniakea { color: #c1cbfc; }
+.horizon { color: #ced6fc; }
+.firmament { color: #dce3fc; }
+.continuum { color: #eaeefc; }

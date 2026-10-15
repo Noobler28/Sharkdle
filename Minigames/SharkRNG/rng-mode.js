@@ -150,6 +150,399 @@
         measurementId: "G-HV5FFNKM5C"
     };
 
+    const ENDGAME_CATCH_DEFS = [
+        {
+            "key": "riftforged",
+            "name": "Comet",
+            "legacyName": "Riftforged",
+            "baseOneIn": 10000000000000,
+            "oneInMult": 1000000,
+            "rollWeight": 0.0015,
+            "color": "#38bdf8",
+            "icon": "◇",
+            "coinReward": 1000000000,
+            "luckBonus": 0.7
+        },
+        {
+            "key": "cosmicsovereign",
+            "name": "Pulsar",
+            "legacyName": "Cosmic Sovereign",
+            "baseOneIn": 1000000000000000,
+            "oneInMult": 100000000,
+            "rollWeight": 0.0008,
+            "color": "#c084fc",
+            "icon": "♛",
+            "coinReward": 100000000000,
+            "luckBonus": 0.85
+        },
+        {
+            "key": "genesis",
+            "name": "Magnetar",
+            "legacyName": "Genesis",
+            "baseOneIn": 1000000000000000000,
+            "oneInMult": 100000000000,
+            "rollWeight": 0.0004,
+            "color": "#86efac",
+            "icon": "✧",
+            "coinReward": 10000000000000,
+            "luckBonus": 1
+        },
+        {
+            "key": "empyrean",
+            "name": "Quasar",
+            "legacyName": "Empyrean",
+            "baseOneIn": 1e+21,
+            "oneInMult": 100000000000000,
+            "rollWeight": 0.0002,
+            "color": "#fde68a",
+            "icon": "✺",
+            "coinReward": 1000000000000000,
+            "luckBonus": 1.2
+        },
+        {
+            "key": "boundless",
+            "name": "Supernova",
+            "legacyName": "Boundless",
+            "baseOneIn": 1e+24,
+            "oneInMult": 100000000000000000,
+            "rollWeight": 0.0001,
+            "color": "#67e8f9",
+            "icon": "∞",
+            "coinReward": 100000000000000000,
+            "luckBonus": 1.45
+        },
+        {
+            "key": "absolute",
+            "name": "Hypernova",
+            "legacyName": "Absolute",
+            "baseOneIn": 1e+27,
+            "oneInMult": 100000000000000000000,
+            "rollWeight": 0.00005,
+            "color": "#f0abfc",
+            "icon": "◆",
+            "coinReward": 10000000000000000000,
+            "luckBonus": 1.75
+        },
+        {
+            "key": "primordialvoid",
+            "name": "Blazar",
+            "legacyName": "Primordial Void",
+            "baseOneIn": 1e+30,
+            "oneInMult": 1e+23,
+            "rollWeight": 0.000025,
+            "color": "#a5b4fc",
+            "icon": "◉",
+            "coinReward": 1e+21,
+            "luckBonus": 2.1
+        },
+        {
+            "key": "infiniteabyss",
+            "name": "Cosmos",
+            "legacyName": "Infinite Abyss",
+            "baseOneIn": 1e+33,
+            "oneInMult": 1e+26,
+            "rollWeight": 0.00001,
+            "color": "#f8fafc",
+            "icon": "✵",
+            "coinReward": 1e+23,
+            "luckBonus": 2.5
+        }
+    ];
+
+    const GAP_MUTATION_DEFS = [
+        {
+            "key": "meteor",
+            "name": "Meteor",
+            "oneInMult": 30000,
+            "rollWeight": 0.0025427716,
+            "color": "#be89f9",
+            "icon": "✦"
+        },
+        {
+            "key": "asteroid",
+            "name": "Asteroid",
+            "oneInMult": 100000,
+            "rollWeight": 0.0021213203,
+            "color": "#909bf9",
+            "icon": "✧"
+        },
+        {
+            "key": "meteoroid",
+            "name": "Meteoroid",
+            "oneInMult": 300000,
+            "rollWeight": 0.001798011,
+            "color": "#66abf8",
+            "icon": "☄"
+        },
+        {
+            "key": "stardust",
+            "name": "Stardust",
+            "oneInMult": 3000000,
+            "rollWeight": 0.001291112,
+            "color": "#58aff9",
+            "icon": "✶"
+        },
+        {
+            "key": "aurora",
+            "name": "Aurora",
+            "oneInMult": 10000000,
+            "rollWeight": 0.0010954451,
+            "color": "#7ca1fa",
+            "icon": "✷"
+        },
+        {
+            "key": "lunar",
+            "name": "Lunar",
+            "oneInMult": 30000000,
+            "rollWeight": 0.00094289486,
+            "color": "#9c93fb",
+            "icon": "◈"
+        },
+        {
+            "key": "solar",
+            "name": "Solar",
+            "oneInMult": 300000000,
+            "rollWeight": 0.00071649646,
+            "color": "#b795ef",
+            "icon": "✦"
+        },
+        {
+            "key": "corona",
+            "name": "Corona",
+            "oneInMult": 1000000000,
+            "rollWeight": 0.00063496042,
+            "color": "#ada8e1",
+            "icon": "✧"
+        },
+        {
+            "key": "flare",
+            "name": "Flare",
+            "oneInMult": 3000000000,
+            "rollWeight": 0.00056868362,
+            "color": "#a3b9d5",
+            "icon": "☄"
+        },
+        {
+            "key": "photon",
+            "name": "Photon",
+            "oneInMult": 10000000000,
+            "rollWeight": 0.00050396842,
+            "color": "#99cbc7",
+            "icon": "✶"
+        },
+        {
+            "key": "neutrino",
+            "name": "Neutrino",
+            "oneInMult": 30000000000,
+            "rollWeight": 0.00045136449,
+            "color": "#90dcba",
+            "icon": "✷"
+        },
+        {
+            "key": "neutron",
+            "name": "Neutron",
+            "oneInMult": 300000000000,
+            "rollWeight": 0.00035824823,
+            "color": "#99eea7",
+            "icon": "◈"
+        },
+        {
+            "key": "plasma",
+            "name": "Plasma",
+            "oneInMult": 1000000000000,
+            "rollWeight": 0.00031748021,
+            "color": "#aeeca1",
+            "icon": "✦"
+        },
+        {
+            "key": "protostar",
+            "name": "Protostar",
+            "oneInMult": 3000000000000,
+            "rollWeight": 0.00028434181,
+            "color": "#c1eb9b",
+            "icon": "✧"
+        },
+        {
+            "key": "redshift",
+            "name": "Redshift",
+            "oneInMult": 10000000000000,
+            "rollWeight": 0.00025198421,
+            "color": "#d5e995",
+            "icon": "☄"
+        },
+        {
+            "key": "blueshift",
+            "name": "Blueshift",
+            "oneInMult": 30000000000000,
+            "rollWeight": 0.00022568224,
+            "color": "#e8e890",
+            "icon": "✶"
+        },
+        {
+            "key": "transit",
+            "name": "Transit",
+            "oneInMult": 300000000000000,
+            "rollWeight": 0.00017912412,
+            "color": "#e5e69c",
+            "icon": "✷"
+        },
+        {
+            "key": "zenith",
+            "name": "Zenith",
+            "oneInMult": 1000000000000000,
+            "rollWeight": 0.00015874011,
+            "color": "#cbe7af",
+            "icon": "◈"
+        },
+        {
+            "key": "perihelion",
+            "name": "Perihelion",
+            "oneInMult": 3000000000000000,
+            "rollWeight": 0.0001421709,
+            "color": "#b3e7c1",
+            "icon": "✦"
+        },
+        {
+            "key": "aphelion",
+            "name": "Aphelion",
+            "oneInMult": 10000000000000000,
+            "rollWeight": 0.0001259921,
+            "color": "#99e7d4",
+            "icon": "✧"
+        },
+        {
+            "key": "solstice",
+            "name": "Solstice",
+            "oneInMult": 30000000000000000,
+            "rollWeight": 0.00011284112,
+            "color": "#81e8e6",
+            "icon": "☄"
+        },
+        {
+            "key": "equinox",
+            "name": "Equinox",
+            "oneInMult": 300000000000000000,
+            "rollWeight": 0.000089562058,
+            "color": "#7ddef9",
+            "icon": "✶"
+        },
+        {
+            "key": "apogee",
+            "name": "Apogee",
+            "oneInMult": 1000000000000000000,
+            "rollWeight": 0.000079370053,
+            "color": "#95d4fa",
+            "icon": "✷"
+        },
+        {
+            "key": "perigee",
+            "name": "Perigee",
+            "oneInMult": 3000000000000000000,
+            "rollWeight": 0.000071085452,
+            "color": "#aacafa",
+            "icon": "◈"
+        },
+        {
+            "key": "exosphere",
+            "name": "Exosphere",
+            "oneInMult": 10000000000000000000,
+            "rollWeight": 0.000062996052,
+            "color": "#c2bffb",
+            "icon": "✦"
+        },
+        {
+            "key": "heliosphere",
+            "name": "Heliosphere",
+            "oneInMult": 30000000000000000000,
+            "rollWeight": 0.000056420561,
+            "color": "#d8b6fb",
+            "icon": "✧"
+        },
+        {
+            "key": "magnetosphere",
+            "name": "Magnetosphere",
+            "oneInMult": 300000000000000000000,
+            "rollWeight": 0.000044781029,
+            "color": "#e4acfc",
+            "icon": "☄"
+        },
+        {
+            "key": "interstellar",
+            "name": "Interstellar",
+            "oneInMult": 1e+21,
+            "rollWeight": 0.000039685026,
+            "color": "#d7aefc",
+            "icon": "✶"
+        },
+        {
+            "key": "intergalactic",
+            "name": "Intergalactic",
+            "oneInMult": 3e+21,
+            "rollWeight": 0.000035542726,
+            "color": "#cbaffc",
+            "icon": "✷"
+        },
+        {
+            "key": "galaxy",
+            "name": "Galaxy",
+            "oneInMult": 1e+22,
+            "rollWeight": 0.000031498026,
+            "color": "#beb1fc",
+            "icon": "◈"
+        },
+        {
+            "key": "andromeda",
+            "name": "Andromeda",
+            "oneInMult": 3e+22,
+            "rollWeight": 0.00002821028,
+            "color": "#b2b2fc",
+            "icon": "✦"
+        },
+        {
+            "key": "supercluster",
+            "name": "Supercluster",
+            "oneInMult": 3e+23,
+            "rollWeight": 0.000021609836,
+            "color": "#b2bffc",
+            "icon": "✧"
+        },
+        {
+            "key": "laniakea",
+            "name": "Laniakea",
+            "oneInMult": 1e+24,
+            "rollWeight": 0.000018420157,
+            "color": "#c1cbfc",
+            "icon": "☄"
+        },
+        {
+            "key": "horizon",
+            "name": "Horizon",
+            "oneInMult": 3e+24,
+            "rollWeight": 0.000015922263,
+            "color": "#ced6fc",
+            "icon": "✶"
+        },
+        {
+            "key": "firmament",
+            "name": "Firmament",
+            "oneInMult": 1e+25,
+            "rollWeight": 0.000013572088,
+            "color": "#dce3fc",
+            "icon": "✷"
+        },
+        {
+            "key": "continuum",
+            "name": "Continuum",
+            "oneInMult": 3e+25,
+            "rollWeight": 0.000011731624,
+            "color": "#eaeefc",
+            "icon": "◈"
+        }
+    ];
+
+    const ENDGAME_MUTATION_DEFS = [...ENDGAME_CATCH_DEFS, ...GAP_MUTATION_DEFS]
+        .sort((a, b) => a.oneInMult - b.oneInMult);
+
     const TIERS = [
         { name: "Common", baseOneIn: 3, coinReward: 12, className: "common" },
         { name: "Uncommon", baseOneIn: 12, coinReward: 32, className: "uncommon" },
@@ -175,7 +568,8 @@
         { name: "Transcendent", baseOneIn: 800_000_000, coinReward: 33000000, className: "transcendent" },
         { name: "Infinity", baseOneIn: 1_000_000_000, coinReward: 39000000, className: "infinity" },
         { name: "Ascendant", baseOneIn: 1_500_000_000, coinReward: 47000000, className: "ascendant" },
-        { name: "Omniversal", baseOneIn: 2_250_000_000, coinReward: 58000000, className: "omniversal" }
+        { name: "Omniversal", baseOneIn: 2_250_000_000, coinReward: 58000000, className: "omniversal" },
+        ...ENDGAME_CATCH_DEFS.map((def) => ({ name: def.name, baseOneIn: def.baseOneIn, coinReward: def.coinReward, className: "rarity-" + def.key, spriteClass: "omniversal" }))
     ];
 
     const INDEX_REWARD_DEFS = buildIndexRewardDefs();
@@ -207,6 +601,8 @@
         Ascendant: 0.53,
         Omniversal: 0.58
     };
+
+    Object.assign(EQUIPPED_LUCK_BONUS_BY_TIER, Object.fromEntries(ENDGAME_CATCH_DEFS.map((def) => [def.name, def.luckBonus])));
 
     const MIN_LUCK_ODDS_BY_TIER = {
         Common: 2,
@@ -421,6 +817,10 @@
             particleSymbols: ["*", "+", ".", "x"]
         }
     };
+
+    for (const def of ENDGAME_CATCH_DEFS) {
+        ULTRA_REVEAL_CONFIGS[def.name] = { ...ULTRA_REVEAL_CONFIGS.Ultra, eyebrow: def.name + " Rarity Detected", tierLabel: def.name };
+    }
 
     const APEX_REVEAL_CONFIG = {
         eyebrow: "Apex Predator Detected",
@@ -1809,6 +2209,10 @@
         }
     };
 
+    for (const def of ENDGAME_MUTATION_DEFS) {
+        MUTATION_TYPES[def.key] = { name: def.name, legacyName: def.legacyName, icon: def.icon, oneInMult: def.oneInMult, rollWeight: def.rollWeight, color: def.color, scoreBonus: 400, endgame: true };
+    }
+
     const STANDARD_MUTATION_KEYS = Object.keys(MUTATION_TYPES)
         .filter((key) => !MUTATION_TYPES[key].naturalOnly);
     const MUTATION_CHANCE_ORDER = [
@@ -1859,6 +2263,7 @@
         "eldritch",       // Divine
         "godfin",         // Corrupted
         "singularity",    // Singularity
+        ...ENDGAME_MUTATION_DEFS.map((def) => def.key),
         "apex"            // Apex — natural only
     ];
     const NATURAL_ONLY_MUTATION_KEYS = MUTATION_CHANCE_ORDER
@@ -2545,7 +2950,7 @@ let rollPool = [];
         if (!snapshot.exists) return null;
 
         const metadata = snapshot.data() || {};
-        const chunkCount = Math.min(200, Math.max(0, Math.floor(Number(metadata.chunkCount) || 0)));
+        const chunkCount = Math.min(400, Math.max(0, Math.floor(Number(metadata.chunkCount) || 0)));
         const chunkRefs = Array.from({ length: chunkCount }, (_, index) =>
             profileRef.collection(RNG_PROFILE_CHUNK_COLLECTION).doc(`chunk_${String(index).padStart(4, "0")}`)
         );
@@ -3565,7 +3970,7 @@ let rollPool = [];
 
     function getTierSpritePath(tierName) {
         const tier = getTierMeta(tierName);
-        return `images/RNG/rarities/${String(tier.className || "common").replace(/-/g, "_")}.png`;
+        return `images/RNG/rarities/${String(tier.spriteClass || tier.className || "common").replace(/-/g, "_")}.png`;
     }
 
     function normalizeMutationKeys(keys) {
@@ -3757,7 +4162,7 @@ let rollPool = [];
 
         for (const key of MUTATION_CHANCE_ORDER) {
             const mutation = MUTATION_TYPES[key];
-            if (normalized === normalizeRngLookupText(key) || normalized === normalizeRngLookupText(mutation?.name)) {
+            if (normalized === normalizeRngLookupText(key) || normalized === normalizeRngLookupText(mutation?.name) || normalized === normalizeRngLookupText(mutation?.legacyName)) {
                 return key;
             }
         }
@@ -3804,7 +4209,7 @@ let rollPool = [];
 
         return normalizeMutationKeys(labels.map((label) => {
             for (const [key, mutation] of Object.entries(MUTATION_TYPES)) {
-                if (label === normalizeRngLookupText(key) || label === normalizeRngLookupText(mutation?.name)) {
+                if (label === normalizeRngLookupText(key) || label === normalizeRngLookupText(mutation?.name) || label === normalizeRngLookupText(mutation?.legacyName)) {
                     return key;
                 }
             }
@@ -3831,6 +4236,7 @@ let rollPool = [];
 
     function getMutationBaseNameFromCollectionName(name, keys) {
         const suffix = getMutationCollectionSuffix(keys);
+        if (getMutationKeysFromCollectionName(name).length) return String(name).replace(/\s\([^()]+\)$/, "");
         return suffix && String(name || "").endsWith(suffix)
             ? String(name).slice(0, -suffix.length)
             : name;
@@ -4723,7 +5129,8 @@ let rollPool = [];
     function formatMutationPickPercent(weight, total) {
         if (!(weight > 0) || !(total > 0)) return "0%";
         const percent = (weight / total) * 100;
-        if (percent < 1) return `${Math.max(0.1, Math.round(percent * 10) / 10)}%`;
+        if (percent < 0.001) return "<0.001%";
+        if (percent < 1) return `${Number(percent.toPrecision(2))}%`;
         if (percent < 10) return `${Math.round(percent * 10) / 10}%`;
         return `${Math.round(percent)}%`;
     }
@@ -4917,6 +5324,9 @@ let rollPool = [];
     }
 
     function tierNameFromOneIn(oneIn) {
+        for (let index = ENDGAME_CATCH_DEFS.length - 1; index >= 0; index--) {
+            if (oneIn >= ENDGAME_CATCH_DEFS[index].baseOneIn) return ENDGAME_CATCH_DEFS[index].name;
+        }
         if (oneIn >= 2_250_000_000) return "Omniversal";
         if (oneIn >= 1_500_000_000) return "Ascendant";
         if (oneIn >= 1_000_000_000) return "Infinity";
@@ -6817,7 +7227,7 @@ function updateAllUi(options = {}) {
                         ${getMutationSpriteHtml(key)}
                         <span>${mutation.name}</span>
                     </span>
-                    <span>${chanceText}${pickText} · ${mutation.oneInMult}x</span>
+                    <span>${chanceText}${pickText} · ${formatCompactNumber(mutation.oneInMult)}x</span>
                 </div>
             `;
         });

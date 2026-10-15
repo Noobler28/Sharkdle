@@ -10,7 +10,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="page-shell.css">
-    <link rel="stylesheet" href="Minigames/SharkRNG/rng.css?v=20261015-afk-mode">
+    <link rel="stylesheet" href="Minigames/SharkRNG/rng.css?v=20261015-mutation-dropdown">
     <link rel="stylesheet" href="mobile.css">
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
@@ -157,6 +157,7 @@
             <select id="rng-collection-filter" class="rng-select">
                 <option value="all">All index entries</option>
                 <option value="base">Base species</option>
+                <option value="stacked">Legacy combos</option>
                 <optgroup label="Rarities">
                     <option value="Common">Common</option>
                     <option value="Uncommon">Uncommon</option>
@@ -176,44 +177,116 @@
                     <option value="Eclipse">Eclipse</option>
                     <option value="Paradox">Paradox</option>
                     <option value="Singularity">Singularity</option>
+                    <option value="Abyssal Rift">Abyssal Rift</option>
                     <option value="Event Horizon">Event Horizon</option>
                     <option value="Eternity">Eternity</option>
+                    <option value="Transcendent">Transcendent</option>
+                    <option value="Infinity">Infinity</option>
+                    <option value="Ascendant">Ascendant</option>
+                    <option value="Omniversal">Omniversal</option>
+                    <option value="Comet">Comet</option>
+                    <option value="Pulsar">Pulsar</option>
+                    <option value="Magnetar">Magnetar</option>
+                    <option value="Quasar">Quasar</option>
+                    <option value="Supernova">Supernova</option>
+                    <option value="Hypernova">Hypernova</option>
+                    <option value="Blazar">Blazar</option>
+                    <option value="Cosmos">Cosmos</option>
                 </optgroup>
                 <optgroup label="Mutations">
                     <option value="melanistic">Melanistic</option>
                     <option value="obsidian">Obsidian</option>
                     <option value="albino">Albino</option>
                     <option value="piebald">Piebald</option>
-                    <option value="shiny">Shiny</option>
-                    <option value="pearl">Pearl</option>
+                    <option value="shiny">Silver</option>
+                    <option value="pearl">Pearlescent</option>
                     <option value="leucistic">Leucistic</option>
                     <option value="bioluminescent">Bioluminescent</option>
                     <option value="sapphire">Sapphire</option>
                     <option value="copper">Copper</option>
                     <option value="emerald">Emerald</option>
                     <option value="ruby">Ruby</option>
-                    <option value="golden">Golden</option>
+                    <option value="golden">Gilded</option>
                     <option value="amethyst">Amethyst</option>
-                    <option value="frostbite">Frostbite</option>
+                    <option value="frostbite">Frostbitten</option>
                     <option value="neon">Neon</option>
                     <option value="spectral">Spectral</option>
-                    <option value="tideborn">Tideborn</option>
-                    <option value="coral">Coral</option>
+                    <option value="tideborn">Iridescent</option>
+                    <option value="coral">Overgrown</option>
                     <option value="abyssal">Abyssal</option>
-                    <option value="prism">Prism</option>
+                    <option value="prism">Prismatic</option>
                     <option value="volcanic">Volcanic</option>
                     <option value="megatooth">Megatooth</option>
-                    <option value="stormcharged">Stormcharged</option>
+                    <option value="stormcharged">Electrified</option>
                     <option value="chrome">Chrome</option>
                     <option value="void">Void</option>
                     <option value="cosmic">Cosmic</option>
-                    <option value="radioactive">Radioactive</option>
+                    <option value="radioactive">Toxic</option>
                     <option value="phantom">Phantom</option>
-                    <option value="glitch">Glitch</option>
-                    <option value="apex">Apex</option>
-                    <option value="primordial">Primordial</option>
+                    <option value="glitch">Glitched</option>
+                    <option value="primordial">Prehistoric</option>
                     <option value="leviathan">Leviathan</option>
-                    <option value="eventhorizon">Event Horizon</option>
+                    <option value="abyssbreaker">Armoured</option>
+                    <option value="maelstrom">Chaotic</option>
+                    <option value="riftborn">Bloodstained</option>
+                    <option value="eventhorizon">Oil Slick</option>
+                    <option value="vortex">Twisted</option>
+                    <option value="oblivion">Corrosive</option>
+                    <option value="cataclysm">Colossal</option>
+                    <option value="titanium">Titanium</option>
+                    <option value="dreamglass">Crystalline</option>
+                    <option value="sunkenstar">Celestial</option>
+                    <option value="worldeater">Dark Matter</option>
+                    <option value="chronoshark">Temporal</option>
+                    <option value="eldritch">Divine</option>
+                    <option value="godfin">Corrupted</option>
+                    <option value="singularity">Singularity</option>
+
+                    <option value="meteor">Meteor</option>
+                    <option value="asteroid">Asteroid</option>
+                    <option value="meteoroid">Meteoroid</option>
+                    <option value="riftforged">Comet</option>
+                    <option value="stardust">Stardust</option>
+                    <option value="aurora">Aurora</option>
+                    <option value="lunar">Lunar</option>
+                    <option value="cosmicsovereign">Pulsar</option>
+                    <option value="solar">Solar</option>
+                    <option value="corona">Corona</option>
+                    <option value="flare">Flare</option>
+                    <option value="photon">Photon</option>
+                    <option value="neutrino">Neutrino</option>
+                    <option value="genesis">Magnetar</option>
+                    <option value="neutron">Neutron</option>
+                    <option value="plasma">Plasma</option>
+                    <option value="protostar">Protostar</option>
+                    <option value="redshift">Redshift</option>
+                    <option value="blueshift">Blueshift</option>
+                    <option value="empyrean">Quasar</option>
+                    <option value="transit">Transit</option>
+                    <option value="zenith">Zenith</option>
+                    <option value="perihelion">Perihelion</option>
+                    <option value="aphelion">Aphelion</option>
+                    <option value="solstice">Solstice</option>
+                    <option value="boundless">Supernova</option>
+                    <option value="equinox">Equinox</option>
+                    <option value="apogee">Apogee</option>
+                    <option value="perigee">Perigee</option>
+                    <option value="exosphere">Exosphere</option>
+                    <option value="heliosphere">Heliosphere</option>
+                    <option value="absolute">Hypernova</option>
+                    <option value="magnetosphere">Magnetosphere</option>
+                    <option value="interstellar">Interstellar</option>
+                    <option value="intergalactic">Intergalactic</option>
+                    <option value="galaxy">Galaxy</option>
+                    <option value="andromeda">Andromeda</option>
+                    <option value="primordialvoid">Blazar</option>
+                    <option value="supercluster">Supercluster</option>
+                    <option value="laniakea">Laniakea</option>
+                    <option value="horizon">Horizon</option>
+                    <option value="firmament">Firmament</option>
+                    <option value="continuum">Continuum</option>
+                    <option value="infiniteabyss">Cosmos</option>
+                    <option value="apex">Apex</option>
                 </optgroup>
             </select>
             <div class="search-bar">
@@ -315,7 +388,7 @@
 <div id="rng-toast" class="rng-toast hidden"></div>
 
 <script src="script.js"></script>
-<script src="Minigames/SharkRNG/rng-mode.js?v=20261015-afk-mode"></script>
+<script src="Minigames/SharkRNG/rng-mode.js?v=20261015-mutation-dropdown"></script>
 <script src="global-broadcast.js"></script>
 <script>
     document.addEventListener("DOMContentLoaded", () => {
