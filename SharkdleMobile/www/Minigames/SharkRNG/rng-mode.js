@@ -1,9 +1,113 @@
 (function () {
     "use strict";
 
+    const COMPACT_NUMBER_UNITS = [
+            { value: 1e303, suffix: "Ce" },
+            { value: 1e300, suffix: "NoNog" },
+            { value: 1e297, suffix: "OcNog" },
+            { value: 1e294, suffix: "SpNog" },
+            { value: 1e291, suffix: "SxNog" },
+            { value: 1e288, suffix: "QiNog" },
+            { value: 1e285, suffix: "QaNog" },
+            { value: 1e282, suffix: "TNog" },
+            { value: 1e279, suffix: "DNog" },
+            { value: 1e276, suffix: "UNog" },
+            { value: 1e273, suffix: "Nog" },
+            { value: 1e270, suffix: "NoOcg" },
+            { value: 1e267, suffix: "OcOcg" },
+            { value: 1e264, suffix: "SpOcg" },
+            { value: 1e261, suffix: "SxOcg" },
+            { value: 1e258, suffix: "QiOcg" },
+            { value: 1e255, suffix: "QaOcg" },
+            { value: 1e252, suffix: "TOcg" },
+            { value: 1e249, suffix: "DOcg" },
+            { value: 1e246, suffix: "UOcg" },
+            { value: 1e243, suffix: "Ocg" },
+            { value: 1e240, suffix: "NoSpg" },
+            { value: 1e237, suffix: "OcSpg" },
+            { value: 1e234, suffix: "SpSpg" },
+            { value: 1e231, suffix: "SxSpg" },
+            { value: 1e228, suffix: "QiSpg" },
+            { value: 1e225, suffix: "QaSpg" },
+            { value: 1e222, suffix: "TSpg" },
+            { value: 1e219, suffix: "DSpg" },
+            { value: 1e216, suffix: "USpg" },
+            { value: 1e213, suffix: "Spg" },
+            { value: 1e210, suffix: "NoSxg" },
+            { value: 1e207, suffix: "OcSxg" },
+            { value: 1e204, suffix: "SpSxg" },
+            { value: 1e201, suffix: "SxSxg" },
+            { value: 1e198, suffix: "QiSxg" },
+            { value: 1e195, suffix: "QaSxg" },
+            { value: 1e192, suffix: "TSxg" },
+            { value: 1e189, suffix: "DSxg" },
+            { value: 1e186, suffix: "USxg" },
+            { value: 1e183, suffix: "Sxg" },
+            { value: 1e180, suffix: "NoQig" },
+            { value: 1e177, suffix: "OcQig" },
+            { value: 1e174, suffix: "SpQig" },
+            { value: 1e171, suffix: "SxQig" },
+            { value: 1e168, suffix: "QiQig" },
+            { value: 1e165, suffix: "QaQig" },
+            { value: 1e162, suffix: "TQig" },
+            { value: 1e159, suffix: "DQig" },
+            { value: 1e156, suffix: "UQig" },
+            { value: 1e153, suffix: "Qig" },
+            { value: 1e150, suffix: "NoQag" },
+            { value: 1e147, suffix: "OcQag" },
+            { value: 1e144, suffix: "SpQag" },
+            { value: 1e141, suffix: "SxQag" },
+            { value: 1e138, suffix: "QiQag" },
+            { value: 1e135, suffix: "QaQag" },
+            { value: 1e132, suffix: "TQag" },
+            { value: 1e129, suffix: "DQag" },
+            { value: 1e126, suffix: "UQag" },
+            { value: 1e123, suffix: "Qag" },
+            { value: 1e120, suffix: "NoTg" },
+            { value: 1e117, suffix: "OcTg" },
+            { value: 1e114, suffix: "SpTg" },
+            { value: 1e111, suffix: "SxTg" },
+            { value: 1e108, suffix: "QiTg" },
+            { value: 1e105, suffix: "QaTg" },
+            { value: 1e102, suffix: "TTg" },
+            { value: 1e99, suffix: "DTg" },
+            { value: 1e96, suffix: "UTg" },
+            { value: 1e93, suffix: "Tg" },
+            { value: 1e90, suffix: "NoVg" },
+            { value: 1e87, suffix: "OcVg" },
+            { value: 1e84, suffix: "SpVg" },
+            { value: 1e81, suffix: "SxVg" },
+            { value: 1e78, suffix: "QiVg" },
+            { value: 1e75, suffix: "QaVg" },
+            { value: 1e72, suffix: "TVg" },
+            { value: 1e69, suffix: "DVg" },
+            { value: 1e66, suffix: "UVg" },
+            { value: 1e63, suffix: "Vg" },
+            { value: 1e60, suffix: "NoDc" },
+            { value: 1e57, suffix: "OcDc" },
+            { value: 1e54, suffix: "SpDc" },
+            { value: 1e51, suffix: "SxDc" },
+            { value: 1e48, suffix: "QiDc" },
+            { value: 1e45, suffix: "QaDc" },
+            { value: 1e42, suffix: "TDc" },
+            { value: 1e39, suffix: "DDc" },
+            { value: 1e36, suffix: "UDc" },
+            { value: 1_000_000_000_000_000_000_000_000_000_000_000, suffix: "Dc" },
+            { value: 1_000_000_000_000_000_000_000_000_000_000, suffix: "No" },
+            { value: 1_000_000_000_000_000_000_000_000_000, suffix: "Oc" },
+            { value: 1_000_000_000_000_000_000_000_000, suffix: "Sp" },
+            { value: 1_000_000_000_000_000_000_000, suffix: "Sx" },
+            { value: 1_000_000_000_000_000_000, suffix: "Qi" },
+            { value: 1_000_000_000_000_000, suffix: "Qa" },
+            { value: 1_000_000_000_000, suffix: "T" },
+            { value: 1_000_000_000, suffix: "B" },
+            { value: 1_000_000, suffix: "M" },
+            { value: 1_000, suffix: "K" }
+        ];
+
     const STORAGE_KEY = "sharkRngProfile";
     const AUTO_ARROW_DISMISSED_KEY = "sharkRngAutoArrowDismissed";
-    const LOCAL_SAVE_INTERVAL_MS = 120000;
+    const LOCAL_SAVE_INTERVAL_MS = 250;
     const BASE_ROLL_COOLDOWN_MS = 1600;
     const BASE_AUTO_INTERVAL_MS = 1800;
     const ULTRA_ONE_IN_THRESHOLD = 1_000_000;
@@ -357,7 +461,6 @@
 
     const PLAYER_RANK_ICON = "\u{1F988}";
     const RANK_LUCK_PER_LEVEL = 0.025;
-    const RANK_LUCK_MULTIPLIER_CAP = 3;
     const PRESTIGE_MIN_BEST_ONE_IN = 1_000_000;
     const PRESTIGE_ROLL_STEP = 750;
     const PRESTIGE_COLLECTION_STEP = 45;
@@ -371,12 +474,6 @@
     const INDEX_BUILD_BATCH_SIZE = 80;
     const INDEX_RENDER_BATCH_SIZE = 48;
     const INDEX_STACKED_CANDIDATE_LIMIT = 2000;
-    const RNG_MOBILE_BREAKPOINT_PX = 820;
-    const MOBILE_INDEX_BUILD_BATCH_SIZE = 34;
-    const MOBILE_INDEX_RENDER_BATCH_SIZE = 16;
-    const MOBILE_AUTO_INDEX_BUILD_BATCH_SIZE = 22;
-    const MOBILE_AUTO_INDEX_RENDER_BATCH_SIZE = 8;
-    const MOBILE_COLLECTION_SEARCH_DELAY_MS = 160;
     const PRESTIGE_UPGRADE_DEFS = [
         {
             id: "pearlLuck",
@@ -986,10 +1083,11 @@
     const APEX_UPGRADE_MIN_ONE_IN = 50_000;
     const APEX_PRESTIGE_UNLOCK_ONE_IN = 7_500_000;
     const APEX_SURGE_POTION_ONE_IN = 100_000;
+    const APEX_SURGE_POTION_ODDS_MULTIPLIER = 4;
 
     function buildApexUpgrades() {
         const list = [];
-        for (let i = 1; i <= 80; i++) {
+        for (let i = 1; i <= 45; i++) {
             // Apex is natural-only, so even max level keeps it rarer than normal mutations.
             const chanceOneIn = Math.round(APEX_UPGRADE_BASE_ONE_IN / Math.pow(1.15, i - 1));
             list.push({
@@ -1097,7 +1195,7 @@
 
     const POTION_DEFS = {
         luckMinor: {
-            sprite: "images/RNG/potions/luck1.jpg",
+            sprite: "images/RNG/potions/Luck1.png",
             name: "Minor Luck Potion",
             icon: "\u{1F343}",
             desc: "1.35\u00d7 luck for 25 rolls",
@@ -1107,7 +1205,7 @@
             category: "luck"
         },
         luck: {
-            sprite: "images/RNG/potions/luck2.jpg",
+            sprite: "images/RNG/potions/Luck2.png",
             name: "Luck Potion",
             icon: "\u{1F340}",
             desc: "1.8\u00d7 luck for 15 rolls",
@@ -1117,7 +1215,7 @@
             category: "luck"
         },
         luckStrong: {
-            sprite: "images/RNG/potions/luck3.jpg",
+            sprite: "images/RNG/potions/Luck3.png",
             name: "Strong Luck Potion",
             icon: "\u2728",
             desc: "2.5\u00d7 luck for 12 rolls",
@@ -1127,7 +1225,7 @@
             category: "luck"
         },
         luckMega: {
-            sprite: "images/RNG/potions/luck4.jpg",
+            sprite: "images/RNG/potions/Luck4.png",
             name: "Mega Luck Potion",
             icon: "\u{1F31F}",
             desc: "4\u00d7 luck for 6 rolls",
@@ -1137,7 +1235,7 @@
             category: "luck"
         },
         luckVoid: {
-            sprite: "images/RNG/potions/luck5.jpg",
+            sprite: "images/RNG/potions/Luck5.png",
             name: "Ultra Luck Potion",
             icon: "\u{1F300}",
             desc: "8\u00d7 luck for 3 rolls",
@@ -1147,7 +1245,7 @@
             category: "luck"
         },
         cosmicLuck: {
-            sprite: "images/RNG/potions/luck6.jpg",
+            sprite: "images/RNG/potions/Luck6.png",
             name: "Cosmic Luck Potion",
             icon: "\u{1F30C}",
             desc: "12\u00d7 luck for 2 rolls",
@@ -1157,6 +1255,7 @@
             category: "luck"
         },
         coin: {
+            sprite: "images/RNG/potions/Coin1.png",
             name: "Coin Potion",
             icon: "\u{1F4B0}",
             desc: "2.5\u00d7 coins for 20 rolls",
@@ -1165,6 +1264,7 @@
             coinMult: 2.5
         },
         speed: {
+            sprite: "images/RNG/potions/Speed1.png",
             name: "Speed Potion",
             icon: "\u26A1",
             desc: "50% faster roll cooldown for 25 rolls",
@@ -1172,6 +1272,7 @@
             rolls: 25
         },
         ultra: {
+            sprite: "images/RNG/potions/Abyss1.png",
             name: "Abyss Potion",
             icon: "\u{1F30A}",
             desc: "Guaranteed 1 in 1M+ species; restocks after 20 normal rolls",
@@ -1181,6 +1282,7 @@
             restockRolls: 20
         },
         omega: {
+            sprite: "images/RNG/potions/Omega1.png",
             name: "Omega Potion",
             icon: "\u{1F31F}",
             desc: "Guaranteed 1 in 100M+ species; restocks after 80 normal rolls",
@@ -1189,16 +1291,40 @@
             maxOwned: 1,
             restockRolls: 80
         },
+        abyssalCompass: {
+            sprite: "images/RNG/potions/Abyss1.png",
+            name: "Abyssal Compass Potion",
+            icon: "\u{1F9ED}",
+            desc: "Guaranteed 1 in 500M+ species; restocks after 250 normal rolls",
+            cost: 5_000_000_000,
+            rolls: 1,
+            minOneIn: 500_000_000,
+            maxOwned: 1,
+            restockRolls: 250
+        },
+        omniversalCompass: {
+            sprite: "images/RNG/potions/Omega1.png",
+            name: "Omniversal Compass Potion",
+            icon: "\u2726",
+            desc: "Guaranteed 1 in 1B+ species; restocks after 800 normal rolls",
+            cost: 50_000_000_000,
+            rolls: 1,
+            minOneIn: 1_000_000_000,
+            maxOwned: 1,
+            restockRolls: 800
+        },
         apexSurge: {
+            sprite: "images/RNG/potions/ApexSurge1.png",
             name: "Apex Surge Potion",
             icon: "\u{1F988}",
-            desc: "Apex rolls become 1 in 100,000 for your next roll, not guaranteed",
+            desc: "4x better natural Apex odds for your next roll action, or 1 in 100,000 if better; not guaranteed",
             cost: 1000000000,
             rolls: 1,
             maxOwned: 1,
             fixedRolls: true
         },
         mutationPrimer: {
+            sprite: "images/RNG/potions/Mutagen1.png",
             name: "Mutagen Primer Potion",
             icon: "\u{1F9EA}",
             desc: "Guaranteed random mutation for 25 rolls; reduced coin payout",
@@ -1207,6 +1333,7 @@
             forceRandomMutation: true
         },
         albino: {
+            sprite: "images/RNG/potions/Albino1.png",
             name: "Albino Potion",
             icon: "\u{1F90D}",
             desc: "Guaranteed albino mutation; reduced coin payout",
@@ -1214,6 +1341,7 @@
             rolls: 1
         },
         shiny: {
+            sprite: "images/RNG/potions/Shiny1.png",
             name: "Shiny Potion",
             icon: "\u2728",
             desc: "Guaranteed shiny mutation; reduced coin payout",
@@ -1221,6 +1349,7 @@
             rolls: 1
         },
         bioluminescent: {
+            sprite: "images/RNG/potions/Bio1.png",
             name: "Bioluminescent Potion",
             icon: "\u{1F9EC}",
             desc: "Guaranteed bioluminescent mutation; reduced coin payout",
@@ -1228,6 +1357,7 @@
             rolls: 1
         },
         megatooth: {
+            sprite: "images/RNG/potions/Megatooth1.png",
             name: "Megatooth Potion",
             icon: "\u{1F9B7}",
             desc: "Guaranteed megatooth mutation; reduced coin payout",
@@ -1235,6 +1365,7 @@
             rolls: 1
         },
         randomMutation: {
+            sprite: "images/RNG/potions/Mutagen2.png",
             name: "Mutagen Storm Potion",
             icon: "\u{1F9EC}",
             desc: "Guaranteed random mutation for 50 rolls; reduced coin payout",
@@ -1242,6 +1373,7 @@
             rolls: 50
         },
         stackedMutation: {
+            sprite: "images/RNG/potions/Mutagen3.png",
             name: "Deep Mutagen Potion",
             icon: "\u{1F9EC}",
             desc: "Guaranteed random mutation for 10 rolls; reduced coin payout",
@@ -1250,6 +1382,7 @@
             forceRandomMutation: true
         },
         stackCatalyst: {
+            sprite: "images/RNG/potions/Catalyst1.png",
             name: "Abyss Catalyst Potion",
             icon: "\u2697",
             desc: "Guaranteed random mutation for 5 rolls; reduced coin payout",
@@ -1258,6 +1391,7 @@
             forceRandomMutation: true
         },
         titanium: {
+            sprite: "images/RNG/potions/Titanium1.png",
             name: "Titanium Potion",
             icon: "\u25A3",
             desc: "Guaranteed titanium mutation; reduced coin payout",
@@ -1265,6 +1399,7 @@
             rolls: 1
         },
         worldeater: {
+            sprite: "images/RNG/potions/Dark1.png",
             name: "Dark Matter Potion",
             icon: "\u25C9",
             desc: "Guaranteed dark matter mutation; reduced coin payout",
@@ -1272,6 +1407,7 @@
             rolls: 1
         },
         singularity: {
+            sprite: "images/RNG/potions/Singularity1.png",
             name: "Singularity Mutagen",
             icon: "\u2737",
             desc: "Guaranteed singularity mutation; reduced coin payout",
@@ -1676,54 +1812,54 @@
     const STANDARD_MUTATION_KEYS = Object.keys(MUTATION_TYPES)
         .filter((key) => !MUTATION_TYPES[key].naturalOnly);
     const MUTATION_CHANCE_ORDER = [
-        "melanistic",
-        "obsidian",
-        "albino",
-        "piebald",
-        "shiny",
-        "pearl",
-        "leucistic",
-        "bioluminescent",
-        "sapphire",
-        "copper",
-        "emerald",
-        "ruby",
-        "golden",
-        "amethyst",
-        "frostbite",
-        "neon",
-        "spectral",
-        "tideborn",
-        "coral",
-        "abyssal",
-        "prism",
-        "volcanic",
-        "megatooth",
-        "stormcharged",
-        "chrome",
-        "void",
-        "cosmic",
-        "radioactive",
-        "phantom",
-        "glitch",
-        "primordial",
-        "leviathan",
-        "abyssbreaker",
-        "maelstrom",
-        "riftborn",
-        "eventhorizon",
-        "vortex",
-        "oblivion",
-        "cataclysm",
-        "titanium",
-        "dreamglass",
-        "sunkenstar",
-        "worldeater",
-        "chronoshark",
-        "eldritch",
-        "godfin",
-        "singularity",
-        "apex"
+        "melanistic",      // Melanistic
+        "obsidian",       // Obsidian
+        "albino",         // Albino
+        "piebald",        // Piebald
+        "shiny",          // Silver
+        "pearl",          // Pearlescent
+        "leucistic",      // Leucistic
+        "bioluminescent", // Bioluminescent
+        "sapphire",       // Sapphire
+        "copper",         // Copper
+        "emerald",        // Emerald
+        "ruby",           // Ruby
+        "golden",         // Gilded
+        "amethyst",       // Amethyst
+        "frostbite",      // Frostbitten
+        "neon",           // Neon
+        "spectral",       // Spectral
+        "tideborn",       // Iridescent
+        "coral",          // Overgrown
+        "abyssal",        // Abyssal
+        "prism",          // Prismatic
+        "volcanic",       // Volcanic
+        "megatooth",      // Megatooth
+        "stormcharged",   // Electrified
+        "chrome",         // Chrome
+        "void",           // Void
+        "cosmic",         // Cosmic
+        "radioactive",    // Toxic
+        "phantom",        // Phantom
+        "glitch",         // Glitched
+        "primordial",     // Prehistoric
+        "leviathan",      // Leviathan
+        "abyssbreaker",   // Armoured
+        "maelstrom",      // Chaotic
+        "riftborn",       // Bloodstained
+        "eventhorizon",   // Oil Slick
+        "vortex",         // Twisted
+        "oblivion",       // Corrosive
+        "cataclysm",      // Colossal
+        "titanium",       // Titanium
+        "dreamglass",     // Crystalline
+        "sunkenstar",     // Celestial
+        "worldeater",     // Dark Matter
+        "chronoshark",    // Temporal
+        "eldritch",       // Divine
+        "godfin",         // Corrupted
+        "singularity",    // Singularity
+        "apex"            // Apex — natural only
     ];
     const NATURAL_ONLY_MUTATION_KEYS = MUTATION_CHANCE_ORDER
         .filter((key) => MUTATION_TYPES[key]?.naturalOnly);
@@ -1757,6 +1893,7 @@ let rollPool = [];
     let rngAdminNextRollCommand = null;
     let rngAdminNextRollUnsubscribe = null;
     let rngCloudSaveTimer = null;
+    let rngCloudSaveDueAtMs = 0;
     let rngCloudSaveDirty = false;
     let rngCloudSaveInFlight = false;
     let rngCloudHydratedUid = null;
@@ -1764,64 +1901,14 @@ let rollPool = [];
     let collectionGridDirty = false;
     let collectionRenderTimer = null;
     let collectionRenderToken = 0;
-    let collectionSearchTimer = null;
     let indexMutationComboCache = null;
-    let rngViewportSyncTimer = null;
     let localSaveTimer = null;
     let localSaveDirty = false;
+    let localSaveError = false;
+    let cloudSaveError = false;
+    let localSavedAtMs = 0;
     let localSaveFlushBound = false;
     let selectedPotionBuyAmount = 1;
-
-    function isRngMobileViewport() {
-        return Boolean(
-            window.innerWidth <= RNG_MOBILE_BREAKPOINT_PX ||
-            window.matchMedia?.(`(max-width: ${RNG_MOBILE_BREAKPOINT_PX}px)`)?.matches ||
-            window.matchMedia?.("(pointer: coarse)")?.matches
-        );
-    }
-
-    function isRngLowPowerMode() {
-        const reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
-        const saveData = navigator.connection?.saveData;
-        const lowCoreDevice = (navigator.hardwareConcurrency || 8) <= 4;
-        return Boolean(reducedMotion || saveData || lowCoreDevice || isRngMobileViewport());
-    }
-
-    function syncRngViewportClasses() {
-        document.body?.classList.toggle("rng-mobile", isRngMobileViewport());
-        document.body?.classList.toggle("rng-low-power", isRngLowPowerMode());
-    }
-
-    function bindRngViewportSync() {
-        syncRngViewportClasses();
-        window.addEventListener("resize", () => {
-            if (rngViewportSyncTimer) clearTimeout(rngViewportSyncTimer);
-            rngViewportSyncTimer = setTimeout(() => {
-                syncRngViewportClasses();
-                if (isCollectionModalOpen()) renderCollectionGrid({ force: true });
-            }, 140);
-        }, { passive: true });
-    }
-
-    function shouldSuppressLightRngFx(id = "") {
-        return Boolean(autoEnabled && isRngLowPowerMode() && ["roll", "tick", "coin"].includes(id));
-    }
-
-    function getCollectionBuildBatchSize() {
-        if (!isRngMobileViewport()) return INDEX_BUILD_BATCH_SIZE;
-        return autoEnabled ? MOBILE_AUTO_INDEX_BUILD_BATCH_SIZE : MOBILE_INDEX_BUILD_BATCH_SIZE;
-    }
-
-    function getCollectionRenderBatchSize() {
-        if (!isRngMobileViewport()) return INDEX_RENDER_BATCH_SIZE;
-        return autoEnabled ? MOBILE_AUTO_INDEX_RENDER_BATCH_SIZE : MOBILE_INDEX_RENDER_BATCH_SIZE;
-    }
-
-    function getCollectionRenderDelayMs() {
-        if (autoEnabled && isRngMobileViewport()) return 38;
-        if (autoEnabled) return 14;
-        return isRngMobileViewport() ? 8 : 0;
-    }
 
     const GameFx = {
         initAudio() {
@@ -1855,7 +1942,6 @@ let rollPool = [];
         },
 
         play(id) {
-            if (shouldSuppressLightRngFx(id)) return;
             const tones = {
                 roll: [[320, 0.05], [480, 0.07]],
                 tick: [[520, 0.04]],
@@ -1872,7 +1958,6 @@ let rollPool = [];
         },
 
         shake(intensity = "light") {
-            if (isRngLowPowerMode() && intensity !== "heavy") return;
             const stage = document.querySelector(".rng-game-shell");
             if (!stage) return;
             stage.classList.remove("rng-shake-light", "rng-shake-medium", "rng-shake-heavy");
@@ -1882,7 +1967,6 @@ let rollPool = [];
         },
 
         floatText(text, className = "") {
-            if (autoEnabled && isRngLowPowerMode() && className.includes("coin")) return;
             const layer = document.getElementById("rng-float-layer");
             if (!layer) return;
             const el = document.createElement("span");
@@ -1894,7 +1978,6 @@ let rollPool = [];
         },
 
         pulseRollButton() {
-            if (autoEnabled && isRngLowPowerMode()) return;
             document.getElementById("rng-roll-btn")?.classList.add("rng-pulse");
             setTimeout(() => document.getElementById("rng-roll-btn")?.classList.remove("rng-pulse"), 220);
         }
@@ -1945,6 +2028,8 @@ let rollPool = [];
                 ultra: { remaining: 0 },
                 omega: { remaining: 0 },
                 apexSurge: { remaining: 0 },
+                abyssalCompass: { remaining: 0 },
+                omniversalCompass: { remaining: 0 },
                 albino: { remaining: 0 },
                 shiny: { remaining: 0 },
                 bioluminescent: { remaining: 0 },
@@ -1963,6 +2048,7 @@ let rollPool = [];
                 seenCutscenes: Object.fromEntries(CUTSCENE_SKIP_TIERS.map((tier) => [tier, false]))
             },
             rngXp: 0,
+            rngXpCurveVersion: 3,
             prestigeLevel: 0,
             prestigePoints: 0,
             totalPrestigePoints: 0,
@@ -2329,7 +2415,15 @@ let rollPool = [];
     }
 
     function mergeRngProfilesForHydration(localProfile = {}, remoteProfile = {}) {
-        const preferRemote = compareRngProfileProgress(remoteProfile, localProfile) >= 0;
+        localProfile = migrateRankXpProfile(localProfile);
+        remoteProfile = migrateRankXpProfile(remoteProfile);
+        // Currency and potion use can reduce balances without changing a progress rank.
+        // Prefer the latest actual gameplay change, not whichever profile has more coins.
+        const localUpdated = Number(localProfile.rngStateUpdatedAtMs) || Number(localProfile.rngCloudUpdatedAtMs) || 0;
+        const remoteUpdated = Number(remoteProfile.rngStateUpdatedAtMs) || Number(remoteProfile.rngCloudUpdatedAtMs) || 0;
+        const preferRemote = localUpdated === remoteUpdated
+            ? compareRngProfileProgress(remoteProfile, localProfile) >= 0
+            : remoteUpdated > localUpdated;
         const preferred = preferRemote ? remoteProfile : localProfile;
         const secondary = preferRemote ? localProfile : remoteProfile;
         const merged = {
@@ -2349,7 +2443,34 @@ let rollPool = [];
         merged.quests = mergeRngQuestStates(localProfile.quests, remoteProfile.quests);
         delete merged.dailyMissions;
         merged.bestOneIn = Math.max(Number(localProfile.bestOneIn) || 0, Number(remoteProfile.bestOneIn) || 0);
-        merged.runBestOneIn = Math.max(Number(localProfile.runBestOneIn) || 0, Number(remoteProfile.runBestOneIn) || 0);
+
+        // Run-only stats must never leak backwards across a prestige boundary.
+        // If one profile is from a newer prestige, its run stats are authoritative.
+        // Only merge with Math.max when both copies belong to the same prestige run.
+        const localPrestigeLevel = Math.max(0, Math.floor(Number(localProfile.prestigeLevel) || 0));
+        const remotePrestigeLevel = Math.max(0, Math.floor(Number(remoteProfile.prestigeLevel) || 0));
+        if (localPrestigeLevel > remotePrestigeLevel) {
+            merged.runBestOneIn = Math.max(0, Number(localProfile.runBestOneIn) || 0);
+            merged.runCollectionFinds = Math.max(0, Math.floor(Number(localProfile.runCollectionFinds) || 0));
+        } else if (remotePrestigeLevel > localPrestigeLevel) {
+            merged.runBestOneIn = Math.max(0, Number(remoteProfile.runBestOneIn) || 0);
+            merged.runCollectionFinds = Math.max(0, Math.floor(Number(remoteProfile.runCollectionFinds) || 0));
+        } else {
+            merged.runBestOneIn = Math.max(Number(localProfile.runBestOneIn) || 0, Number(remoteProfile.runBestOneIn) || 0);
+            merged.runCollectionFinds = Math.max(
+                Math.floor(Number(localProfile.runCollectionFinds) || 0),
+                Math.floor(Number(remoteProfile.runCollectionFinds) || 0)
+            );
+        }
+
+        // These IDs are replay-protection metadata, not resettable progression.
+        // Keep the union so an already-consumed admin next-roll command cannot
+        // become live again after prestige/reset/cloud hydration.
+        merged.adminNextRollConsumedIds = [...new Set([
+            ...(Array.isArray(localProfile.adminNextRollConsumedIds) ? localProfile.adminNextRollConsumedIds : []),
+            ...(Array.isArray(remoteProfile.adminNextRollConsumedIds) ? remoteProfile.adminNextRollConsumedIds : [])
+        ].map(String).filter(Boolean))].slice(-RNG_ADMIN_NEXT_ROLL_CONSUMED_LIMIT);
+
         merged.rngCloudUpdatedAtMs = Math.max(Number(localProfile.rngCloudUpdatedAtMs) || 0, Number(remoteProfile.rngCloudUpdatedAtMs) || 0);
 
         const history = [
@@ -2458,8 +2579,7 @@ let rollPool = [];
 
     function applyRngProfileData(profileData, options = {}) {
         if (!profileData || typeof profileData !== "object") return false;
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(profileData));
-        loadLocalProfile();
+        loadLocalProfile(profileData);
         if (options.saveLocal !== false) {
             saveLocalProfile();
         }
@@ -2476,7 +2596,7 @@ let rollPool = [];
 
         try {
             const remoteProfile = await readRngProfileFromFirebase(user);
-            const localProfile = getRawLocalRngProfile();
+            const localProfile = cloneRngData(player);
             rngCloudHydratedUid = user.uid;
 
             if (!remoteProfile) {
@@ -2498,6 +2618,8 @@ let rollPool = [];
             showToast("Cloud RNG progress loaded.");
             return true;
         } catch (error) {
+            cloudSaveError = true;
+            updateSaveStatusUi();
             console.warn("Unable to hydrate RNG profile from Firebase:", error);
             return false;
         }
@@ -2508,12 +2630,19 @@ let rollPool = [];
         const user = getRngCurrentUser();
         if (!user) return false;
 
-        if (rngCloudSaveInFlight && !options.force) {
+        if (rngCloudSaveInFlight) {
             rngCloudSaveDirty = true;
             return false;
         }
 
+        if (rngCloudSaveTimer) {
+            clearTimeout(rngCloudSaveTimer);
+            rngCloudSaveTimer = null;
+        }
+        rngCloudSaveDueAtMs = 0;
         rngCloudSaveInFlight = true;
+        cloudSaveError = false;
+        updateSaveStatusUi();
         try {
             const profileRef = rngLeaderboardDb.collection(RNG_PROFILE_COLLECTION).doc(user.uid);
             const { metadata, chunks } = buildRngCloudProfilePayload();
@@ -2541,14 +2670,16 @@ let rollPool = [];
             await batch.commit();
             player.rngCloudUpdatedAtMs = metadata.rngCloudUpdatedAtMs;
             rngCloudHydratedUid = user.uid;
-            rngCloudSaveDirty = false;
+            rngCloudSaveDirty = (Number(player.rngStateUpdatedAtMs) || 0) !== (Number(metadata.rngStateUpdatedAtMs) || 0);
             return true;
         } catch (error) {
+            cloudSaveError = true;
             console.warn("Unable to sync full RNG profile:", error);
             rngCloudSaveDirty = true;
             return false;
         } finally {
             rngCloudSaveInFlight = false;
+            updateSaveStatusUi();
             if (rngCloudSaveDirty && !rngCloudSaveTimer) {
                 scheduleRngCloudProfileSync(RNG_CLOUD_SAVE_INTERVAL_MS);
             }
@@ -2559,11 +2690,14 @@ let rollPool = [];
         if (!ensureRngLeaderboardServices() || !getRngCurrentUser()) return;
         rngCloudSaveDirty = true;
         if (rngCloudSaveTimer) return;
-
+        const delay = Math.max(1000, delayMs);
+        rngCloudSaveDueAtMs = Date.now() + delay;
         rngCloudSaveTimer = setTimeout(async () => {
             rngCloudSaveTimer = null;
+            rngCloudSaveDueAtMs = 0;
             await syncRngProfileToFirebase();
-        }, Math.max(1000, delayMs));
+        }, delay);
+        updateSaveStatusUi();
     }
 
     async function getRngLeaderboardProfile(user) {
@@ -2635,6 +2769,7 @@ let rollPool = [];
             bestTier: best?.tier || "",
             bestShark: best?.name || "",
             level: rankInfo.level,
+            prestigeLevel: Math.max(0, Math.floor(Number(player.prestigeLevel) || 0)),
             collectionCount: getCollectionCount(),
             updatedAt: Date.now()
         };
@@ -2654,6 +2789,7 @@ let rollPool = [];
             rngBestTier: payload.bestTier,
             rngBestShark: payload.bestShark,
             rngLevel: payload.level,
+            rngPrestigeLevel: payload.prestigeLevel,
             rngCollectionCount: payload.collectionCount,
             rngUpdatedAt: payload.updatedAt
         };
@@ -2673,6 +2809,7 @@ let rollPool = [];
             bestTier,
             bestShark: (fallbackSource ? data.rngBestShark : data.bestShark) || "Unknown species",
             level: toSafeNumber(fallbackSource ? data.rngLevel : data.level),
+            prestigeLevel: Math.max(0, Math.floor(toSafeNumber(fallbackSource ? data.rngPrestigeLevel : data.prestigeLevel))),
             collectionCount: toSafeNumber(fallbackSource ? data.rngCollectionCount : data.collectionCount),
             updatedAt: (fallbackSource ? data.rngUpdatedAt : data.updatedAt) || 0
         };
@@ -2708,7 +2845,7 @@ let rollPool = [];
         self.innerHTML = `
             <strong>
                 <span>Your RNG Card</span>
-                <span>${formatCompactNumber(player.rolls || 0)} rolls</span>
+                <span>${formatCompactNumber(player.rolls || 0)} rolls · Prestige ${formatCompactNumber(player.prestigeLevel || 0)}</span>
             </strong>
             <span>${escapeHtml(bestText)}${best?.name ? ` - ${escapeHtml(best.name)}` : ""}</span>
             <span>${syncText}</span>
@@ -2740,6 +2877,7 @@ let rollPool = [];
                         <div class="rng-leaderboard-name-line">
                             <strong class="rng-leaderboard-name">${escapeHtml(row.username)}</strong>
                             <span class="rng-leaderboard-tier ${tierClass}">${escapeHtml(tier)}</span>
+                            <span class="rng-leaderboard-prestige">Prestige ${row.prestigeLevel || 0}</span>
                         </div>
                         <span class="rng-leaderboard-best">1 in ${formatOneIn(row.bestOneIn)}</span>
                         <span class="rng-leaderboard-shark">${escapeHtml(row.bestShark)}</span>
@@ -2924,6 +3062,7 @@ let rollPool = [];
 
         rngLeaderboardAuth.onAuthStateChanged((user) => {
             rngLeaderboardUser = user || null;
+            updateSaveStatusUi();
             rngLeaderboardProfileCache = null;
             subscribeRngAdminNextRollCommand(user);
             if (!user) {
@@ -3215,7 +3354,8 @@ let rollPool = [];
                     { goal: 5000, reward: [{ type: "coins", amount: 125000000 }, { type: "potion", key: "stackedMutation", amount: 1 }] },
                     { goal: 10000, reward: [{ type: "coins", amount: 350000000 }, { type: "potion", key: "titanium", amount: 1 }] },
                     { goal: 25000, reward: [{ type: "coins", amount: 1200000000 }, { type: "potion", key: "stackCatalyst", amount: 1 }] },
-                    { goal: 50000, reward: [{ type: "coins", amount: 3500000000 }, { type: "potion", key: "singularity", amount: 1 }] }
+                    { goal: 50000, reward: [{ type: "coins", amount: 3500000000 }, { type: "potion", key: "singularity", amount: 1 }] },
+                    { goal: 100000, reward: [{ type: "coins", amount: 9000000000 }, { type: "potion", key: "worldeater", amount: 1 }] }
                 ]
             },
             rarityMilestone: {
@@ -3419,7 +3559,7 @@ let rollPool = [];
 
     function getMutationSpriteHtml(key, className = "") {
         const classes = ["rng-mutation-sprite", className].filter(Boolean).join(" ");
-        return `<img class="${classes}" src="${getMutationSpritePath(key)}" alt="" loading="lazy" aria-hidden="true">`;
+        return `<img class="${classes}" src="${getMutationSpritePath(key)}" alt="" loading="lazy" decoding="async" aria-hidden="true">`;
     }
 
     function getTierSpritePath(tierName) {
@@ -3727,7 +3867,8 @@ let rollPool = [];
             : baseShark;
         const canonicalKey = getCollectionKey(canonical);
         const baseTier = getBaseTierName(canonical);
-        const oddsTier = getOddsTierName(canonical);
+        const recordedOneIn = Math.max(toSafeNumber(entry.oneIn), toSafeNumber(canonical.oneIn));
+        const oddsTier = tierNameFromOneIn(recordedOneIn);
         const primaryMutationKey = getPrimaryMutationKeyFromKeys(mutationKeys);
 
         return {
@@ -3737,7 +3878,7 @@ let rollPool = [];
                 tier: baseTier,
                 baseTier,
                 oddsTier,
-                oneIn: canonical.oneIn,
+                oneIn: recordedOneIn,
                 mutation: primaryMutationKey || undefined,
                 mutations: mutationKeys.length ? mutationKeys : undefined,
                 baseName: mutationKeys.length ? baseShark.name : undefined
@@ -3892,7 +4033,12 @@ let rollPool = [];
         return copyBonus + oddsBonus;
     }
 
+    let mutationGalleryCache = null;
+
     function getMutationGalleryStats() {
+        if (mutationGalleryCache?.collection === player.collection) {
+            return mutationGalleryCache.stats;
+        }
         const ownedMutationKeys = new Set();
         let mutatedEntries = 0;
         Object.entries(player.collection || {}).forEach(([key, entry]) => {
@@ -3901,7 +4047,9 @@ let rollPool = [];
             mutatedEntries += 1;
             mutationKeys.forEach((mutationKey) => ownedMutationKeys.add(mutationKey));
         });
-        return { mutatedEntries, uniqueMutations: ownedMutationKeys.size };
+        const stats = { mutatedEntries, uniqueMutations: ownedMutationKeys.size };
+        mutationGalleryCache = { collection: player.collection, stats };
+        return stats;
     }
 
     function getMutationGalleryLuckMultiplier() {
@@ -4224,7 +4372,7 @@ let rollPool = [];
                 <article class="rng-prestige-upgrade${maxed ? " maxed" : ""}${canBuy ? " can-buy" : ""}">
                     <div class="rng-prestige-upgrade-head">
                         <span class="rng-prestige-upgrade-icon" aria-hidden="true">
-                            <img src="${getPrestigeUpgradeIconPath(def.id)}" alt="" loading="lazy">
+                            <img src="${getPrestigeUpgradeIconPath(def.id)}" alt="" loading="lazy" decoding="async">
                         </span>
                         <div>
                             <strong>${def.name}</strong>
@@ -4358,13 +4506,12 @@ let rollPool = [];
         const naturalChance = baseChance
             ? Math.max(1, Math.round(baseChance / getPrestigeApexOddsMultiplier()))
             : null;
-        const potionChance = player.activeEffects.apexSurge?.remaining > 0
-            ? APEX_SURGE_POTION_ONE_IN
-            : null;
-
-        if (naturalChance === null) return potionChance;
-        if (potionChance === null) return naturalChance;
-        return Math.min(naturalChance, potionChance);
+        if (!(player.activeEffects.apexSurge?.remaining > 0)) return naturalChance;
+        if (naturalChance === null) return APEX_SURGE_POTION_ONE_IN;
+        return Math.min(
+            APEX_SURGE_POTION_ONE_IN,
+            Math.max(1, Math.round(naturalChance / APEX_SURGE_POTION_ODDS_MULTIPLIER))
+        );
     }
 
     function getApexMutationChance(key = "apex") {
@@ -4390,8 +4537,18 @@ let rollPool = [];
     }
 
     function getActiveGuaranteedPotionKey() {
-        if (player.activeEffects.omega?.remaining > 0) return "omega";
-        if (player.activeEffects.ultra?.remaining > 0) return "ultra";
+        const guaranteedKeys = Object.keys(POTION_DEFS)
+            .filter((key) => POTION_DEFS[key]?.minOneIn || key === "omega" || key === "ultra")
+            .sort((a, b) => {
+                const aMin = POTION_DEFS[a]?.minOneIn || (a === "omega" ? 100_000_000 : ULTRA_ONE_IN_THRESHOLD);
+                const bMin = POTION_DEFS[b]?.minOneIn || (b === "omega" ? 100_000_000 : ULTRA_ONE_IN_THRESHOLD);
+                return bMin - aMin;
+            });
+
+        for (const key of guaranteedKeys) {
+            if (player.activeEffects[key]?.remaining > 0) return key;
+        }
+
         return null;
     }
 
@@ -4540,12 +4697,9 @@ let rollPool = [];
     function consumeRollActionEffects(actionContext = {}) {
         const guaranteedPotionKey = actionContext.guaranteedPotionKey || null;
 
-        if (guaranteedPotionKey === "omega" && player.activeEffects.omega?.remaining > 0) {
-            player.activeEffects.omega.remaining = Math.max(0, player.activeEffects.omega.remaining - 1);
-            startPotionRestock("omega");
-        } else if (guaranteedPotionKey === "ultra" && player.activeEffects.ultra?.remaining > 0) {
-            player.activeEffects.ultra.remaining = Math.max(0, player.activeEffects.ultra.remaining - 1);
-            startPotionRestock("ultra");
+        if (guaranteedPotionKey && player.activeEffects[guaranteedPotionKey]?.remaining > 0) {
+            player.activeEffects[guaranteedPotionKey].remaining = Math.max(0, player.activeEffects[guaranteedPotionKey].remaining - 1);
+            startPotionRestock(guaranteedPotionKey);
         } else {
             tickPotionRestocks();
         }
@@ -4645,25 +4799,35 @@ let rollPool = [];
     }
 
     function getNextUpgrade(list, currentLevel) {
+        // Keep saved level numbers, but never sell a level with the same effective benefit.
+        if (list === MUTATION_LUCK_UPGRADES && currentLevel > 0) {
+            const multiplier = getPrestigeMutationOddsMultiplier();
+            const effectiveChance = (upgrade) => Math.max(1, Math.round(upgrade.chance / multiplier));
+            const current = list[Math.min(currentLevel, list.length) - 1];
+            return list.slice(currentLevel).find((upgrade) => effectiveChance(upgrade) < effectiveChance(current)) || null;
+        }
+        if (list === POTION_RESTOCK_UPGRADES) {
+            const multiplier = 1 - getPrestigeRestockReduction();
+            const effectiveRestock = (value) => Math.max(1, Math.round(value * multiplier));
+            const current = list[Math.min(currentLevel, list.length) - 1] || {
+                ultraRestock: POTION_DEFS.ultra.restockRolls,
+                omegaRestock: POTION_DEFS.omega.restockRolls
+            };
+            return list.slice(currentLevel).find((upgrade) => (
+                effectiveRestock(upgrade.ultraRestock) < effectiveRestock(current.ultraRestock)
+                || effectiveRestock(upgrade.omegaRestock) < effectiveRestock(current.omegaRestock)
+            )) || null;
+        }
         return list[currentLevel] || null;
     }
 
+
+
     function formatCompactNumber(value, minimum = 1000) {
         const num = Math.max(0, Math.floor(Number(value) || 0));
-        const units = [
-            { value: 1_000_000_000_000_000_000_000_000_000_000_000, suffix: "Dc" },
-            { value: 1_000_000_000_000_000_000_000_000_000_000, suffix: "No" },
-            { value: 1_000_000_000_000_000_000_000_000_000, suffix: "Oc" },
-            { value: 1_000_000_000_000_000_000_000_000, suffix: "Sp" },
-            { value: 1_000_000_000_000_000_000_000, suffix: "Sx" },
-            { value: 1_000_000_000_000_000_000, suffix: "Qi" },
-            { value: 1_000_000_000_000_000, suffix: "Qa" },
-            { value: 1_000_000_000_000, suffix: "T" },
-            { value: 1_000_000_000, suffix: "B" },
-            { value: 1_000_000, suffix: "M" },
-            { value: 1_000, suffix: "K" }
-        ];
-        const unit = units.find((entry) => num >= Math.max(minimum, entry.value));
+        if (num >= 1e306) return num.toExponential(2).replace(/\.00e/, "e");
+
+        const unit = COMPACT_NUMBER_UNITS.find((entry) => num >= Math.max(minimum, entry.value));
         if (unit) {
             const scaled = num / unit.value;
             const precision = scaled >= 100 || Number.isInteger(scaled) ? 0 : scaled >= 10 ? 1 : 2;
@@ -4718,6 +4882,19 @@ let rollPool = [];
                 tier: tier.name,
                 weight: (1 / getLuckAdjustedTierOdds(tier.name, luck)) * getTierLuckWeightMultiplier(tier.name, luck)
             });
+        }
+
+        // Beyond the old overcharge limit, keep shifting weight toward rarer populated tiers.
+        // Normalize against the rarest available tier so even enormous luck stays finite.
+        const overchargeLimit = LUCK_BALANCE_REFERENCE * Math.pow(2, LUCK_OVERCHARGE_SPAN);
+        const safeLuck = Math.max(1, Number(luck) || 1);
+        if (safeLuck > overchargeLimit && weightedTiers.length) {
+            const rarestOdds = Math.max(...weightedTiers.map((entry) => getTierMeta(entry.tier).baseOneIn));
+            const strength = Math.log10(safeLuck / overchargeLimit) / 3;
+            for (const entry of weightedTiers) {
+                const relativeOdds = getTierMeta(entry.tier).baseOneIn / rarestOdds;
+                entry.weight *= Math.pow(relativeOdds, strength);
+            }
         }
 
         const totalWeight = weightedTiers.reduce((sum, entry) => sum + entry.weight, 0);
@@ -4784,6 +4961,18 @@ let rollPool = [];
         };
     }
 
+    function pickGuaranteedMinimumOneIn(minOneIn = ULTRA_ONE_IN_THRESHOLD) {
+        const threshold = Math.max(1, Math.floor(Number(minOneIn) || ULTRA_ONE_IN_THRESHOLD));
+        const candidates = rollPool.filter((shark) => shark.oneIn >= threshold);
+        const shark = candidates.length
+            ? candidates[Math.floor(Math.random() * candidates.length)]
+            : [...rollPool].sort((a, b) => b.oneIn - a.oneIn)[0];
+
+        return {
+            ...shark
+        };
+    }
+
     function pickGuaranteedUltraRare() {
         const pool = getAbyssEligiblePool();
         const picked = pool[Math.floor(Math.random() * pool.length)];
@@ -4835,6 +5024,7 @@ let rollPool = [];
         const mutationKeys = getMutationKeys(rolled);
         const primaryMutationKey = getPrimaryMutationKeyFromKeys(mutationKeys);
         if (!player.collection[key]) {
+            mutationGalleryCache = null;
             player.runCollectionFinds = (player.runCollectionFinds || 0) + 1;
             player.collection[key] = {
                 tier: baseTier,
@@ -4850,6 +5040,7 @@ let rollPool = [];
         } else {
             player.collection[key].count += 1;
             if (mutationKeys.length && !getStoredMutationKeys(player.collection[key], key).length) {
+                mutationGalleryCache = null;
                 player.collection[key].mutation = primaryMutationKey || undefined;
                 player.collection[key].mutations = mutationKeys;
                 player.collection[key].baseName = rolled.name;
@@ -4906,7 +5097,7 @@ let rollPool = [];
         }
 
         let changed = false;
-        let bestOneIn = 0;
+        let bestOneIn = Math.max(0, Number(player.bestOneIn) || 0);
         const normalizedCollection = {};
         const equippedBefore = player.equipped;
         const bestBefore = player.bestOneIn || 0;
@@ -4954,7 +5145,7 @@ let rollPool = [];
         return changed;
     }
 
-    function getXpForLevel(level) {
+    function getLegacyXpForLevel(level) {
         if (level <= 1) return 0;
 
         const levelIndex = level - 1;
@@ -4962,6 +5153,27 @@ let rollPool = [];
         const lateCurve = 900 * Math.pow(Math.max(0, levelIndex - 7), 2.18);
 
         return Math.floor(earlyCurve + lateCurve);
+    }
+
+    function scaleRankXp(xp, multiplier = 1000) {
+        const earlyXp = getLegacyXpForLevel(10);
+        return xp <= earlyXp ? xp : earlyXp + ((xp - earlyXp) * multiplier);
+    }
+
+    function getXpForLevel(level) {
+        return scaleRankXp(getLegacyXpForLevel(level));
+    }
+
+    function migrateRankXpProfile(profile) {
+        if (Number(profile.rngXpCurveVersion) >= 3) return profile;
+        return {
+            ...profile,
+            rngXp: scaleRankXp(
+                Math.max(0, Number(profile.rngXp) || 0),
+                Number(profile.rngXpCurveVersion) === 2 ? 20 : 1000
+            ),
+            rngXpCurveVersion: 3
+        };
     }
 
     function getLevelFromXp(xp) {
@@ -4985,10 +5197,7 @@ let rollPool = [];
     }
 
     function getRankLuckMultiplier(level = getLevelFromXp(player.rngXp || 0)) {
-        return Math.min(
-            RANK_LUCK_MULTIPLIER_CAP,
-            1 + ((level - 1) * RANK_LUCK_PER_LEVEL)
-        );
+        return 1 + (Math.max(0, level - 1) * RANK_LUCK_PER_LEVEL);
     }
 
     function getRankInfo() {
@@ -5085,6 +5294,12 @@ function rollForShark(actionContext = createRollActionContext(1)) {
     } else if (!rolled && guaranteedPotionKey === "ultra") {
 
         rolled = markGuaranteedPotionRoll(pickGuaranteedUltraRare(), "ultraPotion");
+    } else if (!rolled && POTION_DEFS[guaranteedPotionKey]?.minOneIn) {
+
+        rolled = markGuaranteedPotionRoll(
+            pickGuaranteedMinimumOneIn(POTION_DEFS[guaranteedPotionKey].minOneIn),
+            "compassPotion"
+        );
     }
 
     // =========================================
@@ -5096,8 +5311,8 @@ function rollForShark(actionContext = createRollActionContext(1)) {
         const apexMutationKey = rollApexPathMutationKey();
 
         if (apexMutationKey) {
-            const picked =
-                rollPool[Math.floor(Math.random() * rollPool.length)];
+            const picked = pickRandomFromTier(pickTierForRoll(getRollLuckMultiplier()))
+                || rollPool[Math.floor(Math.random() * rollPool.length)];
 
             rolled = applyStableMutationStack(picked, rollStandardMutationStack([apexMutationKey]));
         }
@@ -5112,9 +5327,9 @@ function rollForShark(actionContext = createRollActionContext(1)) {
         const mutationKeys = rollStandardMutationStack([], { rollInitial: true });
 
         if (mutationKeys.length) {
-            // Pick a normal shark FIRST
-            const picked =
-                rollPool[Math.floor(Math.random() * rollPool.length)];
+            // Natural mutations use the same luck-adjusted base selection as normal rolls.
+            const picked = pickRandomFromTier(pickTierForRoll(getRollLuckMultiplier()))
+                || rollPool[Math.floor(Math.random() * rollPool.length)];
 
             rolled = applyStableMutationStack(picked, mutationKeys);
         }
@@ -5159,13 +5374,141 @@ function rollForShark(actionContext = createRollActionContext(1)) {
     });
 }
 
+    function accessRngDeviceStore(mode, snapshot) {
+        return new Promise((resolve, reject) => {
+            const request = indexedDB.open("sharkRngSaves", 1);
+            request.onupgradeneeded = () => request.result.createObjectStore("profiles");
+            request.onerror = () => reject(request.error);
+            request.onblocked = () => reject(new Error("Device save storage is blocked"));
+            request.onsuccess = () => {
+                const db = request.result;
+                let transaction;
+                try {
+                    transaction = db.transaction("profiles", mode);
+                    const store = transaction.objectStore("profiles");
+                    const operation = mode === "readwrite" ? store.put(snapshot, STORAGE_KEY) : store.get(STORAGE_KEY);
+                    let result;
+                    operation.onsuccess = () => { result = operation.result; };
+                    transaction.oncomplete = () => { db.close(); resolve(result); };
+                    transaction.onerror = transaction.onabort = () => { db.close(); reject(transaction.error || new Error("Device save transaction failed")); };
+                } catch (error) { db.close(); reject(error); }
+            };
+        });
+    }
+
+    async function loadDeviceProfile() {
+        let fallback = null;
+        if (typeof indexedDB !== "undefined") {
+            try {
+                const raw = await accessRngDeviceStore("readonly");
+                if (raw) fallback = JSON.parse(raw);
+            } catch (error) { console.warn("Unable to read larger device save:", error); }
+        }
+        const local = getRawLocalRngProfile();
+        const savedAt = (profile) => Number(profile?.rngDeviceSavedAtMs) || Number(profile?.rngStateUpdatedAtMs) || 0;
+        if (fallback && savedAt(fallback) >= savedAt(local)) loadLocalProfile(fallback);
+        else loadLocalProfile();
+    }
+
+    let fallbackSaveQueue = Promise.resolve();
+
+    function saveToLargerDeviceStore() {
+        const snapshot = JSON.stringify(player);
+        const savedAt = player.rngDeviceSavedAtMs;
+        const revision = Number(player.rngStateUpdatedAtMs) || 0;
+        localSaveDirty = true;
+        localSaveError = false;
+        updateSaveStatusUi();
+        fallbackSaveQueue = fallbackSaveQueue.then(async () => {
+            try {
+                await accessRngDeviceStore("readwrite", snapshot);
+                if (savedAt >= localSavedAtMs) {
+                    localSavedAtMs = savedAt;
+                    localSaveDirty = revision !== (Number(player.rngStateUpdatedAtMs) || 0);
+                    localSaveError = false;
+                }
+                updateSaveStatusUi();
+                return true;
+            } catch (error) {
+                localSaveDirty = true;
+                localSaveError = true;
+                updateSaveStatusUi();
+                console.warn("Larger device save failed:", error);
+                showToast("Device save failed. Download a backup or save to cloud before closing.", "error");
+                return false;
+            }
+        });
+        return fallbackSaveQueue;
+    }
+
+    function downloadRngBackup() {
+        const blob = new Blob([JSON.stringify(player, null, 2)], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = "shark-rng-backup-" + new Date().toISOString().replace(/[:.]/g, "-") + ".json";
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }
+
+    function updateSaveStatusUi() {
+        const button = document.getElementById("rng-save-status");
+        const local = document.getElementById("rng-save-local");
+        const cloud = document.getElementById("rng-save-cloud");
+        if (!button || !local || !cloud) return;
+        const localText = localSaveError ? "Device save failed" : localSaveDirty ? "Saving on device..." : localSavedAtMs ? "Saved on device" : "Not saved yet";
+        const cloudSeconds = Math.max(0, Math.ceil((rngCloudSaveDueAtMs - Date.now()) / 1000));
+        const cloudText = !getRngCurrentUser() ? "Cloud: sign in to sync"
+            : cloudSaveError ? (rngCloudSaveDueAtMs ? "Cloud failed - retry in " + cloudSeconds + "s" : "Cloud save failed - retry")
+            : rngCloudSaveInFlight ? "Cloud: saving..."
+            : rngCloudSaveDirty ? (rngCloudSaveDueAtMs ? "Cloud save in " + cloudSeconds + "s" : "Cloud: waiting to sync")
+            : player.rngCloudUpdatedAtMs ? "Cloud: synced" : "Cloud: not synced yet";
+        if (local.textContent !== localText) local.textContent = localText;
+        if (cloud.textContent !== cloudText) cloud.textContent = cloudText;
+        button.dataset.state = localSaveError || cloudSaveError ? "error" : localSaveDirty || rngCloudSaveInFlight ? "saving" : "saved";
+        const time = (value) => value ? new Date(value).toLocaleTimeString() : "not yet";
+        button.title = "Click to save now. Last device save: " + time(localSavedAtMs)
+            + ". Last cloud sync: " + time(player.rngCloudUpdatedAtMs)
+            + ". Device saves within 250ms; cloud syncs about every 60 seconds.";
+    }
+
+    async function saveRngProgressNow() {
+        await saveLocalProfile();
+        if (ensureRngLeaderboardServices() && getRngCurrentUser()) {
+            if (rngCloudSaveTimer) {
+                clearTimeout(rngCloudSaveTimer);
+                rngCloudSaveTimer = null;
+                rngCloudSaveDueAtMs = 0;
+            }
+            await syncRngProfileToFirebase({ force: true });
+        }
+        updateSaveStatusUi();
+    }
+
     function saveLocalProfile() {
         if (localSaveTimer) {
             clearTimeout(localSaveTimer);
             localSaveTimer = null;
         }
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(player));
-        localSaveDirty = false;
+        try {
+            player.rngDeviceSavedAtMs = Math.max(Date.now(), (Number(player.rngDeviceSavedAtMs) || 0) + 1);
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(player));
+            localSaveDirty = false;
+            localSaveError = false;
+            localSavedAtMs = player.rngDeviceSavedAtMs;
+            updateSaveStatusUi();
+            return true;
+        } catch (error) {
+            if (typeof indexedDB !== "undefined") return saveToLargerDeviceStore();
+            localSaveDirty = true;
+            localSaveError = true;
+            updateSaveStatusUi();
+            console.warn("Unable to save RNG progress locally:", error);
+            showToast("Progress could not be saved on this device. Keep this page open and try again.", "error");
+            return false;
+        }
     }
 
     function flushLocalProfileSave() {
@@ -5178,12 +5521,14 @@ function rollForShark(actionContext = createRollActionContext(1)) {
     }
 
     function scheduleLocalProfileSave() {
+        player.rngStateUpdatedAtMs = Math.max(Date.now(), (Number(player.rngStateUpdatedAtMs) || 0) + 1);
         localSaveDirty = true;
+        updateSaveStatusUi();
         if (localSaveTimer) return;
 
         localSaveTimer = setTimeout(() => {
             localSaveTimer = null;
-            flushLocalProfileSave();
+            saveLocalProfile();
         }, LOCAL_SAVE_INTERVAL_MS);
     }
 
@@ -5198,11 +5543,12 @@ function rollForShark(actionContext = createRollActionContext(1)) {
         });
     }
 
-    function loadLocalProfile() {
+    function loadLocalProfile(profileOverride) {
         try {
-            const raw = localStorage.getItem(STORAGE_KEY);
-            if (!raw) return;
-            const parsed = JSON.parse(raw);
+            const raw = profileOverride ? null : localStorage.getItem(STORAGE_KEY);
+            if (!raw && !profileOverride) return;
+            const original = profileOverride || JSON.parse(raw);
+            const parsed = migrateRankXpProfile(original);
             const parsedPrestigeLevel = Math.max(0, Math.floor(Number(parsed.prestigeLevel) || 0));
             const parsedCollectionCount = parsed.collection && typeof parsed.collection === "object"
                 ? Object.keys(parsed.collection).length
@@ -5235,6 +5581,8 @@ function rollForShark(actionContext = createRollActionContext(1)) {
                     ultra: { ...createDefaultPlayer().activeEffects.ultra, ...(parsed.activeEffects?.ultra || {}) },
                     omega: { ...createDefaultPlayer().activeEffects.omega, ...(parsed.activeEffects?.omega || {}) },
                     apexSurge: { ...createDefaultPlayer().activeEffects.apexSurge, ...(parsed.activeEffects?.apexSurge || {}) },
+                    abyssalCompass: { ...createDefaultPlayer().activeEffects.abyssalCompass, ...(parsed.activeEffects?.abyssalCompass || {}) },
+                    omniversalCompass: { ...createDefaultPlayer().activeEffects.omniversalCompass, ...(parsed.activeEffects?.omniversalCompass || {}) },
                     albino: { ...createDefaultPlayer().activeEffects.albino, ...(parsed.activeEffects?.albino || {}) },
                     shiny: { ...createDefaultPlayer().activeEffects.shiny, ...(parsed.activeEffects?.shiny || {}) },
                     bioluminescent: { ...createDefaultPlayer().activeEffects.bioluminescent, ...(parsed.activeEffects?.bioluminescent || {}) },
@@ -5283,10 +5631,15 @@ function rollForShark(actionContext = createRollActionContext(1)) {
                     soundEnabled: parsed.settings?.soundEnabled !== false
                 }
             };
-            if (normalizeStoredCollectionRarities()) {
+            localSavedAtMs = Number(player.rngDeviceSavedAtMs) || Number(player.rngStateUpdatedAtMs) || Date.now();
+            localSaveError = false;
+            const collectionChanged = normalizeStoredCollectionRarities();
+            if (collectionChanged || parsed !== original) {
                 saveLocalProfile();
             }
         } catch (error) {
+            localSaveError = true;
+            updateSaveStatusUi();
             console.warn("Failed to load local RNG profile:", error);
             player = createDefaultPlayer();
         }
@@ -5345,6 +5698,8 @@ function rollForShark(actionContext = createRollActionContext(1)) {
         return [
             "luck", "coin", "speed", "ultra", "omega",
             "apexSurge",
+            "abyssalCompass",
+            "omniversalCompass",
             ...STANDARD_MUTATION_KEYS,
             "randomMutation",
             "mutationPrimer",
@@ -5380,6 +5735,11 @@ function rollForShark(actionContext = createRollActionContext(1)) {
         return Math.max(1, Math.round(restock * (1 - getPrestigeRestockReduction())));
     }
 
+    function isPotionPurchasable(key) {
+        const def = POTION_DEFS[key];
+        return Boolean(def && Number.isFinite(Number(def.cost)) && Number(def.cost) > 0);
+    }
+
     function getPotionHeldCount(key) {
         return (player.potions[key] || 0) + (player.activeEffects[key]?.remaining || 0);
     }
@@ -5387,6 +5747,7 @@ function rollForShark(actionContext = createRollActionContext(1)) {
     function getPotionCost(key) {
         const def = POTION_DEFS[key];
         if (!def) return 0;
+        if (!isPotionPurchasable(key)) return 0;
         return Math.max(1, Math.round(def.cost * (1 - getPrestigePotionDiscount())));
     }
 
@@ -5404,6 +5765,7 @@ function rollForShark(actionContext = createRollActionContext(1)) {
     function getPotionBuyQuantity(key, requestedAmount = getSelectedPotionBuyAmount()) {
         const def = POTION_DEFS[key];
         if (!def) return 0;
+        if (!isPotionPurchasable(key)) return 0;
 
         const amount = Math.max(1, Math.floor(Number(requestedAmount) || 1));
         if (!def.maxOwned) return amount;
@@ -5418,6 +5780,7 @@ function rollForShark(actionContext = createRollActionContext(1)) {
     function getPotionMaxBuyQuantity(key) {
         const def = POTION_DEFS[key];
         if (!def || getPotionRestock(key) > 0) return 0;
+        if (!isPotionPurchasable(key)) return 0;
 
         const cost = getPotionCost(key);
         const affordable = Math.max(0, Math.floor((Number(player.coins) || 0) / Math.max(1, cost)));
@@ -5429,6 +5792,10 @@ function rollForShark(actionContext = createRollActionContext(1)) {
     function getPotionPurchaseBlockReason(key, quantity = getPotionBuyQuantity(key)) {
         const def = POTION_DEFS[key];
         if (!def) return "Unknown potion";
+
+        if (!isPotionPurchasable(key)) {
+            return def.sourceText || "Earn from quests";
+        }
 
         if (def.maxOwned && getPotionHeldCount(key) >= def.maxOwned) {
             return "Already stocked";
@@ -5453,6 +5820,14 @@ function rollForShark(actionContext = createRollActionContext(1)) {
 
     function updatePotionBuyButton(button, key) {
         if (!button) return;
+
+        if (!isPotionPurchasable(key)) {
+            const def = POTION_DEFS[key];
+            button.textContent = def?.sourceText || "Quest only";
+            button.title = def?.sourceText || "Earn this potion from quests and deep goals";
+            button.disabled = true;
+            return;
+        }
 
         const buyQuantity = getPotionBuyQuantity(key);
         const batchCost = getPotionBatchCost(key, buyQuantity);
@@ -5484,6 +5859,83 @@ function rollForShark(actionContext = createRollActionContext(1)) {
         button.title = quantity > 0
             ? `Buy max (${formatCompactNumber(quantity)}) for ${formatCompactCoins(getPotionBatchCost(key, quantity))} coins`
             : blockReason;
+    }
+
+    function updatePotionShopSummaryUi() {
+        const total = document.querySelector("[data-potion-summary-total]");
+        const counts = document.querySelector("[data-potion-summary-counts]");
+        if (total) total.textContent = `${formatCompactNumber(getPotionTotalCount())} total potions`;
+        if (counts) counts.textContent = `${formatCompactNumber(getStoredPotionCount())} stored \u00b7 ${formatCompactNumber(getActivePotionChargeCount())} active charges`;
+
+        const consumeAllBtn = document.querySelector(".rng-potion-consume-all");
+        if (consumeAllBtn) consumeAllBtn.disabled = getStoredPotionCount() <= 0;
+    }
+
+    function updatePotionCardUi(key) {
+        const owned = document.querySelector(`[data-potion-owned-key="${key}"]`);
+        if (owned) {
+            const count = Math.max(0, Math.floor(Number(player.potions[key]) || 0));
+            owned.textContent = `Owned: ${formatCompactNumber(count)}`;
+            owned.title = `${count.toLocaleString()} owned`;
+        }
+
+        document.querySelectorAll(`[data-potion-buy-key="${key}"]`).forEach((button) => {
+            updatePotionBuyButton(button, key);
+        });
+        document.querySelectorAll(`[data-potion-max-key="${key}"]`).forEach((button) => {
+            updatePotionMaxBuyButton(button, key);
+        });
+        document.querySelectorAll(`[data-potion-use-key="${key}"]`).forEach((button) => {
+            button.disabled = !(player.potions[key] > 0);
+        });
+        document.querySelectorAll(`[data-potion-use-all-key="${key}"]`).forEach((button) => {
+            button.disabled = !(player.potions[key] > 1);
+            button.title = player.potions[key] > 1
+                ? `Use all ${formatCompactNumber(Math.floor(player.potions[key]))} stored ${POTION_DEFS[key]?.name || "potion"}s`
+                : "Store more than one to use all";
+        });
+    }
+
+    function updatePotionShopLightUi(keys = []) {
+        updatePotionShopSummaryUi();
+        [...new Set(keys)].forEach(updatePotionCardUi);
+        updateStatsUi();
+        updateActiveEffectsUi();
+    }
+
+    function updatePotionShopImmediateUi(keys = []) {
+        const coins = document.querySelector("#rng-top-coins span");
+        if (coins) {
+            coins.textContent = `${formatCompactCoins(player.coins)} (${getCoinMultiplier().toFixed(1)}\u00d7)`;
+            coins.title = `${player.coins.toLocaleString()} coins`;
+        }
+        updatePotionShopSummaryUi();
+        [...new Set(keys)].forEach(updatePotionCardUi);
+    }
+
+    let potionSideEffectsPending = false;
+
+    function deferPotionSideEffects(callback) {
+        // Record the save immediately, including if the page closes before the next frame.
+        scheduleLocalProfileSave();
+        if (typeof callback === "function") callback();
+        if (potionSideEffectsPending) return;
+        potionSideEffectsPending = true;
+        const run = () => {
+            potionSideEffectsPending = false;
+            updateStatsUi();
+            updatePotionBuyButtons();
+            document.querySelectorAll("[data-potion-max-key]").forEach((button) => {
+                updatePotionMaxBuyButton(button, button.dataset.potionMaxKey);
+            });
+            scheduleCloudSync();
+        };
+
+        if (typeof requestAnimationFrame === "function") {
+            requestAnimationFrame(() => setTimeout(run, 0));
+        } else {
+            setTimeout(run, 0);
+        }
     }
 
     function startPotionRestock(key) {
@@ -5758,6 +6210,12 @@ function updateActiveEffectsUi() {
          if (player.activeEffects.apexSurge?.remaining > 0) {
              parts.push(makePotionPart("apexSurge", "Apex surge", player.activeEffects.apexSurge.remaining));
          }
+         if (player.activeEffects.abyssalCompass?.remaining > 0) {
+             parts.push(makePotionPart("abyssalCompass", "500M+ compass", "ready"));
+         }
+         if (player.activeEffects.omniversalCompass?.remaining > 0) {
+             parts.push(makePotionPart("omniversalCompass", "1B+ compass", "ready"));
+         }
          for (const key of STANDARD_MUTATION_KEYS) {
              if (player.activeEffects[key]?.remaining > 0) {
                  if (POTION_DEFS[key]) {
@@ -5785,6 +6243,11 @@ function updateActiveEffectsUi() {
              parts.push(`\u{1F988} Apex: 1 in ${formatOneIn(apexChance)}`);
          }
 
+         // Keep existing sprites and layout when the polling tick has no changes.
+         const effectsSignature = JSON.stringify(parts);
+         if (el.dataset.effectsSignature === effectsSignature) return;
+         el.dataset.effectsSignature = effectsSignature;
+
          if (parts.length) {
              el.replaceChildren(...parts.map((part) => {
                  const item = document.createElement("span");
@@ -5800,6 +6263,8 @@ function updateActiveEffectsUi() {
                          img.alt = "";
                          img.width = 24;
                          img.height = 24;
+                         img.loading = "lazy";
+                         img.decoding = "async";
                          item.appendChild(img);
                      } else {
                          const icon = document.createElement("span");
@@ -6015,7 +6480,7 @@ function updateActiveEffectsUi() {
                 <strong>${formatCompactNumber(points)} spendable token${points === 1 ? "" : "s"}</strong>
             </div>
             <div class="rng-prestige-banner">
-                <img class="rng-prestige-rank-icon" src="${getPrestigeTitleIconPath()}" alt="" loading="lazy" aria-hidden="true">
+                <img class="rng-prestige-rank-icon" src="${getPrestigeTitleIconPath()}" alt="" loading="lazy" decoding="async" aria-hidden="true">
                 <div>
                     <span>Prestige Rank</span>
                     <strong>${getPrestigeTitle()}</strong>
@@ -6024,7 +6489,7 @@ function updateActiveEffectsUi() {
             </div>
             <div class="rng-prestige-head">
                 <div class="rng-prestige-title">
-                    <img class="rng-prestige-depth-icon" src="${getPrestigeTitleIconPath()}" alt="" loading="lazy" aria-hidden="true">
+                    <img class="rng-prestige-depth-icon" src="${getPrestigeTitleIconPath()}" alt="" loading="lazy" decoding="async" aria-hidden="true">
                     <div>
                         <span>Rebirth Depth</span>
                         <strong>Depth ${player.prestigeLevel || 0}</strong>
@@ -6087,8 +6552,6 @@ function updateActiveEffectsUi() {
         const shop = document.getElementById("rng-upgrade-shop");
         if (!shop) return;
 
-        shop.innerHTML = "";
-
         for (const def of UPGRADE_SHOP_DEFS) {
             const list = getUpgradeList(def);
             const currentLevel = player[def.levelKey] || 0;
@@ -6096,13 +6559,22 @@ function updateActiveEffectsUi() {
             const maxed = !next;
             const tierClass = maxed ? getShopTierClass(currentLevel) : next.tierClass;
 
-            const card = document.createElement("article");
+            let card = shop.querySelector('[data-upgrade-key="' + def.levelKey + '"]');
+            const existingButton = card?.querySelector("button");
+            if (card?.dataset.level === String(currentLevel)) {
+                existingButton.disabled = maxed || player.coins < next.cost;
+                continue;
+            }
+            const isNewCard = !card;
+            if (!card) card = document.createElement("article");
+            card.dataset.upgradeKey = def.levelKey;
+            card.dataset.level = String(currentLevel);
             card.className = `rng-upgrade-card ${tierClass}${maxed ? " maxed" : ""}`;
             card.innerHTML = `
                 <div class="rng-upgrade-head">
                     <div class="rng-upgrade-info">
                         <span class="rng-upgrade-icon" aria-hidden="true">${def.sprite
-                            ? `<img src="${def.sprite}" alt="" loading="lazy">`
+                            ? `<img src="${def.sprite}" alt="" loading="lazy" decoding="async">`
                             : `<i class="fa-solid ${def.icon}"></i>`}</span>
                         <div>
                             <h3>${def.name}</h3>
@@ -6115,9 +6587,10 @@ function updateActiveEffectsUi() {
                 <div class="rng-upgrade-progress"><span style="width:${Math.round((currentLevel / list.length) * 100)}%"></span></div>
             `;
 
-            const btn = document.createElement("button");
+            const btn = existingButton || document.createElement("button");
             btn.className = "rng-btn rng-btn-buy";
             btn.type = "button";
+            if (!existingButton) btn.addEventListener("click", () => buyUpgradeByDef(def));
             if (maxed) {
                 btn.textContent = "MAX";
                 btn.disabled = true;
@@ -6125,10 +6598,9 @@ function updateActiveEffectsUi() {
                 btn.textContent = formatCompactCoins(next.cost);
                 btn.title = `Buy for ${next.cost.toLocaleString()} coins`;
                 btn.disabled = player.coins < next.cost;
-                btn.addEventListener("click", () => buyUpgradeByDef(def));
             }
             card.appendChild(btn);
-            shop.appendChild(card);
+            if (isNewCard) shop.appendChild(card);
         }
     }
 
@@ -6151,11 +6623,10 @@ function updateActiveEffectsUi() {
         const layer = document.getElementById("rng-ambient");
         if (!layer || layer.childElementCount > 0) return;
 
-        const bubbleCount = isRngLowPowerMode() ? 4 : isRngMobileViewport() ? 7 : 14;
-        for (let i = 0; i < bubbleCount; i++) {
+        for (let i = 0; i < 14; i++) {
             const bubble = document.createElement("span");
             bubble.className = "rng-bubble";
-            bubble.style.setProperty("--left", `${(i * 13) % 100}%`);
+            bubble.style.setProperty("--left", `${(i * 7) % 100}%`);
             bubble.style.setProperty("--size", `${6 + (i % 5) * 3}px`);
             bubble.style.setProperty("--dur", `${8 + (i % 6) * 2}s`);
             bubble.style.setProperty("--delay", `${(i * 0.6).toFixed(1)}s`);
@@ -6173,8 +6644,8 @@ function updateActiveEffectsUi() {
         summary.className = "rng-potion-summary";
         summary.innerHTML = `
             <div class="rng-potion-summary-copy">
-                <strong>${formatCompactNumber(getPotionTotalCount())} total potions</strong>
-                <span>${formatCompactNumber(getStoredPotionCount())} stored \u00b7 ${formatCompactNumber(getActivePotionChargeCount())} active charges</span>
+                <strong data-potion-summary-total>${formatCompactNumber(getPotionTotalCount())} total potions</strong>
+                <span data-potion-summary-counts>${formatCompactNumber(getStoredPotionCount())} stored \u00b7 ${formatCompactNumber(getActivePotionChargeCount())} active charges</span>
             </div>
         `;
         const consumeAllBtn = document.createElement("button");
@@ -6216,12 +6687,12 @@ function updateActiveEffectsUi() {
             card.innerHTML = `
                 <div class="rng-potion-top">
                     <span class="rng-potion-icon" aria-hidden="true">${def.sprite
-                        ? `<img class="rng-potion-sprite" src="${def.sprite}" alt="" width="72" height="72">`
+                        ? `<img class="rng-potion-sprite" src="${def.sprite}" alt="" width="72" height="72" loading="lazy" decoding="async">`
                         : def.icon}</span>
                     <div class="rng-potion-copy">
                         <h4>${def.name}</h4>
                         <p class="rng-potion-desc">${def.desc}</p>
-                        <span class="rng-potion-owned" title="${(player.potions[key] || 0).toLocaleString()} owned">Owned: ${formatCompactNumber(player.potions[key] || 0)}</span>
+                        <span class="rng-potion-owned" data-potion-owned-key="${key}" title="${(player.potions[key] || 0).toLocaleString()} owned">Owned: ${formatCompactNumber(player.potions[key] || 0)}</span>
                     </div>
                 </div>
                 <div class="rng-potion-actions">
@@ -6241,6 +6712,7 @@ function updateActiveEffectsUi() {
             maxBuyBtn.className = "rng-btn rng-btn-ghost rng-potion-mini-btn";
             maxBuyBtn.type = "button";
             maxBuyBtn.textContent = "Max";
+            maxBuyBtn.dataset.potionMaxKey = key;
             updatePotionMaxBuyButton(maxBuyBtn, key);
             maxBuyBtn.addEventListener("click", () => buyMaxPotion(key));
 
@@ -6248,6 +6720,7 @@ function updateActiveEffectsUi() {
             useBtn.className = "rng-btn";
             useBtn.type = "button";
             useBtn.textContent = "Use";
+            useBtn.dataset.potionUseKey = key;
             useBtn.disabled = !(player.potions[key] > 0);
             useBtn.addEventListener("click", () => usePotion(key));
 
@@ -6255,6 +6728,7 @@ function updateActiveEffectsUi() {
             useAllBtn.className = "rng-btn rng-btn-ghost rng-potion-mini-btn";
             useAllBtn.type = "button";
             useAllBtn.textContent = "All";
+            useAllBtn.dataset.potionUseAllKey = key;
             useAllBtn.disabled = !(player.potions[key] > 1);
             useAllBtn.title = player.potions[key] > 1
                 ? `Use all ${formatCompactNumber(Math.floor(player.potions[key]))} stored ${def.name}s`
@@ -6273,26 +6747,28 @@ function updateAllUi(options = {}) {
          updateStatsUi();
          updateRankUi();
          updateEquippedUi();
+         const activeTabId = document.querySelector(".rng-tab.active")?.dataset.tab || "upgrades";
          if (options.lightUi) {
+             if (activeTabId === "upgrades") renderUpgradeShop();
              if ((options.forceCollectionGrid || options.deferCollectionGridDuringRoll) && isCollectionModalOpen()) {
                  collectionGridDirty = true;
              }
-             renderRngLeaderboardSelf();
+             if (activeTabId === "leaderboard") renderRngLeaderboardSelf();
              if (isRngQuestsPanelActive()) renderRngQuestsPanel();
              updateAutoButtonUi();
              updateRollButtonState();
              return;
          }
-         renderPrestigePanel();
-         renderUpgradeShop();
-         if (isRngQuestsPanelActive()) renderRngQuestsPanel();
-         renderPotionShop();
+         if (activeTabId === "prestige") renderPrestigePanel();
+         if (activeTabId === "upgrades") renderUpgradeShop();
+         if (activeTabId === "quests") renderRngQuestsPanel();
+         if (activeTabId === "potions") renderPotionShop();
          renderCollectionGrid({
              deferDuringActiveRoll: options.deferCollectionGridDuringRoll !== false,
              force: Boolean(options.forceCollectionGrid)
          });
-         renderTierLegend();
-         renderRngLeaderboardSelf();
+         if (activeTabId === "info") renderTierLegend();
+         if (activeTabId === "leaderboard") renderRngLeaderboardSelf();
          updateAutoButtonUi();
          updateRollButtonState();
      }
@@ -6313,7 +6789,7 @@ function updateAllUi(options = {}) {
             return `
                 <div class="rng-tier-row rng-rarity-row ${meta.className}">
                     <span class="rng-rarity-name">
-                        <img class="rng-rarity-sprite" src="${getTierSpritePath(name)}" alt="" loading="lazy" aria-hidden="true">
+                        <img class="rng-rarity-sprite" src="${getTierSpritePath(name)}" alt="" loading="lazy" decoding="async" aria-hidden="true">
                         <span>${name}</span>
                     </span>
                     <span>${odds}</span>
@@ -6501,10 +6977,6 @@ function updateAllUi(options = {}) {
             clearTimeout(collectionRenderTimer);
             collectionRenderTimer = null;
         }
-        if (collectionSearchTimer) {
-            clearTimeout(collectionSearchTimer);
-            collectionSearchTimer = null;
-        }
     }
 
     function scheduleCollectionRenderStep(token, callback) {
@@ -6513,15 +6985,7 @@ function updateAllUi(options = {}) {
             collectionRenderTimer = null;
             if (token !== collectionRenderToken || !isCollectionModalOpen()) return;
             callback();
-        }, getCollectionRenderDelayMs());
-    }
-
-    function scheduleCollectionSearchRender() {
-        if (collectionSearchTimer) clearTimeout(collectionSearchTimer);
-        collectionSearchTimer = setTimeout(() => {
-            collectionSearchTimer = null;
-            renderCollectionGrid();
-        }, isRngMobileViewport() ? MOBILE_COLLECTION_SEARCH_DELAY_MS : 0);
+        }, autoEnabled ? 14 : 0);
     }
 
     function createIndexNote(text) {
@@ -6596,9 +7060,15 @@ function updateAllUi(options = {}) {
             getIndexOddsSearchText(canonical.oneIn, entry?.oneIn)
         ].join(" ").toLowerCase();
 
-        if (baseOnlyFilter && mutationKeys.length) return null;
-        if (stackedOnlyFilter && mutationKeys.length <= 1) return null;
-        if (mutationFilter && !mutationKeys.includes(mutationFilter)) return null;
+        if (baseOnlyFilter && mutationKeys.length) {
+            return null;
+        }
+        if (stackedOnlyFilter && mutationKeys.length <= 1) {
+            return null;
+        }
+        if (mutationFilter && !mutationKeys.includes(mutationFilter)) {
+            return null;
+        }
         if (!baseOnlyFilter && !stackedOnlyFilter && !mutationFilter && tierFilter !== "all" && displayTier !== tierFilter) return null;
         if ((stackedOnlyFilter || mutationFilter) && isKnownTierName(tierFilter) && displayTier !== tierFilter) return null;
         if (ownedOnly && !entry) {
@@ -6626,6 +7096,25 @@ function updateAllUi(options = {}) {
         const entry = player.collection[key] || null;
         const displayName = section.mutation ? baseShark.name : canonical.name;
         return createIndexCandidate(canonical, entry, displayName, filters, section.title);
+    }
+
+    function getOwnedIndexCandidates(filters) {
+        return Object.entries(player.collection || {}).map(([key, entry]) => {
+            if (!entry || typeof entry !== "object") return null;
+            const baseName = getBaseNameFromCollectionEntry(key, entry);
+            const mutationKeys = getStoredMutationKeys(entry, key);
+            const baseShark = getRollPoolEntryByName(baseName);
+            const canonical = {
+                ...baseShark,
+                ...entry,
+                name: baseName,
+                mutations: mutationKeys,
+                mutation: getPrimaryMutationKeyFromKeys(mutationKeys)
+            };
+            const candidate = createIndexCandidate(canonical, entry, baseName, filters);
+            // Equip the exact stored key, including entries with legacy labels.
+            return candidate ? { ...candidate, key } : null;
+        }).filter(Boolean);
     }
 
     function getOwnedStackedIndexCandidates(filters) {
@@ -6748,6 +7237,7 @@ function updateAllUi(options = {}) {
         raritySprite.src = getTierSpritePath(displayTier);
         raritySprite.alt = "";
         raritySprite.loading = "lazy";
+        raritySprite.decoding = "async";
         raritySprite.setAttribute("aria-hidden", "true");
 
         const tier = document.createElement("span");
@@ -6829,7 +7319,9 @@ function updateAllUi(options = {}) {
 
         cancelCollectionGridRender();
         const token = collectionRenderToken;
-        const sectionDefs = getIndexSectionDefs(baseOnlyFilter, mutationFilter, stackedOnlyFilter);
+        const sectionDefs = ownedOnly
+            ? [{ key: "owned", title: "Your Sharks", owned: true }]
+            : getIndexSectionDefs(baseOnlyFilter, mutationFilter, stackedOnlyFilter);
         const filters = { baseOnlyFilter, stackedOnlyFilter, mutationFilter, tierFilter, ownedOnly, searchTokens };
         let sectionIndex = 0;
         let sectionState = null;
@@ -6871,6 +7363,10 @@ function updateAllUi(options = {}) {
 
         function renderStep() {
             if (token !== collectionRenderToken || !isCollectionModalOpen()) return;
+            if (options.deferDuringActiveRoll && !options.force && (isRolling || autoEnabled)) {
+                collectionGridDirty = true;
+                return;
+            }
             ensureSectionState();
 
             if (!sectionState) {
@@ -6878,7 +7374,12 @@ function updateAllUi(options = {}) {
                 return;
             }
 
-            if (sectionState.section.stacked) {
+            if (sectionState.section.owned) {
+                if (!sectionState.stackedBuilt) {
+                    sectionState.candidates = getOwnedIndexCandidates(filters);
+                    sectionState.stackedBuilt = true;
+                }
+            } else if (sectionState.section.stacked) {
                 if (!sectionState.stackedBuilt) {
                     sectionState.candidates = getStackedIndexCandidates(filters);
                     sectionState.scanIndex = rollPool.length;
@@ -6886,8 +7387,7 @@ function updateAllUi(options = {}) {
                 }
             } else {
                 let scanned = 0;
-                const buildBatchSize = getCollectionBuildBatchSize();
-                while (sectionState.scanIndex < rollPool.length && scanned < buildBatchSize) {
+                while (sectionState.scanIndex < rollPool.length && scanned < INDEX_BUILD_BATCH_SIZE) {
                     const candidate = getIndexCandidateForSection(
                         sectionState.section,
                         rollPool[sectionState.scanIndex],
@@ -6929,10 +7429,9 @@ function updateAllUi(options = {}) {
             }
 
             let cardsRendered = 0;
-            const renderBatchSize = getCollectionRenderBatchSize();
             while (
                 sectionState.renderIndex < sectionState.candidates.length &&
-                cardsRendered < renderBatchSize
+                cardsRendered < INDEX_RENDER_BATCH_SIZE
             ) {
                 fragment.appendChild(createIndexCard(sectionState.candidates[sectionState.renderIndex]));
                 sectionState.renderIndex++;
@@ -7062,38 +7561,18 @@ function updateAllUi(options = {}) {
         const reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
         const saveData = navigator.connection?.saveData;
         const lowCoreDevice = (navigator.hardwareConcurrency || 8) <= 4;
-        return Boolean(
-            reducedMotion ||
-            saveData ||
-            lowCoreDevice ||
-            isRngMobileViewport() ||
-            (autoEnabled && isCollectionModalOpen()) ||
-            rollCount >= 5
-        );
+        return Boolean(reducedMotion || saveData || lowCoreDevice || rollCount >= 5);
     }
 
     function getRollAnimationFrameCount(rollCount) {
-        if (isRngLowPowerMode()) return rollCount <= 1 ? 5 : rollCount >= 16 ? 3 : 4;
         if (rollCount <= 1) return shouldUseLeanRollAnimation(rollCount) ? 9 : 14;
-        if (rollCount >= 16) return shouldUseLeanRollAnimation(rollCount) ? 4 : 6;
         return shouldUseLeanRollAnimation(rollCount) ? 7 : 10;
     }
 
     function getVisibleMultiRollSlotCount(rollCount) {
-        const count = Math.max(1, Math.floor(Number(rollCount) || 1));
-        if (!isRngMobileViewport()) return count;
-        if (count > 5) return 6;
-        return count;
-    }
-
-    function getVisibleBurstRollsForSlots(rolls, finalShark, visibleCount) {
-        if (!Array.isArray(rolls) || rolls.length <= visibleCount) return rolls;
-
-        const visible = rolls.slice(0, visibleCount);
-        if (finalShark && !visible.includes(finalShark) && visible.length) {
-            visible[visible.length - 1] = finalShark;
-        }
-        return visible;
+        const safeRollCount = Math.max(1, Math.floor(Number(rollCount) || 1));
+        if (safeRollCount <= 8) return safeRollCount;
+        return shouldUseLeanRollAnimation(safeRollCount) ? 6 : 8;
     }
 
     function clearMultiRollGrid(stage = document.querySelector(".rng-roll-stage")) {
@@ -7116,18 +7595,12 @@ function updateAllUi(options = {}) {
         }
 
         stage.classList.add("rng-roll-stage-multi");
-        const visibleSlotCount = getVisibleMultiRollSlotCount(rollCount);
-        const hiddenSlotCount = Math.max(0, rollCount - visibleSlotCount);
-        if (hiddenSlotCount) {
-            grid.dataset.extraRolls = `+${hiddenSlotCount} more rolls resolved`;
-        } else {
-            delete grid.dataset.extraRolls;
-        }
-        grid.replaceChildren(...Array.from({ length: visibleSlotCount }, (_, index) => {
+        const visibleSlots = getVisibleMultiRollSlotCount(rollCount);
+        grid.replaceChildren(...Array.from({ length: visibleSlots }, (_, index) => {
             const slot = document.createElement("div");
             slot.className = "rng-multi-roll-slot common spinning";
             slot.innerHTML = `
-                <span data-slot-label>Roll ${index + 1}</span>
+                <span data-slot-label>${rollCount > visibleSlots && index === visibleSlots - 1 ? `+${rollCount - visibleSlots + 1} rolls` : `Roll ${index + 1}`}</span>
                 <strong data-slot-name>...</strong>
                 <em data-slot-meta>Rolling</em>
             `;
@@ -7225,14 +7698,19 @@ function updateAllUi(options = {}) {
         const finalMutationClasses = getMutationClassNames(finalShark);
         display.textContent = rollCount > 1 ? `Best: ${finalShark.name}` : finalShark.name;
         display.className = `rng-roll-display ${finalShark.className}${finalMutationClasses ? ' ' + finalMutationClasses : ''}`;
-        const visibleBurstRolls = getVisibleBurstRollsForSlots(burstRolls, finalShark, multiSlots.length);
-        multiSlots.forEach((slot, index) => {
-            const shark = visibleBurstRolls[index];
-            updateMultiRollSlot(slot, shark, index, {
-                final: true,
-                best: shark === finalShark
-            });
-        });
+        if (multiGrid) {
+            // Animate a small preview, then expose every actual result once.
+            multiGrid.replaceChildren(...burstRolls.map((shark, index) => {
+                const slot = multiSlots[index] || document.createElement("div");
+                updateMultiRollSlot(slot, shark, index, {
+                    final: true,
+                    best: shark === finalShark
+                });
+                slot.title = `Roll ${index + 1}: ${shark.name} - 1/${formatOneIn(shark.oneIn)}`;
+                return slot;
+            }));
+            multiGrid.scrollTop = 0;
+        }
 
         stage?.classList.remove("rng-rolling");
 
@@ -7329,9 +7807,9 @@ function updateAllUi(options = {}) {
         `;
 
         overlay.querySelector("#rng-celebration-close").addEventListener("click", closeRarePopup);
-        overlay.addEventListener("click", (event) => {
+        overlay.onclick = (event) => {
             if (event.target === overlay) closeRarePopup();
-        }, { once: true });
+        };
     }
 
     function closeUltraCutscene() {
@@ -7556,11 +8034,11 @@ function updateAllUi(options = {}) {
             });
 
             cutscene.querySelector("#rng-cutscene-close")?.addEventListener("click", closeUltraCutscene);
-            cutscene.addEventListener("click", (event) => {
+            cutscene.onclick = (event) => {
                 if (event.target === cutscene || event.target.classList.contains("rng-cutscene-vignette")) {
                     closeUltraCutscene();
                 }
-            }, { once: true });
+            };
         });
     }
 
@@ -7578,6 +8056,10 @@ async function performRoll() {
          const burstRolls = Array.from({ length: rollCount }, () => rollForShark(rollActionContext));
          updateRngDailyQuestsForRolls(burstRolls);
          consumeRollActionEffects(rollActionContext);
+         // Commit the entire burst before any animation or dismissible reveal can pause it.
+         scheduleLocalProfileSave();
+         await saveLocalProfile();
+         scheduleCloudSync();
          const finalShark = getBestBurstRoll(burstRolls);
          const rollContext = {
              rollCount: burstRolls.length,
@@ -7692,8 +8174,11 @@ async function performRoll() {
         const cost = getPotionBatchCost(key, quantity);
         player.coins -= cost;
         player.potions[key] = (player.potions[key] || 0) + quantity;
-        showToast(`Bought ${formatCompactNumber(quantity)} ${def.name}${quantity === 1 ? "" : "s"}.`);
-        persistPlayerState();
+        startPotionRestock(key);
+        updatePotionShopImmediateUi([key]);
+        deferPotionSideEffects(() => {
+            showToast(`Bought ${formatCompactNumber(quantity)} ${def.name}${quantity === 1 ? "" : "s"}.`);
+        });
     }
 
     function buyMaxPotion(key) {
@@ -7725,7 +8210,8 @@ async function performRoll() {
 
         player.potions[key] -= 1;
         applyPotionEffect(key);
-        persistPlayerState();
+        updatePotionShopImmediateUi([key]);
+        deferPotionSideEffects();
     }
 
     function useAllPotion(key) {
@@ -7735,8 +8221,10 @@ async function performRoll() {
 
         const used = applyPotionEffect(key, owned);
         player.potions[key] = Math.max(0, owned - used);
-        persistPlayerState();
-        showToast(`Used ${formatCompactNumber(used)} ${def.name}${used === 1 ? "" : "s"}.`);
+        updatePotionShopImmediateUi([key]);
+        deferPotionSideEffects(() => {
+            showToast(`Used ${formatCompactNumber(used)} ${def.name}${used === 1 ? "" : "s"}.`);
+        });
     }
 
     function applyPotionEffect(key, quantity = 1) {
@@ -7760,6 +8248,9 @@ async function performRoll() {
             player.activeEffects.omega.remaining += effectRolls;
         } else if (key === "apexSurge") {
             player.activeEffects.apexSurge.remaining += effectRolls;
+        } else if (def.minOneIn) {
+            if (!player.activeEffects[key]) player.activeEffects[key] = { remaining: 0 };
+            player.activeEffects[key].remaining += effectRolls;
         } else if (def.category === "mutationStack" || def.stackMult || def.forceRandomMutation) {
             if (!player.activeEffects[key]) player.activeEffects[key] = { remaining: 0, mult: 1 };
             player.activeEffects[key].remaining += effectRolls;
@@ -7789,7 +8280,11 @@ async function performRoll() {
             consumed += applyPotionEffect(key, owned);
         }
 
-        persistPlayerState();
+        renderPotionShop();
+        updateStatsUi();
+        updateActiveEffectsUi();
+        scheduleLocalProfileSave();
+        scheduleCloudSync();
         showToast(`Consumed ${formatCompactNumber(consumed)} potion${consumed === 1 ? "" : "s"}.`);
     }
 
@@ -7804,6 +8299,15 @@ async function performRoll() {
             loadRngLeaderboard({ syncFirst: true });
         } else if (tabId === "quests") {
             renderRngQuestsPanel();
+        } else if (tabId === "upgrades") {
+            renderUpgradeShop();
+        } else if (tabId === "prestige") {
+            renderPrestigePanel();
+        } else if (tabId === "potions") {
+            renderPotionShop();
+
+        } else if (tabId === "info") {
+            renderTierLegend();
         }
     }
 
@@ -7879,6 +8383,11 @@ async function performRoll() {
             claimedIndexRewards: Array.isArray(previous.claimedIndexRewards) ? previous.claimedIndexRewards : [],
             dailyQuests: normalizeRngDailyQuestState(previous.dailyQuests || previous.dailyMissions),
             quests: normalizeRngQuestState(previous.quests),
+            // Replay-protection metadata must survive prestige. Otherwise an old
+            // queued admin roll can become valid again and fire on roll #1.
+            adminNextRollConsumedIds: Array.isArray(previous.adminNextRollConsumedIds)
+                ? previous.adminNextRollConsumedIds.map(String).filter(Boolean).slice(-RNG_ADMIN_NEXT_ROLL_CONSUMED_LIMIT)
+                : [],
             equipped: previous.equipped || null,
             bestOneIn: previous.bestOneIn || 0,
             settings: previous.settings || fresh.settings,
@@ -7908,7 +8417,13 @@ async function performRoll() {
             return;
         }
 
+        const consumedAdminRollIds = Array.isArray(player.adminNextRollConsumedIds)
+            ? player.adminNextRollConsumedIds.map(String).filter(Boolean).slice(-RNG_ADMIN_NEXT_ROLL_CONSUMED_LIMIT)
+            : [];
+
         player = createDefaultPlayer();
+        // A full progress reset should not reset security/replay bookkeeping.
+        player.adminNextRollConsumedIds = consumedAdminRollIds;
         persistPlayerState();
         updateSettingsUi();
         closeSettingsModal();
@@ -8233,6 +8748,7 @@ async function performRoll() {
                 for (const variant of variants) {
                     const key = getCollectionKey(variant);
                     if (!player.collection[key]) unlocked++;
+                    mutationGalleryCache = null;
                     player.collection[key] = buildRngIndexUnlockEntry(variant);
                     bestOneIn = Math.max(bestOneIn, variant.oneIn || 0);
                 }
@@ -8374,6 +8890,8 @@ async function performRoll() {
     }
 
     function bindUi() {
+        document.getElementById("rng-download-backup")?.addEventListener("click", downloadRngBackup);
+        document.getElementById("rng-save-status")?.addEventListener("click", saveRngProgressNow);
         document.getElementById("rng-roll-btn")?.addEventListener("click", performRoll);
         document.getElementById("rng-auto-btn")?.addEventListener("click", () => setAutoRoll(!autoEnabled));
         document.getElementById("rng-auto-arrow-dismiss")?.addEventListener("click", (event) => {
@@ -8397,7 +8915,7 @@ async function performRoll() {
         }
         document.getElementById("rng-collection-close-btn")?.addEventListener("click", closeCollectionModal);
         document.getElementById("rng-collection-filter")?.addEventListener("change", renderCollectionGrid);
-        document.getElementById("rng-collection-search")?.addEventListener("input", scheduleCollectionSearchRender);
+        document.getElementById("rng-collection-search")?.addEventListener("input", renderCollectionGrid);
         document.getElementById("rng-collection-owned-only")?.addEventListener("change", renderCollectionGrid);
         document.getElementById("rng-collection-equip-best")?.addEventListener("click", equipBestCollectionEntry);
         document.getElementById("rng-collection-sort-rarity")?.addEventListener("click", () => {
@@ -8462,13 +8980,58 @@ async function performRoll() {
 
     function startPotionUiTicker() {
         if (potionTickTimer) clearInterval(potionTickTimer);
-        potionTickTimer = setInterval(updateActiveEffectsUi, 500);
+        potionTickTimer = setInterval(() => {
+            updateActiveEffectsUi();
+            updateSaveStatusUi();
+        }, 500);
+    }
+
+    function initImageLoadingVisibility() {
+        const pending = new WeakMap();
+        const reveal = async (img) => {
+            const source = img.currentSrc || img.src;
+            if (!img.complete || !img.naturalWidth || pending.get(img) === source) return;
+            pending.set(img, source);
+            try {
+                if (typeof img.decode === "function") await img.decode();
+                if (img.isConnected && (img.currentSrc || img.src) === source && img.naturalWidth) {
+                    img.dataset.rngImageReady = "true";
+                }
+            } catch {
+                // A failed image stays hidden, with its layout space reserved.
+            } finally {
+                pending.delete(img);
+            }
+        };
+        const prepare = (img) => {
+            delete img.dataset.rngImageReady;
+            reveal(img);
+        };
+        document.body.addEventListener("load", (event) => {
+            if (event.target.tagName === "IMG") reveal(event.target);
+        }, true);
+        const observer = new MutationObserver((records) => {
+            for (const record of records) {
+                if (record.type === "attributes") {
+                    prepare(record.target);
+                    continue;
+                }
+                for (const node of record.addedNodes) {
+                    if (node.nodeType !== 1) continue;
+                    if (node.tagName === "IMG") prepare(node);
+                    node.querySelectorAll("img").forEach(prepare);
+                }
+            }
+        });
+        observer.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ["src", "srcset"] });
+        document.body.querySelectorAll("img").forEach(prepare);
     }
 
 async function initRngMode() {
+         initImageLoadingVisibility();
          buildRollPool();
-         bindRngViewportSync();
-         loadLocalProfile();
+         await loadDeviceProfile();
+         updateSaveStatusUi();
          initAmbientBubbles();
          installRngDevCommands();
          bindLocalProfileSaveFlush();
@@ -8477,8 +9040,8 @@ async function initRngMode() {
           updateAllUi();
           updateSettingsUi();
           initRngLeaderboard();
-          await hydrateRngProfileFromFirebase();
           startPotionUiTicker();
+          await hydrateRngProfileFromFirebase();
           GameFx.initAudio();
           updateRollButtonState();
      }

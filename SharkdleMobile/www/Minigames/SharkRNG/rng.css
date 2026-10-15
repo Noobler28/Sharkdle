@@ -338,6 +338,12 @@ body.rng-page {
 }
 
 .rng-multi-roll-grid {
+    max-height: min(30vh, 240px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    flex-shrink: 0;
+    scrollbar-width: thin;
+    padding: 2px;
     width: min(100%, 620px);
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -945,11 +951,21 @@ body.rng-page {
     min-height: 0;
     overflow: hidden;
     padding: 6px;
+    contain: layout paint;
 }
 
 .rng-tab-panel.active {
     display: flex;
     flex-direction: column;
+}
+
+.rng-upgrade-card,
+.rng-potion-card,
+.rng-prestige-upgrade,
+.rng-tier-row,
+.rng-index-card {
+    content-visibility: auto;
+    contain-intrinsic-size: 86px;
 }
 
 .rng-panel-hint {
@@ -4386,4 +4402,31 @@ body.rng-page {
 
 .rng-leaderboard-name {
     flex: 1 1 100px;
+}
+
+/* Loading images retain their dimensions without showing partial or broken content. */
+body.rng-page img:not([data-rng-image-ready]) {
+    visibility: hidden;
+}
+body.rng-page img[data-rng-image-ready] {
+    animation: rng-image-appear 160ms ease-out;
+}
+@keyframes rng-image-appear {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+    body.rng-page img[data-rng-image-ready] { animation: none; }
+}
+
+
+.rng-save-status { margin-left: auto; flex-shrink: 0; display: flex; flex-direction: column; gap: 2px; padding: 5px 8px; background: var(--rng-surface); border: 1px solid var(--rng-border); border-radius: 8px; color: #86efac; text-align: left; font: inherit; font-size: 0.65rem; cursor: pointer; }
+.rng-save-status span + span { color: var(--rng-muted); font-size: 0.58rem; }
+.rng-save-status[data-state="saving"] { color: #fde047; }
+.rng-save-status[data-state="error"] { color: #fca5a5; border-color: #f87171; }
+.rng-save-status:focus-visible { outline: 2px solid var(--rng-accent); outline-offset: 2px; }
+@media (max-width: 600px) {
+    .rng-equipped-bar { flex-wrap: wrap; }
+    .rng-equipped-bar > div { flex: 1 1 100%; }
+    .rng-save-status { margin-left: 0; margin-right: auto; }
 }

@@ -10,7 +10,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="page-shell.css">
-    <link rel="stylesheet" href="Minigames/SharkRNG/rng.css">
+    <link rel="stylesheet" href="Minigames/SharkRNG/rng.css?v=20261015-device-save-fallback">
     <link rel="stylesheet" href="mobile.css">
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
@@ -54,6 +54,8 @@
                 <strong id="rng-equipped-name" class="rng-equipped-name common">—</strong>
                 <span id="rng-equipped-meta" class="rng-equipped-meta">Roll to discover your first species</span>
             </div>
+            <button id="rng-save-status" class="rng-save-status" type="button" title="Save progress now"><span id="rng-save-local" role="status">Loading save...</span><span id="rng-save-cloud">Cloud: checking...</span></button>
+            <button id="rng-download-backup" class="rng-icon-btn" type="button" title="Download progress backup" aria-label="Download progress backup"><i class="fa-solid fa-download" aria-hidden="true"></i></button>
             <button id="rng-collection-open-btn" class="rng-btn rng-btn-ghost" type="button" title="Collection">
                 <i class="fa-solid fa-book"></i>
             </button>
@@ -226,7 +228,7 @@
                 Equip Best
             </button>
             <label class="rng-index-toggle" for="rng-collection-owned-only">
-                <input id="rng-collection-owned-only" type="checkbox">
+                <input id="rng-collection-owned-only" checked type="checkbox">
                 <span><i class="fa-solid fa-check" aria-hidden="true"></i></span>
                 Owned only
             </label>
@@ -306,7 +308,7 @@
 <div id="rng-toast" class="rng-toast hidden"></div>
 
 <script src="script.js"></script>
-<script src="Minigames/SharkRNG/rng-mode.js?v=20260904-better-cutscenes"></script>
+<script src="Minigames/SharkRNG/rng-mode.js?v=20261015-device-save-fallback"></script>
 <script src="global-broadcast.js"></script>
 <script>
     document.addEventListener("DOMContentLoaded", () => {
