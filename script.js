@@ -3019,6 +3019,12 @@ const PEARL_SHOP_ITEMS = {
     "season-xp": { price: 3000, label: "Season 2x XP" }
 };
 const SOCIAL_REWARD_TASKS = [
+    { id: "lsfsw-twitch-2026", platform: "LSFSW", action: "Follow LSFSW on Twitch", description: "Support our collab partner on Twitch.", url: "https://www.twitch.tv/lsfsw", icon: "fa-brands fa-twitch", pearls: 200 },
+    { id: "lsfsw-discord-2026", platform: "LSFSW", action: "Join the LSFSW Discord", description: "Meet the LSFSW community.", url: "https://discord.gg/RaDK6pyjQR", icon: "fa-brands fa-discord", pearls: 200 },
+    { id: "lsfsw-substack-2026", platform: "LSFSW", action: "Read LSFSW on Substack", description: "Explore LSFSW's latest posts.", url: "https://landsharksforsharkweek.substack.com/", icon: "fa-solid fa-newspaper", pearls: 200 },
+    { id: "lsfsw-instagram-2026", platform: "LSFSW", action: "Follow @lsforsw on Instagram", description: "Catch LSFSW's Instagram updates.", url: "https://instagram.com/lsforsw", icon: "fa-brands fa-instagram", pearls: 200 },
+    { id: "lsfsw-youtube-2026", platform: "LSFSW", action: "Subscribe to LSFSW on YouTube", description: "Watch LSFSW on YouTube.", url: "https://www.youtube.com/@LSFSW", icon: "fa-brands fa-youtube", pearls: 200 },
+    { id: "lsfsw-tiktok-2026", platform: "LSFSW", action: "Visit LSFSW on TikTok", description: "Check out LSFSW's TikTok channel.", url: "https://www.tiktok.com/@lsforsw", icon: "fa-brands fa-tiktok", pearls: 200 },
     { id: "like-youtube-short-u0lcqvaahog-2026", platform: "YouTube", action: "Like Sharkdle Short 1", description: "Like this YouTube Short.", url: "https://youtube.com/shorts/U0lcQVAAhOg?feature=share", icon: "fa-brands fa-youtube", pearls: 50 },
     { id: "like-youtube-short-ahzzvuritzc-2026", platform: "YouTube", action: "Like Sharkdle Short 2", description: "Like this YouTube Short.", url: "https://youtube.com/shorts/AHZZVuritZc?feature=share", icon: "fa-brands fa-youtube", pearls: 50 },
     { id: "like-youtube-short-q3otnuxy3ri-2026", platform: "YouTube", action: "Like Sharkdle Short 3", description: "Like this YouTube Short.", url: "https://youtube.com/shorts/Q3otnuXy3RI?feature=share", icon: "fa-brands fa-youtube", pearls: 50 },
@@ -3059,6 +3065,7 @@ const SOCIAL_REWARD_TASKS = [
     { id: "check-updates-page-2026", platform: "Support", action: "Read the updates", description: "Visit the updates page to see what changed.", url: "Updates/index.html", icon: "fa-solid fa-newspaper", pearls: 50 }
 ];
 const SOCIAL_REWARD_GROUPS = [
+    { id: "lsfsw", label: "LSFSW Collab", platform: "LSFSW", icon: "fa-solid fa-handshake", description: "Support our collab partner. Six links, 200 pearls each." },
     { id: "tiktok", label: "TikTok", platform: "TikTok", icon: "fa-brands fa-tiktok", description: "Follow and like Sharkdle TikToks." },
     { id: "instagram", label: "Instagram", platform: "Instagram", icon: "fa-brands fa-instagram", description: "Follow and like Sharkdle reels." },
     { id: "youtube", label: "YouTube", platform: "YouTube", icon: "fa-brands fa-youtube", description: "Subscribe and like Sharkdle Shorts." },

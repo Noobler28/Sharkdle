@@ -21456,3 +21456,8 @@ body.home-v3-page .home-v3-center > .home-footer { flex: 0 0 auto; }
     body.home-v3-page .home-v3-shell > .home-v3-center,
     body.home-v3-page .home-v3-shell > .home-v3-right { flex: 0 0 auto; height: auto; overflow: visible; }
 }
+
+body.home-v3-page .social-rewards-platform-lsfsw,
+body.home-v3-page .social-reward-group-lsfsw {
+    --platform-accent: #a6dfcf;
+}
