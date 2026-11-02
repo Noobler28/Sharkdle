@@ -3019,6 +3019,7 @@ const PEARL_SHOP_ITEMS = {
     "season-xp": { price: 3000, label: "Season 2x XP" }
 };
 const SOCIAL_REWARD_TASKS = [
+    { id: "sharkg33k-twitch-2026", platform: "Support", action: "Follow SharkG33k on Twitch", description: "Support our creator partner SharkG33k.", url: "https://www.twitch.tv/sharkg33k", icon: "fa-brands fa-twitch", pearls: 200 },
     { id: "lsfsw-twitch-2026", platform: "LSFSW", action: "Follow LSFSW on Twitch", description: "Support our collab partner on Twitch.", url: "https://www.twitch.tv/lsfsw", icon: "fa-brands fa-twitch", pearls: 200 },
     { id: "lsfsw-discord-2026", platform: "LSFSW", action: "Join the LSFSW Discord", description: "Meet the LSFSW community.", url: "https://discord.gg/RaDK6pyjQR", icon: "fa-brands fa-discord", pearls: 200 },
     { id: "lsfsw-substack-2026", platform: "LSFSW", action: "Read LSFSW on Substack", description: "Explore LSFSW's latest posts.", url: "https://landsharksforsharkweek.substack.com/", icon: "fa-solid fa-newspaper", pearls: 200 },
