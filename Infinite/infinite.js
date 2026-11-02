@@ -157,7 +157,10 @@ const infiniteSpeciesTrackerRoundId = window.SharkdleSpeciesTracker
     ? window.SharkdleSpeciesTracker.createRoundId(`infinite-${speciesMode.key}`)
     : `infinite-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 
+const infiniteFairPlayRound = window.SharkdleFairPlay?.startRound('infinite', speciesMode.key, infiniteSpeciesTrackerRoundId);
+
 function recordInfiniteSpeciesHistory(won) {
+    void window.SharkdleFairPlay?.finishRound(infiniteFairPlayRound, won, 12 - attempts);
     if (!window.SharkdleSpeciesTracker) return;
     void window.SharkdleSpeciesTracker.recordRound({
         mode: `infinite-${speciesMode.key}`,
@@ -202,8 +205,8 @@ function getDepthWithClue(depth) {
 
 const CATEGORY_REVEAL_PRICE = 25;
 const CATEGORY_REVEAL_OPTIONS = [
-    { key: "family", label: "Family", getValue: shark => shark.family },
     { key: "order", label: "Order", getValue: shark => shark.order },
+    { key: "family", label: "Family", getValue: shark => shark.family },
     { key: "genus", label: "Genus", getValue: shark => shark.genus },
     { key: "size", label: "Size", getValue: shark => getSizeWithThreshold(shark.size) },
     { key: "depth", label: "Depth", getValue: shark => getDepthWithClue(shark.depth) },
@@ -846,19 +849,20 @@ function makeGuess() {
     // decrement attempts and update display
     attempts--;
     attemptsLeftDiv.textContent = `Attempts left: ${attempts}`;
-    
+
     const feedback = [
-        { category: "Family", value: guessedShark.family, correct: guessedShark.family === targetShark.family },
         { category: "Order", value: guessedShark.order, correct: guessedShark.order === targetShark.order },
+        { category: "Family", value: guessedShark.family, correct: guessedShark.family === targetShark.family },
         { category: "Genus", value: guessedShark.genus, correct: guessedShark.genus === targetShark.genus },
         { category: "Size", value: guessedShark.size, correct: guessedShark.size === targetShark.size },
         { category: "Depth", value: guessedShark.depth, correct: guessedShark.depth === targetShark.depth },
         { category: "Year of Discovery", value: guessedShark.yod, correct: guessedShark.yod === targetShark.yod }
     ];
     speciesTrackerGuesses.push({ species: guessedShark, feedback });
-    
+    window.SharkdleFairPlay?.noteGuess(infiniteFairPlayRound);
+
     renderGuess(guessedShark, feedback);
-    
+
     // Close guesses with no correct information, then open the newest
     const cards = document.querySelectorAll('#guesses .guess-card');
     cards.forEach(card => {
@@ -876,7 +880,7 @@ function makeGuess() {
 
     updateCategoryRevealPanel();
     scheduleMysteryProfileReveal();
-    
+
     if (normalizeInput(guessedShark.name) === normalizeInput(targetShark.name)) {
         const guessesTaken = 12 - attempts;
         const baseXpGain = Math.max(50, 170 - guessesTaken * 10);
@@ -884,7 +888,7 @@ function makeGuess() {
             ? window.applyLimitedTimeXpBonus(baseXpGain)
             : { totalXp: baseXpGain };
         const xpGain = xpAward.totalXp;
-        
+
         let pearlsEarned = 0;
 
         if (firebase.auth().currentUser) {
@@ -916,6 +920,7 @@ function makeGuess() {
         }
 
         if (typeof window.contributeCommunityBossWin === 'function') {
+            window.SharkdleChristmas?.recordWin('infinite');
             window.contributeCommunityBossWin('infinite');
         }
 
@@ -923,13 +928,13 @@ function makeGuess() {
         if (window.checkAchievements) {
             window.checkAchievements(true, guessesTaken, true);
         }
-        
+
         // Disable input
         categoryRevealGameCompleted = true;
         document.getElementById("sharkGuess").disabled = true;
         document.getElementById("guessBtn").disabled = true;
         updateCategoryRevealPanel();
-        
+
         // Display win screen
         winLoseScreen.innerHTML = `
             <button onclick="document.getElementById('win-lose-screen').style.display='none'; document.getElementById('show-results-btn').style.display='block';" style="position: absolute; top: 8px; right: 8px; width: 32px; height: 32px; background: rgba(0,0,0,0.3); border: none; border-radius: 50%; color: inherit; font-size: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.2s; font-weight: bold;">×</button>
@@ -952,22 +957,22 @@ function makeGuess() {
         winLoseScreen.style.display = "block";
         document.getElementById('show-results-btn').style.display = 'none';
         createBubbles();
-        
+
     } else if (attempts === 0) {
         updateStats(false);
         recordInfiniteSpeciesHistory(false);
-        
+
         // Check achievements for loss conditions
         if (window.checkAchievements) {
             window.checkAchievements(false, 12, false);
         }
-        
+
         // Disable input
         categoryRevealGameCompleted = true;
         document.getElementById("sharkGuess").disabled = true;
         document.getElementById("guessBtn").disabled = true;
         updateCategoryRevealPanel();
-        
+
         // Display lose screen
         winLoseScreen.innerHTML = `
             <button onclick="document.getElementById('win-lose-screen').style.display='none'; document.getElementById('show-results-btn').style.display='block';" style="position: absolute; top: 8px; right: 8px; width: 32px; height: 32px; background: rgba(0,0,0,0.3); border: none; border-radius: 50%; color: inherit; font-size: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.2s; font-weight: bold;">×</button>
@@ -1081,7 +1086,7 @@ function createBubbles() {
         bubble.style.height = bubble.style.width;
         bubble.style.left = `${Math.random() * 100}%`;
         bubble.style.animationDelay = `${Math.random() * 2}s`;
-        bubble.style.bottom = '0';  
+        bubble.style.bottom = '0';
         winLoseScreen.appendChild(bubble);
     }
 }
@@ -1122,7 +1127,7 @@ sharkGuessInput.addEventListener("input", function() {
         suggestionsDiv.classList.remove("active");
         return;
     }
-    
+
     // Build suggestions HTML
     suggestionsDiv.innerHTML = matches.map(shark => {
         const isGuessed = shark.guessed === true;
@@ -1131,7 +1136,7 @@ sharkGuessInput.addEventListener("input", function() {
         const disabledAttr = isGuessed ? 'aria-disabled="true"' : `data-species-name="${speciesName}"`;
         return `<div class="suggestion-item ${guessedClass}" ${disabledAttr}>${escapeHtml(shark.name)}</div>`;
     }).join("");
-    
+
     suggestionsDiv.classList.add("active");
 });
 

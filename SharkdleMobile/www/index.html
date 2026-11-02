@@ -24,7 +24,8 @@ content="Play Sharkdle, the daily shark guessing game. Guess shark species from 
 <meta name="twitter:description" content="Play Sharkdle, the daily shark guessing game.">
 <meta name="twitter:image" content="https://sharkdle.online/images/favicon.png">
 
-<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="style.css?v=20261102-hills-up225">
+<link rel="stylesheet" href="christmas-event.css?v=20261102-present-doors">
 
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800;900&family=Barlow:wght@400;500;600;700&family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -36,7 +37,8 @@ content="Play Sharkdle, the daily shark guessing game. Guess shark species from 
 
 <script src="sharks.js"></script>
 
-    <link rel="stylesheet" href="mobile.css">
+
+    <link rel="stylesheet" href="mobile.css" media="(max-width: 820px)">
 </head>
 
 <body class="home-page home-v3-page">
@@ -131,9 +133,33 @@ content="Play Sharkdle, the daily shark guessing game. Guess shark species from 
             <a href="Updates/index.html"><i class="fa-solid fa-newspaper"></i><span>Updates</span></a>
         </nav>
 
+        <section class="home-v3-quick-access home-v3-quick-access-mobile" aria-labelledby="home-v3-mobile-quick-access-heading">
+            <div class="home-v3-quick-head">
+                <div>
+                    <div class="home-v3-section-label" id="home-v3-mobile-quick-access-heading">Quick Access</div>
+                    <p>Your favorite Sharkdle stops.</p>
+                </div>
+                <button class="home-v3-quick-edit" type="button" onclick="openHomeQuickAccessModal()" aria-label="Customize quick access">
+                    <i class="fa-solid fa-sliders" aria-hidden="true"></i>
+                </button>
+            </div>
+            <div class="home-v3-quick-list" id="home-v3-mobile-quick-access-list" data-home-quick-access-list>
+                <a class="home-v3-quick-link" href="Library/index.html">
+                    <span class="home-v3-quick-icon"><i class="fa-solid fa-book-open" aria-hidden="true"></i></span>
+                    <span class="home-v3-quick-copy"><strong>Sharchive</strong><small>Archive</small></span>
+                    <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
+                </a>
+                <a class="home-v3-quick-link" href="Leaderboard/index.html">
+                    <span class="home-v3-quick-icon"><i class="fa-solid fa-ranking-star" aria-hidden="true"></i></span>
+                    <span class="home-v3-quick-copy"><strong>Leaderboards</strong><small>Ranks</small></span>
+                    <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
+                </a>
+            </div>
+        </section>
+
         <div class="home-v3-fact">
             <span>Fact of the Day</span>
-            <p>Sharks have been around longer than trees.</p>
+            <p id="home-v3-daily-fact">Sharks have been around longer than trees.</p>
         </div>
 
         <section class="home-v3-about-links" aria-label="Sharkdle links">
@@ -160,11 +186,11 @@ content="Play Sharkdle, the daily shark guessing game. Guess shark species from 
             <div class="home-v3-hero-copy">
                 <p class="home-v3-eyebrow">The ultimate shark guessing game</p>
                 <h1>Welcome to <span>Sharkdle</span></h1>
-                <p class="hero-subtitle">Dive into daily puzzles, streaks, crates, duels, and the full Sharchive.</p>
+                <p class="hero-subtitle">Dive into the ULTIMATE shark guessing experience.</p>
                 <div class="home-v3-hero-actions">
                     <a class="home-v3-play-btn" href="Daily/index.html"><i class="fa-solid fa-play"></i><span>Play Daily Challenge</span></a>
                     <a class="home-v3-ghost-btn" href="Infinite/index.html"><i class="fa-solid fa-infinity"></i><span>Infinite</span></a>
-                    <a class="home-v3-download-btn" href="https://github.com/Noobler28/Sharkdle/tree/main/Mobile%20Release" target="_blank" rel="noopener"><i class="fa-brands fa-android"></i><span>Android App</span></a>
+                    <a class="home-v3-download-btn" href="https://github.com/Noobler28/Sharkdle/tree/main/Mobile%20Release" target="_blank" rel="noopener"><i class="fa-brands fa-android"></i><span>Mobile App</span></a>
                 </div>
                 <div id="login-warning" class="login-warning hero-alert hidden">
                     You are not logged in. Your stats and XP won't be saved.
@@ -195,10 +221,6 @@ content="Play Sharkdle, the daily shark guessing game. Guess shark species from 
                 <a class="home-v3-mode-card" href="Minigames/SharkRNG/index.html" style="--mode-bg:url('images/home-v3/whale.png')">
                     <strong>Shark RNG</strong>
                     <p>Roll, upgrade, and chase rare finds.</p>
-                </a>
-                <a class="home-v3-mode-card" href="shark-rescue/index.html" style="--mode-bg:url('images/home-v3/mako.png')">
-                    <strong>Rescue Command</strong>
-                    <p>Save sharks and build your base.</p>
                 </a>
             </div>
         </section>
@@ -243,9 +265,34 @@ content="Play Sharkdle, the daily shark guessing game. Guess shark species from 
                     <strong>Sharchive</strong>
                     <p>Browse shark species, classifications, images, and details.</p>
                 </a>
+                <a class="home-v3-mode-card explore-card" href="shark-rescue/index.html" style="--mode-bg:url('images/home-v3/mako.png')">
+                    <span>Side Mode</span>
+                    <strong>Rescue Command</strong>
+                    <p>Save sharks and build your base.</p>
+                </a>
             </div>
         </section>
         </section>
+<footer class="home-footer">
+
+
+<p class="home-footer-made">Made with <span class="home-footer-heart">&hearts;</span> by the Sharkdle Team - thanks for playing!</p>
+<div class="home-footer-actions">
+    <button class="footer-dev-link" type="button" onclick="openDevModal()">Meet the Dev</button>
+</div>
+<div class="links home-footer-links">
+<a class="footer-social-link github-link" href="https://github.com/Noobler28/sharkdle" target="_blank" rel="noopener">GitHub</a>
+
+<a class="footer-social-link updates-link" href="Updates/index.html">Updates</a>
+
+<a class="footer-social-link instagram-link" href="https://instagram.com/sharkdle.dev" target="_blank" rel="noopener">Instagram</a>
+
+<a class="footer-social-link discord-link" href="https://discord.gg/V97Y8545Ve" target="_blank" rel="noopener">Discord</a>
+</div>
+
+<p style="font-size: 12px; color: #888; margin-top: 15px;">© 2026 Sharkdle. All rights reserved.</p>
+
+</footer>
     </section>
 
     <aside class="home-v3-right">
@@ -287,6 +334,30 @@ content="Play Sharkdle, the daily shark guessing game. Guess shark species from 
             </div>
         </div>
 
+        <section class="home-v3-quick-access home-v3-quick-access-sidebar" aria-labelledby="home-v3-quick-access-heading">
+            <div class="home-v3-quick-head">
+                <div>
+                    <div class="home-v3-section-label" id="home-v3-quick-access-heading">Quick Access</div>
+                    <p>Your favorite Sharkdle stops.</p>
+                </div>
+                <button class="home-v3-quick-edit" type="button" onclick="openHomeQuickAccessModal()" aria-label="Customize quick access">
+                    <i class="fa-solid fa-sliders" aria-hidden="true"></i>
+                </button>
+            </div>
+            <div class="home-v3-quick-list" id="home-v3-quick-access-list" data-home-quick-access-list>
+                <a class="home-v3-quick-link" href="Library/index.html">
+                    <span class="home-v3-quick-icon"><i class="fa-solid fa-book-open" aria-hidden="true"></i></span>
+                    <span class="home-v3-quick-copy"><strong>Sharchive</strong><small>Archive</small></span>
+                    <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
+                </a>
+                <a class="home-v3-quick-link" href="Leaderboard/index.html">
+                    <span class="home-v3-quick-icon"><i class="fa-solid fa-ranking-star" aria-hidden="true"></i></span>
+                    <span class="home-v3-quick-copy"><strong>Leaderboards</strong><small>Ranks</small></span>
+                    <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
+                </a>
+            </div>
+        </section>
+
         <div id="daily-bonus-msg" class="hero-bonus-banner home-v3-bonus"></div>
 
         <div id="xp-event-banner" class="xp-event-banner hidden" aria-live="polite">
@@ -297,19 +368,34 @@ content="Play Sharkdle, the daily shark guessing game. Guess shark species from 
             </div>
         </div>
 
-        <section class="home-v3-event lost-treasures-home-card" role="button" tabindex="0" onclick="openLostTreasuresModal()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openLostTreasuresModal();}">
-            <span>Current Event</span>
-            <strong>Lost Treasures</strong>
-            <p id="home-v3-event-copy">Open messages in bottles, collect 120 treasure cards, and complete every album category.</p>
-            <div class="home-v3-click-view"><i class="fa-solid fa-arrow-pointer"></i><span>Click to view</span></div>
+        <section id="home-community-boss-event" class="home-v3-event" role="button" tabindex="0" onclick="openCommunityBossEventModal()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openCommunityBossEventModal();}">
+            <span class="home-boss-kicker">Christmas · Part 1</span>
+            <div class="home-boss-heading">
+                <strong>Protect Stethacanthus</strong>
+                <img src="images/christmasEvent/StevenStethecanthus.png" alt="" width="90" height="30">
+            </div>
+            <p id="home-community-boss-copy">Win together to protect Stethacanthus and earn up to 25 Christmas Crates.</p>
+            <progress id="home-community-boss-progress" value="0" max="150" aria-label="Community protection progress"></progress>
+            <div class="home-boss-footer"><span id="home-community-boss-progress-label">0 / 150 global wins</span><span>View event →</span></div>
         </section>
 
-        <section class="home-v3-side-section">
-            <div class="home-v3-section-label">Quick Stats</div>
-            <div class="home-v3-stat-row"><span>Games</span><strong id="home-v3-games">0</strong></div>
-            <div class="home-v3-stat-row"><span>Win Rate</span><strong id="home-v3-winrate">0%</strong></div>
-            <div class="home-v3-stat-row"><span>Best Streak</span><strong id="home-v3-best-streak">0</strong></div>
-            <div class="home-v3-stat-row"><span>Total XP</span><strong id="home-v3-total-xp">0</strong></div>
+
+        <section class="home-v3-side-section home-v3-quick-stats" aria-labelledby="home-v3-quick-stats-heading">
+            <div class="home-v3-stats-head">
+                <div>
+                    <div class="home-v3-section-label" id="home-v3-quick-stats-heading">Quick Stats</div>
+                    <p>Your chosen profile numbers.</p>
+                </div>
+                <button class="home-v3-stats-edit" type="button" onclick="openHomeQuickStatsModal()" aria-label="Customize quick stats">
+                    <i class="fa-solid fa-sliders" aria-hidden="true"></i>
+                </button>
+            </div>
+            <div class="home-v3-stats-list" id="home-v3-quick-stats-list">
+                <div class="home-v3-stat-row"><span>Games</span><strong id="home-v3-games">0</strong></div>
+                <div class="home-v3-stat-row"><span>Wins</span><strong id="home-v3-wins">0</strong></div>
+                <div class="home-v3-stat-row"><span>Win Rate</span><strong id="home-v3-winrate">0%</strong></div>
+                <div class="home-v3-stat-row"><span>Best Streak</span><strong id="home-v3-best-streak">0</strong></div>
+            </div>
         </section>
     </aside>
 </main>
@@ -349,8 +435,8 @@ content="Play Sharkdle, the daily shark guessing game. Guess shark species from 
         <button type="button" class="modal-x-btn" onclick="closePearlShopModal()" aria-label="Close pearl shop modal">×</button>
         <div class="pearl-shop-hero">
             <div>
-                <div class="new-modal-kicker">Pearl Shop</div>
-                <h2>Spend Your Pearls</h2>
+                <div class="new-modal-kicker">Sharkdle Shop</div>
+                <h2>Shop The Reef</h2>
                 <p id="home-v3-shop-status">Spend pearls on boosts, crates, and streak protection.</p>
             </div>
             <div class="pearl-shop-balance">
@@ -358,6 +444,48 @@ content="Play Sharkdle, the daily shark guessing game. Guess shark species from 
                 <span>Pearls</span>
                 <strong id="pearl-shop-balance">0</strong>
             </div>
+        </div>
+        <template id="paused-supporter-packs">
+        <section class="supporter-pack-grid" aria-label="Supporter packs">
+            <article class="supporter-pack-card starter-pack-card">
+                <div class="supporter-pack-media" aria-hidden="true">
+                    <i class="fa-solid fa-box-open"></i>
+                    <span>Starter</span>
+                </div>
+                <div class="supporter-pack-copy">
+                    <div class="supporter-pack-topline">
+                        <span>Starter Pack</span>
+                        <strong>£3.99</strong>
+                    </div>
+                    <h4>Jump-start your profile</h4>
+                    <ul>
+                        <li>500 pearls</li>
+                        <li>Exclusive profile icon, badge, and background</li>
+                        <li>5 cosmetic crates</li>
+                    </ul>
+                </div>
+                <div class="supporter-pack-actions">
+                    <a class="supporter-pack-button" href="https://buymeacoffee.com/sharkdle/e/578798" target="_blank" rel="noopener">
+                        <i class="fa-solid fa-cart-shopping" aria-hidden="true"></i>
+                        <span>Buy Starter Pack</span>
+                    </a>
+                </div>
+            </article>
+        </section>
+        <section class="shark-shop-impact" aria-label="Shark conservation pledge">
+            <i class="fa-solid fa-hand-holding-heart" aria-hidden="true"></i>
+            <div>
+                <strong>50% of all money made is donated back into shark conservation.</strong>
+                <span>Supporter packs help fund Sharkdle and real-world shark protection.</span>
+            </div>
+        </section>
+        </template>
+        <div class="shark-shop-section-head">
+            <div>
+                <span>Pearl Market</span>
+                <h3>Earned in game</h3>
+            </div>
+            <p>Use your pearls for boosts, protection, and cosmetic crates.</p>
         </div>
         <div class="pearl-shop-grid">
             <article class="home-v3-shop-item" data-pearl-shop-item="streak-shield">
@@ -392,20 +520,6 @@ content="Play Sharkdle, the daily shark guessing game. Guess shark species from 
                 </div>
                 <button type="button" onclick="buyPearlShopItem('event-crate')">750p</button>
             </article>
-            <article class="home-v3-shop-item bottle-pack-featured" data-pearl-shop-item="message-bottle-pack">
-                <div class="pearl-shop-sticker">Limited Time</div>
-                <div class="pearl-shop-bottle-stack" aria-hidden="true">
-                    <div><img src="images/lostTreasure/Bottles/Bottle1.png" alt=""><span>x5</span></div>
-                    <div><img src="images/lostTreasure/Bottles/Bottle2.png" alt=""><span>x3</span></div>
-                    <div><img src="images/lostTreasure/Bottles/Bottle3.png" alt=""><span>x1</span></div>
-                    <div><img src="images/lostTreasure/Bottles/BottleRare.png" alt=""><span>x1</span></div>
-                </div>
-                <div class="pearl-shop-bottle-copy">
-                    <strong>Message in a Bottle Pack</strong>
-                    <span>5 x3 bottles, 3 x5 bottles, 1 x7 bottle, and 1 guaranteed rare.</span>
-                </div>
-                <button type="button" onclick="buyPearlShopItem('message-bottle-pack')">300p</button>
-            </article>
             <article class="home-v3-shop-item featured" data-pearl-shop-item="season-xp">
                 <i class="fa-solid fa-bolt" aria-hidden="true"></i>
                 <div>
@@ -415,6 +529,40 @@ content="Play Sharkdle, the daily shark guessing game. Guess shark species from 
                 <button type="button" onclick="buyPearlShopItem('season-xp')">3000p</button>
             </article>
         </div>
+        <template id="paused-more-supporter-packs">
+        <div class="shark-shop-section-head supporter-shop-head">
+            <div>
+                <span>More Supporter Packs</span>
+                <h3>Real-money packs</h3>
+            </div>
+            <p>Purchase on BMAC, then redeem your one-time code in Sharkdle.</p>
+        </div>
+        <section class="supporter-pack-grid" aria-label="More supporter packs">
+            <article class="supporter-pack-card scroll-pack-card">
+                <div class="supporter-pack-media scroll-pack-media" aria-hidden="true">
+                    <img src="images/bmac/Premium Scroll Pack.png" alt="">
+                </div>
+                <div class="supporter-pack-copy">
+                    <div class="supporter-pack-topline">
+                        <span>Premium Scroll Pack</span>
+                        <strong>£1.49</strong>
+                    </div>
+                    <h4>Stock up on bottles</h4>
+                    <ul>
+                        <li>20 Barnacle Bottles</li>
+                        <li>15 Red Sea Bottles and 10 Seafoam Bottles</li>
+                        <li>5 Rare Bottles</li>
+                    </ul>
+                </div>
+                <div class="supporter-pack-actions">
+                    <a class="supporter-pack-button" href="https://buymeacoffee.com/sharkdle/e/579254" target="_blank" rel="noopener">
+                        <i class="fa-solid fa-cart-shopping" aria-hidden="true"></i>
+                        <span>Buy Scroll Pack</span>
+                    </a>
+                </div>
+            </article>
+        </section>
+        </template>
     </div>
 </div>
 
@@ -468,26 +616,39 @@ content="Play Sharkdle, the daily shark guessing game. Guess shark species from 
     </div>
 </div>
 
-<footer class="home-footer">
-
-
-<p class="home-footer-made">Made with <span class="home-footer-heart">&hearts;</span> by the Sharkdle Team - thanks for playing!</p>
-<div class="home-footer-actions">
-    <button class="footer-dev-link" type="button" onclick="openDevModal()">Meet the Dev</button>
+<div id="homeQuickAccessModal" class="modal hidden" onclick="if(event.target===this) closeHomeQuickAccessModal()">
+    <div class="modal-content home-quick-access-modal-content">
+        <button type="button" class="modal-x-btn" onclick="closeHomeQuickAccessModal()" aria-label="Close quick access modal">×</button>
+        <div class="home-quick-modal-head">
+            <div class="new-modal-kicker">Quick Access</div>
+            <h2>Customize Panel</h2>
+            <p>Two home-screen slots.</p>
+        </div>
+        <div class="home-quick-options" id="home-quick-access-options"></div>
+        <div class="home-quick-modal-actions">
+            <button type="button" onclick="resetHomeQuickAccess()">Reset</button>
+            <button type="button" onclick="closeHomeQuickAccessModal()">Done</button>
+        </div>
+    </div>
 </div>
-<div class="links home-footer-links">
-<a class="footer-social-link github-link" href="https://github.com/Noobler28/sharkdle" target="_blank" rel="noopener">GitHub</a>
 
-<a class="footer-social-link updates-link" href="Updates/index.html">Updates</a>
-
-<a class="footer-social-link instagram-link" href="https://instagram.com/sharkdle.dev" target="_blank" rel="noopener">Instagram</a>
-
-<a class="footer-social-link discord-link" href="https://discord.gg/V97Y8545Ve" target="_blank" rel="noopener">Discord</a>
+<div id="homeQuickStatsModal" class="modal hidden" onclick="if(event.target===this) closeHomeQuickStatsModal()">
+    <div class="modal-content home-quick-access-modal-content home-quick-stats-modal-content">
+        <button type="button" class="modal-x-btn" onclick="closeHomeQuickStatsModal()" aria-label="Close quick stats modal">×</button>
+        <div class="home-quick-modal-head">
+            <div class="new-modal-kicker">Quick Stats</div>
+            <h2>Customize Stats</h2>
+            <p>Four home-screen numbers.</p>
+        </div>
+        <div class="home-quick-options home-stat-options" id="home-quick-stats-options"></div>
+        <div class="home-quick-modal-actions">
+            <button type="button" onclick="resetHomeQuickStats()">Reset</button>
+            <button type="button" onclick="closeHomeQuickStatsModal()">Done</button>
+        </div>
+    </div>
 </div>
 
-<p style="font-size: 12px; color: #888; margin-top: 15px;">© 2026 Sharkdle. All rights reserved.</p>
 
-</footer>
 
 <!-- Meet the Dev Modal -->
 <div id="devModal" class="modal hidden">
@@ -967,63 +1128,6 @@ content="Play Sharkdle, the daily shark guessing game. Guess shark species from 
 
 
 
-<!-- Profile Picture Modal -->
-<div id="profilePicModal" class="modal hidden">
-<div class="modal-content picker-modal-content pfp-picker-modal-content">
-<div class="picker-modal-heading">
-<div class="picker-modal-kicker">Cosmetics</div>
-<h2>Profile Picture</h2>
-<p class="pfp-picker-subtitle">Choose a portrait for your profile, friends list, and leaderboards.</p>
-</div>
-
-<div class="pfp-picker-preview" id="pfp-picker-preview">
-<div class="pfp-picker-preview-frame">
-<img id="pfp-picker-preview-img" src="images/pfp/shark1.png" alt="Selected profile picture">
-<span class="pfp-picker-preview-crown hidden" id="pfp-picker-preview-crown" aria-hidden="true">👑</span>
-</div>
-<div class="pfp-picker-preview-copy">
-<div class="pfp-picker-preview-label">Equipped portrait</div>
-<div class="pfp-picker-preview-name" id="pfp-picker-preview-name">Whale Shark</div>
-<div class="pfp-picker-preview-source" id="pfp-picker-preview-source">Starter shark</div>
-</div>
-</div>
-
-<div class="pfp-picker-toolbar">
-<input type="search" id="pfp-picker-search" class="pfp-picker-search" placeholder="Search sharks..." autocomplete="off" spellcheck="false">
-<div class="pfp-picker-tabs picker-modal-tabs" id="pfp-picker-tabs" role="tablist">
-<button type="button" class="picker-modal-tab active" data-pfp-filter="all" role="tab" aria-selected="true">All</button>
-<button type="button" class="picker-modal-tab" data-pfp-filter="starter" role="tab">Starter</button>
-<button type="button" class="picker-modal-tab" data-pfp-filter="pass" role="tab">Shark Pass</button>
-<button type="button" class="picker-modal-tab" data-pfp-filter="reward" role="tab">Rewards</button>
-<button type="button" class="picker-modal-tab" data-pfp-filter="crate" role="tab">Crates</button>
-</div>
-</div>
-
-<div class="pfp-picker-meta">
-<span id="pfp-picker-count">0 portraits</span>
-<span id="pfp-picker-unlocked-count">0 unlocked</span>
-</div>
-
-<div id="pfp-picker-grid" class="pfp-picker-grid" role="list"></div>
-<p id="pfp-picker-empty" class="pfp-picker-empty hidden">No portraits match your search. Try another filter or clear the search box.</p>
-
-<button type="button" class="pfp-picker-close-btn" onclick="closeProfilePicModal()">Done</button>
-</div>
-</div>
-
-<!-- Badge Modal -->
-<div id="badgeModal" class="modal hidden">
-<div class="modal-content picker-modal-content badge-picker-modal-content" style="width: 95%; max-width: 640px; max-height: 85vh; overflow-y: auto; display: flex; flex-direction: column;">
-<div class="picker-modal-heading">
-<div class="picker-modal-kicker">Cosmetics</div>
-<h2 style="margin-top: 0; margin-bottom: 12px;">Choose Badge</h2>
-</div>
-<p style="color: #888; font-size: 14px; margin-bottom: 18px;">Equip a badge for your profile.</p>
-<div id="badge-select-container" class="profile-cosmetic-row badge-select-grid" style="max-height: 56vh; overflow-y: auto; padding-right: 4px;"></div>
-<button onclick="closeBadgeModal()" style="width: 100%; padding: 10px; margin-top: 16px; background: #ccc; color: #333; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; flex-shrink: 0;">Close</button>
-</div>
-</div>
-
 <!-- Daily Login Rewards Modal -->
 <div id="dailyLoginModal" class="modal hidden shark-modal-backdrop">
 <div class="modal-content daily-login-modal-content new-site-modal">
@@ -1042,6 +1146,33 @@ content="Play Sharkdle, the daily shark guessing game. Guess shark species from 
 </div>
 
 <button onclick="closeDailyLoginModal()" class="modal-secondary-btn">Close</button>
+</div>
+</div>
+
+<div id="megalodonEscapeAwardModal" class="modal hidden shark-modal-backdrop" onclick="if(event.target===this) closeMegalodonEscapeAwardModal()">
+<div class="modal-content megalodon-award-modal-content new-site-modal">
+<button type="button" class="modal-x-btn" onclick="closeMegalodonEscapeAwardModal()" aria-label="Close event award modal">&times;</button>
+<div class="megalodon-award-hero">
+<div class="megalodon-award-icon"><i class="fa-solid fa-water" aria-hidden="true"></i></div>
+<div>
+<div class="new-modal-kicker">Event Complete</div>
+<h2>The Megalodon Got Away</h2>
+<p>The event has ended, and the Megalodon got away. Thanks for joining the hunt; your participation award has been added.</p>
+</div>
+</div>
+<div class="megalodon-award-rewards" aria-label="Participation award">
+<div class="megalodon-award-reward">
+<i class="fa-solid fa-umbrella-beach" aria-hidden="true"></i>
+<span>Summer Crate</span>
+<strong>+1</strong>
+</div>
+<div class="megalodon-award-reward">
+<i class="fa-solid fa-star" aria-hidden="true"></i>
+<span>XP</span>
+<strong>+1,000</strong>
+</div>
+</div>
+<button type="button" class="modal-primary-btn megalodon-award-close" onclick="closeMegalodonEscapeAwardModal()">Awesome</button>
 </div>
 </div>
 
@@ -1086,6 +1217,13 @@ content="Play Sharkdle, the daily shark guessing game. Guess shark species from 
 <div class="admin-visitor-empty">Loading recent visitors...</div>
 </div>
 <div id="admin-visitor-status" class="admin-abuse-status">Visitor insights are loading.</div>
+</section>
+
+<section class="picker-section admin-abuse-section">
+<h3>Fair Play Review</h3>
+<p>Automatic checks highlight unusual Daily and Infinite results for you to review. Flags do not change rankings or blacklist players.</p>
+<div id="admin-fair-play-list" aria-live="polite"></div>
+<div id="admin-fair-play-status" class="admin-abuse-status">Publish the detector and rules to begin collecting new game observations.</div>
 </section>
 
     <section class="picker-section admin-abuse-section">
@@ -1135,6 +1273,21 @@ content="Play Sharkdle, the daily shark guessing game. Guess shark species from 
 <button class="admin-abuse-btn" onclick="adminApplyIndexTheme()">Apply Theme</button>
 </div>
 <div id="admin-theme-status" class="admin-abuse-status">Theme control ready.</div>
+</section>
+
+<section class="picker-section admin-abuse-section">
+<h3>Christmas Event Parts</h3>
+<div class="admin-abuse-row">
+<select id="admin-christmas-part" class="admin-abuse-select" aria-label="Christmas event part">
+<option value="1">Part 1 · Protect Steven</option>
+<option value="2">Part 2 · Santa Jaws Calendar</option>
+</select>
+<input id="admin-christmas-day" type="number" min="1" max="25" value="1" class="admin-abuse-input" aria-label="Calendar preview day" title="Preview December day (1–25)">
+<button type="button" class="admin-abuse-btn" onclick="SharkdleChristmas.preview(document.getElementById('admin-christmas-part').value)">Preview Locally</button>
+<button type="button" class="admin-abuse-btn" onclick="SharkdleChristmas.publish()">Apply For Everyone</button>
+<button type="button" class="admin-abuse-btn admin-abuse-btn-secondary" onclick="SharkdleChristmas.preview('live')">Exit Preview</button>
+</div>
+<div id="admin-christmas-status" class="admin-abuse-status">Preview is private. Calendar gifts open December 1–25 after a win that day (UTC).</div>
 </section>
 
 <section class="picker-section admin-abuse-section">
@@ -1425,8 +1578,10 @@ content="Play Sharkdle, the daily shark guessing game. Guess shark species from 
 </div>
 </div>
 
-<script src="cordova.js"></script>
-<script src="script.js"></script>
+<link rel="stylesheet" href="fair-play.css?v=20261019">
+<script src="fair-play.js?v=20261019"></script>
+<script src="script.js?v=20261102-thankyou100"></script>
+<script src="christmas-event.js?v=20261102-present-doors"></script>
 <script src="global-broadcast.js"></script>
 <script>
 function openDevModal() {

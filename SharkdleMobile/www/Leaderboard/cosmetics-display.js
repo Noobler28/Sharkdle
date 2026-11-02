@@ -3,6 +3,11 @@
  */
 (function () {
     const LEADERBOARD_BADGES = [
+
+
+
+
+
         { id: "starter", name: "Starter", emoji: "🦈" },
         { id: "dev", name: "Developer", emoji: "🖥️" },
         { id: "tester", name: "Tester", emoji: "🎮" },
@@ -125,6 +130,20 @@
     };
 
     const LEADERBOARD_THEME_IDS = new Set([
+
+
+
+
+        "reef-rush",
+        "abyssal-current",
+        "reef-signal",
+        "copper-surge",
+        "raylight-drift",
+        "sixgill-night",
+        "abyss-bloom",
+        "neon-reef",
+        "lunar-current",
+        "lucky-current",
         "default",
         "tidal-blue",
         "sunken-gold",

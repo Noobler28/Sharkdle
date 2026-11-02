@@ -42,10 +42,6 @@ function getAllAchievementDefinitions() {
     return Object.values(achievementDefinitions).flat();
 }
 
-function getAchievementById(achievementId) {
-    return getAllAchievementDefinitions().find(achievement => achievement.id === achievementId) || null;
-}
-
 function getAchievementProgressValue(achievement = {}, profileData = {}) {
     const metric = achievement.metric || "";
     if (metric === "wins" || achievement.id?.includes("wins_")) return Number(profileData.wins) || 0;

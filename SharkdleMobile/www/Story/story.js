@@ -1,8 +1,88 @@
 const STORY_STORAGE_KEY = "sharkdle_story_mode_v2";
 const ACHIEVEMENT_STORAGE_KEY = "unlockedAchievements";
-const STORY_IMAGE_SHARKS_PER_CHAPTER = 3;
 const STORY_SPECIES_PER_AREA = 3;
 const STORY_TASKS_PER_SPECIES = 3;
+
+const STORY_FINALE_SCENES = [
+    {
+        speaker: "The archive",
+        text: "For the first time, every region on the map is green. The last corrupted record settles into place. Then a second signal appears beneath it."
+    },
+    {
+        speaker: "Dr. Finn",
+        image: "images/storyMode/DrFinn.png",
+        text: "You did it, {playerUsername}. The archive is whole again. All eight regions are... Wait. There is another signal. That isn't a record."
+    },
+    {
+        speaker: "Unknown signal",
+        image: "images/storyMode/Patch.png",
+        text: "A broad, spotted silhouette moves into the light. The transmission steadies. An old survey signal carries a familiar face."
+    },
+    {
+        speaker: "Dr. Finn",
+        image: "images/storyMode/DrFinn.png",
+        text: "Patch? I'd know those markings anywhere. We helped you back into open water, then followed your journey with a survey tag."
+    },
+    {
+        speaker: "Patch",
+        image: "images/storyMode/Patch.png",
+        text: "Finn! I kept calling. I hoped you'd hear me."
+    },
+    {
+        speaker: "Dr. Finn",
+        image: "images/storyMode/DrFinn.png",
+        text: "That old tag... The mixed-up records all lead back to its signal."
+    },
+    {
+        speaker: "Patch",
+        image: "images/storyMode/Patch.png",
+        text: "I was trying to call for help. Some sharks were caught in abandoned fishing gear. I couldn't leave them."
+    },
+    {
+        speaker: "Dr. Finn",
+        image: "images/storyMode/DrFinn.png",
+        text: "You stayed with them?"
+    },
+    {
+        speaker: "Patch",
+        image: "images/storyMode/Patch.png",
+        text: "I kept sending the call. Every time a station answered, the signal started again. I thought one of the boats would find us."
+    },
+    {
+        speaker: "Dr. Finn",
+        image: "images/storyMode/DrFinn.png",
+        text: "Your tag was damaged. The stations kept passing the same call around, and the old archive mixed it into records from every region."
+    },
+    {
+        speaker: "Patch",
+        image: "images/storyMode/Patch.png",
+        text: "That was my signal? I didn't mean to mix anything up. I just wanted them to be found."
+    },
+    {
+        speaker: "Dr. Finn",
+        image: "images/storyMode/DrFinn.png",
+        text: "I know, Patch. You were right to call for help. Our archive should have kept one damaged signal from affecting the other records."
+    },
+    {
+        speaker: "Patch",
+        image: "images/storyMode/Patch.png",
+        text: "Can you still find them?"
+    },
+    {
+        speaker: "Dr. Finn",
+        image: "images/storyMode/DrFinn.png",
+        text: "Thanks to {playerUsername}, the records are restored. Now we can follow your original call. I'll send the rescue team."
+    },
+    {
+        speaker: "Patch",
+        image: "images/storyMode/Patch.png",
+        text: "I'll stay close. They won't be waiting alone."
+    },
+    {
+        speaker: "The archive",
+        text: "Finn sends the coordinates to the rescue team. Across the map, the restored records guide them towards Patch's signal. His call has finally reached someone who can help. The archive is whole, and nobody has to wait alone."
+    }
+];
 
 const areaDefinitions = [
         {
@@ -375,7 +455,7 @@ const areaDefinitions = [
             "Bonnethead Shark"
         ],
         narrative: "The final corrupted node sits beneath the Pacific Ring of Fire, where coastal horn-shark records, deep frilled shark telemetry, and rare megamouth sightings all fold into one ancient archive. Dr. Finn says this is the root cluster. Restore Japan's records and the global map can finally lock.",
-        completionNarrative: "Every map sector flashes green. Dr. Finn laughs, exhausted: 'You did it, {playerUsername}. The global shark database is whole again. Take a break, you earned it. The oceans are back online because of you.'",
+        completionNarrative: "Every map sector flashes green. Dr. Finn's voice reaches your console: 'The database is whole again, {playerUsername}. But there is a signal still coming through. Stay on the line.'",
         facts: [
             "Japanese Bullhead Sharks are small horn sharks with distinctive ridges above the eyes.",
             "Frilled Sharks are primitive deep-water species with serpentine bodies and needle-like teeth.",
@@ -406,18 +486,6 @@ const areaDefinitions = [
 
 const areaOrder = areaDefinitions.map(area => area.id);
 
-const STORY_CHAPTER_FOLDER_ALIASES = {
-    atlantic: ["chapter1", "chapterOne"],
-    pacific: ["chapter2", "chapterTwo"],
-    indian: ["chapter3", "chapterThree"],
-    mediterranean: ["chapter4", "chapterFour"],
-    australia: ["chapter5", "chapterFive"],
-    south_africa: ["chapter6", "chapterSix"],
-    usa_east: ["chapter7", "chapterSeven"],
-    japan: ["chapter8", "chapterEight"]
-};
-
-const STORY_SHARK_NUMBER_WORDS = ["One", "Two", "Three", "Four", "Five"];
 const SHARK_VISUAL_PROFILES = {
     "White Shark": [
         "a massive pale body and a heavy tail",
@@ -686,59 +754,6 @@ const SHARK_OBSERVATION_OPENERS = [
     "A shape moves beneath the swell"
 ];
 
-function getStoryChapterFolders(areaId) {
-    return STORY_CHAPTER_FOLDER_ALIASES[areaId] || [`chapter${getAreaIndex(areaId) + 1}`];
-}
-
-function getStorySharkFileNames(sharkIndex) {
-    const sharkNumber = sharkIndex + 1;
-    const word = STORY_SHARK_NUMBER_WORDS[sharkIndex] || String(sharkNumber);
-    return [
-        `shark${sharkNumber}.png`,
-        `Shark${sharkNumber}.png`,
-        `Shark${word}.png`
-    ];
-}
-
-function getStorySharkImageCandidates(areaId, sharkIndex) {
-    const folders = getStoryChapterFolders(areaId);
-    const fileNames = getStorySharkFileNames(sharkIndex);
-    const candidates = [];
-
-    folders.forEach(folder => {
-        fileNames.forEach(fileName => {
-            candidates.push(`images/storyMode/${folder}/${fileName}`);
-        });
-    });
-
-    return [...new Set(candidates)];
-}
-
-function getStorySharkImagePath(areaId, sharkIndex) {
-    return getStorySharkImageCandidates(areaId, sharkIndex)[0];
-}
-
-function applyStorySharkImage(img, areaId, sharkIndex) {
-    const candidates = getStorySharkImageCandidates(areaId, sharkIndex);
-    let candidateIndex = 0;
-
-    img.onerror = () => {
-        candidateIndex += 1;
-        if (candidateIndex < candidates.length) {
-            img.src = candidates[candidateIndex];
-            return;
-        }
-        img.onerror = null;
-        img.src = "images/pfp/shark1.png";
-    };
-
-    img.src = candidates[0];
-}
-
-function getStoryFeaturedSharks(area) {
-    return (area?.sharks || []).slice(0, STORY_IMAGE_SHARKS_PER_CHAPTER);
-}
-
 function getStorySpeciesLineup(area) {
     return (area?.sharks || [])
         .slice(0, STORY_SPECIES_PER_AREA)
@@ -748,20 +763,6 @@ function getStorySpeciesLineup(area) {
 function getStorySpeciesDescription(area, speciesName) {
     return area?.speciesDescriptions?.[speciesName]
         || "Open this dossier to verify sightings, match field images, and restore the regional record.";
-}
-
-function getSpeciesTaskTitle(species, taskIndex) {
-    const titles = ["Signal Scan", "Archive Match", "Field Truth"];
-    return `${species.name} - ${titles[taskIndex] || `Task ${taskIndex + 1}`}`;
-}
-
-function getSpeciesTaskDescription(taskIndex) {
-    const descriptions = [
-        "Confirm the shark belongs in this chapter.",
-        "Match the chapter image to the shark's name.",
-        "Sort true and false field reports."
-    ];
-    return descriptions[taskIndex] || "Complete the assigned task.";
 }
 
 function getAreaProgressCount(areaState) {
@@ -788,6 +789,9 @@ const areaAchievementMap = {
 let storyState = null;
 let currentOpenAreaId = null;
 let currentOpenMission = null;
+let finaleStepIndex = 0;
+let finaleReplay = false;
+let finaleReturnFocus = null;
 
 function defaultStoryState() {
     const areas = {};
@@ -800,7 +804,7 @@ function defaultStoryState() {
         };
     });
 
-    return { areas };
+    return { areas, finale: { seen: false, step: 0 } };
 }
 
 function loadStoryState() {
@@ -809,6 +813,11 @@ function loadStoryState() {
         const raw = localStorage.getItem(STORY_STORAGE_KEY);
         if (raw) {
             const saved = JSON.parse(raw);
+            base.finale.seen = saved?.finale?.seen === true;
+            const savedStep = saved?.finale?.step;
+            base.finale.step = Number.isInteger(savedStep)
+                ? Math.max(0, Math.min(savedStep, STORY_FINALE_SCENES.length - 1))
+                : 0;
             areaDefinitions.forEach(area => {
                 const savedArea = saved?.areas?.[area.id];
                 if (savedArea) {
@@ -915,22 +924,6 @@ function getAreaIndex(areaId) {
     return areaOrder.indexOf(areaId);
 }
 
-function completeChallenge(areaId, challengeIndex) {
-    const areaState = getAreaState(areaId);
-    const speciesIndex = Math.floor(challengeIndex / STORY_TASKS_PER_SPECIES);
-    const taskIndex = challengeIndex % STORY_TASKS_PER_SPECIES;
-
-    if (speciesIndex >= STORY_SPECIES_PER_AREA) {
-        areaState.bossCompleted = true;
-        completeArea(areaId);
-    } else if (areaState.species?.[speciesIndex]) {
-        areaState.species[speciesIndex][taskIndex] = true;
-    }
-
-    saveStoryState();
-    renderMap();
-}
-
 function completeArea(areaId) {
     const areaState = getAreaState(areaId);
     areaState.completed = true;
@@ -949,7 +942,8 @@ function completeArea(areaId) {
         triggerStoryCelebration({
             variant: "campaign",
             title: "Campaign Complete",
-            subtitle: "You cleared every area, every dossier, and every boss."
+            subtitle: "Every record is restored. One final transmission awaits.",
+            onComplete: () => openStoryFinale()
         });
     } else {
         triggerStoryCelebration({
@@ -960,527 +954,11 @@ function completeArea(areaId) {
     }
 }
 
-function renderMapLegacyUnused() {
-    const pins = document.getElementById("map-pins");
-    pins.innerHTML = "";
-
-    areaDefinitions.forEach(area => {
-        const areaState = getAreaState(area.id);
-        const pin = document.createElement("div");
-        pin.className = "map-pin";
-        pin.style.left = `${area.left}%`;
-        pin.style.top = `${area.top}%`;
-
-        const btn = document.createElement("button");
-        btn.className = "map-pin-btn";
-        btn.disabled = !areaState.unlocked;
-        btn.title = area.name;
-        btn.textContent = areaState.completed ? "✓" : areaState.unlocked ? "🦈" : "🔒";
-        btn.onclick = () => openAreaModal(area.id);
-
-        const label = document.createElement("div");
-        label.className = "map-pin-label";
-        label.textContent = area.name;
-
-        pin.appendChild(btn);
-        pin.appendChild(label);
-        pins.appendChild(pin);
-    });
-}
-
-async function openAreaModalLegacyUnused(areaId) {
-    const area = areaDefinitions.find(entry => entry.id === areaId);
-    const areaState = getAreaState(areaId);
-    const modal = document.getElementById("area-modal");
-    const closeBtn = document.getElementById("close-modal");
-    const title = document.getElementById("modal-title");
-    const speciesContainer = document.getElementById("area-species-container");
-    const label = document.querySelector(".story-modal-area-label");
-    const narrative = document.getElementById("story-modal-narrative");
-    const progressBar = document.getElementById("story-modal-progress-bar");
-    const progressLabel = document.getElementById("story-modal-progress-label");
-
-    currentOpenAreaId = areaId;
-
-    title.textContent = `🌊 ${area.name}`;
-    if (label) label.innerHTML = `<span class="area-icon"></span> ${area.label}`;
-
-    // Ensure user profile is loaded so the correct username is available in narrative
-    if (typeof currentUser !== 'undefined' && currentUser && typeof loadUserProfile === 'function') {
-        const profile = typeof getCurrentProfileData === 'function' ? getCurrentProfileData() : null;
-        if (!profile || !profile.username) {
-            try {
-                await loadUserProfile();
-            } catch (e) {
-                console.warn("Failed to load user profile for narrative:", e);
-            }
-        }
-    }
-
-    if (narrative) {
-        narrative.textContent = areaState.completed
-            ? interpolateNarrative(area.completionNarrative)
-            : interpolateNarrative(area.narrative);
-    }
-
-    const completeCount = areaState.challenges.filter(Boolean).length;
-    progressBar.style.width = `${(completeCount / 3) * 100}%`;
-    progressLabel.textContent = `${completeCount}/3 Challenges Complete`;
-
-    challengeView.style.display = "none";
-    challengeView.innerHTML = "";
-    challengesContainer.innerHTML = "";
-
-    const challengeDefinitions = [
-        { ...(area.challenges?.[0] || { name: "Signal Scan", desc: "Pick the sharks that belong to this region." }), start: () => startSpeciesQuiz(areaId) },
-            { ...(area.challenges?.[1] || { name: "Image Mix Up", desc: "Match pictures to their Names." }), start: () => {
-                const challengeName = area.challenges?.[1]?.name || "Image Mix Up";
-                if (challengeName === "Image Mix Up") {
-                    startPairsChallenge(areaId);
-                } else {
-                    startUnscrambleChallenge(areaId);
-                }
-            }},
-        { ...(area.challenges?.[2] || { name: "Region Report", desc: "Sort true and false field reports." }), start: () => startTrueFalseChallenge(areaId) }
-    ];
-
-    challengeDefinitions.forEach((challenge, index) => {
-        const btn = document.createElement("button");
-        btn.className = "challenge-btn";
-        btn.style.marginBottom = "12px";
-        btn.innerHTML = `<b>${challenge.name}</b><br><span style="font-size:13px;opacity:0.9;">${challenge.desc}</span>`;
-        btn.disabled = index > 0 && !areaState.challenges[index - 1];
-        if (areaState.challenges[index]) {
-            btn.style.background = "linear-gradient(90deg, #4caf50, #81c784)";
-        }
-        btn.onclick = challenge.start;
-        challengesContainer.appendChild(btn);
-    });
-
-    closeBtn.onclick = () => {
-        modal.style.display = "none";
-        challengeView.style.display = "none";
-        currentOpenAreaId = null;
-    };
-
-    modal.onclick = event => {
-        if (event.target === modal) {
-            modal.style.display = "none";
-            currentOpenAreaId = null;
-        }
-    };
-
-    modal.style.display = "flex";
-}
-
 function getOtherAreaSharks(areaId) {
     return areaDefinitions
         .filter(area => area.id !== areaId)
         .flatMap(area => area.sharks)
         .filter(Boolean);
-}
-
-function showChallengeView(renderFn) {
-    const challengeView = document.getElementById("pairs-game-container");
-    challengeView.style.display = "block";
-    challengeView.innerHTML = "";
-    renderFn(challengeView);
-}
-
-function renderChallengeComplete(container, areaId, title, text) {
-    container.innerHTML = "";
-    const heading = document.createElement("h3");
-    heading.textContent = title;
-    container.appendChild(heading);
-
-    const body = document.createElement("p");
-    body.textContent = text;
-    container.appendChild(body);
-
-    const backBtn = document.createElement("button");
-    backBtn.className = "challenge-btn";
-    backBtn.style.width = "auto";
-    backBtn.textContent = "Back to Challenges";
-    backBtn.onclick = () => openAreaModal(areaId);
-    container.appendChild(backBtn);
-}
-
-function startPairsChallenge(areaId, speciesIndex = 0) {
-    const area = areaDefinitions.find(entry => entry.id === areaId);
-    const sharkNames = getStorySpeciesLineup(area);
-    const speciesName = sharkNames[speciesIndex]?.name || area.sharks[0];
-
-    const pairs = [{ id: speciesIndex, name: speciesName, image: getStorySharkImagePath(areaId, speciesIndex) }];
-
-    showChallengeView(container => {
-        const status = document.createElement("div");
-        status.className = "pairs-moves";
-        status.textContent = `Match the chapter image to ${speciesName}`;
-        container.appendChild(status);
-
-        const gameArea = document.createElement("div");
-        gameArea.style.display = "flex";
-        gameArea.style.flexDirection = "column";
-        gameArea.style.gap = "20px";
-        gameArea.style.marginTop = "20px";
-        gameArea.style.alignItems = "center";
-        container.appendChild(gameArea);
-
-        let selectedImg = null;
-        let matchedCount = 0;
-        const matchedPairs = new Set();
-        const connections = [];
-
-        const names = shuffle([...pairs]);
-
-        const svgContainer = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-        svgContainer.style.position = "absolute";
-        svgContainer.style.top = "0";
-        svgContainer.style.left = "0";
-        svgContainer.style.width = "100%";
-        svgContainer.style.height = "100%";
-        svgContainer.style.pointerEvents = "none";
-        svgContainer.style.zIndex = "1";
-        gameArea.style.position = "relative";
-        gameArea.appendChild(svgContainer);
-
-        pairs.forEach((pair, i) => {
-            const row = document.createElement("div");
-            row.style.display = "flex";
-            row.style.flexDirection = "row";
-            row.style.alignItems = "center";
-            row.style.gap = "80px";
-            row.style.width = "100%";
-            row.style.maxWidth = "500px";
-            row.style.justifyContent = "space-between";
-
-            const imgWrapper = document.createElement("div");
-            imgWrapper.className = "pairs-item";
-            imgWrapper.style.padding = "8px";
-            imgWrapper.style.border = "2px dashed transparent";
-            imgWrapper.style.borderRadius = "12px";
-            imgWrapper.style.cursor = "pointer";
-            imgWrapper.style.background = "rgba(11, 34, 51, 0.6)";
-            imgWrapper.style.boxShadow = "0 4px 12px rgba(0, 0, 0, 0.2)";
-            imgWrapper.dataset.pairId = pair.id;
-
-            const img = document.createElement("img");
-            img.alt = pair.name;
-            img.loading = "lazy";
-            applyStorySharkImage(img, areaId, pair.id);
-            img.style.width = "80px";
-            img.style.height = "80px";
-            img.style.objectFit = "cover";
-            img.style.borderRadius = "8px";
-            img.style.display = "block";
-            imgWrapper.appendChild(img);
-            row.appendChild(imgWrapper);
-
-            const nameBtn = document.createElement("button");
-            nameBtn.className = "challenge-btn";
-            nameBtn.style.width = "auto";
-            nameBtn.style.padding = "12px 24px";
-            nameBtn.style.fontSize = "14px";
-            nameBtn.textContent = names[i].name;
-            nameBtn.dataset.pairId = names[i].id;
-            row.appendChild(nameBtn);
-
-            gameArea.appendChild(row);
-        });
-
-        const feedback = document.createElement("div");
-        feedback.style.marginTop = "16px";
-        feedback.style.fontWeight = "700";
-        container.appendChild(feedback);
-
-        function resetSelection() {
-            if (selectedImg) {
-                selectedImg.style.border = "2px dashed transparent";
-                selectedImg = null;
-            }
-        }
-
-        container.querySelectorAll(".pairs-item").forEach(item => {
-            item.addEventListener("click", () => {
-                if (matchedPairs.has(item.dataset.pairId)) return;
-                resetSelection();
-                selectedImg = item;
-                item.style.border = "2px dashed #ffd700";
-            });
-        });
-
-        container.querySelectorAll("button.challenge-btn").forEach(btn => {
-            btn.addEventListener("click", () => {
-                if (matchedPairs.has(btn.dataset.pairId)) return;
-
-                if (!selectedImg) {
-                    feedback.textContent = "Select an image first!";
-                    feedback.style.color = "#ff6b6b";
-                    return;
-                }
-
-                if (selectedImg.dataset.pairId === btn.dataset.pairId) {
-                    matchedPairs.add(btn.dataset.pairId);
-                    selectedImg.style.border = "2px solid #4caf50";
-                    selectedImg.style.opacity = "0.5";
-                    btn.style.background = "linear-gradient(90deg, #4caf50, #81c784)";
-                    btn.disabled = true;
-                    matchedCount++;
-                    feedback.textContent = "Correct!";
-                    feedback.style.color = "#4caf50";
-                    selectedImg = null;
-
-                    if (matchedCount === pairs.length) {
-                        setTimeout(() => {
-                            completeChallenge(areaId, (speciesIndex * STORY_TASKS_PER_SPECIES) + 1);
-                            renderChallengeComplete(container, areaId, `${speciesName} archive match complete.`, "You correctly matched the chapter record.");
-                        }, 500);
-                    }
-                } else {
-                    feedback.textContent = "Not a match. Try again.";
-                    feedback.style.color = "#ff6b6b";
-                    selectedImg.style.border = "2px dashed transparent";
-                    selectedImg = null;
-                }
-            });
-        });
-    });
-}
-
-function startSpeciesQuiz(areaId, speciesIndex = 0) {
-    const area = areaDefinitions.find(entry => entry.id === areaId);
-    const speciesName = getStorySpeciesLineup(area)[speciesIndex]?.name || area.sharks[0];
-    const targets = [speciesName, speciesName, speciesName];
-    let round = 0;
-
-    showChallengeView(container => {
-        const status = document.createElement("div");
-        status.className = "pairs-moves";
-        container.appendChild(status);
-
-        const prompt = document.createElement("div");
-        prompt.style.fontSize = "1.15em";
-        prompt.style.margin = "14px 0";
-        container.appendChild(prompt);
-
-        const optionsWrap = document.createElement("div");
-        optionsWrap.style.display = "grid";
-        optionsWrap.style.gridTemplateColumns = "repeat(auto-fit, minmax(180px, 1fr))";
-        optionsWrap.style.gap = "12px";
-        container.appendChild(optionsWrap);
-
-        const feedback = document.createElement("div");
-        feedback.style.marginTop = "12px";
-        feedback.style.fontWeight = "700";
-        container.appendChild(feedback);
-
-        function renderRound() {
-            if (round >= targets.length) {
-                completeChallenge(areaId, (speciesIndex * STORY_TASKS_PER_SPECIES) + 0);
-                renderChallengeComplete(container, areaId, `${speciesName} signal scan complete.`, "You correctly identified the species and restored its record.");
-                return;
-            }
-
-            status.textContent = `Question ${round + 1} of ${targets.length}`;
-            prompt.textContent = `Which shark is at the center of ${speciesName}'s chapter arc?`;
-            feedback.textContent = "";
-            optionsWrap.innerHTML = "";
-
-            const correct = targets[round];
-            const distractors = shuffle((area.nonSharks || []).slice())
-                .filter(name => name !== correct)
-                .slice(0, 3);
-            if (distractors.length < 3) {
-                feedback.textContent = "This region needs more out-of-area species configured.";
-                feedback.style.color = "#ff6b6b";
-                return;
-            }
-            shuffle([correct, ...distractors]).forEach(option => {
-                const button = document.createElement("button");
-                button.className = "challenge-btn";
-                button.textContent = option;
-                button.onclick = () => {
-                    if (option === correct) {
-                        feedback.textContent = "Correct!";
-                        feedback.style.color = "#4caf50";
-                        round += 1;
-                        setTimeout(renderRound, 500);
-                    } else {
-                        feedback.textContent = "Not quite. Try again.";
-                        feedback.style.color = "#ff6b6b";
-                    }
-                };
-                optionsWrap.appendChild(button);
-            });
-        }
-
-        renderRound();
-    });
-}
-
-function startUnscrambleChallenge(areaId, speciesIndex = 0) {
-    const area = areaDefinitions.find(entry => entry.id === areaId);
-    const speciesName = getStorySpeciesLineup(area)[speciesIndex]?.name || area.sharks[0];
-    const words = [speciesName];
-    let round = 0;
-
-    showChallengeView(container => {
-        const status = document.createElement("div");
-        status.className = "pairs-moves";
-        container.appendChild(status);
-
-        const scrambled = document.createElement("div");
-        scrambled.style.fontSize = "1.35em";
-        scrambled.style.margin = "18px 0 12px 0";
-        scrambled.style.color = "#ffd700";
-        scrambled.style.letterSpacing = "2px";
-        container.appendChild(scrambled);
-
-        const input = document.createElement("input");
-        input.type = "text";
-        input.placeholder = "Type the shark name...";
-        input.style.fontSize = "1.1em";
-        input.style.padding = "10px 14px";
-        input.style.borderRadius = "10px";
-        input.style.border = "2px solid #00b4d8";
-        input.style.width = "90%";
-        container.appendChild(input);
-
-        const submit = document.createElement("button");
-        submit.className = "challenge-btn";
-        submit.style.width = "auto";
-        submit.textContent = "Submit";
-        container.appendChild(submit);
-
-        const feedback = document.createElement("div");
-        feedback.style.marginTop = "12px";
-        feedback.style.fontWeight = "700";
-        container.appendChild(feedback);
-
-        function renderRound() {
-            if (round >= words.length) {
-                completeChallenge(areaId, (speciesIndex * STORY_TASKS_PER_SPECIES) + 1);
-                renderChallengeComplete(container, areaId, `${speciesName} name repair complete.`, "The species records are clean again.");
-                return;
-            }
-
-            status.textContent = `Word ${round + 1} of ${words.length}`;
-            scrambled.textContent = shuffleString(words[round].replace(/\s+/g, ""));
-            input.value = "";
-            feedback.textContent = "";
-            input.focus();
-        }
-
-        submit.onclick = () => {
-            if (input.value.trim().toLowerCase() === words[round].toLowerCase()) {
-                feedback.textContent = "Correct!";
-                feedback.style.color = "#4caf50";
-                round += 1;
-                setTimeout(renderRound, 500);
-            } else {
-                feedback.textContent = "Incorrect, try again.";
-                feedback.style.color = "#ff6b6b";
-            }
-        };
-
-        input.addEventListener("keydown", event => {
-            if (event.key === "Enter") submit.click();
-        });
-
-        renderRound();
-    });
-}
-
-function startTrueFalseChallenge(areaId, speciesIndex = 0) {
-    const area = areaDefinitions.find(entry => entry.id === areaId);
-    const speciesName = getStorySpeciesLineup(area)[speciesIndex]?.name || area.sharks[0];
-    
-    // Use provided facts (now biologically focused)
-    const trueStatements = (area.facts || [])
-        .filter(text => typeof text === "string" && text.trim())
-        .map(text => ({ text, answer: true }));
-
-    const falseStatements = (area.falseFacts || [])
-        .filter(text => typeof text === "string" && text.trim())
-        .map(text => ({ text, answer: false }));
-    
-    // Mix true and false, ensure we have at least 5 rounds
-    let rounds = shuffle([...trueStatements, ...falseStatements]);
-    if (rounds.length < 5) {
-        // Pad with additional false statements from other sharks if needed
-        const extraFalse = getOtherAreaSharks(areaId)
-            .filter(name => !area.sharks.includes(name))
-            .slice(0, 5 - rounds.length)
-            .map(shark => ({
-                text: `${shark} is a key species in ${speciesName}'s chapter.`,
-                answer: false
-            }));
-        rounds = shuffle([...rounds, ...extraFalse]);
-    }
-    rounds = rounds.slice(0, 5);
-    
-    let round = 0;
-
-    showChallengeView(container => {
-        const status = document.createElement("div");
-        status.className = "pairs-moves";
-        container.appendChild(status);
-
-        const statement = document.createElement("div");
-        statement.style.fontSize = "1.15em";
-        statement.style.margin = "16px 0";
-        statement.style.lineHeight = "1.6";
-        container.appendChild(statement);
-
-        const row = document.createElement("div");
-        row.style.display = "flex";
-        row.style.gap = "14px";
-        row.style.justifyContent = "center";
-        container.appendChild(row);
-
-        const trueBtn = document.createElement("button");
-        trueBtn.className = "challenge-btn";
-        trueBtn.textContent = "True";
-        row.appendChild(trueBtn);
-
-        const falseBtn = document.createElement("button");
-        falseBtn.className = "challenge-btn";
-        falseBtn.textContent = "False";
-        row.appendChild(falseBtn);
-
-        const feedback = document.createElement("div");
-        feedback.style.marginTop = "12px";
-        feedback.style.fontWeight = "700";
-        container.appendChild(feedback);
-
-        function renderRound() {
-            if (round >= rounds.length) {
-                completeChallenge(areaId, (speciesIndex * STORY_TASKS_PER_SPECIES) + 2);
-                renderChallengeComplete(container, areaId, `${speciesName} report complete.`, "You sorted the field notes correctly.");
-                return;
-            }
-
-            status.textContent = `Statement ${round + 1} of ${rounds.length}`;
-            statement.textContent = rounds[round].text;
-            feedback.textContent = "";
-        }
-
-        function answer(value) {
-            if (value === rounds[round].answer) {
-                feedback.textContent = "Correct!";
-                feedback.style.color = "#4caf50";
-                round += 1;
-                setTimeout(renderRound, 450);
-            } else {
-                feedback.textContent = "Incorrect, try again.";
-                feedback.style.color = "#ff6b6b";
-            }
-        }
-
-        trueBtn.onclick = () => answer(true);
-        falseBtn.onclick = () => answer(false);
-        renderRound();
-    });
 }
 
 function startBossMission(areaId) {
@@ -1981,32 +1459,7 @@ function shuffle(array) {
     return clone;
 }
 
-function completeOpenMapSectionLegacyUnused() {
-    const modal = document.getElementById("area-modal");
-    if (!modal || modal.style.display === "none" || !currentOpenAreaId) {
-        console.log("❌ Open a map section modal first, then run completeOpenMapSection().");
-        return false;
-    }
-
-    const area = areaDefinitions.find(entry => entry.id === currentOpenAreaId);
-    const areaState = getAreaState(currentOpenAreaId);
-    if (!area || !areaState) {
-        console.log("❌ Could not resolve the currently open map section.");
-        return false;
-    }
-
-    areaState.species = Array.from({ length: STORY_SPECIES_PER_AREA }, () => [true, true, true]);
-    areaState.bossCompleted = true;
-    completeArea(currentOpenAreaId);
-    saveStoryState();
-    renderMap();
-    openAreaModal(currentOpenAreaId);
-
-    console.log(`✅ Completed map section: ${area.name}`);
-    return true;
-}
-
-function triggerStoryCelebration({ variant = "species", title, subtitle }) {
+function triggerStoryCelebration({ variant = "species", title, subtitle, onComplete }) {
     const existing = document.querySelector(".story-celebration-overlay");
     if (existing) existing.remove();
 
@@ -2032,7 +1485,10 @@ function triggerStoryCelebration({ variant = "species", title, subtitle }) {
     requestAnimationFrame(() => overlay.classList.add("visible"));
     setTimeout(() => {
         overlay.classList.remove("visible");
-        setTimeout(() => overlay.remove(), 500);
+        setTimeout(() => {
+            overlay.remove();
+            if (typeof onComplete === "function") onComplete();
+        }, 500);
     }, variant === "campaign" ? 2600 : variant === "area" ? 2000 : 1400);
 }
 
@@ -2048,35 +1504,106 @@ function interpolateNarrative(text) {
     return text.replace(/{playerUsername}/g, getPlayerUsername());
 }
 
-function uncompleteOpenMapSectionLegacyUnused() {
-    const modal = document.getElementById("area-modal");
-    if (!modal || modal.style.display === "none" || !currentOpenAreaId) {
-        console.log("❌ Open a map section modal first, then run uncompleteOpenMapSection().");
-        return false;
+function isStoryCampaignComplete() {
+    return areaDefinitions.every(area => storyState?.areas?.[area.id]?.completed);
+}
+
+function createStoryFinaleLauncher() {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "story-finale-launcher";
+    const seen = storyState.finale.seen;
+    button.innerHTML = `
+        <span class="story-guide-eyebrow">Campaign epilogue</span>
+        <strong>${seen ? "Replay the ending" : "Read the final transmission"}</strong>
+        <span>${seen ? "Return to the signal beyond the restored archive." : "Every region is restored. Someone is still on the line."}</span>
+    `;
+    button.onclick = () => openStoryFinale({ replay: storyState.finale.seen });
+    return button;
+}
+
+function renderStoryFinale() {
+    const scene = STORY_FINALE_SCENES[finaleStepIndex];
+    const dialog = document.getElementById("story-finale");
+    if (!scene || !dialog) return;
+    const image = document.getElementById("story-finale-image");
+    image.hidden = !scene.image;
+    if (scene.image) {
+        image.src = scene.image;
+        image.alt = scene.speaker === "Unknown signal" ? "An unidentified shark in the transmission" : scene.speaker;
+    } else {
+        image.removeAttribute("src");
+        image.alt = "";
     }
+    document.getElementById("story-finale-portrait").hidden = !scene.image;
+    dialog.dataset.narration = String(!scene.image);
+    document.getElementById("story-finale-speaker").textContent = scene.image ? scene.speaker : "Narrator";
+    document.getElementById("story-finale-text").textContent = interpolateNarrative(scene.text);
+    const progress = document.getElementById("story-finale-progress");
+    progress.textContent = `${finaleStepIndex + 1} / ${STORY_FINALE_SCENES.length}`;
+    progress.setAttribute("aria-label", `Dialogue ${finaleStepIndex + 1} of ${STORY_FINALE_SCENES.length}`);
+    document.getElementById("story-finale-progress-fill").style.width = `${((finaleStepIndex + 1) / STORY_FINALE_SCENES.length) * 100}%`;
+    document.getElementById("story-finale-back").disabled = finaleStepIndex === 0;
+    const last = finaleStepIndex === STORY_FINALE_SCENES.length - 1;
+    document.getElementById("story-finale-next").textContent = last ? "Return to map" : "Continue";
+}
 
-    const area = areaDefinitions.find(entry => entry.id === currentOpenAreaId);
-    const areaState = getAreaState(currentOpenAreaId);
-    if (!area || !areaState) {
-        console.log("❌ Could not resolve the currently open map section.");
-        return false;
-    }
-
-    areaState.species = Array.from({ length: STORY_SPECIES_PER_AREA }, () => [false, false, false]);
-    areaState.completed = false;
-    areaState.bossCompleted = false;
-
-    const prevAreaId = areaDefinitions[getAreaIndex(currentOpenAreaId) - 1]?.id;
-    if (prevAreaId) {
-        storyState.areas[prevAreaId].completed = false;
-    }
-
-    saveStoryState();
-    renderMap();
-    openAreaModal(currentOpenAreaId);
-
-    console.log(`↩️  Uncompleted map section: ${area.name}`);
+function openStoryFinale({ replay = false } = {}) {
+    const dialog = document.getElementById("story-finale");
+    if (!isStoryCampaignComplete() || !dialog || dialog.open || (storyState.finale.seen && !replay)) return false;
+    finaleReplay = replay;
+    finaleStepIndex = replay ? 0 : storyState.finale.step;
+    finaleReturnFocus = document.activeElement;
+    renderStoryFinale();
+    dialog.showModal();
+    document.body.classList.add("story-finale-open");
+    document.getElementById("story-finale-next").focus();
     return true;
+}
+
+function advanceStoryFinale(direction) {
+    const dialog = document.getElementById("story-finale");
+    if (!dialog?.open) return;
+    if (direction > 0 && finaleStepIndex === STORY_FINALE_SCENES.length - 1) {
+        closeStoryFinale(true);
+        return;
+    }
+    finaleStepIndex = Math.max(0, Math.min(finaleStepIndex + direction, STORY_FINALE_SCENES.length - 1));
+    if (!finaleReplay) {
+        storyState.finale.step = finaleStepIndex;
+        saveStoryState();
+    }
+    renderStoryFinale();
+}
+
+function closeStoryFinale(finished = false) {
+    const dialog = document.getElementById("story-finale");
+    if (!dialog?.open) return;
+    if (finished) {
+        storyState.finale.seen = true;
+        storyState.finale.step = STORY_FINALE_SCENES.length - 1;
+        saveStoryState();
+    }
+    dialog.close();
+    document.body.classList.remove("story-finale-open");
+    renderMap();
+    if (currentOpenAreaId) refreshAreaModal(currentOpenAreaId);
+    const focusTarget = finaleReturnFocus?.isConnected
+        ? finaleReturnFocus
+        : document.querySelector(".story-finale-launcher");
+    focusTarget?.focus();
+}
+
+function setupStoryFinale() {
+    const dialog = document.getElementById("story-finale");
+    if (!dialog) return;
+    document.getElementById("story-finale-next").onclick = () => advanceStoryFinale(1);
+    document.getElementById("story-finale-back").onclick = () => advanceStoryFinale(-1);
+    document.getElementById("story-finale-close").onclick = () => closeStoryFinale();
+    dialog.addEventListener("cancel", event => {
+        event.preventDefault();
+        closeStoryFinale();
+    });
 }
 
 function closeAreaModal() {
@@ -2111,23 +1638,6 @@ function buildSpeciesMissionPool(areaId, speciesIndex) {
         ...new Set(getOtherAreaSharks(areaId).filter(name => name !== speciesName && !regionalChoices.includes(name)))
     ]).slice(0, 6);
     return { area, speciesName, regionalChoices, distractors };
-}
-
-function getSharkDescriptor(sharkName) {
-    const shark = window.sharks?.find?.(entry => entry.name === sharkName) || {};
-    const sizeText = {
-        Tiny: "small and quick to vanish under the swell",
-        Small: "compact and streamlined",
-        Medium: "a mid-sized hunter with a powerful silhouette",
-        Large: "broad-bodied and unmistakably heavy through the water",
-        Giant: "massive, almost impossible to mistake"
-    }[shark.size] || "distinctive in the water";
-
-    const depthText = shark.depth
-        ? `${shark.depth.toLowerCase()} waters`
-        : "open water";
-    const genusText = shark.genus ? `genus ${shark.genus}` : "a familiar shark lineage";
-    return `${sizeText}, built for ${depthText}, with ${genusText} traits`;
 }
 
 function getSharkVisualClue(sharkName) {
@@ -2214,10 +1724,6 @@ function getObservationRangeText() {
     return shuffle(ranges)[0];
 }
 
-function getSpeciesConfidenceQuestion(speciesName) {
-    return `Is this species a ${speciesName}?`;
-}
-
 function renderMap() {
     const pins = document.getElementById("map-pins");
     const summary = document.getElementById("map-summary");
@@ -2291,6 +1797,7 @@ function renderMap() {
         `;
         summary.appendChild(headline);
         areaRows.forEach(row => summary.appendChild(row));
+        if (isStoryCampaignComplete()) summary.appendChild(createStoryFinaleLauncher());
     }
 }
 
@@ -2392,6 +1899,10 @@ async function openAreaModal(areaId) {
         speciesContainer?.appendChild(bossCard);
     }
 
+    if (areaId === areaOrder[areaOrder.length - 1] && isStoryCampaignComplete()) {
+        speciesContainer?.appendChild(createStoryFinaleLauncher());
+    }
+
     if (closeBtn) closeBtn.onclick = closeAreaModal;
     modal.onclick = event => {
         if (event.target === modal) closeAreaModal();
@@ -2457,5 +1968,7 @@ function uncompleteOpenMapSection() {
 
 document.addEventListener("DOMContentLoaded", () => {
     loadStoryState();
+    setupStoryFinale();
     renderMap();
+    if (isStoryCampaignComplete() && !storyState.finale.seen) openStoryFinale();
 });

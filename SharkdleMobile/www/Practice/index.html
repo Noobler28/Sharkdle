@@ -16,7 +16,8 @@
 
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800;900&family=Barlow:wght@400;500;600;700&family=Montserrat:wght@400;600;700&display=swap" rel="stylesheet">
 
-    <link rel="stylesheet" href="../mobile.css">
+
+    <link rel="stylesheet" href="../mobile.css" media="(max-width: 820px)">
 </head>
 
 
@@ -24,8 +25,8 @@
 
 <header class="topbar">
 <div class="mode-header">
-<p class="panel-kicker mode-kicker">Practice Mode</p>
-<h1>Sharkdle - Practice</h1>
+<p class="panel-kicker mode-kicker" id="mode-kicker">Practice Mode</p>
+<h1 id="mode-title">Sharkdle - Practice</h1>
 <button class="home-btn" type="button" onclick="window.location.href='index.html'">Home</button>
 </div>
 </header>
@@ -34,8 +35,13 @@
 <div class="game-container">
 <section class="guess-hero">
 <div class="guess-hero-copy">
-<h2>Guess the Shark</h2>
-<p class="mode-lead">Think you know this shark? Make your guess below.</p>
+<nav class="species-mode-switcher" aria-label="Practice species mode">
+<a href="Practice/index.html" data-pool-mode="sharks">Sharks</a>
+<a href="Practice/index.html?pool=rays" data-pool-mode="rays">Relatives</a>
+<a href="Practice/index.html?pool=mixed" data-pool-mode="mixed">Mixed</a>
+</nav>
+<h2 id="guess-heading">Guess the Shark</h2>
+<p class="mode-lead" id="mode-lead">Think you know this shark? Make your guess below.</p>
 <div style="position: relative;">
 <input id="sharkGuess" placeholder="Enter shark name..." autocomplete="off">
 <div id="suggestions" class="suggestions-dropdown"></div>
@@ -66,9 +72,10 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="sharks.js"></script>
-<script src="script.js"></script>
+<script src="rays.js"></script>
+<script src="script.js?v=20261102-thankyou100"></script>
 <script src="Achievements/achievements.js"></script>
-<script src="Practice/practice.js"></script>
+<script src="Practice/practice.js?v=20261102-taxonomy-order"></script>
 
 <script src="global-broadcast.js"></script>
 </body>

@@ -3,6 +3,34 @@
  */
 (function () {
     const LEADERBOARD_BADGES = [
+
+
+
+
+        {"id":"extinction","name":"Extinction","emoji":"☄️"},
+        {"id":"spiral-hunter","name":"Spiral Hunter","emoji":"🌀"},
+        {"id":"frost-anvil","name":"Frost Anvil","emoji":"❄️"},
+        {"id":"treasure-keeper","name":"Treasure Keeper","emoji":"🗺️"},
+        {"id":"rollin","name":"Rollin'","emoji":"🎲"},
+        {"id":"arrow-to-the-knee","name":"Arrow to the Knee","emoji":"🏹"},
+        {"id":"im-not-okay","name":"I'm Not Okay (I Promise)","emoji":"💔"},
+        {"id":"one-shot-oracle","name":"One-Shot Oracle","emoji":"🎯"},
+        {"id":"crate-connoisseur","name":"Crate Connoisseur","emoji":"🧰"},
+        {"id":"rival-breaker","name":"Rival Breaker","emoji":"🥇"},
+        {"id":"deep-cartographer","name":"Deep Cartographer","emoji":"🗺️"},
+        {"id":"social-current","name":"Social Current","emoji":"🌐"},
+        {"id":"abyssal-legend","name":"Abyssal Legend","emoji":"🌌"},
+        {"id":"marathon-fin","name":"Marathon Fin","emoji":"🏁"},
+        {"id":"shallow-scout","name":"Shallow Scout","emoji":"🧭"},
+        {"id":"reef-roamer","name":"Reef Roamer","emoji":"🪸"},
+        {"id":"bluewater-bold","name":"Bluewater Bold","emoji":"🌊"},
+        {"id":"tide-turner","name":"Tide Turner","emoji":"🌀"},
+        {"id":"current-rider","name":"Current Rider","emoji":"🌊"},
+        {"id":"tidebreaker","name":"Tidebreaker","emoji":"💫"},
+        {"id":"tide-glass","name":"Tide Glass","emoji":"🫧"},
+        {"id":"fossil-tooth","name":"Fossil Tooth","emoji":"🦷"},
+        {"id":"deep-anchor","name":"Deep Anchor","emoji":"⚓"},
+        {"id":"royal-pearl","name":"Royal Pearl","emoji":"🦪"},
         { id: "starter", name: "Starter", emoji: "🦈" },
         { id: "dev", name: "Developer", emoji: "🖥️" },
         { id: "tester", name: "Tester", emoji: "🎮" },
@@ -77,6 +105,20 @@
     };
 
     const LEADERBOARD_THEME_IDS = new Set([
+
+
+
+
+        "reef-rush",
+        "abyssal-current",
+        "reef-signal",
+        "copper-surge",
+        "raylight-drift",
+        "sixgill-night",
+        "abyss-bloom",
+        "neon-reef",
+        "lunar-current",
+        "lucky-current",
         "default",
         "tidal-blue",
         "sunken-gold",

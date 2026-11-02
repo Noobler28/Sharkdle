@@ -195,7 +195,7 @@ function generateDailyShareText() {
     const title = `${speciesMode.shareTitle} ${today} - ${gameWon ? guesses.length : 'X'}/${12}`;
     // Build grid: 6 categories per guess -> green for correct, black for incorrect
     const rows = guesses.map(g => {
-        const order = ['family','order','genus','size','depth','yod'];
+        const order = ['order','family','genus','size','depth','yod'];
         return order.map(cat => (g.feedback && g.feedback[cat]) ? '🟩' : '⬛').join('');
     });
     const body = rows.join('\n');
@@ -232,12 +232,6 @@ async function shareDailyResults() {
 }
 
 // Get the next midnight in the user's local timezone
-function getNextMidnightTime() {
-    const now = new Date();
-    const tomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 0, 0);
-    return tomorrow.getTime();
-}
-
 const today = getTodayInLocalTimezone()
 const dailyStorageKey = getDailyStorageKey()
 const dailyTargetSeed = speciesMode.key === "sharks" ? today : `${today}:${speciesMode.key}`
@@ -256,7 +250,10 @@ const dailySpeciesTrackerRoundId = window.SharkdleSpeciesTracker
     ? window.SharkdleSpeciesTracker.createRoundId("daily", `${today}-${speciesMode.key}`)
     : `daily-${today}-${speciesMode.key}`
 
+const dailyFairPlayRound = window.SharkdleFairPlay?.startRound('daily', speciesMode.key, dailySpeciesTrackerRoundId);
+
 function recordDailySpeciesHistory(won) {
+    void window.SharkdleFairPlay?.finishRound(dailyFairPlayRound, won, guesses.length);
     if (!window.SharkdleSpeciesTracker) return;
     void window.SharkdleSpeciesTracker.recordRound({
         mode: `daily-${speciesMode.key}`,
@@ -326,8 +323,8 @@ function normalizeSavedGuesses(savedGuesses) {
 
 const CATEGORY_REVEAL_PRICE = 25;
 const CATEGORY_REVEAL_OPTIONS = [
-    { key: "family", label: "Family", getValue: shark => shark.family },
     { key: "order", label: "Order", getValue: shark => shark.order },
+    { key: "family", label: "Family", getValue: shark => shark.family },
     { key: "genus", label: "Genus", getValue: shark => shark.genus },
     { key: "size", label: "Size", getValue: shark => getSizeWithThreshold(shark.size) },
     { key: "depth", label: "Depth", getValue: shark => getDepthWithClue(shark.depth) },
@@ -936,7 +933,7 @@ async function saveGameState() {
 // Initialize game
 async function initializeGame() {
     await loadGameState()
-    
+
     // Set attempts display if game not completed
     if (!gameCompleted) {
         document.getElementById("attempts-left").textContent = "Attempts left: " + attempts;
@@ -989,9 +986,9 @@ function updateCountdown() {
     const now = new Date();
     // Calculate next UTC midnight
     const nextMidnight = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1, 0, 0, 0, 0));
-    
+
     const timeUntil = nextMidnight - now;
-    
+
     let timeStr;
     if (timeUntil <= 0) {
         timeStr = "00:00:00";
@@ -999,14 +996,14 @@ function updateCountdown() {
         const hours = Math.floor(timeUntil / (1000 * 60 * 60));
         const minutes = Math.floor((timeUntil % (1000 * 60 * 60)) / (1000 * 60));
         const seconds = Math.floor((timeUntil % (1000 * 60)) / 1000);
-        
+
         timeStr = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
     }
-    
+
     if (countdownDiv) {
         countdownDiv.textContent = `Next puzzle: ${timeStr}`;
     }
-    
+
     if (winCountdown) {
         winCountdown.textContent = timeStr;
     }
@@ -1113,7 +1110,7 @@ sharkGuessInput.addEventListener("input", function() {
         highlightedSuggestionIndex = -1;
         return;
     }
-    
+
     // Build suggestions HTML
     suggestionsDiv.innerHTML = matches.map(shark => {
         const isGuessed = guesses.some(g => g.shark.name === shark.name);
@@ -1122,7 +1119,7 @@ sharkGuessInput.addEventListener("input", function() {
         const disabledAttr = isGuessed ? 'aria-disabled="true"' : `data-species-name="${speciesName}"`;
         return `<div class="suggestion-item ${guessedClass}" ${disabledAttr}>${escapeHtml(shark.name)}</div>`;
     }).join("");
-    
+
     suggestionsDiv.classList.add("active");
     highlightedSuggestionIndex = -1;
 });
@@ -1212,6 +1209,7 @@ const feedback = {
 }
 
 guesses.push({ shark: shark, feedback: feedback })
+window.SharkdleFairPlay?.noteGuess(dailyFairPlayRound)
 // Save game state to both localStorage and Firestore (fire and forget for better UX)
 saveGameState()
 
@@ -1272,7 +1270,7 @@ if(shark.name === targetShark.name){
     if (!profileData.bestGame || profileData.bestGame === 'N/A' || guessesTaken < parseInt(profileData.bestGame)) {
         profileData.bestGame = guessesTaken;
     }
-    
+
     // Calculate and save average guesses
     if (profileData.gamesPlayed > 0) {
         profileData.averageGuesses = (profileData.totalGuesses / profileData.gamesPlayed).toFixed(2);
@@ -1331,6 +1329,7 @@ if(shark.name === targetShark.name){
     }
 
     if (typeof window.contributeCommunityBossWin === 'function') {
+        window.SharkdleChristmas?.recordWin('daily');
         const contributionKey = speciesMode.key === "sharks" ? today : `${today}_${speciesMode.key}`;
         window.contributeCommunityBossWin('daily', { contributionKey });
     }
@@ -1371,7 +1370,7 @@ if(attempts===0 && !gameWon){
                 profileData.unlockedBadges = [...new Set([...(Array.isArray(profileData.unlockedBadges) ? profileData.unlockedBadges : ["starter"]), "im-not-okay"])];
             }
         }
-        
+
         // Calculate and save average guesses
         if (profileData.gamesPlayed > 0) {
             profileData.averageGuesses = (profileData.totalGuesses / profileData.gamesPlayed).toFixed(2);
@@ -1439,8 +1438,8 @@ card.innerHTML = `<b style="color: ${nameColor};">${shark.name}</b> (click)`
 const feedbackDiv = document.createElement("div")
 feedbackDiv.className="feedback"
 
-feedbackDiv.appendChild(createCategory("Family", shark.family, feedback.family))
 feedbackDiv.appendChild(createCategory("Order", shark.order, feedback.order))
+feedbackDiv.appendChild(createCategory("Family", shark.family, feedback.family))
 feedbackDiv.appendChild(createCategory("Genus", shark.genus, feedback.genus))
 feedbackDiv.appendChild(createCategory("Size", getSizeWithThreshold(shark.size), feedback.size))
 feedbackDiv.appendChild(createCategory("Depth", getDepthWithClue(shark.depth ?? "Unknown"), feedback.depth))
@@ -1512,7 +1511,7 @@ function createBubbles(container) {
         bubble.style.height = bubble.style.width;
         bubble.style.left = `${Math.random() * 100}%`;
         bubble.style.animationDelay = `${Math.random() * 2}s`;
-        bubble.style.bottom = '0';  
+        bubble.style.bottom = '0';
         container.appendChild(bubble);
     }
 }
@@ -1629,27 +1628,3 @@ const common_names = [
     {"scientific": "Pseudocarchariidae", "Common": "Crocodile Sharks"},
     {"scientific": "Somniosidae", "Common": "Sleeper Sharks"},
 ];
-
-async function submitStatsToLeaderboard(won, guesses) {
-    try {
-        // Only submit if user is authenticated
-        if (!firebase.auth().currentUser) {
-            console.log("User not authenticated, skipping leaderboard submission");
-            return;
-        }
-
-        const username = firebase.auth().currentUser.displayName || firebase.auth().currentUser.email || "Anonymous";
-        const docRef = db.collection("leaderboard").doc();
-        await docRef.set({
-            username: username,
-            won: won,
-            guesses: guesses,
-            timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-            mode: "daily",
-            userId: firebase.auth().currentUser.uid
-        });
-        console.log("Stats submitted successfully");
-    } catch (error) {
-        console.error("Error submitting stats:", error);
-    }
-}

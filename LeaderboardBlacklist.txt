@@ -1,0 +1,14 @@
+UserId = sIoLtlm9kubExe2BY5cVvIlOqKA3, Reason = Automated Scripts
+UserId = 1MPm8Ra9VYQusZkCBpRCRDo7nJq2, Reason = Cloned account data
+UserId = AtXSxyWxB0XTLVoB38EP9lXYY143, Reason = Cloned account data
+UserId = FhAoaY0rbGeuHaDdpxeAOUxj7Tz2, Reason = Cloned account data
+UserId = HqV0msSXj4MfRMxrZm5lcHijXSM2, Reason = Cloned account data
+UserId = L5Hq0ozcQobIMUs2PySv2lHt4eQ2, Reason = Cloned account data
+UserId = USfUIeFsBDbInpSqzuf9hF3ERSa2, Reason = Cloned account data
+UserId = Xv8ZMsmMKUZ29AfF8NlDuoc9nXR2, Reason = Cloned account data
+UserId = ef4NrLvi5mRWwNIAf9To9T2fxfH2, Reason = Cloned account data
+UserId = jkF9e0C2IlhuzcPR7kNfymLH9yu2, Reason = Cloned account data
+UserId = jsu9p9Yr2WVZxOlKn8QV1oPOQ972, Reason = Cloned account data
+UserId = pDjQ4iYMC7cwP6fIcCM70HhngR63, Reason = Cloned account data
+UserId = pQQ53hnSQpU45QbYO0uaU5VAlRm1, Reason = Cloned account data
+UserId = vhprPM4Hdghiz1Rpx3t2BX9bmap2, Reason = Offensive username

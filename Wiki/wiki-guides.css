@@ -1,0 +1,28 @@
+/* Reading styles for the editorial guides, walkthroughs, and worked examples. */
+.wiki-introduction{max-width:850px;margin-bottom:40px}
+.wiki-introduction .article-intro h1{max-width:750px}
+.wiki-introduction .article-actions{margin-top:22px}
+.guide-spotlight{margin:0 0 38px}
+.guide-spotlight .section-head h2{margin-top:9px}
+.guide-spotlight-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:13px}
+.guide-feature{display:flex;flex-direction:column;align-items:flex-start;gap:12px;background:#eaf1e4;border:1px solid #d5e2ce;border-radius:7px;padding:23px;color:#254c3a}
+.guide-feature:nth-child(2){background:#e5eeee;border-color:#d1e1dd}
+.guide-feature:nth-child(3){background:#f1eddf;border-color:#e6ddc8}
+.guide-feature h3{font-size:20px;line-height:1.2;margin:0;letter-spacing:-.4px}
+.guide-feature p{font-size:12px;line-height:1.65;color:#60785f;margin:0 0 6px}
+.guide-feature .overline{font-size:9px;color:#637c57}
+.guide-feature:hover{text-decoration:none;border-color:#86ac7e}
+.guide-read-link{font-size:11px;font-weight:700;margin-top:auto}
+.guide-steps{counter-reset:guide-step;list-style:none;padding:0;margin:20px 0}
+.article-section .guide-steps>li{counter-increment:guide-step;position:relative;padding:3px 0 17px 45px;line-height:1.8}
+.guide-steps>li:before{content:counter(guide-step);position:absolute;left:0;top:4px;display:grid;place-items:center;width:28px;height:28px;border:1px solid #d0deca;background:#e9f0e1;border-radius:50%;font-size:12px;color:#426534;font-weight:700}
+.guide-table{margin:20px 0}
+.guide-table table{font-size:13px}
+.guide-table th,.guide-table td{min-width:130px;line-height:1.75;padding:13px 15px}
+.guide-figure{margin:25px 0;background:linear-gradient(145deg,#e5eee1,#f3f6ec);border:1px solid #dbe5d4;border-radius:9px;padding:23px;text-align:center}
+.guide-figure img{display:block;width:min(100%,330px);height:auto;max-height:370px;object-fit:contain;margin:0 auto}
+.guide-figure figcaption{font-size:11px;line-height:1.7;color:#657861;margin-top:18px}
+.article-rail{max-height:calc(100dvh - 125px);overflow:auto;scrollbar-width:thin}
+.article-section p+p{margin-top:17px}
+@media(max-width:1150px){.article-rail{max-height:none;overflow:visible}}
+@media(max-width:760px){.guide-spotlight-grid{grid-template-columns:1fr}.guide-feature{padding:20px;gap:10px}.guide-feature h3{font-size:21px}.guide-feature p{font-size:13px}.guide-read-link{font-size:12px}.article-section .guide-steps>li{padding-left:39px}.guide-table table{font-size:12px}.guide-table th,.guide-table td{min-width:120px;padding:11px 12px}.guide-figure{padding:18px}.guide-figure img{max-height:300px}}

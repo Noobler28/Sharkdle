@@ -14,7 +14,7 @@ for(const path of ['Minigames/SharkRNG/rng-mode.js','SharkdleMobile/www/Minigame
    equip:key=>{player.equipped=key;},luck:getEquippedLuckBonus,cloud:buildRngCloudProfilePayload,
    setCollection:collection=>{player.collection=collection;}
  };`);
- vm.runInContext(source,c);const t=c.window.test;t.init();assert.equal(t.defs.length,8);assert.equal(t.keys.length,91);
+ vm.runInContext(source,c);const t=c.window.test;t.init();assert.equal(t.defs.length,8);assert.equal(t.keys.length,238);
  const base=t.pool().find(s=>s.name==='Ridge-egg Catshark');let max=0,previousLuck=0;
  t.enableMutation();
  for(const def of t.defs){
@@ -45,11 +45,11 @@ for(const path of ['Minigames/SharkRNG/rng-mode.js','SharkdleMobile/www/Minigame
    assert.equal(t.player().equipped,newKey);
  }
  const old=t.mutate(base,'singularity');assert.equal(old.oneIn,5886000000000);
- // Expanded complete collections exceed the old 200-chunk read limit.
+ // Larger chunks accommodate the expanded index while preserving cloud saves.
  const full={};for(const shark of t.pool())for(const def of t.defs)full[shark.name+' ('+def.name+')']={oneIn:1e18,count:1};
  // Model a fully unlocked index, retaining the final entry in the final chunk.
  for(let i=Object.keys(full).length;i<70000;i++)full['legacy-'+i]={oneIn:1e18,count:1};
- t.setCollection(full);const cloud=t.cloud();assert(cloud.chunks.length>200);assert(cloud.chunks.length<=400);assert.equal(cloud.chunks.flat().length,70000);
- assert(source.includes('const chunkCount = Math.min(400,'));
+ t.setCollection(full);const cloud=t.cloud();assert(cloud.chunks.length<=400);assert.equal(cloud.chunks.flat().length,70000);
+ assert.equal(cloud.metadata.collectionCount,70000);
  console.log(path+': PASS all 8 families reachable through weighted selection; unique tiers, art, equip, save/reload, leaderboard, old 5.89T unchanged, 70,000-entry cloud payload');
 }

@@ -7,6 +7,7 @@
     <base href="../">
 <title>Sharkdle Map</title>
     <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="Story/story-guide.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800;900&family=Barlow:wght@400;500;600;700&family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
@@ -88,6 +89,31 @@
             <div id="mission-modal-body"></div>
         </div>
     </div>
+    <dialog id="story-finale" class="story-finale" aria-labelledby="story-finale-title" aria-describedby="story-finale-text">
+        <header class="story-finale-header">
+            <h2 id="story-finale-title" class="story-finale-heading">Final transmission</h2>
+            <button id="story-finale-close" class="story-finale-close" type="button" aria-label="Close ending and return to map">&times;</button>
+        </header>
+        <div class="story-finale-body">
+            <div id="story-finale-portrait" class="story-finale-portrait" hidden>
+                <img id="story-finale-image" width="500" height="500" alt="" hidden>
+            </div>
+            <div class="story-finale-dialogue" aria-live="polite" aria-atomic="true">
+                <p id="story-finale-speaker" class="story-finale-speaker">Narrator</p>
+                <p id="story-finale-text" class="story-finale-text"></p>
+            </div>
+        </div>
+        <footer class="story-finale-footer">
+            <div class="story-finale-position">
+                <span id="story-finale-progress"></span>
+                <div class="story-finale-progress-track" aria-hidden="true"><span id="story-finale-progress-fill"></span></div>
+            </div>
+            <div class="story-finale-actions">
+                <button id="story-finale-back" class="story-finale-back" type="button" disabled>Back</button>
+                <button id="story-finale-next" class="story-finale-next" type="button" autofocus>Continue</button>
+            </div>
+        </footer>
+    </dialog>
 <script src="global-broadcast.js"></script>
 </body>
 </html>

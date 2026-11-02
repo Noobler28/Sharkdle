@@ -39,23 +39,131 @@ const common_names = [
     {"scientific": "Haploblepharus", "Common": "ShySharks"},
 ];
 
-let lastFamily = localStorage.getItem('infiniteLastFamily');
+function getRequestedSpeciesMode() {
+    const requestedMode = new URLSearchParams(window.location.search).get("pool") || "sharks";
+    const normalizedMode = requestedMode.toLowerCase();
+    if (["ray", "rays"].includes(normalizedMode)) return "rays";
+    if (["mixed", "all", "elasmobranch", "elasmobranchs"].includes(normalizedMode)) return "mixed";
+    return "sharks";
+}
+
+const HERO_ART = {
+    sharkBg: "images/home-v3/shark-bg.png",
+    sharkFg: "images/home-v3/shark-fg.png",
+    manta: "images/home-v3/manta-ray.png"
+};
+
+function getSpeciesModeConfig(modeKey) {
+    const configs = {
+        sharks: {
+            key: "sharks",
+            title: "Sharkdle - Infinite",
+            kicker: "Infinite Mode",
+            heading: "Guess the Shark",
+            lead: "Think you know this shark? Make your guess below.",
+            placeholder: "Enter shark name...",
+            animal: "shark",
+            animalTitle: "Shark",
+            shareTitle: "Sharkdle Infinite",
+            recentMode: "Infinite",
+            heroBackground: HERO_ART.sharkBg,
+            heroForeground: HERO_ART.sharkFg
+        },
+        rays: {
+            key: "rays",
+            title: "Relatives - Infinite",
+            kicker: "Infinite Relatives",
+            heading: "Guess the Relative",
+            lead: "Think you know this shark relative? Make your guess below.",
+            placeholder: "Enter relative name...",
+            animal: "relative",
+            animalTitle: "Relative",
+            shareTitle: "Relatives Infinite",
+            recentMode: "Infinite Relatives",
+            heroBackground: HERO_ART.manta,
+            heroForeground: HERO_ART.manta
+        },
+        mixed: {
+            key: "mixed",
+            title: "Sharkdle - Mixed Infinite",
+            kicker: "Mixed Infinite",
+            heading: "Guess the Species",
+            lead: "Sharks and relatives share the board. Make your guess below.",
+            placeholder: "Enter shark or relative name...",
+            animal: "species",
+            animalTitle: "Species",
+            shareTitle: "Sharkdle Mixed Infinite",
+            recentMode: "Infinite Mixed",
+            heroBackground: HERO_ART.sharkBg,
+            heroForeground: HERO_ART.manta
+        }
+    };
+
+    return configs[modeKey] || configs.sharks;
+}
+
+function getActiveSpeciesPool(modeKey) {
+    const sharkPool = Array.isArray(window.sharks) ? window.sharks : [];
+    const rayPool = Array.isArray(window.rays) ? window.rays : [];
+    if (modeKey === "rays") return rayPool.length ? rayPool : sharkPool;
+    if (modeKey === "mixed") return [...sharkPool, ...rayPool];
+    return sharkPool;
+}
+
+function applySpeciesModeCopy() {
+    document.title = speciesMode.title;
+    document.body.classList.remove("species-mode-sharks", "species-mode-rays", "species-mode-mixed");
+    document.body.classList.add(`species-mode-${speciesMode.key}`);
+
+    document.querySelectorAll("[data-pool-mode]").forEach(link => {
+        link.classList.toggle("active", link.dataset.poolMode === speciesMode.key);
+    });
+
+    const title = document.getElementById("mode-title");
+    const kicker = document.getElementById("mode-kicker");
+    const heading = document.getElementById("guess-heading");
+    const lead = document.getElementById("mode-lead");
+    const input = document.getElementById("sharkGuess");
+    const heroBackground = document.querySelector(".guess-hero-bg");
+    const heroForeground = document.querySelector(".guess-hero-fg");
+
+    if (title) title.textContent = speciesMode.title;
+    if (kicker) kicker.textContent = speciesMode.kicker;
+    if (heading) heading.textContent = speciesMode.heading;
+    if (lead) lead.textContent = speciesMode.lead;
+    if (input) input.placeholder = speciesMode.placeholder;
+    if (heroBackground) heroBackground.src = speciesMode.heroBackground;
+    if (heroForeground) heroForeground.src = speciesMode.heroForeground;
+}
+
+const speciesMode = getSpeciesModeConfig(getRequestedSpeciesMode());
+const activeSpecies = getActiveSpeciesPool(speciesMode.key).map(species => ({ ...species, guessed: false }));
+const infiniteLastFamilyKey = speciesMode.key === "sharks" ? "infiniteLastFamily" : `infiniteLastFamily_${speciesMode.key}`;
+
+applySpeciesModeCopy();
+
+let lastFamily = localStorage.getItem(infiniteLastFamilyKey);
 let targetIndex;
 do {
-  targetIndex = Math.floor(Math.random() * sharks.length);
-} while (lastFamily && sharks[targetIndex].family === lastFamily);
-let targetShark = sharks[targetIndex];
-localStorage.setItem('infiniteLastFamily', targetShark.family);
+  targetIndex = Math.floor(Math.random() * activeSpecies.length);
+} while (lastFamily && activeSpecies.length > 1 && activeSpecies[targetIndex].family === lastFamily);
+let targetShark = activeSpecies[targetIndex];
+localStorage.setItem(infiniteLastFamilyKey, targetShark.family);
 let attempts = 12;
+let categoryReveal = null;
+let categoryRevealGameCompleted = false;
 let speciesTrackerGuesses = [];
 const infiniteSpeciesTrackerRoundId = window.SharkdleSpeciesTracker
-    ? window.SharkdleSpeciesTracker.createRoundId("infinite-sharks")
+    ? window.SharkdleSpeciesTracker.createRoundId(`infinite-${speciesMode.key}`)
     : `infinite-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 
+const infiniteFairPlayRound = window.SharkdleFairPlay?.startRound('infinite', speciesMode.key, infiniteSpeciesTrackerRoundId);
+
 function recordInfiniteSpeciesHistory(won) {
+    void window.SharkdleFairPlay?.finishRound(infiniteFairPlayRound, won, 12 - attempts);
     if (!window.SharkdleSpeciesTracker) return;
     void window.SharkdleSpeciesTracker.recordRound({
-        mode: "infinite-sharks",
+        mode: `infinite-${speciesMode.key}`,
         roundId: infiniteSpeciesTrackerRoundId,
         targetSpecies: targetShark,
         guesses: speciesTrackerGuesses.map(entry => entry.species),
@@ -95,29 +203,72 @@ function getDepthWithClue(depth) {
     return clue ? `${depth} (${clue})` : depth;
 }
 
-const MYSTERY_PROFILE_FIELDS = [
-    { key: "family", getValue: shark => shark.family },
-    { key: "order", getValue: shark => shark.order },
-    { key: "genus", getValue: shark => shark.genus },
-    { key: "size", getValue: shark => getSizeWithThreshold(shark.size) },
-    { key: "depth", getValue: shark => getDepthWithClue(shark.depth) },
-    { key: "yod", getValue: shark => shark.yod }
+const CATEGORY_REVEAL_PRICE = 25;
+const CATEGORY_REVEAL_OPTIONS = [
+    { key: "order", label: "Order", getValue: shark => shark.order },
+    { key: "family", label: "Family", getValue: shark => shark.family },
+    { key: "genus", label: "Genus", getValue: shark => shark.genus },
+    { key: "size", label: "Size", getValue: shark => getSizeWithThreshold(shark.size) },
+    { key: "depth", label: "Depth", getValue: shark => getDepthWithClue(shark.depth) },
+    { key: "yod", label: "Year of Discovery", getValue: shark => shark.yod }
 ];
 
-function hasCorrectGuessForProfileField(field) {
-    return sharks.some(shark =>
-        shark.guessed && field.getValue(shark) === field.getValue(targetShark)
+function getCategoryRevealOption(key) {
+    return CATEGORY_REVEAL_OPTIONS.find(option => option.key === key) || null;
+}
+
+function getDiscoveredCategoryKeys() {
+    const discovered = new Set();
+
+    activeSpecies.forEach(shark => {
+        if (!shark.guessed) return;
+        CATEGORY_REVEAL_OPTIONS.forEach(option => {
+            if (option.getValue(shark) === option.getValue(targetShark)) {
+                discovered.add(option.key);
+            }
+        });
+    });
+
+    if (categoryReveal?.key) {
+        discovered.add(categoryReveal.key);
+    }
+
+    return discovered;
+}
+
+function getAvailableCategoryRevealOptions() {
+    const discovered = getDiscoveredCategoryKeys();
+    return CATEGORY_REVEAL_OPTIONS.filter(option => !discovered.has(option.key));
+}
+
+function getCategoryRevealCommonName(option) {
+    if (!["family", "order", "genus"].includes(option.key)) return "";
+    const value = option.getValue(targetShark);
+    return (typeof window.getSharkTaxonomyCommonName === "function"
+        ? window.getSharkTaxonomyCommonName(value)
+        : "") || common_names.find(commonName => commonName.scientific === value)?.Common || "";
+}
+
+function formatCategoryRevealText(option) {
+    const value = option.getValue(targetShark);
+    const commonName = getCategoryRevealCommonName(option);
+    return commonName ? `${option.label}: ${value} (${commonName})` : `${option.label}: ${value}`;
+}
+
+function hasCorrectGuessForProfileField(option) {
+    return activeSpecies.some(shark =>
+        shark.guessed && option.getValue(shark) === option.getValue(targetShark)
     );
 }
 
 function isMysteryProfileSpeciesDiscovered() {
-    return sharks.some(shark =>
+    return activeSpecies.some(shark =>
         shark.guessed && normalizeInput(shark.name) === normalizeInput(targetShark.name)
     );
 }
 
 function getProfileGuessedSpecies() {
-    return sharks.filter(shark => shark.guessed);
+    return activeSpecies.filter(shark => shark.guessed);
 }
 
 function getYearDiscoveryClueRange() {
@@ -145,8 +296,9 @@ function formatYearDiscoveryClueRange(range) {
 }
 
 function hasProfileFilterValue(key) {
-    const field = MYSTERY_PROFILE_FIELDS.find(entry => entry.key === key);
-    return field ? hasCorrectGuessForProfileField(field) : false;
+    const option = getCategoryRevealOption(key);
+    if (!option) return false;
+    return hasCorrectGuessForProfileField(option) || categoryReveal?.key === key;
 }
 
 function getMysteryProfileFilterState() {
@@ -271,24 +423,26 @@ function updateMysteryProfilePanel(animate = false) {
     let narrowedCount = 0;
     const rowsToAnimate = [];
 
-    MYSTERY_PROFILE_FIELDS.forEach(field => {
-        const row = panel.querySelector(`[data-profile-key="${field.key}"]`);
+    CATEGORY_REVEAL_OPTIONS.forEach(option => {
+        const row = panel.querySelector(`[data-profile-key="${option.key}"]`);
         if (!row) return;
 
         const valueElement = row.querySelector(".mystery-profile-value");
         const wasVisible = row.classList.contains("revealed") || row.classList.contains("narrowed");
         const previousValue = valueElement?.textContent || "";
-        const isConfirmed = hasCorrectGuessForProfileField(field);
-        const rangeValue = field.key === "yod" && !isConfirmed
+        const confirmedByGuess = hasCorrectGuessForProfileField(option);
+        const confirmedByReveal = categoryReveal?.key === option.key;
+        const isConfirmed = confirmedByGuess || confirmedByReveal;
+        const rangeValue = option.key === "yod" && !isConfirmed
             ? formatYearDiscoveryClueRange(getYearDiscoveryClueRange())
             : "";
         const isNarrowed = Boolean(rangeValue);
-        const value = isConfirmed ? String(field.getValue(targetShark) ?? "") : rangeValue;
+        const value = isConfirmed ? String(option.getValue(targetShark) ?? "") : rangeValue;
 
         row.classList.remove("profile-revealing");
         row.classList.toggle("revealed", isConfirmed);
         row.classList.toggle("narrowed", isNarrowed);
-        row.classList.remove("purchased");
+        row.classList.toggle("purchased", confirmedByReveal && !confirmedByGuess);
         if (animate && (isConfirmed || isNarrowed) && (!wasVisible || previousValue !== value)) {
             rowsToAnimate.push(row);
         }
@@ -314,7 +468,7 @@ function updateMysteryProfilePanel(animate = false) {
     const status = panel.querySelector(".mystery-profile-target small");
     if (status) {
         if (confirmedCount > 0) {
-            status.textContent = `${confirmedCount}/${MYSTERY_PROFILE_FIELDS.length} clues confirmed`;
+            status.textContent = `${confirmedCount}/${CATEGORY_REVEAL_OPTIONS.length} clues confirmed`;
         } else if (narrowedCount > 0) {
             status.textContent = `${narrowedCount} clue narrowed`;
         } else {
@@ -333,6 +487,204 @@ function updateMysteryProfilePanel(animate = false) {
     }
 }
 
+function getCategoryRevealProfile() {
+    if (typeof window.getBestLocalProfile === "function") {
+        return window.getBestLocalProfile();
+    }
+
+    try {
+        return JSON.parse(localStorage.getItem("userProfile") || "{}");
+    } catch (error) {
+        return {};
+    }
+}
+
+function getCategoryRevealPearls(profileData) {
+    if (typeof window.getPearlCount === "function") {
+        return window.getPearlCount(profileData);
+    }
+
+    return Math.max(0, Math.floor(Number(profileData?.pearls ?? profileData?.tidePearls) || 0));
+}
+
+function spendCategoryRevealPearls(profileData, amount) {
+    const currentPearls = getCategoryRevealPearls(profileData);
+    const nextPearls = currentPearls - amount;
+
+    if (typeof window.setPearlCount === "function") {
+        window.setPearlCount(profileData, nextPearls);
+    } else {
+        profileData.pearls = Math.max(0, nextPearls);
+    }
+
+    return Math.max(0, nextPearls);
+}
+
+async function persistCategoryRevealProfile(profileData, authUser) {
+    const nextProfile = {
+        ...profileData,
+        uid: window.currentUser?.uid || authUser?.uid || profileData.uid
+    };
+
+    if (typeof window.saveUserProfileLocally === "function") {
+        window.saveUserProfileLocally(nextProfile, { skipRemoteSync: true });
+    } else {
+        localStorage.setItem("userProfile", JSON.stringify(nextProfile));
+    }
+
+    if (authUser && typeof db !== "undefined") {
+        try {
+            await db.collection("userStats").doc(authUser.uid).set({
+                pearls: getCategoryRevealPearls(nextProfile),
+                lastCategoryRevealPurchase: {
+                    mode: speciesMode.recentMode,
+                    targetShark: targetShark.name,
+                    category: categoryReveal?.key || "",
+                    price: CATEGORY_REVEAL_PRICE,
+                    purchasedAt: new Date()
+                },
+                lastUpdated: new Date()
+            }, { merge: true });
+        } catch (error) {
+            console.warn("Error saving category reveal pearl spend:", error);
+        }
+    }
+
+    if (typeof updateHomeV3Sidebar === "function") {
+        updateHomeV3Sidebar(nextProfile);
+    }
+    if (typeof renderPearlShop === "function") {
+        renderPearlShop(nextProfile);
+    }
+}
+
+function setCategoryRevealMessage(text, type = "info") {
+    const messageDiv = document.getElementById("message");
+    if (messageDiv) messageDiv.textContent = text;
+    if (typeof showNotification === "function") {
+        showNotification(text, type, 3000);
+    }
+}
+
+function updateCategoryRevealPanel() {
+    const panel = document.getElementById("category-reveal-panel");
+    if (!panel) return;
+
+    const result = document.getElementById("category-reveal-result");
+    const balance = document.getElementById("category-reveal-balance");
+    const button = document.getElementById("category-reveal-btn");
+    const authUser = firebase.auth().currentUser;
+    const profileData = getCategoryRevealProfile();
+    const pearls = getCategoryRevealPearls(profileData);
+    const revealedOption = categoryReveal?.key ? getCategoryRevealOption(categoryReveal.key) : null;
+    const availableOptions = getAvailableCategoryRevealOptions();
+
+    panel.classList.toggle("revealed", Boolean(revealedOption));
+
+    if (balance) {
+        balance.textContent = authUser ? `${pearls.toLocaleString()} pearls available` : "Login required to spend pearls";
+    }
+
+    if (revealedOption) {
+        if (result) result.textContent = `Revealed: ${formatCategoryRevealText(revealedOption)}`;
+        if (button) {
+            button.disabled = true;
+            button.textContent = "Category Revealed";
+        }
+        return;
+    }
+
+    if (!availableOptions.length) {
+        if (result) result.textContent = "Every category has already been discovered.";
+        if (button) {
+            button.disabled = true;
+            button.textContent = "All Categories Found";
+        }
+        return;
+    }
+
+    if (categoryRevealGameCompleted) {
+        if (result) result.textContent = "Category reveal is unavailable after the game ends.";
+        if (button) {
+            button.disabled = true;
+            button.textContent = "Game Complete";
+        }
+        return;
+    }
+
+    if (!authUser) {
+        if (result) result.textContent = `Reveal one undiscovered category for ${CATEGORY_REVEAL_PRICE} pearls.`;
+        if (button) {
+            button.disabled = true;
+            button.textContent = "Login Required";
+        }
+        return;
+    }
+
+    if (pearls < CATEGORY_REVEAL_PRICE) {
+        if (result) result.textContent = `Reveal one undiscovered category for ${CATEGORY_REVEAL_PRICE} pearls.`;
+        if (button) {
+            button.disabled = true;
+            button.textContent = `Need ${CATEGORY_REVEAL_PRICE - pearls} More`;
+        }
+        return;
+    }
+
+    if (result) result.textContent = "Reveal one random category you have not discovered yet.";
+    if (button) {
+        button.disabled = false;
+        button.textContent = `Reveal Category - ${CATEGORY_REVEAL_PRICE}p`;
+    }
+}
+
+async function buyCategoryReveal() {
+    if (categoryRevealGameCompleted) {
+        setCategoryRevealMessage("Category reveal is unavailable after the game ends.", "error");
+        updateCategoryRevealPanel();
+        return;
+    }
+
+    if (categoryReveal?.key) {
+        setCategoryRevealMessage("You already revealed a category this game.", "error");
+        updateCategoryRevealPanel();
+        return;
+    }
+
+    const availableOptions = getAvailableCategoryRevealOptions();
+    if (!availableOptions.length) {
+        setCategoryRevealMessage("You already discovered every category.", "info");
+        updateCategoryRevealPanel();
+        return;
+    }
+
+    const authUser = firebase.auth().currentUser;
+    if (!authUser) {
+        setCategoryRevealMessage("Login to spend pearls on a category reveal.", "error");
+        updateCategoryRevealPanel();
+        return;
+    }
+
+    const profileData = getCategoryRevealProfile();
+    const pearls = getCategoryRevealPearls(profileData);
+    if (pearls < CATEGORY_REVEAL_PRICE) {
+        setCategoryRevealMessage(`You need ${CATEGORY_REVEAL_PRICE - pearls} more pearls.`, "error");
+        updateCategoryRevealPanel();
+        return;
+    }
+
+    const option = availableOptions[Math.floor(Math.random() * availableOptions.length)];
+    categoryReveal = {
+        key: option.key,
+        revealedAt: Date.now()
+    };
+
+    spendCategoryRevealPearls(profileData, CATEGORY_REVEAL_PRICE);
+    await persistCategoryRevealProfile(profileData, authUser);
+    updateCategoryRevealPanel();
+    updateMysteryProfilePanel();
+    setCategoryRevealMessage(`${formatCategoryRevealText(option)} revealed.`, "success");
+}
+
 
 
 
@@ -345,7 +697,16 @@ function getLessSpecificName(sharkName) {
 }
 
 function normalizeInput(input) {
-    return input.replace(/\s+/g, '').toLowerCase();
+    return String(input || "").replace(/\s+/g, "").toLowerCase();
+}
+
+function escapeHtml(value) {
+    return String(value)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
 }
 
 function updateStats(isWin, guessesTaken = 0) {
@@ -378,7 +739,7 @@ function updateStats(isWin, guessesTaken = 0) {
         profileData.currentLossStreak = (profileData.currentLossStreak || 0) + 1;
         const previousWinStreak = Math.max(0, Number(profileData.currentStreak) || 0);
         const streakShieldUsed = typeof window.applyStreakShieldOnLoss === 'function'
-            ? window.applyStreakShieldOnLoss(profileData, { mode: "Infinite" })
+            ? window.applyStreakShieldOnLoss(profileData, { mode: speciesMode.recentMode })
             : false;
         if (!streakShieldUsed) {
             profileData.currentStreak = 0;
@@ -420,7 +781,7 @@ function updateStats(isWin, guessesTaken = 0) {
         result: isWin ? 'Win' : 'Loss',
         guesses: isWin ? guessesTaken : 'X',
         sharkName: targetShark.name,
-        mode: 'Infinite'
+        mode: speciesMode.recentMode
     });
     // Only keep the 20 most recent games
     localStorage.setItem('recentGames', JSON.stringify(recentGames.slice(0, 20)));
@@ -468,18 +829,18 @@ function makeGuess() {
     const winLoseScreen = document.getElementById("win-lose-screen");
 
     if (!guessInput) {
-        messageDiv.textContent = "Enter a shark name.";
+        messageDiv.textContent = `Enter a ${speciesMode.animal} name.`;
         return;
     }
 
-    const guessedShark = sharks.find(s => normalizeInput(s.name) === guessInput);
+    const guessedShark = activeSpecies.find(s => normalizeInput(s.name) === guessInput);
     if (!guessedShark) {
-        messageDiv.textContent = "Shark not found in the list.";
+        messageDiv.textContent = `${speciesMode.animalTitle} not found in the list.`;
         return;
     }
 
     if (guessedShark.guessed) {
-        messageDiv.textContent = "You already guessed this shark.";
+        messageDiv.textContent = `You already guessed this ${speciesMode.animal}.`;
         return;
     }
 
@@ -488,16 +849,17 @@ function makeGuess() {
     // decrement attempts and update display
     attempts--;
     attemptsLeftDiv.textContent = `Attempts left: ${attempts}`;
-    
+
     const feedback = [
-        { category: "Family", value: guessedShark.family, correct: guessedShark.family === targetShark.family },
         { category: "Order", value: guessedShark.order, correct: guessedShark.order === targetShark.order },
+        { category: "Family", value: guessedShark.family, correct: guessedShark.family === targetShark.family },
         { category: "Genus", value: guessedShark.genus, correct: guessedShark.genus === targetShark.genus },
         { category: "Size", value: guessedShark.size, correct: guessedShark.size === targetShark.size },
         { category: "Depth", value: guessedShark.depth, correct: guessedShark.depth === targetShark.depth },
         { category: "Year of Discovery", value: guessedShark.yod, correct: guessedShark.yod === targetShark.yod }
     ];
     speciesTrackerGuesses.push({ species: guessedShark, feedback });
+    window.SharkdleFairPlay?.noteGuess(infiniteFairPlayRound);
 
     renderGuess(guessedShark, feedback);
 
@@ -516,6 +878,7 @@ function makeGuess() {
         openGuessFeedback(newestFeedback, true);
     }
 
+    updateCategoryRevealPanel();
     scheduleMysteryProfileReveal();
 
     if (normalizeInput(guessedShark.name) === normalizeInput(targetShark.name)) {
@@ -525,7 +888,7 @@ function makeGuess() {
             ? window.applyLimitedTimeXpBonus(baseXpGain)
             : { totalXp: baseXpGain };
         const xpGain = xpAward.totalXp;
-        
+
         let pearlsEarned = 0;
 
         if (firebase.auth().currentUser) {
@@ -553,10 +916,11 @@ function makeGuess() {
         recordInfiniteSpeciesHistory(true);
 
         if (typeof window.maybeAwardCrateDrop === 'function') {
-            window.maybeAwardCrateDrop('infinite win');
+            window.maybeAwardCrateDrop(`${speciesMode.recentMode.toLowerCase()} win`);
         }
 
         if (typeof window.contributeCommunityBossWin === 'function') {
+            window.SharkdleChristmas?.recordWin('infinite');
             window.contributeCommunityBossWin('infinite');
         }
 
@@ -564,16 +928,18 @@ function makeGuess() {
         if (window.checkAchievements) {
             window.checkAchievements(true, guessesTaken, true);
         }
-        
+
         // Disable input
+        categoryRevealGameCompleted = true;
         document.getElementById("sharkGuess").disabled = true;
         document.getElementById("guessBtn").disabled = true;
-        
+        updateCategoryRevealPanel();
+
         // Display win screen
         winLoseScreen.innerHTML = `
             <button onclick="document.getElementById('win-lose-screen').style.display='none'; document.getElementById('show-results-btn').style.display='block';" style="position: absolute; top: 8px; right: 8px; width: 32px; height: 32px; background: rgba(0,0,0,0.3); border: none; border-radius: 50%; color: inherit; font-size: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.2s; font-weight: bold;">×</button>
             <h2 style="margin-top: 0; font-size: 32px; margin-bottom: 20px;">🎉 You Found It!</h2>
-            <p style="font-size: 18px; margin: 10px 0; color: inherit;">The shark was <b>${targetShark.name}</b></p>
+            <p style="font-size: 18px; margin: 10px 0; color: inherit;">The ${speciesMode.animal} was <b>${targetShark.name}</b></p>
             <p style="font-size: 16px; margin: 10px 0; opacity: 0.9;">Discovered in ${targetShark.yod}</p>
             <p style="font-size: 16px; margin: 10px 0; opacity: 0.9;">You took ${guessesTaken} guess${guessesTaken !== 1 ? 'es' : ''}.</p>
             <div style="margin: 20px 0; padding: 15px; background: rgba(255,255,255,0.2); border-radius: 8px;">
@@ -591,25 +957,27 @@ function makeGuess() {
         winLoseScreen.style.display = "block";
         document.getElementById('show-results-btn').style.display = 'none';
         createBubbles();
-        
+
     } else if (attempts === 0) {
         updateStats(false);
         recordInfiniteSpeciesHistory(false);
-        
+
         // Check achievements for loss conditions
         if (window.checkAchievements) {
             window.checkAchievements(false, 12, false);
         }
-        
+
         // Disable input
+        categoryRevealGameCompleted = true;
         document.getElementById("sharkGuess").disabled = true;
         document.getElementById("guessBtn").disabled = true;
-        
+        updateCategoryRevealPanel();
+
         // Display lose screen
         winLoseScreen.innerHTML = `
             <button onclick="document.getElementById('win-lose-screen').style.display='none'; document.getElementById('show-results-btn').style.display='block';" style="position: absolute; top: 8px; right: 8px; width: 32px; height: 32px; background: rgba(0,0,0,0.3); border: none; border-radius: 50%; color: inherit; font-size: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.2s; font-weight: bold;">×</button>
             <h2 style="margin-top: 0; font-size: 32px; margin-bottom: 20px;">😢 You Lost</h2>
-            <p style="font-size: 18px; margin: 10px 0; color: inherit;">The shark was <b>${targetShark.name}</b></p>
+            <p style="font-size: 18px; margin: 10px 0; color: inherit;">The ${speciesMode.animal} was <b>${targetShark.name}</b></p>
             <p style="font-size: 16px; margin: 10px 0; opacity: 0.9;">Discovered in ${targetShark.yod}</p>
             <div style="display: flex; flex-wrap: wrap; gap: 10px; margin-top: 25px; justify-content: center;">
                 <button onclick="shareInfiniteResults()" style="padding: 12px 18px; font-size: 15px; cursor: pointer; background: #0097a7; border: none; border-radius: 6px; color: white; font-weight: bold; transition: filter 0.2s;">🦈 Share Results</button>
@@ -718,7 +1086,7 @@ function createBubbles() {
         bubble.style.height = bubble.style.width;
         bubble.style.left = `${Math.random() * 100}%`;
         bubble.style.animationDelay = `${Math.random() * 2}s`;
-        bubble.style.bottom = '0';  
+        bubble.style.bottom = '0';
         winLoseScreen.appendChild(bubble);
     }
 }
@@ -730,36 +1098,45 @@ document.getElementById("sharkGuess").addEventListener("keydown", function(event
 });
 
 document.getElementById("guessBtn").addEventListener("click", makeGuess);
+document.getElementById("category-reveal-btn")?.addEventListener("click", buyCategoryReveal);
+
+if (typeof firebase !== "undefined" && firebase.auth) {
+    firebase.auth().onAuthStateChanged(() => updateCategoryRevealPanel());
+}
+
+updateCategoryRevealPanel();
 updateMysteryProfilePanel();
 
 const sharkGuessInput = document.getElementById("sharkGuess");
 const suggestionsDiv = document.getElementById("suggestions");
 
 sharkGuessInput.addEventListener("input", function() {
-    const input = this.value.toLowerCase().trim();
-    
+    const input = normalizeInput(this.value);
+
     if (input.length === 0) {
         suggestionsDiv.classList.remove("active");
         return;
     }
-    
-    // Filter sharks that match the input
-    const matches = sharks.filter(shark => 
-        shark.name.toLowerCase().includes(input)
+
+    // Filter species that match the input
+    const matches = activeSpecies.filter(shark =>
+        normalizeInput(shark.name).includes(input)
     );
-    
+
     if (matches.length === 0) {
         suggestionsDiv.classList.remove("active");
         return;
     }
-    
+
     // Build suggestions HTML
     suggestionsDiv.innerHTML = matches.map(shark => {
         const isGuessed = shark.guessed === true;
         const guessedClass = isGuessed ? 'guessed' : '';
-        return `<div class="suggestion-item ${guessedClass}" onclick="${isGuessed ? '' : `selectShark('${shark.name}')`}">${shark.name}</div>`;
+        const speciesName = encodeURIComponent(shark.name);
+        const disabledAttr = isGuessed ? 'aria-disabled="true"' : `data-species-name="${speciesName}"`;
+        return `<div class="suggestion-item ${guessedClass}" ${disabledAttr}>${escapeHtml(shark.name)}</div>`;
     }).join("");
-    
+
     suggestionsDiv.classList.add("active");
 });
 
@@ -768,6 +1145,12 @@ document.addEventListener("click", function(event) {
     if (event.target !== sharkGuessInput && !event.target.closest(".suggestions-dropdown")) {
         suggestionsDiv.classList.remove("active");
     }
+});
+
+suggestionsDiv.addEventListener("click", function(event) {
+    const item = event.target.closest(".suggestion-item[data-species-name]");
+    if (!item) return;
+    selectShark(decodeURIComponent(item.dataset.speciesName));
 });
 
 function selectShark(sharkName) {
@@ -782,13 +1165,13 @@ window.revealShark = function() {
         console.log("Access denied. This command is for developers only.");
         return;
     }
-    console.log("TESTING ONLY: The target shark is: " + targetShark.name);
+    console.log(`TESTING ONLY: The target ${speciesMode.animal} is: ${targetShark.name}`);
 };
 
 // --- Share Results (Infinite) ---
 function generateInfiniteShareText(isWin) {
     const dateStr = new Date().toLocaleDateString();
-    const title = `Sharkdle Infinite ${dateStr} - ${isWin ? (12 - attempts) + '/12' : 'X/12'}`;
+    const title = `${speciesMode.shareTitle} ${dateStr} - ${isWin ? (12 - attempts) + '/12' : 'X/12'}`;
     // Build rows from guesses DOM: each guess-card -> .feedback .category.correct
     const guessCards = Array.from(document.querySelectorAll('#guesses .guess-card'));
     const rows = guessCards.map(card => {
@@ -799,8 +1182,9 @@ function generateInfiniteShareText(isWin) {
         return cats.map(c => c.classList.contains('correct') ? '🟩' : '⬛').join('');
     });
     const body = rows.join('\n');
-    const url = new URL("./", window.location.href).href;
-    return `${title}\n${body}\n\nPlay: ${url}`;
+    const url = window.location.href.split("#")[0];
+    const tag = " #Sharkdle";
+    return `${title}\n${body}\n\nPlay: ${url}\n\n${tag}`;
 }
 
 async function shareInfiniteResults() {

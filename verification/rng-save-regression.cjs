@@ -55,13 +55,20 @@ function harness(path) {
             mockHydration: (read) => {
                 ensureRngLeaderboardServices = () => true;
                 getRngCurrentUser = () => ({ uid: 'test' });
+                rngProfileOwnerUid = 'test';
                 readRngProfileFromFirebase = read;
                 updateAllUi = updateSettingsUi = scheduleRngCloudProfileSync = () => {};
             },
             mockCloud: (commit) => {
                 ensureRngLeaderboardServices = () => true;
                 getRngCurrentUser = () => ({ uid: 'test' });
-                rngLeaderboardDb = { collection: () => ({ doc: () => ({ collection: () => ({ doc: () => ({}) }) }) }), batch: () => ({ set() {}, commit }) };
+                rngProfileOwnerUid = 'test';
+                readRngProfileFromFirebase = async () => null;
+                updateAllUi = updateSettingsUi = () => {};
+                rngLeaderboardDb = {
+                    collection: () => ({ doc: () => ({ collection: () => ({ doc: () => ({}) }) }) }),
+                    runTransaction: async callback => { const result = await callback({ set() {} }); await commit(); return result; }
+                };
                 rngCloudSaveDirty = true;
             }
         };`);
@@ -134,6 +141,7 @@ function harness(path) {
         t.mockCloud(() => { commits++; return new Promise(resolve => { finishWrite = resolve; }); });
         t.scheduleLocalProfileSave();
         const writing = t.syncRngProfileToFirebase();
+        await new Promise(setImmediate);
         t.player().coins = 10; t.scheduleLocalProfileSave();
         assert.equal(await t.syncRngProfileToFirebase({ force: true }), false);
         assert.equal(commits, 1);

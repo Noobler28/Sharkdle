@@ -1,0 +1,40 @@
+#community-boss-event-modal .winter-dialog:has(.christmas-calendar-event) { width: min(700px, 100%); }
+.christmas-calendar-hero { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding-right: 10px; }
+.christmas-calendar-hero h2 { margin: 10px 0 8px; color: #f2f8f6; font: 700 clamp(22px,4vw,30px)/1.15 'Barlow',sans-serif; letter-spacing: -.6px; }
+.christmas-calendar-hero p { margin: 0 0 12px; color: #a4b7c3; font-size: 13px; }
+#christmas-countdown { color: #e8c98d; font-size: 14px; font-weight: 600; }
+.santa-jaws-portrait { flex: 0 0 150px; width: 150px; height: 110px; overflow: hidden; }
+.santa-jaws-portrait img { width: 150px; height: 110px; object-fit: cover; object-position: center; }
+.christmas-calendar-status { margin: 18px 0; padding: 12px 14px; border-left: 2px solid #a9deca; background: #182f38; border-radius: 0 8px 8px 0; color: #d8e9e8; font-size: 12px; line-height: 1.5; }
+.christmas-calendar-heading { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 14px; }
+.christmas-calendar-heading h3 { margin: 0; font-size: 15px; }
+.christmas-calendar-heading > span { color: #afc3cb; text-align: right; font-size: 11px; line-height: 1.5; }
+.christmas-calendar-grid { display: grid; grid-template-columns: repeat(5,minmax(0,1fr)); gap: 8px; }
+.christmas-calendar-day { min-width: 0; min-height: 116px; display: grid; justify-items: center; align-content: center; gap: 4px; padding: 9px 4px; border: 1px solid #344c59; border-radius: 10px; background: #142934; color: #acbfca; font-family: 'Barlow',sans-serif; }
+.christmas-calendar-day b { font-size: 15px; font-weight: 600; }
+.christmas-calendar-gift-icon { display: block; width: 48px; aspect-ratio: 1217 / 1724; background: url('images/christmasEvent/PresentOpenAnim.png') 0% 0% / 400% 300% no-repeat; }
+.christmas-calendar-day.opened .christmas-calendar-gift-icon { background-position: 100% 100%; }
+.christmas-calendar-day small { font-size: 10px; }
+.christmas-calendar-day.ready { background: #21483f; color: #effff7; border-color: #9ed6bc; box-shadow: 0 0 14px #8fd5b511; cursor: pointer; }
+.christmas-calendar-day.ready:hover { background: #2a5a4e; transform: translateY(-2px); }
+.christmas-calendar-day.ready:focus-visible { outline: 2px solid #f4dfa8; outline-offset: 2px; }
+.christmas-calendar-day.opened { background: #132a2b; border-color: #345c51; color: #acd9c4; }
+.christmas-calendar-day.missed,.christmas-calendar-day.ended { background: #11212b; color: #8ca2b0; }
+.christmas-calendar-day.win-needed { border-color: #c4ab71; color: #f0d69d; }
+.christmas-calendar-fine-print { margin: 13px 0 18px; color: #a4b7c3; font-size: 11px; line-height: 1.5; }
+.christmas-present-reveal { margin-top: 16px; padding: 14px; border: 1px solid #486b61; border-radius: 12px; background: radial-gradient(ellipse at center,#2b5045,#12252d); text-align: center; }
+.christmas-present-reveal[hidden] { display: none; }
+.christmas-present-reveal p { color: #e6f7ed; font-size: 13px; line-height: 1.5; }
+.christmas-present-sprite { width: 150px; aspect-ratio: 1217 / 1724; margin: 0 auto; background-image: url('images/christmasEvent/PresentOpenAnim.png'); background-size: 400% 300%; background-repeat: no-repeat; }
+.christmas-test-win { margin-top: 12px; width: 100%; padding: 10px; border: 1px dashed #9b8959; border-radius: 8px; background: transparent; color: #dfcf9f; font: 500 12px 'Barlow',sans-serif; cursor: pointer; }
+#home-community-boss-event.santa-calendar-card .home-boss-heading img { object-fit: cover; object-position: center; }
+@media (max-width: 480px) {
+    .santa-jaws-portrait { flex-basis: 95px; width: 95px; height: 100px; }
+    .santa-jaws-portrait img { width: 95px; height: 100px; }
+    .christmas-calendar-hero h2 { font-size: 23px; }
+    .christmas-calendar-grid { gap: 5px; }
+    .christmas-calendar-day { min-height: 100px; }
+    .christmas-calendar-gift-icon { width: 38px; }
+    .christmas-calendar-day small { font-size: 9px; }
+}
+@media (prefers-reduced-motion: reduce) { .christmas-calendar-day.ready:hover { transform: none; } }

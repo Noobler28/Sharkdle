@@ -1,0 +1,52 @@
+/* Visual catalogues share the wiki's existing ocean and paper palette. */
+.wiki-article{min-width:0}
+.wiki-article>h1{overflow-wrap:anywhere}
+.wiki-article>.page-lead{max-width:850px}
+.wiki-article>.related-links{margin:25px 0}
+.article-contents{padding:20px 22px;background:#edf3eb;border:1px solid var(--line);border-radius:7px;margin:24px 0 30px}
+.article-contents strong{display:block;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:#456b59;margin-bottom:12px}
+.article-contents>div{display:flex;flex-wrap:wrap;gap:8px 20px}
+.article-contents a{font-size:12px;line-height:1.7}
+.catalog-controls{display:flex;flex-wrap:wrap;align-items:flex-end;gap:14px;padding:20px;background:white;border:1px solid var(--line);border-radius:7px;margin:0 0 30px}
+.catalog-controls label{display:flex;flex-direction:column;gap:7px;font-size:11px;font-weight:600;color:#496b5c}
+.catalog-controls .catalog-query{flex:1;min-width:190px}
+.catalog-controls input,.catalog-controls select{border:1px solid #bfd1c5;border-radius:4px;background:#fbfcf9;color:var(--ink);font:inherit;font-size:13px;min-height:42px;padding:10px 12px;max-width:100%}
+.catalog-controls input:focus-visible,.catalog-controls select:focus-visible{outline:2px solid var(--teal);outline-offset:3px}
+.catalog-controls #catalog-count{flex-basis:100%;font-size:12px;color:#617b6c;margin:0;font-weight:400}
+.catalog-controls select{max-width:210px}
+.catalog-controls button{min-height:42px;padding:10px 16px;border:1px solid #8caa95;border-radius:4px;background:#edf3e6;color:#315d45;font:inherit;font-size:12px;font-weight:600;cursor:pointer}
+.catalog-controls button:focus-visible{outline:2px solid var(--teal);outline-offset:3px}
+.catalog-section-count{display:inline-block;vertical-align:middle;margin-left:12px;font-family:inherit;font-size:11px;font-weight:400;letter-spacing:0;border:1px solid var(--line);border-radius:4px;padding:4px 8px;color:#567163;background:#f4f7ee;white-space:nowrap}
+.cosmetic-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin-top:22px}
+.cosmetic-card{background:white;border:1px solid var(--line);border-radius:8px;overflow:hidden;min-width:0;display:flex;flex-direction:column}
+.cosmetic-card[hidden],.catalog-section[hidden],#catalog-empty[hidden]{display:none}
+.cosmetic-art{height:165px;display:flex;align-items:center;justify-content:center;border-bottom:1px solid var(--line);flex-shrink:0;overflow:hidden}
+.cosmetic-art--portrait{background:radial-gradient(ellipse at 50% 95%,#b8d9d0 0,transparent 60%),linear-gradient(135deg,#edf4e9,#d9eeea)}
+.cosmetic-art--portrait img{width:145px;height:145px;object-fit:contain;filter:drop-shadow(0 6px 8px #234d4920)}
+.cosmetic-art--badge{background:radial-gradient(circle at 50% 45%,#fffdf2,#eaf0e4)}
+.cosmetic-art--badge>span{display:flex;align-items:center;justify-content:center;font-size:45px;line-height:1;width:92px;height:92px;border:2px solid #b3c8b4;border-radius:50%;background:#fffdf8;box-shadow:0 6px 18px #355e4512}
+.cosmetic-art--theme{position:relative;background-color:#0b2233!important}
+.cosmetic-art--theme>span{color:white;font-size:20px;font-weight:700;letter-spacing:.07em;text-align:center;padding:12px 20px;border:1px solid #ffffff45;background:#082d358c;border-radius:6px;text-shadow:0 1px 4px #0008}
+.cosmetic-art--theme>span>span{display:block;font-size:10px;font-weight:400;letter-spacing:.08em;text-transform:uppercase;margin-top:6px}
+.cosmetic-card-body{padding:18px 18px 20px;flex:1}
+.cosmetic-card .cosmetic-kind{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:#718777;line-height:1.4;margin:0 0 7px}
+.cosmetic-card h3{font-size:18px;line-height:1.3;margin:0 0 12px;overflow-wrap:anywhere}
+.cosmetic-labels{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:17px}
+.cosmetic-rarity,.cosmetic-availability{font-size:10px;line-height:1.4;border-radius:4px;padding:4px 7px;border:1px solid #d8e2d4;background:#f2f5ec;color:#547049}
+.cosmetic-rarity[data-tier=rare]{background:#e7f4f9;border-color:#b7dce7;color:#245a70}
+.cosmetic-rarity[data-tier=epic]{background:#f0eafa;border-color:#d8c8ec;color:#67428e}
+.cosmetic-rarity[data-tier=legendary]{background:#fbf0d7;border-color:#e4ca89;color:#7d5b18}
+.cosmetic-rarity[data-tier=special],.cosmetic-rarity[data-tier=code]{background:#fae9e1;border-color:#e8c2b3;color:#87482f}
+.cosmetic-availability{background:#f8f8f5;color:#687568;border-color:#e0e4da}
+.cosmetic-card[data-availability=Retired] .cosmetic-availability,.cosmetic-card[data-availability=Unavailable] .cosmetic-availability{background:#f1eeea;color:#746556;border-color:#ddd3c6}
+.cosmetic-card[data-availability=Seasonal] .cosmetic-availability{background:#ecf2ef;color:#446e60}
+.cosmetic-card dl{margin:0}
+.cosmetic-card dt{font-size:10px;text-transform:uppercase;letter-spacing:.07em;font-weight:600;color:#617b6a;margin:13px 0 5px}
+.cosmetic-card dd{font-size:13px;line-height:1.7;color:#3f6056;margin:0;overflow-wrap:anywhere}
+.cosmetic-card .cosmetic-note{font-size:12px;line-height:1.7;color:#6a786a;margin:14px 0 0;padding-top:12px;border-top:1px solid #e7ece2}
+.catalog-section{margin-top:36px}
+.catalog-section>p{max-width:850px}
+.wiki-article table caption{text-align:left;padding:12px 14px;font-size:12px;font-weight:600;color:#48674e;background:#f6f8f1}
+@media(max-width:1150px){.cosmetic-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:560px){.cosmetic-grid{grid-template-columns:minmax(0,1fr)}.catalog-controls{gap:12px;padding:16px}.catalog-controls .catalog-query{min-width:100%}.catalog-controls label{flex:1;min-width:0}.catalog-controls select{width:100%;font-size:12px}.article-contents{padding:17px}.cosmetic-art{height:155px}.cosmetic-card-body{padding:18px 20px}.cosmetic-card h3{font-size:20px}}
+@media print{.catalog-controls{display:none}.cosmetic-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.cosmetic-card{break-inside:avoid}.cosmetic-art{-webkit-print-color-adjust:exact;print-color-adjust:exact}.catalog-section{break-inside:auto}}

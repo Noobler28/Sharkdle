@@ -1,4 +1,4 @@
-﻿const FRIENDS_COLLECTION = 'friendNetwork';
+const FRIENDS_COLLECTION = 'friendNetwork';
 const FRIEND_CODES_COLLECTION = 'friendCodes';
 let friendDocumentUnsubscribe = null;
 let adminCompensationNoticeUnsubscribe = null;
@@ -319,19 +319,6 @@ async function populateFriendsTab() {
     await renderFriendsList(friends);
     await renderDuelsList(activeDuelsCache);
     await renderRequestsList(requests);
-}
-
-async function getUsernameForUid(uid) {
-    if (!db || !uid) return uid;
-    try {
-        const doc = await db.collection('userStats').doc(uid).get();
-        if (!doc.exists) return uid;
-        const data = doc.data() || {};
-        return data.username || uid;
-    } catch (error) {
-        console.warn('Unable to resolve username for', uid, error);
-        return uid;
-    }
 }
 
 async function getUserProfileForUid(uid) {
@@ -706,7 +693,7 @@ window.craftSeasonalCrate = async function() {
         openLoginModal();
         return;
     }
-    if (seasonalCrateCraftingInProgress) return;
+    if (seasonalCrateCraftingInProgress || crateOpeningInProgress) return;
 
     const activeCrateId = getActiveSeasonalCrateId();
     if (!activeCrateId) {
@@ -726,27 +713,38 @@ window.craftSeasonalCrate = async function() {
     seasonalCrateCraftingInProgress = true;
     updateSeasonalCrateCraftingUI(profileData);
 
-    const rollbackProfileData = JSON.parse(JSON.stringify(profileData));
-    const craftTimestamp = Date.now();
-    inventory.reef -= SEASONAL_CRATE_CRAFT_COST;
-    inventory[activeCrateId] = (inventory[activeCrateId] || 0) + 1;
-    profileData.crateInventory = normalizeCrateInventory(inventory);
-    markCrateInventoryChanged(profileData, craftTimestamp);
-
+    const uid = currentUser.uid;
+    let craftedProfile;
     try {
-        await persistCrateProfileUpdate(profileData);
-        renderCratesModal();
-        showNotification(`Crafted 1 ${activeCrateName} from 2 Cosmetic Crates!`, "success", 2500);
+        if (!db) throw new Error("Cloud save unavailable");
+        const userRef = db.collection("userStats").doc(uid);
+        craftedProfile = await db.runTransaction(async transaction => {
+            const snapshot = await transaction.get(userRef);
+            const next = mergeProfilesSafely(profileData, snapshot.data() || {}, { preferRemote: true });
+            const nextInventory = getCrateInventory(snapshot.exists ? snapshot.data() : next);
+            if (nextInventory.reef < SEASONAL_CRATE_CRAFT_COST) throw new Error("Not enough Cosmetic Crates");
+            nextInventory.reef -= SEASONAL_CRATE_CRAFT_COST;
+            nextInventory[activeCrateId] = (nextInventory[activeCrateId] || 0) + 1;
+            next.crateInventory = normalizeCrateInventory(nextInventory);
+            markCrateInventoryChanged(next);
+            next.lastUpdated = Date.now();
+            transaction.set(userRef, { crateInventory: next.crateInventory, crateInventoryUpdatedAt: getCrateInventoryUpdatedAt(next), lastUpdated: next.lastUpdated }, { merge: true });
+            return next;
+        });
     } catch (error) {
         console.warn("Crafting sync failed:", error);
-        Object.assign(profileData, rollbackProfileData);
-        saveUserProfileLocally(profileData, { skipRemoteSync: true });
-        showNotification("Crafting could not be saved. No crates were spent.", "error", 3500);
-        renderCratesModal();
+        if (currentUser?.uid === uid) showNotification("Crafting could not be saved. No crates were spent.", "error", 3500);
     } finally {
         seasonalCrateCraftingInProgress = false;
-        updateSeasonalCrateCraftingUI(getCurrentProfileData());
     }
+    if (currentUser?.uid !== uid) return;
+    if (craftedProfile) {
+        saveUserProfileLocally(craftedProfile, { skipRemoteSync: true });
+        showNotification(`Crafted 1 ${activeCrateName} from ${SEASONAL_CRATE_CRAFT_COST} Cosmetic Crates!`, "success", 2500);
+    }
+    renderCratesButton();
+    renderCratesModal();
+    updateSeasonalCrateCraftingUI(getCurrentProfileData());
 };
 
 function getDuelStatusClass(status) {
@@ -825,8 +823,8 @@ function moveDuelSuggestionSelection(direction) {
 
 function buildDuelFeedback(guessedShark, targetShark) {
     return [
-        { category: 'Family', value: guessedShark.family, correct: guessedShark.family === targetShark.family },
         { category: 'Order', value: guessedShark.order, correct: guessedShark.order === targetShark.order },
+        { category: 'Family', value: guessedShark.family, correct: guessedShark.family === targetShark.family },
         { category: 'Genus', value: guessedShark.genus, correct: guessedShark.genus === targetShark.genus },
         { category: 'Size', value: guessedShark.size, correct: guessedShark.size === targetShark.size },
         { category: 'Depth', value: guessedShark.depth, correct: guessedShark.depth === targetShark.depth },
@@ -1009,15 +1007,6 @@ async function renderRequestsList(requests) {
 function generateFriendCode(uid) {
     return uid ? uid.slice(-8).toUpperCase() : '';
 }
-
-function getChatThreadId(uid1, uid2) {
-    if (!uid1 || !uid2) return null;
-    return [uid1, uid2].sort().join('_');
-}
-
-
-
-
 
 window.addFriend = async function() {
     const input = document.getElementById('add-friend-uid');
@@ -1767,13 +1756,16 @@ document.addEventListener('keydown', function(e) {
 });
 
 // ----- BADGE SYSTEM -----
-const DEV_UID = 'ETPtQC0VA2NiSnX67rS2P2ma2tC2'; // Primary dev UID kept for backwards compatibility
 const DEV_UIDS = ['ETPtQC0VA2NiSnX67rS2P2ma2tC2', 'gOcPqOuyPJRWisE4dxvFkGTOl5g2'];
 
 function isDeveloperUid(uid) {
     return DEV_UIDS.includes(uid || "");
 }
 const sharkPassCardThemes = [
+    {"id":"tidal-blue","name":"Tidal Blue","preview":"linear-gradient(135deg, rgba(67, 170, 255, 0.24), rgba(8, 23, 48, 0.98))","legacyLevel":7,"retired":true,"source":"Shark Pass 1 (Retired)"},
+    {"id":"sunken-gold","name":"Sunken Gold","preview":"linear-gradient(135deg, rgba(255, 196, 87, 0.22), rgba(20, 27, 56, 0.98))","legacyLevel":15,"retired":true,"source":"Shark Pass 1 (Retired)"},
+    {"id":"reef-rush","name":"Reef Rush","preview":"linear-gradient(135deg, rgba(118, 244, 184, 0.22), rgba(15, 92, 112, 0.96) 44%, rgba(6, 24, 42, 1))","legacyLevel":24,"retired":true,"source":"Shark Pass 1 (Retired)"},
+    {"id":"abyssal-current","name":"Abyssal Current","preview":"linear-gradient(135deg, rgba(117, 202, 255, 0.24), rgba(33, 55, 120, 0.28) 42%, rgba(4, 12, 27, 1))","legacyLevel":30,"retired":true,"source":"Shark Pass 1 (Retired)"},
     { id: "default", name: "Starter Blue", level: 0, preview: "linear-gradient(135deg, rgba(0,180,216,0.16), rgba(11,34,51,0.94))" },
     { id: "reef-signal", name: "Reef Signal", level: 7, preview: "radial-gradient(circle at 18% 20%, rgba(255, 147, 105, 0.22), transparent 26%), linear-gradient(135deg, rgba(42, 121, 117, 0.34), rgba(9, 30, 55, 0.96) 52%, rgba(5, 13, 28, 1))" },
     { id: "copper-surge", name: "Copper Surge", level: 15, preview: "radial-gradient(circle at 84% 16%, rgba(255, 197, 105, 0.28), transparent 22%), linear-gradient(135deg, rgba(139, 83, 55, 0.34), rgba(25, 45, 76, 0.96) 50%, rgba(6, 17, 31, 1))" },
@@ -1865,20 +1857,26 @@ const COMMUNITY_BOSS_EVENTS = [
     {
         id: "christmas-stethacanthus-2026",
         season: "christmas",
-        seasonLabel: "Limited Christmas Boss Event",
+        seasonLabel: "Christmas Part 1 · Global Win Event",
         bossName: "Stethacanthus",
-        title: "Defeat the Stethacanthus",
+        title: "Protect Stethacanthus",
         targetWins: 150,
-        startMs: new Date("2026-12-12T00:00:00Z").getTime(),
+        startMs: new Date("2026-11-02T00:00:00Z").getTime(),
         endMs: new Date("2026-12-26T00:00:00Z").getTime(),
         crateId: "christmas",
         rewardBadgeId: "frost-anvil",
         rewardBadgeName: "Frost Anvil",
-        rewards: createCommunityBossRewards("christmas")
+        rewardMode: "milestone",
+        requiresContribution: true,
+        championBonusXp: 10000,
+        rewards: [
+            { id: "tier-50", label: "First snowfall", goal: 50, xp: 10000, crateId: "christmas", crateCount: 5, badge: false },
+            { id: "tier-100", label: "Winter surge", goal: 100, xp: 15000, crateId: "christmas", crateCount: 8, badge: false },
+            { id: "tier-150", label: "Stethacanthus protected", goal: 150, xp: 25000, crateId: "christmas", crateCount: 12 }
+        ]
     }
 ];
 const COMMUNITY_BOSS_EVENT = getCurrentCommunityBossEvent();
-const COMMUNITY_BOSS_DISPLAY_DISABLED_FOR_NOW = true;
 const CLADOSELACHE_PARTICIPATION_EVENT_ID = "summer-cladoselache-2026";
 const CLADOSELACHE_PARTICIPATION_REWARD_ID = "cladoselache-participation-cosmetic-crate";
 const CLADOSELACHE_PARTICIPATION_ACCOUNT_CUTOFF_MS = new Date("2026-07-05T23:59:59Z").getTime();
@@ -2074,7 +2072,6 @@ let globalXpEventUnsubscribe = null;
 let globalIndexThemeUnsubscribe = null;
 let communityBossUnsubscribe = null;
 let communityBossState = null;
-let communityBossUiTimer = null;
 let cloudProfileReloadTimeouts = [];
 let lastServerHydratedProfileUid = null;
 const CLOUD_PROFILE_RELOAD_DELAYS_MS = [1200, 4000, 9000];
@@ -2902,7 +2899,6 @@ function unlockProfileBadge(source = "game", badgeId = "") {
     profileData.lastBadgeUnlockSource = source;
     saveUserProfileLocally(profileData);
     updateProfileBadgeUI?.();
-    renderBadgeSelection?.();
     renderProfileInventoryUI?.(profileData);
     showNotification?.(`${badge.name} badge unlocked!`, "success", 4200);
     return true;
@@ -3020,7 +3016,6 @@ const PEARL_SHOP_ITEMS = {
     "pearl-boost": { price: 500, label: "2x Pearls Boost" },
     "cosmetic-crate": { price: 500, label: "Cosmetic Crate" },
     "event-crate": { price: 750, label: "Event Crate" },
-    "message-bottle-pack": { price: 300, label: "Message in a Bottle Pack" },
     "season-xp": { price: 3000, label: "Season 2x XP" }
 };
 const SOCIAL_REWARD_TASKS = [
@@ -3282,10 +3277,6 @@ function isCrateRewardOwned(profileData, reward) {
     return false;
 }
 
-function getAvailableCrateRewards(profileData = getCurrentProfileData()) {
-    return crateRewardPool.filter(reward => !isCrateRewardOwned(profileData, reward));
-}
-
 function getCrateRewardsByRarity(rarity, crateId = "reef") {
     const pool = getCratePoolById(crateId);
     return pool.filter(reward => reward.rarity === rarity);
@@ -3413,6 +3404,7 @@ function markDailySpinUsed(profileData = getCurrentProfileData()) {
     const bonusSpins = getDailySpinBonusCount(profileData, uid);
     if (bonusSpins > 0) {
         setDailySpinBonusCount(profileData, bonusSpins - 1, uid);
+        return profileData;
     }
     profileData.lastSpinWheelDate = today;
     localStorage.setItem(getLastSpinWheelDateStorageKey(uid), today);
@@ -3655,6 +3647,7 @@ async function spinDailyWheel() {
     if (!disk) return;
 
     spinWheelSpinning = true;
+    const spinningUid = currentUser.uid;
     if (actionBtn) actionBtn.disabled = true;
 
     const rewards = getSpinWheelRewards();
@@ -3672,6 +3665,12 @@ async function spinDailyWheel() {
 
     await new Promise(resolve => setTimeout(resolve, 4200));
 
+    if (currentUser?.uid !== spinningUid) {
+        spinWheelSpinning = false;
+        updateSpinWheelUI();
+        return;
+    }
+
     let profileData = getCurrentProfileData();
     const grantResult = grantSpinWheelReward(profileData, reward);
     profileData = markDailySpinUsed(grantResult.profileData);
@@ -3688,8 +3687,8 @@ async function spinDailyWheel() {
                 crateInventory: normalizeCrateInventory(profileData.crateInventory),
                 crateInventoryUpdatedAt: getCrateInventoryUpdatedAt(profileData),
                 streakShields: getStreakShieldCount(profileData),
-                lastSpinWheelDate: profileData.lastSpinWheelDate,
-                dailySpinWinDate: profileData.dailySpinWinDate,
+                lastSpinWheelDate: normalizeStoredDateValue(profileData.lastSpinWheelDate) || "",
+                dailySpinWinDate: normalizeStoredDateValue(profileData.dailySpinWinDate) || "",
                 dailySpinBonusSpins: getDailySpinBonusCount(profileData)
             }, { merge: true });
         } catch (error) {
@@ -3720,10 +3719,8 @@ async function spinDailyWheel() {
     renderCratesButton();
     renderCratesModal();
     updateSeasonalCratePanels();
-    if (typeof loadAvailablePFPs === "function") loadAvailablePFPs();
     if (typeof loadEarnedCosmetics === "function") loadEarnedCosmetics();
     if (typeof renderThemeSelection === "function") renderThemeSelection();
-    if (typeof renderBadgeSelection === "function") renderBadgeSelection();
     if (typeof updateProfileBadgeUI === "function") updateProfileBadgeUI();
     spinWheelSpinning = false;
     updateIndexStats();
@@ -3748,7 +3745,7 @@ function collectAllUnlockablePfps() {
             rarity: reward.rarity,
             source: getSharkPassRewardSourceLabel(reward)
         }));
-    getAllCrateRewardPools().flat()
+    getAllDisplayCrateRewardPools().flat()
         .filter(reward => reward.type === "pfp")
         .forEach(reward => addEntry(reward.name, reward.imagePath, { crateReward: true, rarity: reward.rarity }));
     Object.values(redeemCodes).forEach(code => {
@@ -3760,6 +3757,8 @@ function collectAllUnlockablePfps() {
     addEntry("Catshark", "images/leaderPfp/Daily/Shark1.png", { leaderReward: true });
     addEntry("Whitetip Reef Shark", "images/leaderPfp/Monthly/Shark1.png", { leaderReward: true });
     addEntry("Hammerhead Shark", "images/codePfp/Shark26.png", { codeReward: true });
+    addEntry("Bull Shark", "images/loginPfp/Shark20.png", { loginReward: true });
+    RETIRED_TREASURE_PFPS.forEach(pfp => addEntry(pfp.name, pfp.imagePath, pfp));
 
     return entries;
 }
@@ -3815,8 +3814,6 @@ window.unlockAllCosmetics = async function() {
     }
 
     if (typeof renderThemeSelection === "function") renderThemeSelection();
-    if (typeof renderBadgeSelection === "function") renderBadgeSelection();
-    if (typeof loadAvailablePFPs === "function") loadAvailablePFPs();
     if (typeof loadEarnedCosmetics === "function") loadEarnedCosmetics();
     if (typeof updateProfileBadgeUI === "function") updateProfileBadgeUI();
 
@@ -3897,11 +3894,11 @@ function getOpenedCrateCount(profileData = getCurrentProfileData(), crateId = nu
         const inventory = normalizeCrateInventory(profileData.crateInventory || {});
         return inventory[crateId] || 0;
     }
-    
+
     if (crateId === null) {
         return crateRewardPool.filter(reward => isCrateRewardOwned(profileData, reward)).length;
     }
-    
+
     const pool = getCratePoolById(crateId);
     return pool.filter(reward => isCrateRewardOwned(profileData, reward)).length;
 }
@@ -4062,14 +4059,40 @@ function getCurrentCommunityBossEvent(nowMs = Date.now()) {
         || COMMUNITY_BOSS_EVENTS[COMMUNITY_BOSS_EVENTS.length - 1];
 }
 
-function getCommunityBossPageKind() {
-    const path = window.location.pathname.toLowerCase();
-    if (document.body?.classList.contains("home-page")) return "home";
-    return "";
-}
-
 function getCommunityBossWins() {
     return Math.max(0, Number(communityBossState?.wins) || 0);
+}
+
+let communityBossParticipation = { uid: null, wins: 0, loaded: false, championUid: null };
+let communityBossClaimInProgress = false;
+
+function getCommunityBossPersonalWins() {
+    return currentUser?.uid === communityBossParticipation.uid ? communityBossParticipation.wins : 0;
+}
+
+function isCommunityBossParticipant() {
+    return !COMMUNITY_BOSS_EVENT.requiresContribution || getCommunityBossPersonalWins() >= 1;
+}
+
+function getCommunityBossChampionReward() {
+    return { id: "champion-bonus", label: "#1 contributor bonus", goal: 150, xp: COMMUNITY_BOSS_EVENT.championBonusXp, crateCount: 0, badge: false };
+}
+
+async function refreshCommunityBossParticipation() {
+    const uid = currentUser?.uid;
+    if (!uid || !db || !COMMUNITY_BOSS_EVENT.requiresContribution) return;
+    if (communityBossParticipation.uid !== uid) communityBossParticipation = { uid, wins: 0, loaded: false, championUid: null };
+    try {
+        const [personal, leaders] = await Promise.all([
+            getCommunityBossContributorRef(uid).get({ source: "server" }),
+            getCommunityBossDocRef().collection("contributors").orderBy("wins", "desc").limit(1).get({ source: "server" })
+        ]);
+        if (currentUser?.uid !== uid) return;
+        communityBossParticipation = { uid, wins: Math.max(0, Number(personal.data()?.wins) || 0), loaded: true, championUid: leaders.docs[0]?.id || null };
+        renderCommunityBossPanel();
+    } catch (error) {
+        console.warn("Unable to check event participation:", error);
+    }
 }
 
 function isCommunityBossStarted(nowMs = Date.now()) {
@@ -4128,8 +4151,11 @@ function getUnlockedCommunityBossRewards(wins = getCommunityBossWins()) {
 
 function getPendingCommunityBossRewards(wins = getCommunityBossWins(), profileData = getCurrentProfileData()) {
     if (!isCommunityBossMilestoneEvent()) return [];
+    if (!isCommunityBossParticipant()) return [];
     const claimedRewardIds = getClaimedCommunityBossRewardIds(profileData);
-    return getUnlockedCommunityBossRewards(wins).filter(reward => !claimedRewardIds.has(String(reward.id)));
+    const rewards = getUnlockedCommunityBossRewards(wins);
+    if (COMMUNITY_BOSS_EVENT.championBonusXp && isCommunityBossComplete(wins) && communityBossParticipation.championUid === currentUser?.uid) rewards.push(getCommunityBossChampionReward());
+    return rewards.filter(reward => !claimedRewardIds.has(String(reward.id)));
 }
 
 function hasClaimedCommunityBossReward(profileData = getCurrentProfileData(), wins = getCommunityBossWins()) {
@@ -4178,7 +4204,7 @@ function formatCommunityBossCrateAwards(crateAwards) {
 }
 
 function getCommunityBossRewardDescription(reward) {
-    return `${formatCommunityBossCrateReward(reward)}, ${reward.xp.toLocaleString()} XP, ${COMMUNITY_BOSS_EVENT.rewardBadgeName} profile badge`;
+    return [reward.crateCount > 0 ? formatCommunityBossCrateReward(reward) : null, `${reward.xp.toLocaleString()} XP`, reward.badge !== false ? `${COMMUNITY_BOSS_EVENT.rewardBadgeName} profile badge` : null].filter(Boolean).join(", ");
 }
 
 function getCommunityBossDescription() {
@@ -4188,7 +4214,7 @@ function getCommunityBossDescription() {
         const goals = getCommunityBossRewardTiers()
             .map(reward => (Number(reward.goal) || 0).toLocaleString())
             .join(", ");
-        return `Daily and Infinite wins from every logged-in player count together.${multiplierCopy} Unlock shared rewards at ${goals} community wins before the deadline to bring down the ${COMMUNITY_BOSS_EVENT.bossName}.`;
+        return `Daily and Infinite wins count together. Unlock rewards at ${goals} global wins.${COMMUNITY_BOSS_EVENT.requiresContribution ? " Contribute just one win to claim every milestone the community reaches. Earn up to 25 Christmas Crates in total." : multiplierCopy}`;
     }
     return `Daily and Infinite wins from every logged-in player count together.${multiplierCopy} Reach ${COMMUNITY_BOSS_EVENT.targetWins.toLocaleString()} community wins by the event deadline to bring down the ${COMMUNITY_BOSS_EVENT.bossName}.`;
 }
@@ -4205,6 +4231,20 @@ function getCommunityBossRewardsMarkup(wins = getCommunityBossWins(), profileDat
     const rewardRows = getCommunityBossRewardTiers();
     const claimedRewardIds = getClaimedCommunityBossRewardIds(profileData);
     const heading = isCommunityBossMilestoneEvent() ? "Community Milestones" : "Rewards";
+
+    if (COMMUNITY_BOSS_EVENT.requiresContribution) {
+        return `<div class="winter-rewards-head"><h3>Community rewards</h3><span>25 crates in total</span></div>
+            <div class="winter-rewards">${rewardRows.map(reward => {
+                const claimed = claimedRewardIds.has(reward.id), unlocked = wins >= reward.goal;
+                const status = claimed ? "Claimed" : unlocked ? "Unlocked" : "Locked";
+                return `<article class="winter-reward ${claimed ? "claimed" : unlocked ? "unlocked" : "locked"}">
+                    <div class="winter-goal"><b>${reward.goal}</b><span>wins</span></div>
+                    <div class="winter-reward-copy"><h4>${reward.crateCount} Christmas Crates</h4><p>${reward.xp.toLocaleString()} XP${reward.badge !== false ? " · Frost Anvil badge" : ""}</p></div>
+                    <span class="winter-reward-status">${claimed ? "✓ " : ""}${status}</span>
+                </article>`;
+            }).join("")}</div>
+            <div class="winter-bonus"><i class="fa-solid fa-trophy" aria-hidden="true"></i><p><strong>#1 contributor bonus</strong><span>+${COMMUNITY_BOSS_EVENT.championBonusXp.toLocaleString()} XP at 150 wins${claimedRewardIds.has("champion-bonus") ? " · Claimed" : ""}</span></p></div>`;
+    }
 
     return `
         <strong>${heading}</strong>
@@ -4351,7 +4391,7 @@ function getCommunityBossDisplayState() {
         ? pendingRewards.length > 0
         : complete && !hasClaimedCommunityBossReward(profileData, wins);
     const claimed = isCommunityBossMilestoneEvent()
-        ? getUnlockedCommunityBossRewards(wins).length > 0 && pendingRewards.length === 0
+        ? isCommunityBossParticipant() && getUnlockedCommunityBossRewards(wins).length > 0 && pendingRewards.length === 0
         : hasClaimedCommunityBossReward(profileData, wins);
     const started = isCommunityBossStarted(nowMs);
     const expired = isCommunityBossExpired(nowMs);
@@ -4361,7 +4401,7 @@ function getCommunityBossDisplayState() {
     if (!started) {
         timerText = `Starts in ${formatEventTimeRemaining(COMMUNITY_BOSS_EVENT.startMs - nowMs)}`;
     } else if (complete) {
-        timerText = "Boss defeated. Rewards are unlocked.";
+        timerText = COMMUNITY_BOSS_EVENT.season === "christmas" ? "Stethacanthus protected. Rewards are unlocked." : "Boss defeated. Rewards are unlocked.";
     } else if (canClaim) {
         timerText = `${pendingRewards.length} reward${pendingRewards.length === 1 ? "" : "s"} unlocked.`;
     } else if (expired) {
@@ -4372,13 +4412,17 @@ function getCommunityBossDisplayState() {
 
     const claimLabel = !currentUser
         ? "Login to Claim"
+        : !isCommunityBossParticipant()
+        ? "Contribute 1 win to qualify"
         : claimed
         ? "Rewards Claimed"
         : canClaim
         ? pendingRewards.length > 1 ? "Claim Rewards" : "Claim Reward"
         : "Locked";
 
-    const contributionCopy = contributionOpen
+    const contributionCopy = COMMUNITY_BOSS_EVENT.requiresContribution && !isCommunityBossParticipant()
+        ? contributionOpen ? "Win one Daily or Infinite game to qualify for all community milestone rewards." : "Only players who contributed a win can claim these rewards."
+        : contributionOpen
         ? canClaim
             ? "A shared reward is unlocked. Claim it now, and keep winning for the next milestone."
             : `Your next Daily or Infinite win will add ${getCommunityBossContributionMultiplier()} to the global total.`
@@ -4420,17 +4464,48 @@ function ensureCommunityBossEventModal() {
     return modal;
 }
 
+function getWinterCommunityBossMarkup(state) {
+    const contributionCount = getCommunityBossPersonalWins();
+    const qualification = !currentUser ? "Log in, then contribute one win to qualify."
+        : contributionCount > 0 ? `You qualify · ${contributionCount} contribution${contributionCount === 1 ? "" : "s"}`
+        : communityBossParticipation.uid === currentUser.uid && communityBossParticipation.loaded ? "Contribute one win to qualify."
+        : "Checking your contributions…";
+    return `<section class="winter-event" aria-labelledby="community-boss-modal-title">
+        <header class="winter-header"><span class="winter-kicker">CHRISTMAS · PART 1</span>
+            <h2 id="community-boss-modal-title">Protect Stethacanthus</h2>
+            <p>Help keep Steven the Stethacanthus safe this Christmas. Every Daily or Infinite win brings the community closer.</p>
+        </header>
+        <div class="winter-boss-art">
+            <img src="images/christmasEvent/StevenStethecanthus.png" alt="Stethacanthus" width="2172" height="724" decoding="async">
+        </div>
+        <div class="winter-progress-section">
+            <div class="winter-progress-label"><div><strong>${state.wins}</strong><span> / ${state.target} global wins</span></div><span>${Math.floor(state.progressPercent)}%</span></div>
+            <div class="winter-progress-track" role="progressbar" aria-label="Global wins" aria-valuenow="${state.wins}" aria-valuemin="0" aria-valuemax="${state.target}"><div style="width:${state.progressPercent}%"></div></div>
+            <div class="winter-progress-note"><span>${qualification}</span><span>${state.timerText}</span></div>
+        </div>
+        ${getCommunityBossRewardsMarkup(state.wins)}
+        <footer class="winter-footer">
+            <div class="winter-primary-actions"><button id="community-boss-modal-claim-btn" type="button">${state.claimLabel}</button><button type="button" onclick="navigate('Infinite/index.html')">Play Infinite <span aria-hidden="true">↗</span></button></div>
+            <div class="winter-secondary-actions"><button type="button" onclick="navigate('Daily/index.html')">Play Daily</button><button type="button" onclick="openCommunityBossRanksModal()">Contributors <span aria-hidden="true">→</span></button></div>
+        </footer>
+    </section>`;
+}
+
 function renderCommunityBossEventModal() {
+    if (window.SharkdleChristmas?.isOpening()) return;
     const body = document.getElementById("community-boss-event-modal-body");
     if (!body) return;
 
     const state = getCommunityBossDisplayState();
-    body.innerHTML = `
+    const dialog = document.getElementById("community-boss-event-modal")?.querySelector(".community-boss-event-card");
+    dialog?.classList.toggle("winter-dialog", Boolean(COMMUNITY_BOSS_EVENT.requiresContribution));
+    body.innerHTML = COMMUNITY_BOSS_EVENT.requiresContribution ? (window.SharkdleChristmas?.activePart() === 2 ? window.SharkdleChristmas.markup() : getWinterCommunityBossMarkup(state)) : `
         <section class="community-boss-event community-boss-modal-event community-boss-season-${COMMUNITY_BOSS_EVENT.season}" aria-live="polite">
             <div class="community-boss-modal-heading">
                 <span class="community-boss-kicker">${COMMUNITY_BOSS_EVENT.seasonLabel}</span>
                 <h2 id="community-boss-modal-title">${COMMUNITY_BOSS_EVENT.title}</h2>
                 <p>${getCommunityBossDescription()}</p>
+                ${COMMUNITY_BOSS_EVENT.requiresContribution ? `<div class="community-participation"><span><i class="fa-solid fa-snowflake" aria-hidden="true"></i> 25 crates to earn</span><span>${!currentUser ? "Log in to join" : getCommunityBossPersonalWins() > 0 ? `${getCommunityBossPersonalWins()} contribution${getCommunityBossPersonalWins() === 1 ? "" : "s"} · You qualify` : communityBossParticipation.uid === currentUser.uid && communityBossParticipation.loaded ? "1 win qualifies you" : "Checking your contributions…"}</span></div>` : ""}
             </div>
             <div class="community-boss-progress-shell community-boss-modal-progress">
                 <div class="community-boss-progress-meta">
@@ -4440,6 +4515,7 @@ function renderCommunityBossEventModal() {
                 <div class="community-boss-progress" aria-label="Global ${COMMUNITY_BOSS_EVENT.bossName} progress">
                     <div class="community-boss-progress-fill" style="width:${state.progressPercent}%"></div>
                 </div>
+                ${COMMUNITY_BOSS_EVENT.requiresContribution ? `<div class="community-progress-milestones">${getCommunityBossRewardTiers().map(reward => `<span class="${state.wins >= reward.goal ? "reached" : ""}">${state.wins >= reward.goal ? "✓ " : ""}${reward.goal} wins</span>`).join("")}</div>` : ""}
                 <div class="community-boss-status">${state.timerText}</div>
             </div>
             <div class="community-boss-modal-lower">
@@ -4451,7 +4527,7 @@ function renderCommunityBossEventModal() {
                     <div class="community-boss-actions">
                         <button class="primary" type="button" onclick="navigate('infinite.html')">Play Infinite</button>
                         <button type="button" onclick="navigate('Daily/index.html')">Daily Challenge</button>
-                        ${isCommunityBossMilestoneEvent() ? "" : `<button type="button" onclick="openCommunityBossRanksModal()">Ranks</button>`}
+                        ${!isCommunityBossMilestoneEvent() || COMMUNITY_BOSS_EVENT.championBonusXp ? `<button type="button" onclick="openCommunityBossRanksModal()">Contributors</button>` : ""}
                         <button id="community-boss-modal-claim-btn" type="button">${state.claimLabel}</button>
                     </div>
                 </div>
@@ -4463,8 +4539,10 @@ function renderCommunityBossEventModal() {
     if (claimBtn) {
         claimBtn.onclick = claimCommunityBossReward;
         claimBtn.classList.toggle("primary", state.canClaim);
-        claimBtn.disabled = Boolean(currentUser && !state.canClaim);
+        claimBtn.disabled = communityBossClaimInProgress || Boolean(currentUser && !state.canClaim);
+        if (communityBossClaimInProgress) claimBtn.textContent = "Saving rewards…";
     }
+    window.SharkdleChristmas?.bind();
 }
 
 function openCommunityBossEventModal() {
@@ -4472,6 +4550,8 @@ function openCommunityBossEventModal() {
     const modal = ensureCommunityBossEventModal();
     renderCommunityBossEventModal();
     modal.classList.remove("hidden");
+    refreshCommunityBossParticipation();
+    if (window.SharkdleChristmas?.activePart() === 2) window.SharkdleChristmas.refresh();
 }
 
 function closeCommunityBossEventModal() {
@@ -4878,109 +4958,36 @@ function ensureCommunityBossStyles() {
     document.head.appendChild(style);
 }
 
-function ensureCommunityBossPanel() {
-    if (COMMUNITY_BOSS_DISPLAY_DISABLED_FOR_NOW) return;
-    const pageKind = getCommunityBossPageKind();
-    if (!pageKind || document.getElementById("community-boss-event")) return;
-
-    ensureCommunityBossStyles();
-    const panel = document.createElement("section");
-    panel.id = "community-boss-event";
-    panel.className = `community-boss-event community-boss-${pageKind} community-boss-season-${COMMUNITY_BOSS_EVENT.season}`;
-    panel.setAttribute("aria-live", "polite");
-
-    if (pageKind === "home") {
-        const homeSection = document.querySelector(".home-section");
-        if (homeSection?.parentNode) {
-            homeSection.parentNode.insertBefore(panel, homeSection);
-        }
-    } else {
-        const gameContainer = document.querySelector(".game-container");
-        if (gameContainer?.parentNode) {
-            gameContainer.parentNode.insertBefore(panel, gameContainer);
-        }
-    }
-
-    renderCommunityBossPanel();
-}
-
 function renderCommunityBossPanel() {
-    const panel = document.getElementById("community-boss-event");
-    if (!panel) {
-        if (!document.getElementById("community-boss-event-modal")?.classList.contains("hidden")) {
-            renderCommunityBossEventModal();
+    const homeCopy = document.getElementById("home-community-boss-copy");
+    if (homeCopy) {
+        const wins = Math.min(getCommunityBossWins(), COMMUNITY_BOSS_EVENT.targetWins);
+        homeCopy.textContent = isCommunityBossComplete(wins)
+            ? "Stethacanthus is protected! Your community rewards are ready."
+            : "Win together to protect Stethacanthus and earn up to 25 Christmas Crates.";
+        const progress = document.getElementById("home-community-boss-progress");
+        if (progress) {
+            progress.max = COMMUNITY_BOSS_EVENT.targetWins;
+            progress.value = wins;
         }
-        return;
+        const progressLabel = document.getElementById("home-community-boss-progress-label");
+        if (progressLabel) progressLabel.textContent = `${wins.toLocaleString()} / ${COMMUNITY_BOSS_EVENT.targetWins.toLocaleString()} global wins`;
     }
-
-    const state = getCommunityBossDisplayState();
-
-    panel.innerHTML = `
-        <div class="community-boss-grid">
-            <div>
-                <span class="community-boss-kicker">${COMMUNITY_BOSS_EVENT.seasonLabel}</span>
-                <h2>${COMMUNITY_BOSS_EVENT.title}</h2>
-                <p>${getCommunityBossDescription()}</p>
-                <div class="community-boss-actions">
-                    <button class="primary" type="button" onclick="navigate('infinite.html')">Play Infinite</button>
-                    <button type="button" onclick="navigate('Daily/index.html')">Daily Challenge</button>
-                    ${isCommunityBossMilestoneEvent() ? "" : `<button type="button" onclick="openCommunityBossRanksModal()">Ranks</button>`}
-                    <button id="community-boss-claim-btn" type="button">${state.claimLabel}</button>
-                </div>
-                <div class="community-boss-status" id="community-boss-status">${state.timerText}</div>
-            </div>
-            <div class="community-boss-progress-shell">
-                <div class="community-boss-progress-meta">
-                    <span>${state.wins.toLocaleString()} / ${state.target.toLocaleString()} wins</span>
-                    <span>${Math.floor(state.progressPercent)}%</span>
-                </div>
-                <div class="community-boss-progress" aria-label="Community boss progress">
-                    <div class="community-boss-progress-fill" style="width:${state.progressPercent}%"></div>
-                </div>
-                <div class="community-boss-reward">
-                    ${getCommunityBossRewardsMarkup(state.wins)}
-                </div>
-                <p>${state.contributionCopy}</p>
-            </div>
-        </div>
-    `;
-
-    const claimBtn = document.getElementById("community-boss-claim-btn");
-    if (claimBtn) {
-        claimBtn.onclick = claimCommunityBossReward;
-        claimBtn.classList.toggle("primary", state.canClaim);
-        claimBtn.disabled = Boolean(currentUser && !state.canClaim);
-    }
-
+    window.SharkdleChristmas?.updateSidebar();
     if (!document.getElementById("community-boss-event-modal")?.classList.contains("hidden")) {
         renderCommunityBossEventModal();
     }
 }
 
-function ensureCommunityBossUiTimer() {
-    if (COMMUNITY_BOSS_DISPLAY_DISABLED_FOR_NOW) return;
-    ensureCommunityBossPanel();
-    if (communityBossUiTimer) return;
-    if (!getCommunityBossPageKind()) return;
-    communityBossUiTimer = setInterval(() => {
-        if (!getCommunityBossPageKind()) {
-            clearInterval(communityBossUiTimer);
-            communityBossUiTimer = null;
-            return;
-        }
-        renderCommunityBossPanel();
-    }, 1000);
-}
-
 function setupCommunityBossEventListener() {
     const start = () => {
-        ensureCommunityBossUiTimer();
         const eventRef = getCommunityBossDocRef();
         if (!eventRef || communityBossUnsubscribe) return;
 
         communityBossUnsubscribe = eventRef.onSnapshot(snapshot => {
             communityBossState = snapshot.exists ? (snapshot.data() || {}) : { wins: 0 };
             renderCommunityBossPanel();
+            if (isCommunityBossComplete()) refreshCommunityBossParticipation();
         }, error => {
             console.warn("Community boss event listener failed:", error);
             communityBossState = communityBossState || { wins: 0 };
@@ -5003,6 +5010,7 @@ function getCommunityBossContributionStorageKey(mode, options = {}) {
 }
 
 async function contributeCommunityBossWin(mode = "infinite", options = {}) {
+    if (COMMUNITY_BOSS_EVENT.season === "christmas" && window.SharkdleChristmas?.activePart() === 2) return { contributed: false, reason: "part-two" };
     const normalizedMode = mode === "daily" ? "daily" : "infinite";
     if (!isCommunityBossContributionOpen()) return { contributed: false, reason: "inactive" };
     if (!currentUser || !db || typeof firebase === "undefined") {
@@ -5074,6 +5082,7 @@ async function contributeCommunityBossWin(mode = "infinite", options = {}) {
         });
 
         if (didIncrement) {
+            await refreshCommunityBossParticipation();
             if (storageKey) localStorage.setItem(storageKey, "true");
             showNotification(`Community boss progress +${contributionValue}`, "success", 2600);
             renderCommunityBossPanel();
@@ -5086,6 +5095,88 @@ async function contributeCommunityBossWin(mode = "infinite", options = {}) {
     }
 }
 
+async function claimParticipatingCommunityBossRewards() {
+    if (communityBossClaimInProgress) return;
+    const uid = currentUser.uid;
+    const eventRef = getCommunityBossDocRef();
+    const userRef = db.collection("userStats").doc(uid);
+    const personalRef = getCommunityBossContributorRef(uid);
+    communityBossClaimInProgress = true;
+    renderCommunityBossPanel();
+    try {
+        // Once 150 wins is reached, contributions close and the final ranking is fixed.
+        // Firestore breaks equal win totals by document ID, keeping the winner consistent.
+        const finalEvent = await eventRef.get({ source: "server" });
+        const finalRanking = isCommunityBossComplete(Number(finalEvent.data()?.wins) || 0);
+        const leaders = finalRanking ? await eventRef.collection("contributors").orderBy("wins", "desc").limit(1).get({ source: "server" }) : null;
+        const championUid = leaders?.docs[0]?.id || null;
+        const localProfile = getCurrentProfileData();
+        const result = await db.runTransaction(async transaction => {
+            const eventSnap = await transaction.get(eventRef);
+            const personalSnap = await transaction.get(personalRef);
+            const profileSnap = await transaction.get(userRef);
+            if ((Number(personalSnap.data()?.wins) || 0) < 1) return { reason: "Contribute one Daily or Infinite win to qualify for rewards." };
+            const wins = Math.max(0, Number(eventSnap.data()?.wins) || 0);
+            const profile = mergeProfilesSafely(localProfile, profileSnap.data() || {}, { preferRemote: true });
+            const existing = profileSnap.data()?.communityBossRewards?.[COMMUNITY_BOSS_EVENT.id] || {};
+            const claimed = new Set(existing.claimedRewardIds || []);
+            const rewards = getUnlockedCommunityBossRewards(wins);
+            if (isCommunityBossComplete(wins) && championUid === uid) rewards.push(getCommunityBossChampionReward());
+            const pending = rewards.filter(reward => !claimed.has(reward.id));
+            if (!pending.length) return { reason: "No new rewards yet. Milestones unlock at 50, 100 and 150 global wins." };
+            const now = Date.now();
+            const inventory = getCrateInventory(profileSnap.exists ? profileSnap.data() : profile);
+            const claims = { ...(existing.claims || {}) };
+            const crates = { ...(existing.crates || {}) };
+            // Credit any rewards already paid under the earlier rank-based event too.
+            const previousCrates = Number(crates.christmas ?? (existing.crateId === "christmas" ? existing.crateCount : 0)) || 0;
+            const xp = Math.max(0, rewards.reduce((sum, reward) => sum + reward.xp, 0) - (Number(existing.xp) || 0));
+            const crateCount = Math.max(0, rewards.reduce((sum, reward) => sum + reward.crateCount, 0) - previousCrates);
+            for (const reward of pending) {
+                claimed.add(reward.id);
+                claims[reward.id] = { claimedAt: now, xp: reward.xp, crateCount: reward.crateCount, goal: reward.goal };
+            }
+            // Earned event crates remain claimable even when the visual theme changes.
+            inventory.christmas += crateCount;
+            crates.christmas = previousCrates + crateCount;
+            profile.crateInventory = normalizeCrateInventory(inventory);
+            if (crateCount) markCrateInventoryChanged(profile, now);
+            profile.totalXP = (Number(profile.totalXP) || 0) + xp;
+            applySharkPassXpGain(profile, xp);
+            if (pending.some(reward => reward.badge !== false)) {
+                profile.unlockedBadges = [...new Set([...getUnlockedBadgeIds(profile), COMMUNITY_BOSS_EVENT.rewardBadgeId])];
+            }
+            profile.communityBossRewards = { ...(profile.communityBossRewards || {}), [COMMUNITY_BOSS_EVENT.id]: {
+                ...existing, claimedAt: existing.claimedAt || now, updatedAt: now, rewardMode: "milestone",
+                claimedRewardIds: [...claimed], claims, crates, xp: (Number(existing.xp) || 0) + xp
+            } };
+            profile.lastUpdated = now;
+            transaction.set(userRef, {
+                totalXP: profile.totalXP, ...getSharkPassSyncPayload(profile),
+                crateInventory: profile.crateInventory, crateInventoryUpdatedAt: getCrateInventoryUpdatedAt(profile),
+                unlockedBadges: getUnlockedBadgeIds(profile), communityBossRewards: profile.communityBossRewards, lastUpdated: now
+            }, { merge: true });
+            return { profile, xp, crateCount };
+        });
+        if (currentUser?.uid !== uid) return;
+        if (!result?.profile) {
+            showNotification(result?.reason || "No new rewards available.", "info", 3600);
+            return;
+        }
+        saveUserProfileLocally(result.profile, { skipRemoteSync: true });
+        updateProfileDisplay(result.profile);
+        updateProfileBadgeUI();
+        renderCratesButton();
+        showNotification(`Claimed ${result.crateCount} Christmas Crates and ${result.xp.toLocaleString()} XP!`, "success", 5000);
+    } catch (error) {
+        console.warn("Community reward claim failed:", error);
+        if (currentUser?.uid === uid) showNotification("Rewards could not be saved. Please try again.", "error", 3600);
+    } finally {
+        communityBossClaimInProgress = false;
+        renderCommunityBossPanel();
+    }
+}
+
 async function claimCommunityBossReward() {
     if (!currentUser) {
         openLoginModal();
@@ -5095,6 +5186,8 @@ async function claimCommunityBossReward() {
         showNotification("Community event is unavailable right now.", "error", 3200);
         return;
     }
+
+    if (COMMUNITY_BOSS_EVENT.requiresContribution) return claimParticipatingCommunityBossRewards();
 
     const eventRef = getCommunityBossDocRef();
     const snapshot = eventRef ? await eventRef.get().catch(() => null) : null;
@@ -5397,79 +5490,7 @@ window.closeCommunityBossRanksModal = closeCommunityBossRanksModal;
 window.openCommunityBossEventModal = openCommunityBossEventModal;
 window.closeCommunityBossEventModal = closeCommunityBossEventModal;
 
-const LOST_TREASURES_EVENT_ID = "lost-treasures-2026";
-const LOST_TREASURES_BOTTLES = [
-    { id: "barnacle", name: "Barnacle Bottle", image: "images/lostTreasure/Bottles/Bottle1.png", scrollCount: 3, rareChance: 0.001, maxRareCards: 1 },
-    { id: "red-sea", name: "Red Sea Bottle", image: "images/lostTreasure/Bottles/Bottle2.png", scrollCount: 5, rareChance: 0.01, maxRareCards: 1 },
-    { id: "seafoam", name: "Seafoam Bottle", image: "images/lostTreasure/Bottles/Bottle3.png", scrollCount: 7, rareChance: 0.05, maxRareCards: 2 },
-    { id: "celestial", name: "Celestial Bottle", image: "images/lostTreasure/Bottles/BottleRare.png", scrollCount: 1, rareChance: 1, maxRareCards: 1, rareOnly: true }
-];
-const LOST_TREASURES_BOTTLE_IMAGES = LOST_TREASURES_BOTTLES.map(bottle => bottle.image);
-const LOST_TREASURES_CARD_IMAGES = Object.freeze({
-    common: "images/lostTreasure/Cards/Card.png",
-    commonWorn: "images/lostTreasure/Cards/Card2.png",
-    rare: "images/lostTreasure/Cards/RareCard.png",
-    rareWorn: "images/lostTreasure/Cards/RareCard2.png"
-});
-const LOST_TREASURES_SPECIES_ART_FILENAMES = Object.freeze({
-    "Benthic Broadwings|Torpedo Ray": "RingedTorpedoRay.png",
-    "Abyssal Relics|Pointy-nosed Blue Chimaera": "PointyNoseBlueChimaera.png",
-    "Gentle Giants|Spinetail Devil Ray": "SpinetailDevilray.png",
-    "Ambush Hunters|Brown-banded Bamboo Shark": "BrownBrandedBambooShark.png",
-    "Odd Adaptations|Sawfish": "Sawshark.png",
-    "Odd Adaptations|Cookiecutter Shark": "CookieCutterShark.png",
-    "Odd Adaptations|Japanese Bullhead Shark": "JapeneseBullheadShark.png",
-    "Reef Regulars|Blacktip Reef Shark": "BlackTipReefShark.png",
-    "Reef Regulars|Blue-spotted Ribbontail Ray": "BlueSpottedRibbontailRay.png",
-    "Reef Regulars|Whitetip Reef Shark": "WhiteTipReefShark.png",
-    "Miniature Marvels|Smallspotted Catshark": "SmallSpottedCatshark.png",
-    "Seafloor Walkers|Brown-banded Bamboo Shark": "BrownBandedBambooShark.png",
-    "Seafloor Walkers|Whitespotted Bamboo Shark": "WhiteSpottedBambooShark.png"
-});
-const LOST_TREASURES_BOTTLE_DROP_CHANCE = 0.36;
-const LOST_TREASURES_BOTTLE_DROP_WEIGHTS = Object.freeze({
-    barnacle: 64,
-    "red-sea": 24,
-    seafoam: 10,
-    celestial: 2
-});
-const LOST_TREASURES_LEGACY_BOTTLE_IDS = Object.freeze({
-    barnacle: "weathered",
-    "red-sea": ["placeholder", "seafoam"],
-    seafoam: "barnacle",
-    celestial: "rare"
-});
-const LOST_TREASURES_BOTTLE_ID_ALIASES = Object.freeze(
-    {
-        weathered: "barnacle",
-        placeholder: "red-sea",
-        rare: "celestial"
-    }
-);
-const LOST_TREASURES_DAILY_WIN_BOTTLE_ID = "barnacle";
-const LOST_TREASURES_STREAK_BOTTLE_REWARDS = Object.freeze([
-    { streak: 3, bottleId: "barnacle", amount: 1 },
-    { streak: 7, bottleId: "red-sea", amount: 1 },
-    { streak: 14, bottleId: "seafoam", amount: 1 },
-    { streak: 30, bottleId: "celestial", amount: 1 }
-]);
-const LOST_TREASURES_DUPLICATE_EXCHANGES = [
-    { id: "dupes-red-sea", cost: 10, bottleId: "red-sea", amount: 1, label: "10 Dupes", reward: "Red Sea Bottle" },
-    { id: "dupes-seafoam", cost: 25, bottleId: "seafoam", amount: 1, label: "25 Dupes", reward: "Seafoam Bottle" },
-    { id: "dupes-celestial", cost: 60, bottleId: "celestial", amount: 1, label: "60 Dupes", reward: "Celestial Bottle" }
-];
-const LOST_TREASURES_DUPLICATE_BASE_CHANCE = 0.28;
-const LOST_TREASURES_DUPLICATE_PROGRESS_BONUS = 0.34;
-const LOST_TREASURES_DUPLICATE_MAX_CHANCE = 0.72;
-const LOST_TREASURES_RARE_DUPLICATE_VALUE = 3;
-const LOST_TREASURES_CATEGORY_PEARL_REWARD = 300;
-const LOST_TREASURES_GRAND_PEARL_REWARD = 2500;
-const LOST_TREASURES_GRAND_BADGE = Object.freeze({
-    id: "treasure-keeper",
-    name: "Treasure Keeper",
-    emoji: "\u{1F5FA}\uFE0F"
-});
-const LOST_TREASURES_GRAND_PFPS = Object.freeze([
+const RETIRED_TREASURE_PFPS = Object.freeze([
     {
         name: "Grey Nurse Shark",
         imagePath: "images/lostTreasure/Pfp/GreyNurseShark.png",
@@ -5483,888 +5504,6 @@ const LOST_TREASURES_GRAND_PFPS = Object.freeze([
         source: "Lost Treasures"
     }
 ]);
-const LOST_TREASURES_CATEGORY_SUBTITLES = Object.freeze({
-    "everyone-knows": "Broad, bottom-dwelling species including rays, skates, and flat-bodied sharks.",
-    "reef-regulars": "Extreme-depth species with photos from submersibles or deep trawls.",
-    "open-ocean-icons": "Large plankton-feeders with abundant real photos.",
-    "deep-sea-strangers": "Common reef species with thousands of real photographs.",
-    "flat-and-fancy": "Pelagic species photographed by divers and fisheries.",
-    "saw-snouts": "Species known for stealth or sudden strikes.",
-    "ancient-oddballs": "Species with bizarre shapes or adaptations.",
-    "tiny-terrors": "Species documented in rivers or brackish systems.",
-    "carpet-crew": "Species from frigid seas with verified photos.",
-    "sting-and-wing": "Miniature sharks and rays with confirmed photos.",
-    "hammer-time": "Species that walk or rest on the seafloor.",
-    "rare-finds": "Fast, powerful apex hunters with abundant real photos."
-});
-const LOST_TREASURES_CATEGORIES = [
-    { id: "everyone-knows", name: "Benthic Broadwings", color: "#66e0d1", species: ["Ornate Wobbegong", "Japanese Sawshark", "Common Sawfish", "Bowmouth Guitarfish", "Shovelnose Guitarfish", "Cownose Ray", "Southern Stingray", "Big Skate", "Torpedo Ray", "Spotted Eagle Ray"] },
-    { id: "reef-regulars", name: "Abyssal Relics", color: "#d8a55f", species: ["Goblin Shark", "Frilled Shark", "Greenland Shark", "Bluntnose Sixgill Shark", "Sevengill Shark", "Pacific Sleeper Shark", "Portuguese Dogfish", "Kitefin Shark", "Chimaera monstrosa", "Pointy-nosed Blue Chimaera"] },
-    { id: "open-ocean-icons", name: "Gentle Giants", color: "#f4d7ff", species: ["Whale Shark", "Basking Shark", "Megamouth Shark", "Reef Manta Ray", "Giant Manta Ray", "Devil Ray", "Bentfin Devil Ray", "Spinetail Devil Ray", "Pygmy Devil Ray", "Chilean Devil Ray"] },
-    { id: "deep-sea-strangers", name: "Reef Regulars", color: "#7bd875", species: ["Blacktip Reef Shark", "Whitetip Reef Shark", "Grey Reef Shark", "Nurse Shark", "Zebra Shark", "Epaulette Shark", "Blue-spotted Ribbontail Ray", "Honeycomb Stingray", "Reticulate Whipray", "Coral Catshark"] },
-    { id: "flat-and-fancy", name: "Open Ocean Drifters", color: "#8fb6ff", species: ["Blue Shark", "Oceanic Whitetip", "Shortfin Mako", "Salmon Shark", "Pelagic Thresher", "Bigeye Thresher", "Pelagic Stingray", "Mobula kuhlii", "Mobula hypostoma", "Mobula munkiana"] },
-    { id: "saw-snouts", name: "Ambush Hunters", color: "#ffcc70", species: ["Great White Shark", "Tiger Shark", "Bull Shark", "Sand Tiger Shark", "Angel Shark", "Ornate Angel Shark", "Tasselled Wobbegong", "Spotted Wobbegong", "Copper Shark", "Brown-banded Bamboo Shark"] },
-    { id: "ancient-oddballs", name: "Odd Adaptations", color: "#7fe8ff", species: ["Scalloped Hammerhead", "Great Hammerhead", "Winghead Shark", "Sawfish", "Cookiecutter Shark", "Longnose Sawshark", "Chimaera phantasma", "Elephant Fish", "Spotted Ratfish", "Japanese Bullhead Shark"] },
-    { id: "tiny-terrors", name: "River Shadows", color: "#d6c3a4", species: ["Bull Shark", "Ganges River Shark", "Speartooth Shark", "Irrawaddy River Shark", "Largetooth Sawfish", "Green Sawfish", "Giant Freshwater Stingray", "Pearl Ray", "Black Stingray", "Tiger River Stingray"] },
-    { id: "carpet-crew", name: "Coldwater Charts", color: "#b7a7ff", species: ["Porbeagle Shark", "Spiny Dogfish", "Greenland Shark", "Arctic Skate", "Winter Skate", "Rough Skate", "Pacific Spiny Dogfish", "Barndoor Skate", "Longnose Skate", "White Skate"] },
-    { id: "sting-and-wing", name: "Miniature Marvels", color: "#ff8fab", species: ["Dwarf Lanternshark", "Pygmy Shark", "Velvet Belly Lanternshark", "Chain Catshark", "Smallspotted Catshark", "Bali Catshark", "Lesser Electric Ray", "Shorttail Stingray", "Fanray", "Spotted Torpedo Ray"] },
-    { id: "hammer-time", name: "Seafloor Walkers", color: "#58c7ff", species: ["Epaulette Shark", "Speckled Carpetshark", "Brownbanded Bamboo Shark", "Whitespotted Bamboo Shark", "Arabian Carpetshark", "Ornate Wobbegong", "Guitarfish", "Shovelnose Ray", "Eastern Shovelnose Ray", "Common Skate"] },
-    { id: "rare-finds", name: "Apex Legends", color: "#ffe18a", species: ["Great White Shark", "Tiger Shark", "Bull Shark", "Shortfin Mako", "Longfin Mako", "Dusky Shark", "Silky Shark", "Lemon Shark", "Blacktip Shark", "Sandbar Shark"] }
-];
-const LOST_TREASURES_CARDS_PER_CATEGORY = 10;
-
-function getLostTreasuresCardId(categoryId, cardNumber) {
-    return `${categoryId}-${String(cardNumber).padStart(2, "0")}`;
-}
-
-function getLostTreasuresGeneratedCardImage(categoryId, cardNumber) {
-    return `images/lostTreasure/Cards/generated/${getLostTreasuresCardId(categoryId, cardNumber)}.png`;
-}
-
-function getLostTreasuresArtPathPart(value) {
-    return String(value || "").replace(/[^a-z0-9]/gi, "");
-}
-
-function getLostTreasuresSpeciesArtImage(categoryName, speciesName) {
-    const filename = LOST_TREASURES_SPECIES_ART_FILENAMES[`${categoryName}|${speciesName}`] || `${getLostTreasuresArtPathPart(speciesName)}.png`;
-    return `images/lostTreasure/Cards/Sharks/${getLostTreasuresArtPathPart(categoryName)}/${filename}`;
-}
-
-function getLostTreasuresCommonFrameImage(cardNumber) {
-    return [2, 5, 7].includes(cardNumber)
-        ? LOST_TREASURES_CARD_IMAGES.commonWorn
-        : LOST_TREASURES_CARD_IMAGES.common;
-}
-
-function getLostTreasuresRareFrameImage(categoryIndex, cardNumber) {
-    return (categoryIndex + cardNumber) % 2 === 0
-        ? LOST_TREASURES_CARD_IMAGES.rareWorn
-        : LOST_TREASURES_CARD_IMAGES.rare;
-}
-
-function getLostTreasuresCardArtMarkup(card, altText) {
-    if (card.speciesImage) {
-        return `
-            <img class="lost-treasures-frame-card" src="${card.frameImage}" alt="" aria-hidden="true">
-            <img class="lost-treasures-species-card" src="${card.speciesImage}" alt="${altText}" onerror="this.onerror=null; this.remove(); this.closest('.lost-treasures-scroll-art, .lost-treasures-detail-art')?.classList.remove('has-species-art');">
-        `;
-    }
-    return `<img class="lost-treasures-frame-card" src="${card.frameImage}" alt="${altText}">`;
-}
-
-function getLostTreasuresAlbum() {
-    return LOST_TREASURES_CATEGORIES.map((category, categoryIndex) => ({
-        ...category,
-        cards: Array.from({ length: LOST_TREASURES_CARDS_PER_CATEGORY }, (_, index) => {
-            const speciesName = category.species[index] || `${category.name} Scroll ${index + 1}`;
-            return {
-            id: getLostTreasuresCardId(category.id, index + 1),
-            number: index + 1,
-            name: speciesName,
-            mark: speciesName
-                .split(/\s+/)
-                .map(part => part[0])
-                .join("")
-                .replace(/[^A-Z]/gi, "")
-                .slice(0, 4)
-                .toUpperCase(),
-            rarity: index >= LOST_TREASURES_CARDS_PER_CATEGORY - 2 ? "rare" : "common",
-            frameImage: index >= LOST_TREASURES_CARDS_PER_CATEGORY - 2
-                ? getLostTreasuresRareFrameImage(categoryIndex, index + 1)
-                : getLostTreasuresCommonFrameImage(index + 1),
-            speciesImage: getLostTreasuresSpeciesArtImage(category.name, speciesName),
-            image: getLostTreasuresGeneratedCardImage(category.id, index + 1)
-            };
-        })
-    }));
-}
-
-function getLostTreasuresState(profileData = getCurrentProfileData()) {
-    const raw = profileData.lostTreasures && typeof profileData.lostTreasures === "object" ? profileData.lostTreasures : {};
-    const legacyBottleCount = typeof raw.bottles === "number" ? Math.max(0, Number(raw.bottles) || 0) : 0;
-    const rawBottleInventory = raw.bottles && typeof raw.bottles === "object" ? raw.bottles : raw.bottleInventory;
-    const bottleInventory = LOST_TREASURES_BOTTLES.reduce((inventory, bottle, index) => {
-        const legacyBottleIds = [LOST_TREASURES_LEGACY_BOTTLE_IDS[bottle.id]].flat().filter(Boolean);
-        const savedCount = Number(rawBottleInventory?.[bottle.id]);
-        const hasSavedCount = Number.isFinite(savedCount);
-        const legacyCount = legacyBottleIds.reduce((sum, legacyBottleId) => sum + Math.max(0, Number(rawBottleInventory?.[legacyBottleId]) || 0), 0);
-        inventory[bottle.id] = Math.max(0, hasSavedCount ? savedCount : legacyCount)
-            + (index === 0 ? legacyBottleCount : 0);
-        return inventory;
-    }, {});
-    const selectedBottleId = LOST_TREASURES_BOTTLE_ID_ALIASES[raw.selectedBottleId] || raw.selectedBottleId || LOST_TREASURES_BOTTLES[0].id;
-    return {
-        eventId: raw.eventId || LOST_TREASURES_EVENT_ID,
-        bottles: bottleInventory,
-        collectedCards: Array.isArray(raw.collectedCards) ? [...new Set(raw.collectedCards)] : [],
-        duplicateCards: Math.max(0, Number(raw.duplicateCards) || 0),
-        duplicateCardCounts: raw.duplicateCardCounts && typeof raw.duplicateCardCounts === "object" ? { ...raw.duplicateCardCounts } : {},
-        claimedCategories: Array.isArray(raw.claimedCategories) ? [...new Set(raw.claimedCategories)] : [],
-        recentCards: Array.isArray(raw.recentCards) ? raw.recentCards.slice(0, 8) : [],
-        claimedGrandReward: Boolean(raw.claimedGrandReward),
-        lastOpenedCardId: raw.lastOpenedCardId || "",
-        selectedBottleId: selectedBottleId,
-        dailyBottleDates: Array.isArray(raw.dailyBottleDates) ? [...new Set(raw.dailyBottleDates)] : [],
-        claimedBottleMilestones: Array.isArray(raw.claimedBottleMilestones) ? [...new Set(raw.claimedBottleMilestones)] : []
-    };
-}
-
-function mergeLostTreasuresStates(localProfile = {}, remoteProfile = {}) {
-    const localState = getLostTreasuresState(localProfile);
-    const remoteState = getLostTreasuresState(remoteProfile);
-    const hasRemoteLostTreasures = Boolean(remoteProfile?.lostTreasures && typeof remoteProfile.lostTreasures === "object");
-    const hasLocalLostTreasures = Boolean(localProfile?.lostTreasures && typeof localProfile.lostTreasures === "object");
-    const localUpdatedAt = Number(localProfile?.lostTreasures?.updatedAt) || 0;
-    const remoteUpdatedAt = Number(remoteProfile?.lostTreasures?.updatedAt) || 0;
-    const bottleSourceState = remoteUpdatedAt > localUpdatedAt ? remoteState : localState;
-    return {
-        eventId: LOST_TREASURES_EVENT_ID,
-        bottles: LOST_TREASURES_BOTTLES.reduce((inventory, bottle) => {
-            inventory[bottle.id] = getLostTreasuresBottleCount(bottleSourceState, bottle.id);
-            return inventory;
-        }, {}),
-        collectedCards: [...new Set([...localState.collectedCards, ...remoteState.collectedCards])],
-        duplicateCards: Math.max(localState.duplicateCards, remoteState.duplicateCards),
-        duplicateCardCounts: Object.keys({ ...localState.duplicateCardCounts, ...remoteState.duplicateCardCounts }).reduce((counts, cardId) => {
-            counts[cardId] = Math.max(Number(localState.duplicateCardCounts?.[cardId]) || 0, Number(remoteState.duplicateCardCounts?.[cardId]) || 0);
-            return counts;
-        }, {}),
-        claimedCategories: [...new Set([...localState.claimedCategories, ...remoteState.claimedCategories])],
-        recentCards: [...remoteState.recentCards, ...localState.recentCards].filter(Boolean).slice(0, 8),
-        claimedGrandReward: Boolean(localState.claimedGrandReward || remoteState.claimedGrandReward),
-        dailyBottleDates: [...new Set([...localState.dailyBottleDates, ...remoteState.dailyBottleDates])],
-        claimedBottleMilestones: [...new Set([...localState.claimedBottleMilestones, ...remoteState.claimedBottleMilestones])],
-        lastOpenedCardId: hasRemoteLostTreasures && remoteState.lastOpenedCardId ? remoteState.lastOpenedCardId : localState.lastOpenedCardId || "",
-        selectedBottleId: hasRemoteLostTreasures
-            ? (remoteState.selectedBottleId || localState.selectedBottleId || LOST_TREASURES_BOTTLES[0].id)
-            : hasLocalLostTreasures
-                ? (localState.selectedBottleId || LOST_TREASURES_BOTTLES[0].id)
-                : LOST_TREASURES_BOTTLES[0].id,
-        updatedAt: Math.max(localUpdatedAt, remoteUpdatedAt)
-    };
-}
-
-function setLostTreasuresState(profileData, state, options = {}) {
-    profileData.lostTreasures = {
-        eventId: LOST_TREASURES_EVENT_ID,
-        bottles: LOST_TREASURES_BOTTLES.reduce((inventory, bottle) => {
-            inventory[bottle.id] = Math.max(0, Number(state.bottles?.[bottle.id]) || 0);
-            return inventory;
-        }, {}),
-        collectedCards: [...new Set(state.collectedCards || [])],
-        duplicateCards: Math.max(0, Number(state.duplicateCards) || 0),
-        duplicateCardCounts: state.duplicateCardCounts && typeof state.duplicateCardCounts === "object" ? { ...state.duplicateCardCounts } : {},
-        claimedCategories: [...new Set(state.claimedCategories || [])],
-        recentCards: Array.isArray(state.recentCards) ? state.recentCards.filter(Boolean).slice(0, 8) : [],
-        claimedGrandReward: Boolean(state.claimedGrandReward),
-        lastOpenedCardId: state.lastOpenedCardId || "",
-        selectedBottleId: state.selectedBottleId || LOST_TREASURES_BOTTLES[0].id,
-        dailyBottleDates: Array.isArray(state.dailyBottleDates) ? [...new Set(state.dailyBottleDates)].slice(-30) : [],
-        claimedBottleMilestones: Array.isArray(state.claimedBottleMilestones) ? [...new Set(state.claimedBottleMilestones)] : [],
-        updatedAt: Date.now()
-    };
-    saveUserProfileLocally(profileData, options);
-}
-
-function getLostTreasuresBottleCount(state = getLostTreasuresState(), bottleId = null) {
-    if (bottleId) return Math.max(0, Number(state.bottles?.[bottleId]) || 0);
-    return LOST_TREASURES_BOTTLES.reduce((sum, bottle) => sum + Math.max(0, Number(state.bottles?.[bottle.id]) || 0), 0);
-}
-
-function pickLostTreasuresBottleDrop() {
-    const weightedBottles = LOST_TREASURES_BOTTLES.map(bottle => ({
-        ...bottle,
-        weight: Math.max(0, Number(LOST_TREASURES_BOTTLE_DROP_WEIGHTS[bottle.id]) || 0)
-    })).filter(bottle => bottle.weight > 0);
-    const totalWeight = weightedBottles.reduce((sum, bottle) => sum + bottle.weight, 0);
-    let roll = Math.random() * totalWeight;
-    for (const bottle of weightedBottles) {
-        roll -= bottle.weight;
-        if (roll <= 0) return bottle;
-    }
-    return weightedBottles[0] || LOST_TREASURES_BOTTLES[0];
-}
-
-async function persistLostTreasuresState(profileData) {
-    saveUserProfileLocally(profileData, { skipRemoteSync: true });
-    if (!currentUser || !db) return;
-    await db.collection("userStats").doc(currentUser.uid).set({
-        lostTreasures: profileData.lostTreasures,
-        pearls: getPearlCount(profileData),
-        pearlBalanceUpdatedAt: getPearlBalanceUpdatedAt(profileData),
-        unlockedBadges: Array.isArray(profileData.unlockedBadges) ? profileData.unlockedBadges : ["starter"],
-        earnedCosmetics: Array.isArray(profileData.earnedCosmetics) ? profileData.earnedCosmetics : [],
-        lastUpdated: new Date()
-    }, { merge: true });
-}
-
-function grantLostTreasuresBottle(profileData, bottleId = "barnacle", amount = 1) {
-    const state = getLostTreasuresState(profileData);
-    const bottle = LOST_TREASURES_BOTTLES.find(item => item.id === bottleId) || LOST_TREASURES_BOTTLES[0];
-    state.bottles[bottle.id] = getLostTreasuresBottleCount(state, bottle.id) + Math.max(1, Math.floor(Number(amount) || 1));
-    state.selectedBottleId = bottle.id;
-    setLostTreasuresState(profileData, state, { skipRemoteSync: true });
-    return { state, bottle };
-}
-
-function getLostTreasuresTodayKey() {
-    return new Date().toISOString().slice(0, 10);
-}
-
-function maybeAwardLostTreasuresBottleDrop(source = "win") {
-    if (!currentUser) return false;
-    const profileData = getCurrentProfileData();
-    const state = getLostTreasuresState(profileData);
-    const todayKey = getLostTreasuresTodayKey();
-    const grants = [];
-
-    if (!state.dailyBottleDates.includes(todayKey)) {
-        state.dailyBottleDates.push(todayKey);
-        grants.push({ bottleId: LOST_TREASURES_DAILY_WIN_BOTTLE_ID, amount: 1, reason: "daily win" });
-    }
-
-    const streak = Math.max(0, Number(profileData.currentStreak) || 0);
-    LOST_TREASURES_STREAK_BOTTLE_REWARDS.forEach(reward => {
-        const milestoneKey = String(reward.streak);
-        if (streak >= reward.streak && !state.claimedBottleMilestones.includes(milestoneKey)) {
-            state.claimedBottleMilestones.push(milestoneKey);
-            grants.push({ ...reward, reason: `${reward.streak}-win streak` });
-        }
-    });
-
-    if (Math.random() <= LOST_TREASURES_BOTTLE_DROP_CHANCE) {
-        const bottle = pickLostTreasuresBottleDrop();
-        grants.push({ bottleId: bottle.id, amount: 1, reason: "washed up" });
-    }
-
-    if (!grants.length) return false;
-
-    grants.forEach(grant => {
-        const bottle = LOST_TREASURES_BOTTLES.find(item => item.id === grant.bottleId) || LOST_TREASURES_BOTTLES[0];
-        state.bottles[bottle.id] = getLostTreasuresBottleCount(state, bottle.id) + Math.max(1, Math.floor(Number(grant.amount) || 1));
-        state.selectedBottleId = bottle.id;
-    });
-    setLostTreasuresState(profileData, state, { skipRemoteSync: true });
-    persistLostTreasuresState(profileData).catch(error => console.warn("Lost Treasures bottle sync failed:", error));
-    const bestGrant = grants[grants.length - 1];
-    const bestBottle = LOST_TREASURES_BOTTLES.find(item => item.id === bestGrant.bottleId) || LOST_TREASURES_BOTTLES[0];
-    const extraCount = grants.reduce((sum, grant) => sum + Math.max(1, Math.floor(Number(grant.amount) || 1)), 0) - 1;
-    showNotification?.(`${bestBottle.name} earned from your ${source}${extraCount > 0 ? ` +${extraCount} more bottle${extraCount === 1 ? "" : "s"}` : ""}!`, "success", 4200);
-    if (document.getElementById("lost-treasures-modal")) {
-        renderLostTreasuresModal?.();
-    }
-    return true;
-}
-
-function getLostTreasuresProgress(state = getLostTreasuresState()) {
-    const album = getLostTreasuresAlbum();
-    const collected = new Set(state.collectedCards);
-    const totalCards = album.length * LOST_TREASURES_CARDS_PER_CATEGORY;
-    const collectedCount = album.reduce((sum, category) => sum + category.cards.filter(card => collected.has(card.id)).length, 0);
-    return {
-        album,
-        collected,
-        totalCards,
-        collectedCount,
-        percent: totalCards ? Math.round((collectedCount / totalCards) * 100) : 0
-    };
-}
-
-function findLostTreasuresCard(cardId) {
-    return getLostTreasuresAlbum()
-        .flatMap(category => category.cards.map(card => ({ ...card, category })))
-        .find(card => card.id === cardId) || null;
-}
-
-function getLostTreasuresCardDuplicateCount(state, cardId) {
-    return Math.max(0, Number(state.duplicateCardCounts?.[cardId]) || 0);
-}
-
-function addLostTreasuresRecentCard(state, card, alreadyOwned = false) {
-    state.recentCards = [
-        { id: card.id, at: Date.now(), duplicate: Boolean(alreadyOwned) },
-        ...(Array.isArray(state.recentCards) ? state.recentCards : []).filter(item => item?.id !== card.id)
-    ].slice(0, 8);
-}
-
-function ensureLostTreasuresModal() {
-    let modal = document.getElementById("lost-treasures-modal");
-    if (modal) return modal;
-    modal = document.createElement("div");
-    modal.id = "lost-treasures-modal";
-    modal.className = "modal hidden lost-treasures-modal";
-    modal.onclick = event => {
-        if (event.target === modal) closeLostTreasuresModal();
-    };
-    modal.innerHTML = `
-        <div class="lost-treasures-card">
-            <button type="button" class="modal-x-btn lost-treasures-close" onclick="closeLostTreasuresModal()" aria-label="Close Lost Treasures">&times;</button>
-            <section class="lost-treasures-hero">
-                <div class="lost-treasures-copy">
-                    <span>Limited Event</span>
-                    <h2>Lost Treasures</h2>
-                    <p>Open messages in bottles to collect every scroll and earn rewards.</p>
-                    <div class="lost-treasures-progress">
-                        <div><strong id="lost-treasures-collected">0</strong><span>Scrolls</span></div>
-                        <div><strong id="lost-treasures-bottles">0</strong><span>Bottles</span></div>
-                        <div><strong id="lost-treasures-duplicates">0</strong><span>Dupes</span></div>
-                    </div>
-                </div>
-                <div class="lost-treasures-bottle-stage lost-treasures-dock">
-                    <img id="lost-treasures-bottle-img" src="${LOST_TREASURES_BOTTLE_IMAGES[0]}" alt="Message in a bottle">
-                    <div class="lost-treasures-dock-head">
-                        <h3>Bottle Dock</h3>
-                    </div>
-                    <div id="lost-treasures-bottle-list" class="lost-treasures-bottle-list"></div>
-                    <div id="lost-treasures-selected-bottle" class="lost-treasures-selected-bottle">Select a bottle</div>
-                    <div id="lost-treasures-open-amount" class="lost-treasures-open-amount" aria-label="Bottles to open"></div>
-                    <button id="lost-treasures-open-bottle-btn" type="button" onclick="openLostTreasuresBottle()">Open Bottle</button>
-                </div>
-            </section>
-            <div class="lost-treasures-meter"><span id="lost-treasures-meter-fill"></span></div>
-            <section class="lost-treasures-main">
-                <aside class="lost-treasures-side" aria-label="Lost Treasures tools">
-                    <div class="lost-treasures-side-panel lost-treasures-exchange-panel">
-                        <span>Duplicate Exchange</span>
-                        <div id="lost-treasures-exchange" class="lost-treasures-exchange"></div>
-                    </div>
-                </aside>
-                <section class="lost-treasures-album-shell">
-                    <nav id="lost-treasures-categories" class="lost-treasures-categories" aria-label="Lost Treasures categories"></nav>
-                    <section class="lost-treasures-album-head">
-                        <div>
-                            <span id="lost-treasures-active-kicker">Category</span>
-                            <h3 id="lost-treasures-active-title">Reef Relics</h3>
-                            <p id="lost-treasures-active-subtitle"></p>
-                        </div>
-                        <div class="lost-treasures-category-reward">
-                            <div class="lost-treasures-reward-chip pearl">
-                                <b>${LOST_TREASURES_CATEGORY_PEARL_REWARD}</b>
-                                <span>Pearls</span>
-                            </div>
-                            <button id="lost-treasures-claim-category" type="button" onclick="claimLostTreasuresCategory()">Complete Category</button>
-                        </div>
-                    </section>
-                    <div id="lost-treasures-grid" class="lost-treasures-grid"></div>
-                    <section class="lost-treasures-grand">
-                        <div>
-                            <span>Grand Reward</span>
-                    <strong>Complete all 120 scrolls</strong>
-                            <p>Finish the full album to earn ${LOST_TREASURES_GRAND_PEARL_REWARD.toLocaleString()} pearls, the ${LOST_TREASURES_GRAND_BADGE.name} badge, and two Lost Treasures profile icons.</p>
-                            <div class="lost-treasures-grand-rewards" aria-label="Lost Treasures grand reward preview">
-                                <div class="lost-treasures-reward-chip pearl"><b>${LOST_TREASURES_GRAND_PEARL_REWARD.toLocaleString()}</b><span>Pearls</span></div>
-                                <div class="lost-treasures-reward-chip badge"><strong>${LOST_TREASURES_GRAND_BADGE.emoji}</strong><b>${LOST_TREASURES_GRAND_BADGE.name}</b><span>Badge</span></div>
-                                ${LOST_TREASURES_GRAND_PFPS.map(pfp => `
-                                    <div class="lost-treasures-reward-chip pfp">
-                                        <img src="${pfp.imagePath}" alt="${pfp.name}">
-                                        <span>${pfp.name}</span>
-                                    </div>
-                                `).join("")}
-                            </div>
-                        </div>
-                        <button id="lost-treasures-claim-grand" type="button" onclick="claimLostTreasuresGrandReward()">Claim Grand Reward</button>
-                    </section>
-                </section>
-            </section>
-            <div id="lost-treasures-detail" class="lost-treasures-detail hidden" onclick="if(event.target===this) closeLostTreasuresCardDetail()"></div>
-        </div>
-    `;
-    document.body.appendChild(modal);
-    return modal;
-}
-
-let activeLostTreasuresCategoryId = LOST_TREASURES_CATEGORIES[0].id;
-let lostTreasuresOpeningInProgress = false;
-let lostTreasuresOpenBottleCount = 1;
-
-function renderLostTreasuresModal() {
-    const modal = ensureLostTreasuresModal();
-    const state = getLostTreasuresState();
-    const progress = getLostTreasuresProgress(state);
-    const activeCategory = progress.album.find(category => category.id === activeLostTreasuresCategoryId) || progress.album[0];
-    activeLostTreasuresCategoryId = activeCategory.id;
-
-    modal.querySelector("#lost-treasures-collected").textContent = `${progress.collectedCount}/${progress.totalCards}`;
-    const selectedBottle = LOST_TREASURES_BOTTLES.find(bottle => bottle.id === state.selectedBottleId) || LOST_TREASURES_BOTTLES[0];
-    modal.querySelector("#lost-treasures-bottles").textContent = getLostTreasuresBottleCount(state);
-    modal.querySelector("#lost-treasures-duplicates").textContent = state.duplicateCards;
-    modal.querySelector("#lost-treasures-meter-fill").style.width = `${progress.percent}%`;
-    modal.querySelector("#lost-treasures-bottle-img").src = selectedBottle.image;
-    const selectedBottleCount = getLostTreasuresBottleCount(state, selectedBottle.id);
-    lostTreasuresOpenBottleCount = Math.min(Math.max(1, lostTreasuresOpenBottleCount), Math.max(1, selectedBottleCount));
-    const selectedBottleLabel = modal.querySelector("#lost-treasures-selected-bottle");
-    if (selectedBottleLabel) {
-        selectedBottleLabel.textContent = `${selectedBottle.name} selected - opens ${selectedBottle.scrollCount * lostTreasuresOpenBottleCount} scrolls`;
-    }
-    const openAmount = modal.querySelector("#lost-treasures-open-amount");
-    if (openAmount) {
-        const amounts = [1, 3, 5].filter(amount => amount <= selectedBottleCount);
-        if (selectedBottleCount > 1 && !amounts.includes(selectedBottleCount)) amounts.push(selectedBottleCount);
-        const uniqueAmounts = [...new Set(amounts)].sort((a, b) => a - b);
-        openAmount.innerHTML = selectedBottleCount > 1
-            ? uniqueAmounts.map(amount => `<button type="button" class="${amount === lostTreasuresOpenBottleCount ? "active" : ""}" onclick="selectLostTreasuresOpenAmount(${amount})" ${lostTreasuresOpeningInProgress ? "disabled" : ""}>${amount === selectedBottleCount ? "All" : `x${amount}`}</button>`).join("")
-            : "";
-        openAmount.classList.toggle("hidden", selectedBottleCount <= 1);
-    }
-    const openBottleBtn = modal.querySelector("#lost-treasures-open-bottle-btn");
-    if (openBottleBtn) {
-        openBottleBtn.disabled = lostTreasuresOpeningInProgress || selectedBottleCount <= 0;
-        openBottleBtn.textContent = lostTreasuresOpeningInProgress
-            ? "Opening..."
-            : selectedBottleCount > 0
-                ? `Open ${lostTreasuresOpenBottleCount} ${selectedBottle.name}${lostTreasuresOpenBottleCount === 1 ? "" : "s"}`
-                : `No ${selectedBottle.name}s`;
-    }
-    const bottleList = modal.querySelector("#lost-treasures-bottle-list");
-    if (bottleList) {
-        bottleList.innerHTML = LOST_TREASURES_BOTTLES.map(bottle => {
-            const count = getLostTreasuresBottleCount(state, bottle.id);
-            return `<button type="button" class="${bottle.id === selectedBottle.id ? "active" : ""}" aria-pressed="${bottle.id === selectedBottle.id ? "true" : "false"}" onclick="selectLostTreasuresBottle('${bottle.id}')" ${lostTreasuresOpeningInProgress ? "disabled" : ""}>
-                <img src="${bottle.image}" alt="${bottle.name}">
-                <span>${bottle.name}</span>
-                <small>${bottle.rareOnly ? "1 guaranteed rare scroll" : `${bottle.scrollCount} scrolls - ${bottle.rareChance * 100}% rare`}</small>
-                <strong>${count}</strong>
-            </button>`;
-        }).join("");
-    }
-
-    const exchangePanel = modal.querySelector("#lost-treasures-exchange");
-    if (exchangePanel) {
-        exchangePanel.innerHTML = LOST_TREASURES_DUPLICATE_EXCHANGES.map(exchange => {
-            const bottle = LOST_TREASURES_BOTTLES.find(item => item.id === exchange.bottleId);
-            return `
-            <button type="button" onclick="exchangeLostTreasuresDuplicates('${exchange.id}')" ${state.duplicateCards < exchange.cost || lostTreasuresOpeningInProgress ? "disabled" : ""}>
-                ${bottle ? `<img src="${bottle.image}" alt="${bottle.name}">` : ""}
-                <span>
-                    <strong>${exchange.reward}</strong>
-                    <small>${exchange.label}</small>
-                </span>
-            </button>
-        `;
-        }).join("");
-    }
-
-    const categoryNav = modal.querySelector("#lost-treasures-categories");
-    categoryNav.innerHTML = progress.album.map(category => {
-        const owned = category.cards.filter(card => progress.collected.has(card.id)).length;
-        const complete = owned === LOST_TREASURES_CARDS_PER_CATEGORY;
-        const claimed = state.claimedCategories.includes(category.id);
-        return `<button type="button" class="${category.id === activeCategory.id ? "active" : ""} ${complete ? "complete" : ""}" style="--category-color:${category.color}" onclick="showLostTreasuresCategory('${category.id}')">
-            <strong>${category.name}</strong><span>${owned}/${LOST_TREASURES_CARDS_PER_CATEGORY}${claimed ? " Claimed" : ""}</span>
-        </button>`;
-    }).join("");
-
-    modal.querySelector("#lost-treasures-active-kicker").textContent = `${activeCategory.cards.filter(card => progress.collected.has(card.id)).length}/${LOST_TREASURES_CARDS_PER_CATEGORY} scrolls collected`;
-    modal.querySelector("#lost-treasures-active-title").textContent = activeCategory.name;
-    const subtitle = modal.querySelector("#lost-treasures-active-subtitle");
-    if (subtitle) subtitle.textContent = LOST_TREASURES_CATEGORY_SUBTITLES[activeCategory.id] || "Recover every scroll in this set.";
-    const claimCategoryBtn = modal.querySelector("#lost-treasures-claim-category");
-    const categoryComplete = activeCategory.cards.every(card => progress.collected.has(card.id));
-    const categoryClaimed = state.claimedCategories.includes(activeCategory.id);
-    claimCategoryBtn.disabled = !categoryComplete || categoryClaimed;
-    claimCategoryBtn.textContent = categoryClaimed ? "Reward Claimed" : categoryComplete ? `Claim ${LOST_TREASURES_CATEGORY_PEARL_REWARD} Pearls` : "Complete Category";
-
-    modal.querySelector("#lost-treasures-grid").innerHTML = activeCategory.cards.map(card => {
-        const owned = progress.collected.has(card.id);
-        return `<button type="button" class="lost-treasures-slot ${owned ? "owned" : "locked"} rarity-${card.rarity}" style="--category-color:${activeCategory.color}" onclick="openLostTreasuresCardDetail('${card.id}')">
-            <div class="lost-treasures-scroll-art ${card.speciesImage ? "has-species-art" : ""}">
-                ${getLostTreasuresCardArtMarkup(card, card.name)}
-                <span class="lost-treasures-scroll-number">${card.number}</span>
-                <b>${owned ? card.mark : "?"}</b>
-            </div>
-            <strong>${card.name}</strong>
-            <small>${owned ? (card.rarity === "rare" ? "Rare Scroll" : "Recovered") : "Missing"}</small>
-        </button>`;
-    }).join("");
-
-    const grandBtn = modal.querySelector("#lost-treasures-claim-grand");
-    const completeAlbum = progress.collectedCount === progress.totalCards;
-    grandBtn.disabled = !completeAlbum || state.claimedGrandReward;
-    grandBtn.textContent = state.claimedGrandReward ? "Grand Reward Claimed" : completeAlbum ? "Claim Grand Reward" : `${progress.collectedCount}/${progress.totalCards}`;
-}
-
-function openLostTreasuresModal() {
-    renderLostTreasuresModal();
-    ensureLostTreasuresModal().classList.remove("hidden");
-}
-
-function closeLostTreasuresModal() {
-    document.getElementById("lost-treasures-modal")?.classList.add("hidden");
-}
-
-function showLostTreasuresCategory(categoryId) {
-    activeLostTreasuresCategoryId = LOST_TREASURES_CATEGORIES.some(category => category.id === categoryId)
-        ? categoryId
-        : LOST_TREASURES_CATEGORIES[0].id;
-    renderLostTreasuresModal();
-}
-
-function selectLostTreasuresBottle(bottleId) {
-    if (lostTreasuresOpeningInProgress) return;
-    const profileData = getCurrentProfileData();
-    const state = getLostTreasuresState(profileData);
-    state.selectedBottleId = LOST_TREASURES_BOTTLES.some(bottle => bottle.id === bottleId) ? bottleId : LOST_TREASURES_BOTTLES[0].id;
-    lostTreasuresOpenBottleCount = 1;
-    setLostTreasuresState(profileData, state, { skipRemoteSync: true });
-    renderLostTreasuresModal();
-}
-
-function selectLostTreasuresOpenAmount(amount) {
-    if (lostTreasuresOpeningInProgress) return;
-    const state = getLostTreasuresState();
-    const selectedBottle = LOST_TREASURES_BOTTLES.find(bottle => bottle.id === state.selectedBottleId) || LOST_TREASURES_BOTTLES[0];
-    const selectedBottleCount = getLostTreasuresBottleCount(state, selectedBottle.id);
-    lostTreasuresOpenBottleCount = Math.min(Math.max(1, Math.floor(Number(amount) || 1)), Math.max(1, selectedBottleCount));
-    renderLostTreasuresModal();
-}
-
-function getRandomLostTreasuresCard(state, targetRarity = "common") {
-    const allCards = getLostTreasuresAlbum().flatMap(category => category.cards);
-    const rarityPool = allCards.filter(card => card.rarity === targetRarity);
-    const poolByRarity = rarityPool.length ? rarityPool : allCards;
-    const collectedCards = Array.isArray(state.collectedCards) ? state.collectedCards : [];
-    const ownedPool = poolByRarity.filter(card => collectedCards.includes(card.id));
-    const missingPool = poolByRarity.filter(card => !collectedCards.includes(card.id));
-    const completionRatio = poolByRarity.length ? ownedPool.length / poolByRarity.length : 0;
-    const duplicateChance = Math.min(
-        LOST_TREASURES_DUPLICATE_MAX_CHANCE,
-        LOST_TREASURES_DUPLICATE_BASE_CHANCE + completionRatio * LOST_TREASURES_DUPLICATE_PROGRESS_BONUS
-    );
-    const shouldPullDuplicate = ownedPool.length > 0 && (!missingPool.length || Math.random() < duplicateChance);
-    const pool = shouldPullDuplicate ? ownedPool : missingPool.length ? missingPool : poolByRarity;
-    return pool[Math.floor(Math.random() * pool.length)];
-}
-
-function openLostTreasuresScrollsFromBottle(state, bottle) {
-    const opened = [];
-    const scrollCount = Math.max(1, Math.floor(Number(bottle.scrollCount) || 1));
-    const maxRareCards = Math.max(0, Math.floor(Number(bottle.maxRareCards) || 0));
-    let rareCardsOpened = 0;
-    for (let index = 0; index < scrollCount; index += 1) {
-        const shouldRollRare = bottle.rareOnly || (rareCardsOpened < maxRareCards && Math.random() < (Number(bottle.rareChance) || 0));
-        const targetRarity = shouldRollRare ? "rare" : "common";
-        const card = getRandomLostTreasuresCard(state, targetRarity);
-        if (card.rarity === "rare") rareCardsOpened += 1;
-        const alreadyOwned = state.collectedCards.includes(card.id);
-        if (alreadyOwned) {
-            state.duplicateCards += card.rarity === "rare" ? LOST_TREASURES_RARE_DUPLICATE_VALUE : 1;
-            state.duplicateCardCounts = state.duplicateCardCounts && typeof state.duplicateCardCounts === "object" ? state.duplicateCardCounts : {};
-            state.duplicateCardCounts[card.id] = getLostTreasuresCardDuplicateCount(state, card.id) + 1;
-        } else {
-            state.collectedCards.push(card.id);
-        }
-        state.lastOpenedCardId = card.id;
-        addLostTreasuresRecentCard(state, card, alreadyOwned);
-        opened.push({ card, alreadyOwned });
-    }
-    return opened;
-}
-
-function getLostTreasuresScrollRevealMarkup(openedItem, index) {
-    const category = LOST_TREASURES_CATEGORIES.find(item => openedItem.card.id.startsWith(item.id)) || LOST_TREASURES_CATEGORIES[0];
-    return `<article class="lost-treasures-opening-scroll ${openedItem.alreadyOwned ? "duplicate" : "new"} rarity-${openedItem.card.rarity}" style="--category-color:${category.color}; --reveal-index:${index}">
-        <div class="lost-treasures-scroll-art ${openedItem.card.speciesImage ? "has-species-art" : ""}">
-            ${getLostTreasuresCardArtMarkup(openedItem.card, openedItem.card.name)}
-            <span class="lost-treasures-scroll-number">${openedItem.card.number}</span>
-            <b>${openedItem.card.mark}</b>
-        </div>
-        <strong>${openedItem.card.name}</strong>
-        <small>${openedItem.alreadyOwned ? "Duplicate" : openedItem.card.rarity === "rare" ? "New Rare" : "New Scroll"}</small>
-    </article>`;
-}
-
-function ensureLostTreasuresOpeningModal() {
-    let opening = document.getElementById("lost-treasures-opening-modal");
-    if (opening) return opening;
-    opening = document.createElement("div");
-    opening.id = "lost-treasures-opening-modal";
-    opening.className = "lost-treasures-opening hidden";
-    opening.setAttribute("aria-live", "polite");
-    document.body.appendChild(opening);
-    return opening;
-}
-
-async function playLostTreasuresOpeningAnimation(bottle, opened) {
-    const opening = ensureLostTreasuresOpeningModal();
-    if (!opening) return;
-    const hasRarePull = opened.some(item => item?.card?.rarity === "rare");
-    opening.classList.remove("hidden", "revealed", "closing", "flash-common", "flash-rare");
-    opening.classList.add(hasRarePull ? "flash-rare" : "flash-common");
-    opening.innerHTML = `
-        <div class="lost-treasures-opening-flash" aria-hidden="true"></div>
-        <div class="lost-treasures-opening-actions">
-            <button type="button" class="lost-treasures-opening-skip">Skip Animation</button>
-            <button type="button" class="lost-treasures-opening-close hidden">Close</button>
-        </div>
-        <div class="lost-treasures-opening-bottle">
-            <img src="${bottle.image}" alt="${bottle.name}">
-            <span>Opening ${bottle.name}</span>
-        </div>
-        <div class="lost-treasures-opening-scrolls"></div>
-    `;
-    await new Promise(resolve => {
-        const skipButton = opening.querySelector(".lost-treasures-opening-skip");
-        const closeButton = opening.querySelector(".lost-treasures-opening-close");
-        const scrollWrap = opening.querySelector(".lost-treasures-opening-scrolls");
-        let revealed = false;
-        let closed = false;
-
-        const revealNow = () => {
-            if (revealed || closed) return;
-            revealed = true;
-            if (scrollWrap) {
-                scrollWrap.innerHTML = opened.map(getLostTreasuresScrollRevealMarkup).join("");
-            }
-            opening.classList.add("revealed");
-            skipButton?.classList.add("hidden");
-            closeButton?.classList.remove("hidden");
-            closeButton?.focus();
-        };
-
-        const closeNow = () => {
-            if (closed) return;
-            closed = true;
-            clearTimeout(revealTimer);
-            opening.classList.add("closing");
-            setTimeout(() => {
-                opening.classList.add("hidden");
-                opening.classList.remove("revealed", "closing", "flash-common", "flash-rare");
-                opening.innerHTML = "";
-                resolve();
-            }, 260);
-        };
-
-        const revealTimer = setTimeout(revealNow, 900);
-        skipButton?.addEventListener("click", revealNow, { once: true });
-        closeButton?.addEventListener("click", closeNow);
-    });
-}
-
-async function openLostTreasuresBottle() {
-    if (lostTreasuresOpeningInProgress) return;
-    if (!currentUser) {
-        openLoginModal?.();
-        return;
-    }
-    const profileData = getCurrentProfileData();
-    const state = getLostTreasuresState(profileData);
-    const bottle = LOST_TREASURES_BOTTLES.find(item => item.id === state.selectedBottleId) || LOST_TREASURES_BOTTLES[0];
-    if (getLostTreasuresBottleCount(state, bottle.id) <= 0) {
-        showNotification?.("No messages in bottles ready yet.", "info", 3200);
-        return;
-    }
-    lostTreasuresOpeningInProgress = true;
-    renderLostTreasuresModal();
-    const openCount = Math.min(Math.max(1, lostTreasuresOpenBottleCount), getLostTreasuresBottleCount(state, bottle.id));
-    state.bottles[bottle.id] = Math.max(0, Number(state.bottles[bottle.id]) || 0) - openCount;
-    const opened = [];
-    for (let index = 0; index < openCount; index += 1) {
-        opened.push(...openLostTreasuresScrollsFromBottle(state, bottle));
-    }
-    setLostTreasuresState(profileData, state);
-    await persistLostTreasuresState(profileData);
-    const firstNew = opened.find(item => !item.alreadyOwned) || opened[0];
-    const category = LOST_TREASURES_CATEGORIES.find(item => firstNew.card.id.startsWith(item.id)) || LOST_TREASURES_CATEGORIES[0];
-    activeLostTreasuresCategoryId = category.id;
-    renderLostTreasuresModal();
-    await playLostTreasuresOpeningAnimation(bottle, opened);
-    lostTreasuresOpeningInProgress = false;
-    renderLostTreasuresModal();
-}
-
-async function fakePurchaseLostTreasuresBundle() {
-    if (lostTreasuresOpeningInProgress) return;
-    if (!currentUser || !isDeveloperUid(currentUser.uid)) {
-        openLoginModal?.();
-        return;
-    }
-    const profileData = getCurrentProfileData();
-    const grants = [
-        ["barnacle", 5],
-        ["red-sea", 3],
-        ["seafoam", 1],
-        ["celestial", 1]
-    ];
-    grants.forEach(([bottleId, amount]) => grantLostTreasuresBottle(profileData, bottleId, amount));
-    await persistLostTreasuresState(profileData);
-    renderLostTreasuresModal();
-    showNotification?.("Fake purchase added: 5 barnacle, 3 red sea, 1 seafoam, and 1 celestial bottle.", "success", 4200);
-}
-
-async function exchangeLostTreasuresDuplicates(exchangeId) {
-    if (lostTreasuresOpeningInProgress) return;
-    if (!currentUser) {
-        openLoginModal?.();
-        return;
-    }
-    const exchange = LOST_TREASURES_DUPLICATE_EXCHANGES.find(item => item.id === exchangeId);
-    if (!exchange) return;
-    const profileData = getCurrentProfileData();
-    const state = getLostTreasuresState(profileData);
-    if (state.duplicateCards < exchange.cost) {
-        showNotification?.("Not enough duplicate scrolls yet.", "info", 2800);
-        return;
-    }
-    state.duplicateCards -= exchange.cost;
-    state.bottles[exchange.bottleId] = getLostTreasuresBottleCount(state, exchange.bottleId) + exchange.amount;
-    state.selectedBottleId = exchange.bottleId;
-    setLostTreasuresState(profileData, state);
-    await persistLostTreasuresState(profileData);
-    renderLostTreasuresModal();
-    showNotification?.(`Traded duplicates for ${exchange.reward}.`, "success", 3200);
-}
-
-async function resetLostTreasuresBottles() {
-    if (lostTreasuresOpeningInProgress) return;
-    if (!currentUser || !isDeveloperUid(currentUser.uid)) {
-        openLoginModal?.();
-        return;
-    }
-    const profileData = getCurrentProfileData();
-    const state = getLostTreasuresState(profileData);
-    state.bottles = LOST_TREASURES_BOTTLES.reduce((inventory, bottle) => {
-        inventory[bottle.id] = 0;
-        return inventory;
-    }, {});
-    state.selectedBottleId = LOST_TREASURES_BOTTLES[0].id;
-    setLostTreasuresState(profileData, state);
-    await persistLostTreasuresState(profileData);
-    lostTreasuresOpenBottleCount = 1;
-    renderLostTreasuresModal();
-    showNotification?.("Lost Treasures bottles reset.", "success", 3200);
-}
-
-async function resetLostTreasuresProgress() {
-    if (lostTreasuresOpeningInProgress) return;
-    if (!currentUser || !isDeveloperUid(currentUser.uid)) {
-        openLoginModal?.();
-        return;
-    }
-    const profileData = getCurrentProfileData();
-    profileData.lostTreasures = {
-        eventId: LOST_TREASURES_EVENT_ID,
-        bottles: LOST_TREASURES_BOTTLES.reduce((inventory, bottle) => {
-            inventory[bottle.id] = 0;
-            return inventory;
-        }, {}),
-        collectedCards: [],
-        duplicateCards: 0,
-        duplicateCardCounts: {},
-        claimedCategories: [],
-        recentCards: [],
-        claimedGrandReward: false,
-        lastOpenedCardId: "",
-        selectedBottleId: LOST_TREASURES_BOTTLES[0].id,
-        updatedAt: Date.now()
-    };
-    await persistLostTreasuresState(profileData);
-    const opening = document.getElementById("lost-treasures-opening-modal");
-    if (opening) {
-        opening.classList.add("hidden");
-        opening.innerHTML = "";
-    }
-    activeLostTreasuresCategoryId = LOST_TREASURES_CATEGORIES[0].id;
-    renderLostTreasuresModal();
-    showNotification?.("Lost Treasures progress reset.", "success", 3200);
-}
-
-async function claimLostTreasuresCategory() {
-    const profileData = getCurrentProfileData();
-    const state = getLostTreasuresState(profileData);
-    const progress = getLostTreasuresProgress(state);
-    const category = progress.album.find(item => item.id === activeLostTreasuresCategoryId);
-    if (!category || !category.cards.every(card => progress.collected.has(card.id)) || state.claimedCategories.includes(category.id)) return;
-    state.claimedCategories.push(category.id);
-    setLostTreasuresState(profileData, state, { skipRemoteSync: true });
-    addPearls(LOST_TREASURES_CATEGORY_PEARL_REWARD, profileData, { deferSave: true, deferUiUpdate: true });
-    await persistLostTreasuresState(profileData);
-    updateHomeV3Sidebar?.(profileData);
-    showNotification?.(`${category.name} complete: +${LOST_TREASURES_CATEGORY_PEARL_REWARD} pearls.`, "success", 3200);
-    renderLostTreasuresModal();
-}
-
-async function claimLostTreasuresGrandReward() {
-    const profileData = getCurrentProfileData();
-    const state = getLostTreasuresState(profileData);
-    const progress = getLostTreasuresProgress(state);
-    if (progress.collectedCount !== progress.totalCards || state.claimedGrandReward) return;
-    state.claimedGrandReward = true;
-    setLostTreasuresState(profileData, state, { skipRemoteSync: true });
-    addPearls(LOST_TREASURES_GRAND_PEARL_REWARD, profileData, { deferSave: true, deferUiUpdate: true });
-    profileData.unlockedBadges = [...new Set([...(Array.isArray(profileData.unlockedBadges) ? profileData.unlockedBadges : ["starter"]), LOST_TREASURES_GRAND_BADGE.id])];
-    const earnedCosmetics = Array.isArray(profileData.earnedCosmetics) ? [...profileData.earnedCosmetics] : [];
-    LOST_TREASURES_GRAND_PFPS.forEach(pfp => {
-        if (!earnedCosmetics.some(cosmetic => cosmetic?.imagePath === pfp.imagePath || cosmetic?.name === pfp.name)) {
-            earnedCosmetics.push({ ...pfp });
-        }
-    });
-    profileData.earnedCosmetics = earnedCosmetics;
-    await persistLostTreasuresState(profileData);
-    updateHomeV3Sidebar?.(profileData);
-    showNotification?.(`Lost Treasures complete: +${LOST_TREASURES_GRAND_PEARL_REWARD.toLocaleString()} pearls, Treasure Keeper badge, and 2 profile icons.`, "success", 4800);
-    renderLostTreasuresModal();
-}
-
-function openLostTreasuresCardDetail(cardId) {
-    const modal = ensureLostTreasuresModal();
-    const detail = modal.querySelector("#lost-treasures-detail");
-    const state = getLostTreasuresState();
-    const progress = getLostTreasuresProgress(state);
-    const found = progress.album
-        .flatMap(category => category.cards.map(card => ({ ...card, category })))
-        .find(card => card.id === cardId);
-    if (!detail || !found) return;
-    const owned = progress.collected.has(found.id);
-    const categoryOwned = found.category.cards.filter(card => progress.collected.has(card.id)).length;
-    const categoryCards = found.category.cards;
-    const cardIndex = categoryCards.findIndex(card => card.id === found.id);
-    const previousCard = categoryCards[(cardIndex - 1 + categoryCards.length) % categoryCards.length];
-    const nextCard = categoryCards[(cardIndex + 1) % categoryCards.length];
-    detail.innerHTML = `
-        <article class="lost-treasures-detail-card rarity-${found.rarity}">
-            <button type="button" class="modal-x-btn" onclick="closeLostTreasuresCardDetail()" aria-label="Close scroll detail">&times;</button>
-            <button type="button" class="lost-treasures-detail-nav previous" onclick="event.stopPropagation(); openLostTreasuresCardDetail('${previousCard.id}')" aria-label="Previous scroll">&lsaquo;</button>
-            <button type="button" class="lost-treasures-detail-nav next" onclick="event.stopPropagation(); openLostTreasuresCardDetail('${nextCard.id}')" aria-label="Next scroll">&rsaquo;</button>
-            <div class="lost-treasures-detail-art ${found.speciesImage ? "has-species-art" : ""}">
-                ${getLostTreasuresCardArtMarkup(found, found.name)}
-            </div>
-            <div>
-                <span>${found.category.name} · ${found.number}/${LOST_TREASURES_CARDS_PER_CATEGORY}</span>
-                <h3>${found.name}</h3>
-                <p>${LOST_TREASURES_CATEGORY_SUBTITLES[found.category.id] || "Lost Treasures scroll"}</p>
-                <dl>
-                    <div><dt>Status</dt><dd>${owned ? "Recovered" : "Missing"}</dd></div>
-                    <div><dt>Rarity</dt><dd>${found.rarity === "rare" ? "Rare" : "Common"}</dd></div>
-                    <div><dt>Duplicates</dt><dd>${getLostTreasuresCardDuplicateCount(state, found.id)}</dd></div>
-                    <div><dt>Set</dt><dd>${categoryOwned}/${LOST_TREASURES_CARDS_PER_CATEGORY}</dd></div>
-                </dl>
-            </div>
-        </article>
-    `;
-    detail.classList.remove("hidden");
-}
-
-function closeLostTreasuresCardDetail() {
-    const detail = document.getElementById("lost-treasures-detail");
-    if (detail) detail.classList.add("hidden");
-}
-
-window.openLostTreasuresModal = openLostTreasuresModal;
-window.closeLostTreasuresModal = closeLostTreasuresModal;
-window.showLostTreasuresCategory = showLostTreasuresCategory;
-window.selectLostTreasuresBottle = selectLostTreasuresBottle;
-window.selectLostTreasuresOpenAmount = selectLostTreasuresOpenAmount;
-window.openLostTreasuresBottle = openLostTreasuresBottle;
-window.claimLostTreasuresCategory = claimLostTreasuresCategory;
-window.claimLostTreasuresGrandReward = claimLostTreasuresGrandReward;
-window.openLostTreasuresCardDetail = openLostTreasuresCardDetail;
-window.closeLostTreasuresCardDetail = closeLostTreasuresCardDetail;
-window.exchangeLostTreasuresDuplicates = exchangeLostTreasuresDuplicates;
-window.grantLostTreasuresBottle = grantLostTreasuresBottle;
-window.maybeAwardLostTreasuresBottleDrop = maybeAwardLostTreasuresBottleDrop;
-window.fakePurchaseLostTreasuresBundle = fakePurchaseLostTreasuresBundle;
-window.resetLostTreasuresBottles = resetLostTreasuresBottles;
-window.resetLostTreasuresProgress = resetLostTreasuresProgress;
 
 const SHIVER_SEASON_ID = "tide-clash-2026-07";
 const SHIVER_WIN_POINTS = Object.freeze({
@@ -7764,6 +6903,7 @@ function getCrateRewardPreviewMarkup(reward) {
 }
 
 function renderCratesButton() {
+    renderHomeCratesModal();
     const cratesBtn = document.getElementById("crates-btn");
     const countEl = document.getElementById("crates-btn-count");
     if (!cratesBtn || !countEl) return;
@@ -7982,7 +7122,6 @@ function getMergedUniqueIds(localIds, remoteIds, fallback = []) {
 }
 
 function openCratesModal() {
-    crateOpeningInProgress = false;
     setCratesModalTab("inventory");
     renderCratesModal();
     const modal = document.getElementById("cratesModal");
@@ -7997,8 +7136,7 @@ function openCrateDropsModal(crateId = "reef") {
 function closeCratesModal() {
     const modal = document.getElementById("cratesModal");
     if (modal) modal.classList.add("hidden");
-    closeCrateUnboxOverlay();
-    crateOpeningInProgress = false;
+    if (!crateOpeningInProgress) closeCrateUnboxOverlay();
     updateSeasonalCrateCraftingUI();
 }
 
@@ -8210,8 +7348,6 @@ function showCrateOverlayReward(reward, crateId = activeCrateUnboxId) {
     }
 }
 
-let crateSkipTimeout = null;
-
 function unlockCrateAchievement(crateId = "reef") {
     const achievementId = crateAchievementIds[crateId];
     if (!achievementId) return;
@@ -8262,10 +7398,8 @@ function finalizeCrateRewardPresentation(reward, duplicateReward, duplicateXpAwa
         }
     }
 
-    if (typeof loadAvailablePFPs === "function") loadAvailablePFPs();
     if (typeof loadEarnedCosmetics === "function") loadEarnedCosmetics();
     if (typeof renderThemeSelection === "function") renderThemeSelection();
-    if (typeof renderBadgeSelection === "function") renderBadgeSelection();
     if (typeof updateProfileBadgeUI === "function") updateProfileBadgeUI();
     unlockCrateAchievement(crateId);
     renderCratesModal();
@@ -8283,7 +7417,7 @@ function toggleCrateInstantOpen(enabled) {
 }
 
 async function openCrate(crateId = "reef") {
-    if (crateOpeningInProgress) return;
+    if (crateOpeningInProgress || seasonalCrateCraftingInProgress) return;
     if (!currentUser) {
         openLoginModal();
         return;
@@ -8298,69 +7432,72 @@ async function openCrate(crateId = "reef") {
     }
 
     crateOpeningInProgress = true;
-    updateSeasonalCrateCraftingUI(profileData);
-    const rollbackProfileData = JSON.parse(JSON.stringify(profileData));
-    const openTimestamp = Date.now();
-    inventory[crateId] -= 1;
-    profileData.crateInventory = normalizeCrateInventory(inventory);
-    markCrateInventoryChanged(profileData, openTimestamp);
-    profileData.cratesOpened = getOpenedCrateCount(profileData) + 1;
-    const rewardRarity = pickCrateRewardRarity(profileData);
-    const rarityRewards = getCrateRewardsByRarity(rewardRarity, crateId);
-    const pool = getCratePoolById(crateId);
-    const reward = rarityRewards[Math.floor(Math.random() * rarityRewards.length)] || pool[0];
-    const previousCratesSinceLegendary = getCratesSinceLegendary(profileData);
-    const { duplicateReward } = grantCrateReward(profileData, reward);
-    profileData.cratesSinceLegendary = reward.rarity === "legendary" ? 0 : previousCratesSinceLegendary + 1;
-    let duplicateXpAward = null;
-    if (duplicateReward) {
-        const baseDuplicateXp = crateDuplicateXpRewards[reward.rarity] || crateDuplicateXpRewards.common;
-        duplicateXpAward = typeof window.applyLimitedTimeXpBonus === "function"
-            ? window.applyLimitedTimeXpBonus(baseDuplicateXp)
-            : { totalXp: baseDuplicateXp, baseXp: baseDuplicateXp, bonusXp: 0, multiplier: 1, event: null };
-        profileData.totalXP = (profileData.totalXP || 0) + duplicateXpAward.totalXp;
-        applySharkPassXpGain(profileData, duplicateXpAward.totalXp);
-    }
     try {
-        await persistCrateProfileUpdate(profileData);
-    } catch (error) {
-        console.warn("Crate sync failed:", error);
-        Object.assign(profileData, rollbackProfileData);
-        saveUserProfileLocally(profileData, { skipRemoteSync: true });
+        updateSeasonalCrateCraftingUI(profileData);
+        const rollbackProfileData = JSON.parse(JSON.stringify(profileData));
+        const openTimestamp = Date.now();
+        inventory[crateId] -= 1;
+        profileData.crateInventory = normalizeCrateInventory(inventory);
+        markCrateInventoryChanged(profileData, openTimestamp);
+        profileData.cratesOpened = getOpenedCrateCount(profileData) + 1;
+        const rewardRarity = pickCrateRewardRarity(profileData);
+        const rarityRewards = getCrateRewardsByRarity(rewardRarity, crateId);
+        const pool = getCratePoolById(crateId);
+        const reward = rarityRewards[Math.floor(Math.random() * rarityRewards.length)] || pool[0];
+        const previousCratesSinceLegendary = getCratesSinceLegendary(profileData);
+        const { duplicateReward } = grantCrateReward(profileData, reward);
+        profileData.cratesSinceLegendary = reward.rarity === "legendary" ? 0 : previousCratesSinceLegendary + 1;
+        let duplicateXpAward = null;
+        if (duplicateReward) {
+            const baseDuplicateXp = crateDuplicateXpRewards[reward.rarity] || crateDuplicateXpRewards.common;
+            duplicateXpAward = typeof window.applyLimitedTimeXpBonus === "function"
+                ? window.applyLimitedTimeXpBonus(baseDuplicateXp)
+                : { totalXp: baseDuplicateXp, baseXp: baseDuplicateXp, bonusXp: 0, multiplier: 1, event: null };
+            profileData.totalXP = (profileData.totalXP || 0) + duplicateXpAward.totalXp;
+            applySharkPassXpGain(profileData, duplicateXpAward.totalXp);
+        }
+        try {
+            await persistCrateProfileUpdate(profileData);
+        } catch (error) {
+            console.warn("Crate sync failed:", error);
+            Object.assign(profileData, rollbackProfileData);
+            saveUserProfileLocally(profileData, { skipRemoteSync: true });
+            renderCratesButton();
+            renderCratesModal();
+            showNotification("Crate could not be saved. No crate was opened.", "error", 3600);
+            return;
+        }
+        renderCratesButton();
+        renderCratesModal();
+
+        if (getCrateInstantOpenEnabled(profileData)) {
+            finalizeCrateRewardPresentation(reward, duplicateReward, duplicateXpAward, crateId);
+            return;
+        }
+
+        openCrateUnboxOverlay(crateId);
+
+        await new Promise(resolve => {
+            setTimeout(resolve, getCrateUnboxRevealDelay(crateId));
+        });
+
+        if (duplicateReward) {
+            showCrateOverlayDuplicateReward(reward, duplicateXpAward, crateId);
+        } else {
+            showCrateOverlayReward(reward, crateId);
+        }
+
+        await new Promise(resolve => {
+            setTimeout(resolve, getCrateUnboxRevealHoldDelay(crateId));
+        });
+        finalizeCrateRewardPresentation(reward, duplicateReward, duplicateXpAward, crateId);
+        await new Promise(resolve => setTimeout(resolve, 1200));
+    } finally {
+        closeCrateUnboxOverlay();
         crateOpeningInProgress = false;
         renderCratesButton();
         renderCratesModal();
-        showNotification("Crate could not be saved. No crate was opened.", "error", 3600);
-        return;
     }
-    renderCratesButton();
-    renderCratesModal();
-
-    if (getCrateInstantOpenEnabled(profileData)) {
-        crateOpeningInProgress = false;
-        finalizeCrateRewardPresentation(reward, duplicateReward, duplicateXpAward, crateId);
-        return;
-    }
-
-    openCrateUnboxOverlay(crateId);
-
-    await new Promise(resolve => {
-        crateSkipTimeout = setTimeout(resolve, getCrateUnboxRevealDelay(crateId));
-    });
-
-    if (duplicateReward) {
-        showCrateOverlayDuplicateReward(reward, duplicateXpAward, crateId);
-    } else {
-        showCrateOverlayReward(reward, crateId);
-    }
-
-    await new Promise(resolve => {
-        crateSkipTimeout = setTimeout(resolve, getCrateUnboxRevealHoldDelay(crateId));
-    });
-    crateOpeningInProgress = false;
-    finalizeCrateRewardPresentation(reward, duplicateReward, duplicateXpAward, crateId);
-    await new Promise(resolve => setTimeout(resolve, 1200));
-    closeCrateUnboxOverlay();
 }
 
 function maybeAwardCrateDrop(source = "win") {
@@ -8381,7 +7518,7 @@ function maybeAwardCrateDrop(source = "win") {
         awarded = true;
     }
 
-    return maybeAwardLostTreasuresBottleDrop(source) || awarded;
+    return awarded;
 }
 
 window.openCratesModal = openCratesModal;
@@ -8462,23 +7599,6 @@ function getBadgeRarityMeta(badge) {
     return badgeRarityMeta[passReward?.rarity || crateReward?.rarity || badge.rarity || "common"] || badgeRarityMeta.common;
 }
 
-function getBadgeRarityRank(badge) {
-    const rarityOrder = ["core", "code", "special", "common", "rare", "epic", "legendary"];
-    const rarityClass = getBadgeRarityMeta(badge).className;
-    const rank = rarityOrder.indexOf(rarityClass);
-    return rank === -1 ? rarityOrder.length : rank;
-}
-
-function getBadgeUnlockOrder(badge) {
-    if (badge.id === "starter") return -3;
-    if (badge.id === "tester") return -2;
-    if (badge.id === "dev") return -1;
-    const passReward = sharkPassRewards.find(reward => reward.type === "badge" && reward.badgeId === badge.id);
-    if (passReward) return passReward.level;
-    if (getAllCrateBadgeRewards().some(reward => reward.badgeId === badge.id)) return 500;
-    return 999;
-}
-
 function getBadgePalette(rarityClass) {
     const palettes = {
         core: { shell: "#0f3c56", border: "#61e7ff", fin: "#9ff6ff", mark: "#d7ffff" },
@@ -8489,28 +7609,6 @@ function getBadgePalette(rarityClass) {
         legendary: { shell: "#4d3511", border: "#ffd37b", fin: "#ffe7ad", mark: "#fff8df" }
     };
     return palettes[rarityClass] || palettes.common;
-}
-
-function buildBadgeIconSVG(badge, rarityClass) {
-    const palette = getBadgePalette(rarityClass);
-    const tier = Math.max(1, Math.min(5, badge.tier || 1));
-    const marks = Array.from({ length: tier }, (_, index) => {
-        const x = 24 + index * 12;
-        return `<circle cx="${x}" cy="56" r="3" fill="${palette.mark}" opacity="${0.78 + index * 0.04}"/>`;
-    }).join("");
-    return `
-<svg viewBox="0 0 72 72" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-  <rect x="4" y="4" width="64" height="64" rx="20" fill="${palette.shell}" stroke="${palette.border}" stroke-width="3"/>
-  <path d="M19 49c4-11 8-24 17-33 9 8 14 22 17 33-7-4-13-5-17-5s-10 1-17 5Z" fill="${palette.fin}"/>
-  <path d="M31 24c4 6 6 12 7 18-4-2-8-3-11-3 1-5 2-10 4-15Z" fill="${palette.mark}" opacity=".28"/>
-  <path d="M18 51c6-4 12-6 18-6s12 2 18 6" fill="none" stroke="${palette.border}" stroke-width="2.4" stroke-linecap="round"/>
-  ${marks}
-</svg>`.trim();
-}
-
-function getBadgeIconMarkup(badge) {
-    const rarity = getBadgeRarityMeta(badge);
-    return buildBadgeIconSVG(badge, rarity.className);
 }
 
 function getUnlockedBadgeIds(profileData = getCurrentProfileData()) {
@@ -8677,6 +7775,21 @@ function renderThemeSelection() {
     applyProfileCardTheme(equippedTheme);
 }
 const allBadges = [
+    {"id":"shallow-scout","name":"Shallow Scout","emoji":"🧭","description":"A Shark Pass badge for reaching level 3 in Tidal Horizons.","legacyLevel":3,"retired":true,"source":"Tidal Horizons (Retired)"},
+    {"id":"reef-roamer","name":"Reef Roamer","emoji":"🪸","description":"A Shark Pass badge for reaching level 6 in Tidal Horizons.","legacyLevel":6,"retired":true,"source":"Tidal Horizons (Retired)"},
+    {"id":"bluewater-bold","name":"Bluewater Bold","emoji":"🌊","description":"A Shark Pass badge for reaching level 15 in Tidal Horizons.","legacyLevel":15,"retired":true,"source":"Tidal Horizons (Retired)"},
+    {"id":"tide-turner","name":"Tide Turner","emoji":"🌀","description":"A Shark Pass badge for reaching level 24 in Tidal Horizons.","legacyLevel":24,"retired":true,"source":"Tidal Horizons (Retired)"},
+    {"id":"reef-scout","name":"Shiver","emoji":"🐟","description":"A Shark Pass badge for reaching level 3.","legacyLevel":3,"retired":true,"source":"Shark Pass 1 (Retired)"},
+    {"id":"bronze-fin","name":"Pup","emoji":"🪸","description":"A Shark Pass badge for reaching level 5.","legacyLevel":5,"retired":true,"source":"Shark Pass 1 (Retired)"},
+    {"id":"night-diver","name":"Juvenile","emoji":"🌙","description":"A Shark Pass badge for reaching level 8.","legacyLevel":8,"retired":true,"source":"Shark Pass 1 (Retired)"},
+    {"id":"abyss-explorer","name":"Oceanic","emoji":"💙","description":"A Shark Pass badge for reaching level 10.","legacyLevel":10,"retired":true,"source":"Shark Pass 1 (Retired)"},
+    {"id":"open-water-ace","name":"Subadult","emoji":"✨","description":"A Shark Pass badge for reaching level 12.","legacyLevel":12,"retired":true,"source":"Shark Pass 1 (Retired)"},
+    {"id":"storm-tracker","name":"Prime","emoji":"⚡","description":"A Shark Pass badge for reaching level 18.","legacyLevel":18,"retired":true,"source":"Shark Pass 1 (Retired)"},
+    {"id":"apex-voyager","name":"Apex","emoji":"👑","description":"A Shark Pass badge for reaching level 20.","legacyLevel":20,"retired":true,"source":"Shark Pass 1 (Retired)"},
+    {"id":"current-rider","name":"Current Rider","emoji":"🌊","description":"A Shark Pass badge for reaching level 22.","legacyLevel":22,"retired":true,"source":"Shark Pass 1 (Retired)"},
+    {"id":"tidebreaker","name":"Tidebreaker","emoji":"💫","description":"A Shark Pass badge for reaching level 26.","legacyLevel":26,"retired":true,"source":"Shark Pass 1 (Retired)"},
+
+
     { id: "starter", name: "Starter", emoji: "\u{1F988}", description: "Default badge for all players." },
     { id: "dev", name: "Developer", emoji: "\u{1F5A5}\uFE0F", description: "Awarded only to the developer.", devOnly: true },
     { id: "tester", name: "Tester", emoji: "\u{1F3AE}", description: "Awarded for testing via code redeem.", codeUnlock: true },
@@ -8684,7 +7797,7 @@ const allBadges = [
     { id: "lucky-fin", name: "Lucky Fin", emoji: "\u{1F340}", description: "Awarded from the daily win wheel.", codeUnlock: true },
     { id: "extinction", name: "Extinction", emoji: "\u{2604}\uFE0F", description: "Awarded for defeating a summer community boss.", rarity: "legendary", codeUnlock: true },
     { id: "spiral-hunter", name: "Spiral Hunter", emoji: "\u{1F300}", description: "Awarded for defeating the Halloween Helicoprion community boss.", rarity: "legendary", codeUnlock: true },
-    { id: "frost-anvil", name: "Frost Anvil", emoji: "\u{2744}\uFE0F", description: "Awarded for defeating the Christmas Stethacanthus community boss.", rarity: "legendary", codeUnlock: true },
+    { id: "frost-anvil", name: "Frost Anvil", emoji: "\u{2744}\uFE0F", description: "Awarded for helping protect Stethacanthus during the Christmas community event.", rarity: "legendary", codeUnlock: true },
     { id: "treasure-keeper", name: "Treasure Keeper", emoji: "\u{1F5FA}\uFE0F", description: "Awarded for completing every Lost Treasures scroll.", rarity: "legendary", codeUnlock: true }
 ];
 
@@ -8800,7 +7913,6 @@ function setEquippedBadge(badgeId) {
         db.collection("userStats").doc(currentUser.uid).set(buildCosmeticSyncPayload(profileData), { merge: true });
     }
     updateProfileBadgeUI();
-    renderBadgeSelection();
     renderProfileInventoryUI(profileData);
 }
 
@@ -8842,63 +7954,6 @@ function updateProfileBadgeUI() {
         badgeLabel.textContent = badge && badge.name ? badge.name : "Badge";
         badgeLabel.style.color = textColor;
     }
-}
-
-function renderBadgeSelection() {
-    const badgeContainer = document.getElementById("badge-select-container");
-    if (!badgeContainer || !currentUser) return;
-    badgeContainer.innerHTML = "";
-    const unlocked = getUnlockedBadges(currentUser.uid).sort((a, b) => {
-        const rarityDiff = getBadgeRarityRank(a) - getBadgeRarityRank(b);
-        if (rarityDiff !== 0) return rarityDiff;
-        const unlockDiff = getBadgeUnlockOrder(a) - getBadgeUnlockOrder(b);
-        if (unlockDiff !== 0) return unlockDiff;
-        return a.name.localeCompare(b.name);
-    });
-    const equippedBadge = getEquippedBadge();
-    unlocked.forEach(badge => {
-        const rarityMeta = getBadgeRarityMeta(badge);
-        // Color rarity logic
-        let borderColor = '#00b4d8', bgColor = 'rgba(0,180,216,0.12)', textColor = '#00b4d8';
-        if (badge.id === 'dev') {
-            borderColor = '#FFD700';
-            bgColor = 'rgba(255,215,0,0.13)';
-            textColor = '#FFD700';
-        } else if (badge.id === 'tester') {
-            borderColor = '#ff8a3d';
-            bgColor = 'rgba(255,138,61,0.15)';
-            textColor = '#ffc18d';
-        } else if (badge.id === 'starter') {
-            borderColor = '#00b4d8';
-            bgColor = 'rgba(0,180,216,0.12)';
-            textColor = '#00b4d8';
-        } else if (rarityMeta.className === 'rare') {
-            borderColor = '#6ee7ff';
-            bgColor = 'rgba(77,208,225,0.14)';
-            textColor = '#9cf4ff';
-        } else if (rarityMeta.className === 'epic') {
-            borderColor = '#a99bff';
-            bgColor = 'rgba(120,119,255,0.16)';
-            textColor = '#d2cbff';
-        } else if (rarityMeta.className === 'legendary') {
-            borderColor = '#ffd47f';
-            bgColor = 'rgba(255,196,87,0.18)';
-            textColor = '#ffe3ad';
-        }
-        const div = document.createElement("div");
-        div.className = `badge-option rarity-${rarityMeta.className}`;
-        if (badge.id === equippedBadge) {
-            div.classList.add("active");
-        }
-        div.onclick = () => setEquippedBadge(badge.id);
-        div.innerHTML = `
-          <span class="badge-option-kicker">Shark Badge</span>
-          <span class="badge-option-emoji" style="background:${bgColor};border-color:${borderColor};color:${textColor};">${badge.emoji || "\u{1F988}"}</span>
-          <span class="badge-option-name" style="color:${textColor};">${badge.name}</span>
-          <span class="badge-option-rarity rarity-${rarityMeta.className}">${rarityMeta.label}</span>
-        `;
-        badgeContainer.appendChild(div);
-    });
 }
 
 function getProfileTitleMeta(titleId) {
@@ -9141,19 +8196,6 @@ function maybeShowAdminCompensationNotice(profileData = {}) {
     return true;
 }
 
-// Loading state manager
-function showLoadingState(element, show = true) {
-    if (show) {
-        element.disabled = true;
-        element.style.opacity = '0.6';
-        element.style.pointerEvents = 'none';
-    } else {
-        element.disabled = false;
-        element.style.opacity = '1';
-        element.style.pointerEvents = 'auto';
-    }
-}
-
 // Firebase init with retry limit
 let initRetries = 0;
 const MAX_INIT_RETRIES = 10;
@@ -9170,17 +8212,17 @@ function initializeFirebase() {
         }
         return;
     }
-    
+
     if (!firebase.apps.length) {
         firebase.initializeApp(firebaseConfig);
     }
-    
+
     auth = firebase.auth();
     db = firebase.firestore();
     setupGlobalXpEventListener();
     setupGlobalIndexThemeListener();
     setupCommunityBossEventListener();
-    
+
     // Set up offline support detection
     window.addEventListener('online', () => {
         console.log('Connection restored');
@@ -9191,7 +8233,7 @@ function initializeFirebase() {
         console.warn('Offline - changes will sync when connection returns');
         showNotification('Offline - changes will sync when connection returns', 'info', 5000);
     });
-    
+
     // Set up auth state listener after Firebase is initialized
     setupAuthStateListener();
 }
@@ -9292,18 +8334,19 @@ const levelRewards = [
 
 // ----- REDEEM CODE SYSTEM -----
 const redeemCodes = {
+    'THANKYOU100': { xp: 10000, pearls: 1000, spins: 3, crates: { reef: 5 }, description: '10k XP + 1,000 Pearls + 3 bonus spins (no win needed) + 5 Cosmetic Crates' },
     'SHARKDLE': { xp: 2500, cosmetics: [{ imagePath: 'images/codePfp/Shark17.png', name: 'Wobbegong Shark' }], description: '2.5k XP + Wobbegong Shark Profile Icon' },
     'UPDATE1': { xp: 1000, cosmetics: [{ imagePath: 'images/codePfp/Shark18.png', name: 'Greenland Shark' }], description: '1k XP + Greenland Shark Profile Icon' },
     'UPDATE2': { xp: 1500, cosmetics: [{ imagePath: 'images/codePfp/Shark19.png', name: 'Goblin Shark' }], description: '1.5k XP + Goblin Shark Profile Icon' },
     'TIKTOK2026': { xp: 2000, cosmetics: [{ imagePath: 'images/codePfp/MantaRay.png', name: 'Manta Ray' }], description: '2k XP + Manta Ray Profile Icon' },
     'INSTAGRAM2026': { xp: 2000, cosmetics: [{ imagePath: 'images/codePfp/WhitespottedEagleRay.png', name: 'Whitespotted Eagle Ray' }], description: '2k XP + Whitespotted Eagle Ray Profile Icon' },
     'SHARKG33K': { xp: 2000, cosmetics: [{ imagePath: 'images/codePfp/creators/SharkG33k.png', name: 'SharkG33k Creator' }], description: '2k XP + SharkG33k Creator Profile Icon' },
+    'LSFSW': { xp: 2000, pearls: 250, cosmetics: [{ imagePath: 'images/codePfp/creators/LSFSW.png', name: 'LSFSW Partner' }], description: '2k XP + 250 Pearls + LSFSW Partner Profile Icon' },
     'SUMMER2026': { xp: 3000, crates: { summer: 1 }, description: '3k XP + 1 Summer Crate' },
-    'SORRY': { xp: 5000, description: '5k XP apology reward' },
-    'TESTER': { badge: 'tester', description: 'Unlocks the Tester badge (\u{1F3AE})' }
+    'SORRY': { xp: 5000, description: '5k XP apology reward' }
 };
 
-delete redeemCodes.TESTER;
+const pendingRedeemCodeClaims = new Set();
 
 function applyCodeCrateRewards(profileData, crateRewards = {}) {
     if (!crateRewards || typeof crateRewards !== "object") return [];
@@ -9325,8 +8368,12 @@ function applyCodeCrateRewards(profileData, crateRewards = {}) {
 
 // Keep track of redeemed codes in localStorage
 function getRedeemedCodes() {
-    const redeemed = localStorage.getItem("redeemedCodes");
-    return redeemed ? JSON.parse(redeemed) : [];
+    try {
+        const redeemed = JSON.parse(localStorage.getItem("redeemedCodes") || "[]");
+        return Array.isArray(redeemed) ? redeemed.filter(code => typeof code === "string").map(code => code.toUpperCase()) : [];
+    } catch (error) {
+        return [];
+    }
 }
 
 function addRedeemedCode(code) {
@@ -9355,11 +8402,11 @@ function hasRedeemedCode(code) {
     // Check localStorage first
     const localRedeemed = getRedeemedCodes();
     if (localRedeemed.includes(codeUpper)) return true;
-    
+
     // Also check if the cosmetic from this code is already in earnedCosmetics (from Firebase)
     const profileData = getCurrentProfileData();
     const earnedCosmetics = Array.isArray(profileData.earnedCosmetics) ? profileData.earnedCosmetics : [];
-    
+
     // Check if any cosmetic from this code is already owned
     if (redeemCodes[codeUpper] && redeemCodes[codeUpper].cosmetics) {
         const codeCosmetics = redeemCodes[codeUpper].cosmetics;
@@ -9369,7 +8416,7 @@ function hasRedeemedCode(code) {
             }
         }
     }
-    
+
     return false;
 }
 
@@ -9512,7 +8559,10 @@ function setupAuthStateListener() {
     }
 
     // Listen for auth state changes
-    auth.onAuthStateChanged(user => {
+    auth.onAuthStateChanged(authUser => {
+        // Firebase creates a pending Auth record before email verification.
+        // Never expose that session to profile creation, sync, or account UI.
+        const user = authUser?.emailVerified === true ? authUser : null;
         const previousUid = currentUser?.uid || null;
         clearPendingAuthStateClearTimeout();
         currentUser = user;
@@ -9548,7 +8598,7 @@ function setupAuthStateListener() {
             updateAuthUI();
         }
     });
-    
+
     // Set up profile sync after auth is set up
     setupProfileSync();
 }
@@ -9606,10 +8656,6 @@ function unsubscribeAdminCompensationNoticeListener() {
         adminCompensationNoticeUnsubscribe();
         adminCompensationNoticeUnsubscribe = null;
     }
-}
-
-function unsubscribeFriendDuelListener() {
-    activeDuelsCache = [];
 }
 
 // Cross-subdomain profile sync
@@ -9685,7 +8731,7 @@ async function updateAuthUI() {
         if (loginBtn) loginBtn.style.display = "block";
         clearPendingProfileSyncTimeout();
         clearCloudProfileReloadTimeouts();
-        
+
         const profileBtn = document.getElementById("profile-btn-nav");
         if (profileBtn) {
             profileBtn.remove();
@@ -9693,7 +8739,7 @@ async function updateAuthUI() {
         closeAdminAbuseModal();
         // DO NOT clear userProfile
     }
-    
+
 
     // Always update index stats from localStorage
     if (authContainer) {
@@ -9702,7 +8748,6 @@ async function updateAuthUI() {
     ensureAdminAbuseVisibility();
     renderCratesButton();
     ensureXpEventBannerTimer();
-    ensureCommunityBossUiTimer();
     renderCommunityBossPanel();
     if (typeof renderConsumablesPage === "function") {
         renderConsumablesPage();
@@ -9879,7 +8924,7 @@ function getProfileRecoveryScore(profile = {}) {
         "redeemedCodes", "sharkPassLevelRewardClaims"
     ];
     const arrayScore = arrayKeys.reduce((sum, key) => sum + (Array.isArray(profile[key]) ? profile[key].length * 150 : 0), 0);
-    const objectKeys = ["lostTreasures", "sharkPassMissionClaims", "sharkPassSeasonBaselines", "communityBossRewards", "referralRewards"];
+    const objectKeys = ["sharkPassMissionClaims", "sharkPassSeasonBaselines", "communityBossRewards", "referralRewards"];
     const objectScore = objectKeys.reduce((sum, key) => {
         const value = profile[key];
         return sum + (value && typeof value === "object" ? Object.keys(value).length * 120 : 0);
@@ -10133,11 +9178,6 @@ function getCalendarDayDifference(fromDateKey, toDateKey) {
     const fromUtc = Date.UTC(fromDate.getFullYear(), fromDate.getMonth(), fromDate.getDate());
     const toUtc = Date.UTC(toDate.getFullYear(), toDate.getMonth(), toDate.getDate());
     return Math.round((toUtc - fromUtc) / 86400000);
-}
-
-function getLocalMonthKey(dateValue = new Date()) {
-    const normalizedDate = normalizeStoredDateValue(dateValue);
-    return normalizedDate ? normalizedDate.slice(0, 7) : "";
 }
 
 function getUtcDateKey(dateValue = new Date()) {
@@ -10463,7 +9503,6 @@ function saveUserProfileLocally(profileData, options = {}) {
     if (!Array.isArray(profileData.sharkPassLevelRewardClaims)) profileData.sharkPassLevelRewardClaims = [];
     normalizeSharkPassProgressForActiveSeason(profileData);
     sanitizeCurrentSharkPassUnlocks(profileData);
-    profileData.lostTreasures = mergeLostTreasuresStates(profileData, {});
     if (!Array.isArray(profileData.redeemedCodes)) profileData.redeemedCodes = getRedeemedCodes();
     if (!profileData.communityBossRewards || typeof profileData.communityBossRewards !== "object") {
         profileData.communityBossRewards = {};
@@ -10810,7 +9849,6 @@ function mergeProfilesSafely(localProfile, firebaseData, options = {}) {
             ...(firebaseData.referralRewards && typeof firebaseData.referralRewards === "object" ? firebaseData.referralRewards : {})
         },
         socialRewardsClaimed: mergedSocialRewardsClaimed,
-        lostTreasures: mergeLostTreasuresStates(localProfile, firebaseData),
         sharkPassMissionClaims: {
             ...(localProfile.sharkPassMissionClaims && typeof localProfile.sharkPassMissionClaims === "object" ? localProfile.sharkPassMissionClaims : {}),
             ...(firebaseData.sharkPassMissionClaims && typeof firebaseData.sharkPassMissionClaims === "object" ? firebaseData.sharkPassMissionClaims : {})
@@ -11012,9 +10050,6 @@ async function loadUserProfile(options = {}) {
             renderTitleSelection();
         }
         loadEarnedCosmetics();
-        if (typeof loadAvailablePFPs === "function") {
-            loadAvailablePFPs();
-        }
         maybeShowAdminCompensationNotice(userData);
         return userData;
     } catch (error) {
@@ -11271,16 +10306,6 @@ function grantPearlShopItem(profileData, itemId) {
         return { success: true, message: `${getCrateDefinition(crateId).name} added.` };
     }
 
-    if (itemId === "message-bottle-pack") {
-        const state = getLostTreasuresState(profileData);
-        state.bottles.barnacle = (state.bottles.barnacle || 0) + 5;
-        state.bottles["red-sea"] = (state.bottles["red-sea"] || 0) + 3;
-        state.bottles.seafoam = (state.bottles.seafoam || 0) + 1;
-        state.bottles.celestial = (state.bottles.celestial || 0) + 1;
-        setLostTreasuresState(profileData, state, { skipRemoteSync: true });
-        return { success: true, message: "Message in a Bottle Pack added." };
-    }
-
     if (itemId === "season-xp") {
         if (hasSeasonXpBoost(profileData)) return { success: false, message: "Season 2x XP is already owned." };
         setSeasonXpBoost(profileData);
@@ -11319,7 +10344,6 @@ async function persistPearlShopPurchase(profileData, itemId, item) {
                 streakShields: getStreakShieldCount(nextProfile),
                 crateInventory: normalizeCrateInventory(nextProfile.crateInventory),
                 crateInventoryUpdatedAt: getCrateInventoryUpdatedAt(nextProfile),
-                lostTreasures: getLostTreasuresState(nextProfile),
                 seasonXpBoosts: getSeasonXpBoosts(nextProfile),
                 sharkPassSeasonId: nextProfile.sharkPassSeasonId || SHARK_PASS_ACTIVE_SEASON_ID,
                 lastPearlShopPurchase: {
@@ -11374,7 +10398,6 @@ async function buyPearlShopItem(itemId) {
     renderCratesButton();
     renderCratesModal();
     updateSeasonalCratePanels(nextProfile);
-    renderLostTreasuresModal();
     showNotification(`${grant.message} -${item.price} pearls`, "success", 3400);
 }
 
@@ -11468,42 +10491,6 @@ function updateIndexStats() {
 }
 // expose for game files
 window.updateIndexStats = updateIndexStats;
-
-// Profile Tabs Logic
-window.showProfileTab = function(tab) {
-    const statsTab = document.getElementById('stats-tab');
-    const recentTab = document.getElementById('recent-tab');
-    const friendsTab = document.getElementById('friends-tab');
-    const consumablesTab = document.getElementById('consumables-tab');
-    const statsBtn = document.getElementById('stats-tab-btn');
-    const recentBtn = document.getElementById('recent-tab-btn');
-    const friendsBtn = document.getElementById('friends-tab-btn');
-    const consumablesBtn = document.getElementById('consumables-tab-btn');
-
-    if (statsTab) statsTab.style.display = tab === 'stats' ? 'block' : 'none';
-    if (recentTab) recentTab.style.display = tab === 'recent' ? 'block' : 'none';
-    if (friendsTab) friendsTab.style.display = tab === 'friends' ? 'block' : 'none';
-    if (consumablesTab) consumablesTab.style.display = tab === 'consumables' ? 'block' : 'none';
-
-    if (statsBtn) statsBtn.classList.toggle('active', tab === 'stats');
-    if (recentBtn) recentBtn.classList.toggle('active', tab === 'recent');
-    if (friendsBtn) friendsBtn.classList.toggle('active', tab === 'friends');
-    if (consumablesBtn) consumablesBtn.classList.toggle('active', tab === 'consumables');
-
-    if (tab === 'stats') {
-        animateStatsFromLastView();
-    } else if (tab === 'recent') {
-        saveLastViewedStats();
-        renderRecentGames();
-    } else if (tab === 'friends') {
-        populateFriendsTab();
-    } else if (tab === 'consumables') {
-        renderConsumablesPage();
-    }
-
-    // Save current tab for persistent tab selection (optional QoL)
-    localStorage.setItem('profileLastTab', tab);
-}
 
 function saveLastViewedStats() {
     const stats = {
@@ -11730,7 +10717,7 @@ function buildInitialUserProfileForAuthUser(user, usernameOverride = "") {
 }
 
 async function ensureAuthUserProfile(user, usernameOverride = "") {
-    if (!user || !db) return false;
+    if (!user || user.emailVerified !== true || !db) return false;
     const userRef = db.collection("userStats").doc(user.uid);
     const { snapshot, fromServer } = await getUserStatsSnapshot(userRef);
     if (snapshot.exists) return false;
@@ -11750,22 +10737,10 @@ async function ensureAuthUserProfile(user, usernameOverride = "") {
         await syncFullUserProfileToFirebase(recoveredProfile);
         return false;
     }
-    const initialProfile = buildInitialUserProfileForAuthUser(user, usernameOverride);
+    const initialProfile = buildInitialUserProfileForAuthUser(user, usernameOverride || user.displayName || "");
     await userRef.set(initialProfile);
     await syncFullUserProfileToFirebase(initialProfile);
     return true;
-}
-
-function shouldRepairMissingSignUpBonus(profile = {}) {
-    if (profile.signUpBonusClaimed === true) return false;
-    if ((Number(profile.pearls) || 0) >= SIGN_UP_BONUS_PEARLS) return false;
-
-    const hasProgress = ["gamesPlayed", "wins", "losses", "totalXP", "totalGuesses", "cratesOpened"]
-        .some(key => Number(profile[key]) > 0);
-    const hasCollections = [profile.redeemedCodes, profile.earnedCosmetics, profile.claimedAchievements, profile.unlockedAchievements]
-        .some(value => Array.isArray(value) && value.length > 0);
-
-    return !hasProgress && !hasCollections;
 }
 
 function getFriendlyAuthErrorMessage(error, fallback = "Something went wrong. Please try again.") {
@@ -11809,7 +10784,20 @@ function loginUser() {
     }
 
     auth.signInWithEmailAndPassword(email, password)
-        .then(result => {
+        .then(async result => {
+            if (result.user.emailVerified !== true) {
+                try {
+                    await result.user.sendEmailVerification();
+                    errorEl.textContent = "Verify your email before logging in. A new verification link has been sent; check your inbox and spam folder, then log in again.";
+                } catch (error) {
+                    errorEl.textContent = "Your email is not verified. " + getFriendlyAuthErrorMessage(error, "Unable to resend the verification email. Try logging in again later.");
+                } finally {
+                    await auth.signOut();
+                }
+                errorEl.style.display = "block";
+                return;
+            }
+            await result.user.getIdToken(true);
             errorEl.style.display = "none";
             showNotification('Login successful!', 'success');
             closeLoginModal();
@@ -11900,121 +10888,21 @@ async function signupUser() {
     }
 
     try {
-        // Check if email is already in use
-        const methods = await auth.fetchSignInMethodsForEmail(email);
-        if (methods.length > 0) {
-            errorEl.textContent = "This email is already registered. Please try logging in instead.";
-            errorEl.style.display = "block";
-            return;
-        }
-
-        // Proceed with account creation
         const result = await auth.createUserWithEmailAndPassword(email, password);
-        const userRef = db.collection("userStats").doc(result.user.uid);
-        
-        // Migrate local offline stats - check both new and old storage locations
-        const rawLocalProfile = JSON.parse(localStorage.getItem("userProfile") || "{}");
-        const localProfile = rawLocalProfile && !rawLocalProfile.uid ? rawLocalProfile : {};
-        const _totalXP = localProfile.totalXP || parseInt(localStorage.getItem("totalXP")) || 0;
-        const _gamesPlayed = localProfile.gamesPlayed || parseInt(localStorage.getItem("games")) || 0;
-        const _wins = localProfile.wins || parseInt(localStorage.getItem("wins")) || 0;
-        const _losses = localProfile.losses || parseInt(localStorage.getItem("losses")) || 0;
-        const _totalGuesses = localProfile.totalGuesses || 0;
-        const _averageGuesses = localProfile.averageGuesses || 0;
-        const _bestGame = localProfile.bestGame || 0;
-        const _currentStreak = localProfile.currentStreak || 0;
-        const _highestStreak = localProfile.highestStreak || 0;
-        const _loginProgress = getLoginProgressFromLocalStorage(result.user.uid);
-        let _claimedAchievements = [];
-        let _unlockedAchievements = [];
-        let _showcasedAchievements = [];
         try {
-            _claimedAchievements = JSON.parse(localStorage.getItem("claimedAchievements") || "[]");
-            _unlockedAchievements = JSON.parse(localStorage.getItem("unlockedAchievements") || "[]");
-            _showcasedAchievements = JSON.parse(localStorage.getItem("showcasedAchievements") || "[]");
-        } catch (error) {
-            console.warn("Unable to migrate local achievement cache during signup:", error);
+            // Keep the chosen name on the pending Auth record for any device.
+            await result.user.updateProfile({ displayName: username });
+            await result.user.sendEmailVerification();
+        } finally {
+            await auth.signOut();
         }
-        
-        const _currentLevel = getLevelFromXP(_totalXP);
-        const _xpInLevel = getXPInCurrentLevel(_totalXP);
-        const _xpToNext = getXPToNextLevel(_totalXP);
-        const _unlockedPfps = levelRewards
-            .filter(r => r.level <= _currentLevel)
-            .map(r => ({ level: r.level, name: r.name || r.imagePath }));
-
-        const newProfile = {
-            uid: result.user.uid,
-            profilePicture: localProfile.profilePicture || "images/pfp/shark1.png",
-            profilePic: localProfile.profilePicture || "images/pfp/shark1.png",
-            equippedBadge: localProfile.equippedBadge || "starter",
-            equippedCardTheme: localProfile.equippedCardTheme || "default",
-            equippedTitle: localProfile.equippedTitle || "",
-            unlockedTitles: Array.isArray(localProfile.unlockedTitles) ? localProfile.unlockedTitles : [],
-            unlockedBadges: Array.isArray(localProfile.unlockedBadges) ? localProfile.unlockedBadges : ["starter"],
-            unlockedCardThemes: Array.isArray(localProfile.unlockedCardThemes) ? localProfile.unlockedCardThemes : ["default"],
-            earnedCosmetics: Array.isArray(localProfile.earnedCosmetics) ? localProfile.earnedCosmetics : [],
-            testerBadgeUnlocked: Boolean(localProfile.testerBadgeUnlocked),
-            communityBossRewards: localProfile.communityBossRewards && typeof localProfile.communityBossRewards === "object"
-                ? localProfile.communityBossRewards
-                : {},
-            referralRewards: localProfile.referralRewards && typeof localProfile.referralRewards === "object"
-                ? localProfile.referralRewards
-                : {},
-            sharkPassMissionClaims: localProfile.sharkPassMissionClaims && typeof localProfile.sharkPassMissionClaims === "object"
-                ? localProfile.sharkPassMissionClaims
-                : {},
-            sharkPassSeasonBaselines: localProfile.sharkPassSeasonBaselines && typeof localProfile.sharkPassSeasonBaselines === "object"
-                ? localProfile.sharkPassSeasonBaselines
-                : {},
-            sharkPassLevelRewardClaims: [],
-            sharkPassProgressSeasonId: getActiveSharkPassSeasonId(),
-            sharkPassXP: 0,
-            sharkPassSeasonId: getActiveSharkPassSeasonId(),
-            crateInventory: normalizeCrateInventory(localProfile.crateInventory),
-            crateInventoryUpdatedAt: getCrateInventoryUpdatedAt(localProfile),
-            cratesOpened: Math.max(0, Number(localProfile.cratesOpened) || 0),
-            streakShields: getStreakShieldCount(localProfile),
-            instantCrateOpen: getCrateInstantOpenEnabled(localProfile),
-            pearls: getPearlCount(localProfile) + SIGN_UP_BONUS_PEARLS,
-            pearlBalanceUpdatedAt: Date.now(),
-            signUpBonusPearls: SIGN_UP_BONUS_PEARLS,
-            signUpBonusClaimed: true,
-            pearlBoostExpiresAt: getPearlBoostExpiresAt(localProfile),
-            seasonXpBoosts: getSeasonXpBoosts(localProfile),
-            username: username,
-            email: email,
-            avatar: "\u{1F988}",
-            totalXP: _totalXP,
-            gamesPlayed: _gamesPlayed,
-            wins: _wins,
-            losses: _losses,
-            totalGuesses: _totalGuesses,
-            averageGuesses: _averageGuesses,
-            bestGame: _bestGame,
-            currentStreak: _currentStreak,
-            highestStreak: _highestStreak,
-            currentLevel: _currentLevel,
-            currentXP: _xpInLevel,
-            xpToNextLevel: _xpToNext,
-            unlockedPfps: _unlockedPfps,
-            claimedAchievements: Array.isArray(_claimedAchievements) ? _claimedAchievements : [],
-            unlockedAchievements: Array.isArray(_unlockedAchievements) ? _unlockedAchievements : [],
-            showcasedAchievements: Array.isArray(_showcasedAchievements) ? _showcasedAchievements : [],
-            redeemedCodes: getRedeemedCodes(),
-            loginStreak: _loginProgress.loginStreak,
-            currentLoginDay: _loginProgress.currentLoginDay,
-            lastLoginDate: _loginProgress.lastLoginDate,
-            dailyLoginModalShownToday: _loginProgress.dailyLoginModalShownToday,
-            createdAt: new Date(),
-            lastUpdated: new Date()
-        };
-        await userRef.set(newProfile);
-
-        errorEl.style.display = "none";
-        showNotification(`Account created! +${SIGN_UP_BONUS_PEARLS} pearls signup bonus.`, "success");
-        closeLoginModal();
-        loadUserProfile();
+        switchToLogin();
+        const loginEmail = document.getElementById("login-email");
+        if (loginEmail) loginEmail.value = email;
+        passwordInput.value = "";
+        errorEl.textContent = "Verification email sent. Check your inbox and spam folder, follow the link, then log in to finish creating your account. If it doesn't arrive, log in to resend it.";
+        errorEl.style.display = "block";
+        showNotification("Check your email to verify your account.", "info");
     } catch (error) {
         const message = getFriendlyAuthErrorMessage(error, "Account creation failed. Please try again.");
         errorEl.textContent = message;
@@ -12028,8 +10916,11 @@ async function signupUser() {
     }
 }
 
-function logoutUser() {
-    auth.signOut().then(() => {
+async function logoutUser() {
+    if (typeof window.flushRngBeforeSignOut === "function") {
+        await window.flushRngBeforeSignOut();
+    }
+    return auth.signOut().then(() => {
         currentUser = null;
         clearPendingProfileSyncTimeout();
         clearCloudProfileReloadTimeouts();
@@ -12184,6 +11075,7 @@ function openAdminAbuseModal() {
     const modal = document.getElementById("adminAbuseModal");
     if (!modal) return;
     modal.classList.remove("hidden");
+    window.SharkdleFairPlay?.startAdminReview();
     if (typeof refreshAdminAbusePanel === "function") {
         refreshAdminAbusePanel().catch(error => {
             console.warn("Unable to load admin abuse panel state:", error);
@@ -12192,67 +11084,15 @@ function openAdminAbuseModal() {
 }
 
 function closeAdminAbuseModal() {
+    window.SharkdleFairPlay?.stopAdminReview();
     const modal = document.getElementById("adminAbuseModal");
     if (modal) {
         modal.classList.add("hidden");
     }
 }
 
-function openBadgeModal() {
-    if (!currentUser) return;
-    const modal = document.getElementById("badgeModal");
-    if (!modal) {
-        showNotification("Badges are unavailable on this page.", "error", 3000);
-        return;
-    }
-    renderBadgeSelection();
-    modal.classList.remove("hidden");
-}
-
-function closeBadgeModal() {
-    document.getElementById("badgeModal")?.classList.add("hidden");
-}
-
 function closeFriendProfileModal() {
     document.getElementById("friendProfileModal")?.classList.add("hidden");
-}
-
-async function refreshProfilePicPicker() {
-    await loadEarnedCosmetics();
-    renderProfilePicPicker();
-}
-
-function openProfilePicModal() {
-    const modal = document.getElementById("profilePicModal");
-    if (!modal) return;
-
-    pfpPickerFilter = "all";
-    pfpPickerSearchQuery = "";
-    const searchInput = document.getElementById("pfp-picker-search");
-    if (searchInput) searchInput.value = "";
-    document.querySelectorAll("#pfp-picker-tabs .picker-modal-tab").forEach(tab => {
-        const isAll = tab.dataset.pfpFilter === "all";
-        tab.classList.toggle("active", isAll);
-        tab.setAttribute("aria-selected", isAll ? "true" : "false");
-    });
-
-    const showModal = () => {
-        renderProfilePicPicker();
-        modal.classList.remove("hidden");
-    };
-
-    if (typeof loadUserProfile === "function") {
-        loadUserProfile()
-            .then(() => refreshProfilePicPicker().then(showModal))
-            .catch(() => refreshProfilePicPicker().then(showModal));
-        return;
-    }
-
-    refreshProfilePicPicker().then(showModal);
-}
-
-function closeProfilePicModal() {
-    document.getElementById("profilePicModal")?.classList.add("hidden");
 }
 
 function switchToLogin() {
@@ -12294,8 +11134,6 @@ async function setProfilePicture(picturePath) {
             lastUpdated: Date.now()
         }, { merge: true });
 
-        updateProfilePicPickerPreview(safePicturePath);
-        renderProfilePicPicker();
         renderProfileInventoryUI(profileData);
         const equippedEntry = findProfilePicCatalogEntry(buildProfilePicPickerCatalog(), safePicturePath);
         showNotification(`${equippedEntry?.name || "Portrait"} equipped.`, "success", 2400);
@@ -12314,10 +11152,6 @@ const STARTER_PROFILE_PFPS = [
 ];
 
 const PFP_RARITY_ORDER = ["core", "common", "rare", "epic", "legendary", "special"];
-let pfpPickerFilter = "all";
-let pfpPickerSearchQuery = "";
-let pfpPickerControlsBound = false;
-
 function inferPfpRarityFromPath(imagePath = "") {
     if (/leaderPfp\/Shark19\.png$/i.test(imagePath)) return "legendary";
     if (/leaderPfp\/(Daily|Monthly)\//i.test(imagePath)) return "rare";
@@ -12353,15 +11187,6 @@ function getPfpRarityLabel(rarity) {
         legendary: "Legendary",
         special: "Special"
     })[rarity] || "Common";
-}
-
-function getPfpCategoryLabel(category) {
-    return ({
-        starter: "Starter",
-        pass: "Shark Pass",
-        reward: "Reward",
-        crate: "Crate"
-    })[category] || "Portrait";
 }
 
 function getSharkPassRewardSourceLabel(reward = null, fallbackLevel = null) {
@@ -12532,7 +11357,7 @@ function buildProfilePicPickerCatalog() {
         });
     });
 
-    getAllCrateRewardPools()
+    getAllDisplayCrateRewardPools()
         .flat()
         .filter(reward => reward.type === "pfp")
         .forEach(reward => {
@@ -12573,117 +11398,8 @@ function buildProfilePicPickerCatalog() {
     });
 }
 
-function getEquippedProfilePicturePath() {
-    const profileData = getCurrentProfileData();
-    return profileData.profilePicture || profileData.profilePic || "images/pfp/shark1.png";
-}
-
 function findProfilePicCatalogEntry(catalog, imagePath) {
     return catalog.find(entry => entry.imagePath === imagePath) || null;
-}
-
-function updateProfilePicPickerPreview(imagePath = getEquippedProfilePicturePath()) {
-    const previewImg = document.getElementById("pfp-picker-preview-img");
-    const previewName = document.getElementById("pfp-picker-preview-name");
-    const previewSource = document.getElementById("pfp-picker-preview-source");
-    const previewCrown = document.getElementById("pfp-picker-preview-crown");
-    if (!previewImg || !previewName || !previewSource) return;
-
-    const catalog = buildProfilePicPickerCatalog();
-    const entry = findProfilePicCatalogEntry(catalog, imagePath);
-    previewImg.src = imagePath;
-    previewName.textContent = entry?.name || "Shark";
-    previewSource.textContent = entry?.source || "Profile portrait";
-    if (previewCrown) {
-        previewCrown.classList.toggle("hidden", !entry?.isLeader);
-    }
-}
-
-function bindProfilePicPickerControls() {
-    if (pfpPickerControlsBound) return;
-    pfpPickerControlsBound = true;
-
-    const searchInput = document.getElementById("pfp-picker-search");
-    if (searchInput) {
-        searchInput.addEventListener("input", () => {
-            pfpPickerSearchQuery = searchInput.value.trim().toLowerCase();
-            renderProfilePicPicker();
-        });
-    }
-
-    const tabs = document.getElementById("pfp-picker-tabs");
-    if (tabs) {
-        tabs.addEventListener("click", event => {
-            const button = event.target.closest("[data-pfp-filter]");
-            if (!button) return;
-            pfpPickerFilter = button.dataset.pfpFilter || "all";
-            tabs.querySelectorAll(".picker-modal-tab").forEach(tab => {
-                const isActive = tab === button;
-                tab.classList.toggle("active", isActive);
-                tab.setAttribute("aria-selected", isActive ? "true" : "false");
-            });
-            renderProfilePicPicker();
-        });
-    }
-}
-
-function renderProfilePicPicker() {
-    const grid = document.getElementById("pfp-picker-grid");
-    if (!grid) return;
-
-    bindProfilePicPickerControls();
-
-    const catalog = buildProfilePicPickerCatalog();
-    const equippedPath = getEquippedProfilePicturePath();
-    const filtered = catalog.filter(entry => {
-        const matchesFilter = pfpPickerFilter === "all" || entry.category === pfpPickerFilter;
-        const matchesSearch = !pfpPickerSearchQuery ||
-            entry.name.toLowerCase().includes(pfpPickerSearchQuery) ||
-            entry.source.toLowerCase().includes(pfpPickerSearchQuery);
-        return matchesFilter && matchesSearch;
-    });
-
-    const unlockedCount = catalog.filter(entry => entry.unlocked).length;
-    const countEl = document.getElementById("pfp-picker-count");
-    const unlockedEl = document.getElementById("pfp-picker-unlocked-count");
-    const emptyEl = document.getElementById("pfp-picker-empty");
-    if (countEl) countEl.textContent = `${filtered.length} shown`;
-    if (unlockedEl) unlockedEl.textContent = `${unlockedCount} unlocked`;
-    if (emptyEl) emptyEl.classList.toggle("hidden", filtered.length > 0);
-
-    updateProfilePicPickerPreview(equippedPath);
-    grid.innerHTML = "";
-
-    filtered.forEach(entry => {
-        const card = document.createElement("button");
-        card.type = "button";
-        card.className = `pfp-option rarity-${entry.rarity}${entry.unlocked ? "" : " pfp-option-locked"}`;
-        if (entry.imagePath === equippedPath) card.classList.add("active");
-        card.title = entry.unlocked
-            ? `${entry.name} \u2014 ${entry.source}`
-            : `Unlock at Shark Pass level ${entry.levelRequired}`;
-
-        card.innerHTML = `
-            <span class="pfp-option-kicker">${getPfpCategoryLabel(entry.category)}</span>
-            <span class="pfp-option-frame rarity-${entry.rarity}${entry.isLeader ? " is-leader" : ""}">
-                ${entry.isLeader ? '<span class="pfp-option-crown">\u{1F451}</span>' : ""}
-                <img src="${entry.imagePath}" alt="${entry.name}" loading="lazy" onerror="this.onerror=null;this.src='images/pfp/shark1.png';">
-                ${entry.unlocked ? "" : '<span class="pfp-option-lock" aria-hidden="true">\u{1F512}</span>'}
-            </span>
-            <span class="pfp-option-name">${entry.name}</span>
-            <span class="pfp-option-rarity rarity-${entry.rarity}">${entry.unlocked ? getPfpRarityLabel(entry.rarity) : `Lv. ${entry.levelRequired}`}</span>
-        `;
-
-        card.addEventListener("click", () => {
-            if (!entry.unlocked) {
-                showNotification(`Reach Shark Pass level ${entry.levelRequired} to unlock ${entry.name}.`, "info", 3200);
-                return;
-            }
-            setProfilePicture(entry.imagePath);
-        });
-
-        grid.appendChild(card);
-    });
 }
 
 const LEADER_REWARD_PFP_NAMES = {
@@ -12700,10 +11416,6 @@ function getCosmeticDisplayName(cosmetic) {
 
 function isLeaderRewardPfp(cosmetic) {
     return /leaderPfp/i.test(cosmetic?.imagePath || "");
-}
-
-function loadAvailablePFPs() {
-    renderProfilePicPicker();
 }
 
 async function loadEarnedCosmetics() {
@@ -12767,9 +11479,6 @@ async function loadEarnedCosmetics() {
         profileData.earnedCosmetics = mergedUnlocked;
         saveUserProfileLocally(profileData, { skipRemoteSync: true });
 
-        if (document.getElementById("pfp-picker-grid")) {
-            renderProfilePicPicker();
-        }
     } catch (error) {
         console.error("\u{274C} Error loading earned cosmetics:", error);
     }
@@ -12927,7 +11636,7 @@ async function syncStatsToFirebase() {
         const mergedLoginProgress = mergeLoginProgress(getLoginProgressFromLocalStorage(authUser.uid), remoteData);
         storeLoginProgressLocally(mergedLoginProgress, authUser.uid);
         mergedProfile.showcasedAchievements = mergedShowcasedAchievements;
-        
+
         // base stats
         const stats = {
             uid: authUser.uid,
@@ -12969,7 +11678,6 @@ async function syncStatsToFirebase() {
                 ? mergedProfile.referralRewards
                 : {},
             socialRewardsClaimed: getClaimedSocialRewards(mergedProfile),
-            lostTreasures: mergeLostTreasuresStates(mergedProfile, remoteData),
             sharkPassMissionClaims: mergedProfile.sharkPassMissionClaims && typeof mergedProfile.sharkPassMissionClaims === "object"
                 ? mergedProfile.sharkPassMissionClaims
                 : {},
@@ -13027,7 +11735,7 @@ async function syncStatsToFirebase() {
         stats.winPeriodVersion = 2;
 
         Object.assign(stats, buildCosmeticSyncPayload(mergedProfile));
-        
+
         // shark pass related values
         const totalXP = mergedProfile.totalXP || 0;
         const currentLevel = getLevelFromXP(totalXP);
@@ -13070,7 +11778,7 @@ async function syncStatsToFirebase() {
 
         // Save stats to userStats collection
         await statsRef.set(stats, { merge: true });
-        
+
         Object.assign(mergedProfile, stats);
         await syncFullUserProfileToFirebase(mergedProfile);
         saveUserProfileLocally(mergedProfile, { skipRemoteSync: true });
@@ -13184,10 +11892,6 @@ async function ensureLoginStreakRewards() {
         console.warn("Unable to sync day 7 login reward:", error);
     }
 
-    if (document.getElementById("pfp-picker-grid")) {
-        loadEarnedCosmetics();
-    }
-
     showCosmeticUnlockToast(DAY_7_LOGIN_PFP, {
         title: "Login Reward Unlocked!",
         subtitle: `${DAY_7_LOGIN_PFP.name} profile picture`,
@@ -13224,10 +11928,10 @@ async function initializeDailyLogin() {
         // Calculate next day (keeps incrementing)
         let nextDay = currentLoginDay;
         let streak = 1;
-        
+
         if (lastLoginDate) {
             const daysDiff = getCalendarDayDifference(lastLoginDate, today);
-            
+
             if (daysDiff === 1) {
                 // User logged in yesterday, advance the day
                 nextDay = currentLoginDay + 1;
@@ -13316,7 +12020,7 @@ function showDailyLoginModal(currentDay, xpGained) {
     const modal = document.getElementById("dailyLoginModal");
     const grid = document.getElementById("daily-rewards-grid");
     const day7Container = document.getElementById("day-7-reward");
-    
+
     if (!modal || !grid || !day7Container) return; // Element doesn't exist on this page
 
     grid.innerHTML = '';
@@ -13341,7 +12045,7 @@ function showDailyLoginModal(currentDay, xpGained) {
         const reward = dailyRewards[i - 1];
         const isClaimed = i < positionInCycle || (i === positionInCycle && !isNewClaim);
         const isAvailable = i === positionInCycle && isNewClaim;
-        
+
         const dayCard = document.createElement("div");
         dayCard.style.cssText = `
             padding: 15px;
@@ -13352,21 +12056,21 @@ function showDailyLoginModal(currentDay, xpGained) {
             cursor: ${isAvailable ? 'pointer' : 'default'};
             transition: all 0.3s ease;
         `;
-        
+
         if (isAvailable) {
             dayCard.style.boxShadow = '0 0 15px rgba(0, 180, 216, 0.5)';
         }
-        
+
         dayCard.innerHTML = `
             <div style="font-size: 24px; margin-bottom: 8px;">${reward.emoji}</div>
             <div style="font-size: 14px; color: #4dd0e1; font-weight: 600;">${reward.xp} XP</div>
             <div style="font-size: 12px; color: #888; margin-top: 5px;">${isClaimed ? '\u2713 Claimed' : isAvailable ? 'Available Today!' : 'Locked'}</div>
         `;
-        
+
         if (isAvailable) {
             dayCard.onclick = () => claimDailyReward(i);
         }
-        
+
         grid.appendChild(dayCard);
     }
 
@@ -13374,7 +12078,7 @@ function showDailyLoginModal(currentDay, xpGained) {
     const isDay7Claimed = 7 < positionInCycle || (7 === positionInCycle && !isNewClaim);
     const isDay7Available = 7 === positionInCycle && isNewClaim;
     const shouldShowDay7LoginReward = !day7LoginRewardUnlocked && currentDay <= 7;
-    
+
     const day7Card = document.createElement("div");
     day7Card.style.cssText = `
         padding: 25px;
@@ -13386,12 +12090,12 @@ function showDailyLoginModal(currentDay, xpGained) {
         transition: all 0.3s ease;
         min-width: 150px;
     `;
-    
+
     if (isDay7Available) {
         day7Card.style.boxShadow = '0 0 25px rgba(255, 215, 0, 0.8)';
         day7Card.style.transform = 'scale(1.05)';
     }
-    
+
     const day7BonusMarkup = shouldShowDay7LoginReward
         ? [
             `<div style="margin: 10px 0 8px;">`,
@@ -13408,13 +12112,13 @@ function showDailyLoginModal(currentDay, xpGained) {
         ${day7BonusMarkup}
         <div style="font-size: 14px; color: ${isDay7Available ? '#001f3f' : '#888'}; margin-top: 8px; font-weight: 600;">${isDay7Claimed ? '\u2713 Claimed' : isDay7Available ? 'MEGA REWARD!' : 'Locked'}</div>
     `;
-    
+
     if (isDay7Available) {
         day7Card.onclick = () => claimDailyReward(7);
     }
-    
+
     day7Container.appendChild(day7Card);
-    
+
     modal.classList.remove("hidden");
 }
 
@@ -13459,11 +12163,6 @@ document.addEventListener("DOMContentLoaded", function() {
         document.getElementById("losses").textContent = localStorage.getItem("losses") || 0;
     }
 
-    // Load profile picture picker data on page load
-    if (document.getElementById("pfp-picker-grid")) {
-        loadEarnedCosmetics();
-    }
-
     // If user is already logged in, refresh profile from Firebase immediately
     // This ensures cross-subdomain sync works correctly
     if (currentUser) {
@@ -13476,7 +12175,6 @@ document.addEventListener("DOMContentLoaded", function() {
     if (typeof ensureConsumablesPageTimer === "function") {
         ensureConsumablesPageTimer();
     }
-    ensureCommunityBossUiTimer();
     initCratesModalTabs();
     updateSeasonalCratePanels();
 });
@@ -13488,6 +12186,7 @@ async function redeemCode(inputId = "redeem-code-input", messageId = "redeem-mes
         return;
     }
 
+    const redemptionUid = currentUser.uid;
     const codeInput = document.getElementById(inputId) || document.getElementById("redeem-code-input");
     if (!codeInput) {
         showNotification("Code input is unavailable right now.", "error", 3000);
@@ -13514,87 +12213,114 @@ async function redeemCode(inputId = "redeem-code-input", messageId = "redeem-mes
         return;
     }
 
+    const claimKey = redemptionUid + ":" + code;
+    if (pendingRedeemCodeClaims.has(claimKey)) {
+        showRedeemMessage("This code is already being redeemed.", false, messageId);
+        return;
+    }
+    pendingRedeemCodeClaims.add(claimKey);
     try {
-        // Get current user data
-        const userProfile = getCurrentProfileData();
-        const currentXP = userProfile.totalXP || 0;
         const codeReward = redeemCodes[code];
-
-        // Add XP
-        const rewardXp = Number(codeReward.xp) || 0;
-        const xpAward = typeof window.applyLimitedTimeXpBonus === "function"
-            ? window.applyLimitedTimeXpBonus(rewardXp)
-            : { totalXp: rewardXp };
-        const newXP = currentXP + xpAward.totalXp;
-        userProfile.totalXP = newXP;
-        applySharkPassXpGain(userProfile, xpAward.totalXp);
-
-        // Add cosmetics if any
-        const newlyUnlockedCosmetics = [];
-        if (codeReward.cosmetics) {
-            if (!userProfile.earnedCosmetics) {
-                userProfile.earnedCosmetics = [];
+        const statsRef = db.collection("userStats").doc(redemptionUid);
+        const claimRef = statsRef.collection("redeemedCodes").doc(code);
+        const result = await db.runTransaction(async transaction => {
+            const [snapshot, claim] = await Promise.all([transaction.get(statsRef), transaction.get(claimRef)]);
+            if (currentUser?.uid !== redemptionUid) throw new Error("Account changed during redemption");
+            if (claim.exists) return { alreadyRedeemed: true };
+            const remoteProfile = snapshot.exists ? snapshot.data() || {} : {};
+            const remoteCodes = Array.isArray(remoteProfile.redeemedCodes) ? remoteProfile.redeemedCodes : [];
+            const remoteCosmetics = Array.isArray(remoteProfile.earnedCosmetics) ? remoteProfile.earnedCosmetics : [];
+            if (remoteCodes.some(value => String(value).toUpperCase() === code)
+                || (codeReward.cosmetics || []).some(reward => remoteCosmetics.some(owned => owned.imagePath === reward.imagePath || owned.name === reward.name))) {
+                transaction.set(claimRef, { uid: redemptionUid, code, redeemedAt: firebase.firestore.FieldValue.serverTimestamp() });
+                return { alreadyRedeemed: true };
             }
-            codeReward.cosmetics.forEach(cosmetic => {
-                // Check if cosmetic is not already in the list
-                if (!userProfile.earnedCosmetics.some(c => c.name === cosmetic.name)) {
-                    userProfile.earnedCosmetics.push(cosmetic);
-                    newlyUnlockedCosmetics.push(cosmetic);
+            // Get current user data
+            const userProfile = mergeProfilesSafely(JSON.parse(JSON.stringify(getCurrentProfileData())), remoteProfile, { preferRemote: true });
+            const currentXP = userProfile.totalXP || 0;
+
+            // Add XP
+            const rewardXp = Number(codeReward.xp) || 0;
+            const xpAward = typeof window.applyLimitedTimeXpBonus === "function"
+                ? window.applyLimitedTimeXpBonus(rewardXp)
+                : { totalXp: rewardXp };
+            const newXP = currentXP + xpAward.totalXp;
+            userProfile.totalXP = newXP;
+            applySharkPassXpGain(userProfile, xpAward.totalXp);
+
+            const rewardPearls = Math.max(0, Math.floor(Number(codeReward.pearls) || 0));
+            if (rewardPearls > 0) {
+                addPearls(rewardPearls, userProfile, { deferSave: true, deferUiUpdate: true });
+            }
+
+            // Add cosmetics if any
+            const newlyUnlockedCosmetics = [];
+            if (codeReward.cosmetics) {
+                if (!userProfile.earnedCosmetics) {
+                    userProfile.earnedCosmetics = [];
                 }
-            });
-        }
-
-        // Add badge if any
-        if (codeReward.badge) {
-            if (!Array.isArray(userProfile.unlockedBadges)) {
-                userProfile.unlockedBadges = ["starter"];
+                codeReward.cosmetics.forEach(cosmetic => {
+                    // Check if cosmetic is not already in the list
+                    if (!userProfile.earnedCosmetics.some(c => c.name === cosmetic.name)) {
+                        userProfile.earnedCosmetics.push(cosmetic);
+                        newlyUnlockedCosmetics.push(cosmetic);
+                    }
+                });
             }
-            if (!userProfile.unlockedBadges.includes(codeReward.badge)) {
-                userProfile.unlockedBadges.push(codeReward.badge);
+
+            // Add badge if any
+            if (codeReward.badge) {
+                if (!Array.isArray(userProfile.unlockedBadges)) {
+                    userProfile.unlockedBadges = ["starter"];
+                }
+                if (!userProfile.unlockedBadges.includes(codeReward.badge)) {
+                    userProfile.unlockedBadges.push(codeReward.badge);
+                }
+                // Backwards compatible: keep the legacy tester flag for the tester badge.
+                if (codeReward.badge === "tester") {
+                    userProfile.testerBadgeUnlocked = true;
+                }
             }
-            // Backwards compatible: keep the legacy tester flag for the tester badge.
-            if (codeReward.badge === "tester") {
-                userProfile.testerBadgeUnlocked = true;
+
+            const grantedCrates = applyCodeCrateRewards(userProfile, codeReward.crates);
+            const rewardSpins = normalizeDailySpinBonusCount(codeReward.spins);
+            if (rewardSpins > 0) {
+                userProfile.dailySpinBonusSpins = normalizeDailySpinBonusCount(remoteProfile.dailySpinBonusSpins) + rewardSpins;
             }
-        }
-
-        const grantedCrates = applyCodeCrateRewards(userProfile, codeReward.crates);
-
-        // Save to localStorage
-        saveUserProfileLocally(userProfile);
-
-        // Sync to Firebase
-        if (currentUser) {
-            const statsRef = db.collection("userStats").doc(currentUser.uid);
-            await statsRef.set({
+            userProfile.redeemedCodes = [...new Set([...(userProfile.redeemedCodes || []), ...remoteCodes, code])];
+            transaction.set(claimRef, { uid: redemptionUid, code, redeemedAt: firebase.firestore.FieldValue.serverTimestamp() });
+            transaction.set(statsRef, {
                 totalXP: newXP,
+                ...(rewardPearls > 0 ? { pearls: getPearlCount(userProfile), pearlBalanceUpdatedAt: getPearlBalanceUpdatedAt(userProfile) } : {}),
+                ...(rewardSpins > 0 ? { dailySpinBonusSpins: userProfile.dailySpinBonusSpins } : {}),
                 ...getSharkPassSyncPayload(userProfile),
-                earnedCosmetics: userProfile.earnedCosmetics,
+                earnedCosmetics: userProfile.earnedCosmetics || [],
                 unlockedBadges: Array.isArray(userProfile.unlockedBadges) ? userProfile.unlockedBadges : ["starter"],
                 testerBadgeUnlocked: userProfile.testerBadgeUnlocked === true,
                 crateInventory: normalizeCrateInventory(userProfile.crateInventory),
-                crateInventoryUpdatedAt: getCrateInventoryUpdatedAt(userProfile)
+                crateInventoryUpdatedAt: getCrateInventoryUpdatedAt(userProfile),
+                redeemedCodes: userProfile.redeemedCodes
             }, { merge: true });
+            return { userProfile, xpAward, rewardPearls, rewardSpins, newlyUnlockedCosmetics, grantedCrates };
+        });
+        if (currentUser?.uid !== redemptionUid) return;
+        if (result.alreadyRedeemed) {
+            showRedeemMessage("This code has already been redeemed.", false, messageId);
+            codeInput.value = "";
+            loadUserProfile();
+            return;
         }
-
-        // Mark code as redeemed
+        const { userProfile, xpAward, rewardPearls, rewardSpins, newlyUnlockedCosmetics, grantedCrates } = result;
+        const refreshedProfile = mergeProfilesSafely(getCurrentProfileData(), userProfile, { preferRemote: true });
+        if (rewardSpins > 0) setDailySpinBonusCount(refreshedProfile, userProfile.dailySpinBonusSpins, redemptionUid);
+        saveUserProfileLocally(refreshedProfile);
         addRedeemedCode(code);
-
-        // Sync redeemed codes BEFORE refreshing UI
-        if (currentUser) {
-            const redeemedCodesList = getRedeemedCodes();
-            const statsRef = db.collection("userStats").doc(currentUser.uid);
-            const syncData = { redeemedCodes: redeemedCodesList };
-            if (codeReward.badge === 'tester' && userProfile.testerBadgeUnlocked) {
-                syncData.testerBadgeUnlocked = true;
-            }
-            // Wait for Firebase sync to complete before refreshing UI
-            await statsRef.set(syncData, { merge: true });
-        }
 
         // Show success message
         const rewardLines = [];
         if (xpAward.totalXp > 0) rewardLines.push(`${xpAward.totalXp} XP`);
+        if (rewardPearls > 0) rewardLines.push(`${rewardPearls} pearls`);
+        if (rewardSpins > 0) rewardLines.push(`${rewardSpins} bonus spins (no win needed)`);
         if (newlyUnlockedCosmetics.length) rewardLines.push(`${newlyUnlockedCosmetics.length} cosmetic${newlyUnlockedCosmetics.length === 1 ? "" : "s"}`);
         if (codeReward.badge) rewardLines.push(`badge unlocked`);
         grantedCrates.forEach(crate => {
@@ -13607,14 +12333,23 @@ async function redeemCode(inputId = "redeem-code-input", messageId = "redeem-mes
         // Refresh profile and cosmetics
         loadUserProfile();
         loadEarnedCosmetics();
-        loadAvailablePFPs();
         renderCratesButton();
         renderCratesModal();
         updateSeasonalCratePanels();
+        if (typeof updateSpinWheelUI === "function") updateSpinWheelUI();
 
     } catch (error) {
-        console.error("\u{274C} Error redeeming code:", error);
-        showRedeemMessage("An error occurred. Please try again.", false, messageId);
+        if (currentUser?.uid !== redemptionUid) return;
+        if (error.code === "already-redeemed") {
+            showRedeemMessage("This code has already been redeemed.", false, messageId);
+            codeInput.value = "";
+            loadUserProfile();
+        } else {
+            console.error("Error redeeming code:", error);
+            showRedeemMessage("The code could not be saved. Check your connection and try again.", false, messageId);
+        }
+    } finally {
+        pendingRedeemCodeClaims.delete(claimKey);
     }
 }
 
@@ -13662,7 +12397,7 @@ async function addStats(statsObj) {
 
     try {
         const userProfile = getCurrentProfileData();
-        
+
         // Add to requested stats
         if (statsObj.xp) {
             userProfile.totalXP = (userProfile.totalXP || 0) + statsObj.xp;
@@ -13693,20 +12428,20 @@ async function addStats(statsObj) {
             userProfile.highestStreak = Math.max(userProfile.highestStreak || 0, statsObj.highestStreak);
             console.log(`? Highest streak: ${userProfile.highestStreak}`);
         }
-        
+
         // Save to localStorage
         saveUserProfileLocally(userProfile);
-        
+
         // Sync to Firebase
         const statsRef = db.collection("userStats").doc(currentUser.uid);
         await statsRef.set(userProfile, { merge: true });
-        
+
         console.log("? Stats synced to Firebase");
-        
+
         // Refresh UI
         loadUserProfile();
         updateAuthUI();
-        
+
     } catch (error) {
         console.error("? Error adding stats:", error);
     }
@@ -14095,19 +12830,6 @@ async function runActiveUserStatsBatch(updateBuilder, options = {}) {
     };
 }
 
-async function grantGlobalCrates(amount = 1) {
-    const count = Math.floor(Number(amount));
-    if (!Number.isFinite(count) || count <= 0) {
-        throw new Error("Invalid crate amount.");
-    }
-    const nowMs = Date.now();
-    return runActiveUserStatsBatch(() => ({
-        "crateInventory.reef": firebase.firestore.FieldValue.increment(count),
-        crateInventoryUpdatedAt: nowMs,
-        lastUpdated: nowMs
-    }));
-}
-
 async function grantGlobalStreakShields(amount = 1) {
     const count = Math.floor(Number(amount));
     if (!Number.isFinite(count) || count <= 0) {
@@ -14474,26 +13196,6 @@ async function adminStopGlobalXpEvent() {
     }
 }
 
-async function adminGrantGlobalCrates() {
-    if (!isDeveloperSessionActive()) {
-        showNotification("Developer access required.", "error", 3000);
-        return;
-    }
-    const amount = getAdminPositiveCountValue("admin-grant-crates-count", 1);
-    setAdminAbuseStatus("admin-grant-status", `Granting ${amount} crate${amount === 1 ? "" : "s"} to active players...`);
-    try {
-        const result = await grantGlobalCrates(amount);
-        const activeMinutes = Math.round(result.activeWindowMs / 60000);
-        setAdminAbuseStatus(
-            "admin-grant-status",
-            `Granted ${amount} crate${amount === 1 ? "" : "s"} to ${result.updatedUsers} active player${result.updatedUsers === 1 ? "" : "s"} (last ${activeMinutes}m).`
-        );
-        showNotification(`Granted crates to ${result.updatedUsers} active player${result.updatedUsers === 1 ? "" : "s"}.`, "success", 3400);
-    } catch (error) {
-        setAdminAbuseStatus("admin-grant-status", `Crate grant failed: ${error.message || error}`, { error: true });
-    }
-}
-
 async function adminGrantGlobalStreakShields() {
     if (!isDeveloperSessionActive()) {
         showNotification("Developer access required.", "error", 3000);
@@ -14546,10 +13248,6 @@ async function adminCompensatePlayer() {
     } catch (error) {
         setAdminAbuseStatus("admin-comp-status", `Compensation failed: ${error.message || error}`, { error: true });
     }
-}
-
-function adminAddPlayerLevels() {
-    return adminCompensatePlayer();
 }
 
 async function adminApplyIndexTheme() {
@@ -14730,7 +13428,6 @@ async function addLoginDays(days) {
 
         await ensureLoginStreakRewards();
         await loadUserProfile();
-        if (typeof loadAvailablePFPs === "function") loadAvailablePFPs();
         if (typeof loadEarnedCosmetics === "function") loadEarnedCosmetics();
 
         console.log(`? Added ${Math.floor(amount)} login day(s). Current login day: ${nextLoginDay}. Login streak: ${nextLoginStreak}.`);
@@ -14877,6 +13574,11 @@ async function forceRedeemCode(code) {
         userProfile.totalXP = newXP;
         applySharkPassXpGain(userProfile, xpAward.totalXp);
 
+        const rewardPearls = Math.max(0, Math.floor(Number(codeReward.pearls) || 0));
+        if (rewardPearls > 0) {
+            addPearls(rewardPearls, userProfile, { deferSave: true, deferUiUpdate: true });
+        }
+
         // Add cosmetics if any
         const newlyUnlockedCosmetics = [];
         if (codeReward.cosmetics) {
@@ -14913,6 +13615,10 @@ async function forceRedeemCode(code) {
             const statsRef = db.collection("userStats").doc(currentUser.uid);
             await statsRef.set({
                 totalXP: newXP,
+                ...(rewardPearls > 0 ? {
+                    pearls: getPearlCount(userProfile),
+                    pearlBalanceUpdatedAt: getPearlBalanceUpdatedAt(userProfile)
+                } : {}),
                 ...getSharkPassSyncPayload(userProfile),
                 earnedCosmetics: userProfile.earnedCosmetics,
                 testerBadgeUnlocked: userProfile.testerBadgeUnlocked,
@@ -14934,6 +13640,7 @@ async function forceRedeemCode(code) {
 
         console.log(`? Force-redeemed code "${codeUpper}". Rewards:`);
         if (codeReward.xp) console.log(`   XP: +${xpAward.totalXp} (new total: ${newXP})`);
+        if (rewardPearls > 0) console.log(`   Pearls: +${rewardPearls} (new total: ${getPearlCount(userProfile)})`);
         if (codeReward.cosmetics) {
             codeReward.cosmetics.forEach(c => console.log(`   Cosmetic: ${c.name}`));
         }
@@ -14942,7 +13649,6 @@ async function forceRedeemCode(code) {
 
         loadUserProfile();
         loadEarnedCosmetics();
-        loadAvailablePFPs();
         renderCratesButton();
         renderCratesModal();
         updateSeasonalCratePanels();
@@ -15020,35 +13726,6 @@ async function addStreakShields(amount = 1) {
     }
 }
 
-async function addLostBottles(amount = 1, bottleId = "barnacle") {
-    if (!firebase.auth().currentUser || !isDeveloperUid(firebase.auth().currentUser.uid)) {
-        console.log("\u{274C} Access denied. This command is for developers only.");
-        return;
-    }
-    if (!currentUser) {
-        console.log("\u{274C} Error: User must be logged in");
-        return;
-    }
-
-    const count = Math.floor(Number(amount));
-    if (!Number.isFinite(count) || count <= 0) {
-        console.log("\u{274C} Usage: addLostBottles(5, 'barnacle')");
-        return;
-    }
-
-    try {
-        const profileData = getCurrentProfileData();
-        const result = grantLostTreasuresBottle(profileData, bottleId, count);
-        await persistLostTreasuresState(profileData);
-        renderLostTreasuresModal?.();
-        console.log(`\u{2705} Added ${count} ${result.bottle.name}${count === 1 ? "" : "s"}. Total bottles: ${getLostTreasuresBottleCount(result.state)}`);
-    } catch (error) {
-        console.error("\u{274C} Error adding Lost Treasures bottles:", error);
-    }
-}
-
-window.addLostBottles = addLostBottles;
-
 // Display current stats
 function showStats() {
     const userProfile = JSON.parse(localStorage.getItem("userProfile") || "{}");
@@ -15061,7 +13738,6 @@ function showStats() {
     console.log(`Current Streak: ${userProfile.currentStreak || 0}`);
     console.log(`Highest Streak: ${userProfile.highestStreak || 0}`);
     console.log(`Streak Shields: ${Math.max(0, Number(userProfile.streakShields) || 0)}`);
-    console.log(`Lost Treasures Bottles: ${getLostTreasuresBottleCount(getLostTreasuresState(userProfile))}`);
     console.log(`Login Day: ${parseInt(localStorage.getItem("currentLoginDay")) || 1}`);
     console.log(`Login Streak: ${parseInt(localStorage.getItem("loginStreak")) || 1}`);
     console.log(`Level: ${getLevelFromXP(userProfile.totalXP || 0)}`);
@@ -15092,7 +13768,6 @@ function showCommands() {
     console.log("skipLoginDay(1) - Simulate missing 1 day and re-run daily login logic");
     console.log("addCrates(3) - Add Cosmetic Crates for testing");
     console.log("addStreakShields(3) - Add Streak Shields for testing");
-    console.log("addLostBottles(5, 'barnacle') - Add Lost Treasures bottles for testing");
     console.log("giveDailySpin(5) / giveSpin(5) - Grant daily wheel spins for testing");
     console.log("resetDailySpin() - Reset today's daily spin wheel");
     console.log("unlockAllCosmetics() - Unlock all profile icons, badges, and themes");
@@ -15392,6 +14067,7 @@ function getShortCosmeticSourceLabel(source = "Reward") {
 }
 
 function getThemeCosmeticMeta(theme) {
+    if (theme.retired) return { rarity: theme.legacyLevel >= 20 ? "legendary" : theme.legacyLevel >= 15 ? "epic" : "rare", category: "pass", source: theme.source, passLevel: theme.legacyLevel, passNumber: 1 };
     const passReward = sharkPassRewards.find(reward => reward.type === "theme" && reward.themeId === theme.id);
     const crateReward = getAllCrateRewardPools()
         .flat()
@@ -15418,6 +14094,7 @@ function getThemeCosmeticMeta(theme) {
 }
 
 function getBadgeCosmeticMeta(badge) {
+    if (badge.retired) return { rarity: badge.legacyLevel >= 18 ? "legendary" : badge.legacyLevel >= 10 ? "epic" : badge.legacyLevel >= 8 ? "rare" : "common", category: "pass", source: badge.source, passLevel: badge.legacyLevel, passNumber: 1 };
     const rarityMeta = typeof getBadgeRarityMeta === "function"
         ? getBadgeRarityMeta(badge)
         : { className: badge?.rarity || "common", label: getCosmeticRarityLabel(badge?.rarity) };
@@ -15618,7 +14295,6 @@ function showProfileInventoryCategory(category = "portraits") {
     localStorage.setItem("profileInventoryCategory", activeCategory);
 }
 
-const originalShowProfileTab = window.showProfileTab;
 window.showProfileTab = function(tab = "overview") {
     const validTabs = ["overview", "inventory", "stats", "recent", "friends", "settings"];
     const activeTab = validTabs.includes(tab) ? tab : "overview";

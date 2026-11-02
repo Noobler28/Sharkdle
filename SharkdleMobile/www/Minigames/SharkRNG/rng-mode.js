@@ -109,6 +109,9 @@
     const AUTO_ARROW_DISMISSED_KEY = "sharkRngAutoArrowDismissed";
     const LOCAL_SAVE_INTERVAL_MS = 250;
     const BASE_ROLL_COOLDOWN_MS = 1600;
+    const NORMAL_BASELINE_ROLL_SHARE = 0.2;
+    const MUTATION_BASELINE_ROLL_SHARE = 0.75;
+    const HIGH_LUCK_TILT_SPAN = 30;
     const BASE_AUTO_INTERVAL_MS = 1800;
     const ULTRA_ONE_IN_THRESHOLD = 1_000_000;
     const ROLLIN_BADGE_CHANCE = 1 / 250_000;
@@ -125,8 +128,9 @@
     const RNG_LEADERBOARD_FALLBACK_COLLECTION = "userStats";
     const RNG_PROFILE_COLLECTION = "rngProfiles";
     const RNG_PROFILE_CHUNK_COLLECTION = "chunks";
-    const RNG_PROFILE_SCHEMA_VERSION = 1;
-    const RNG_PROFILE_CHUNK_SIZE = 300;
+    const RNG_PROFILE_SCHEMA_VERSION = 2;
+    // The expanded index fits in the existing 400-chunk cloud read limit.
+    const RNG_PROFILE_CHUNK_SIZE = 1000;
     const RNG_CLOUD_SAVE_INTERVAL_MS = 60000;
     const RNG_LEADERBOARD_LIMIT = 10;
     const RNG_LEADERBOARD_QUERY_LIMIT = 30;
@@ -933,11 +937,11 @@
         },
         {
             id: "apexMemory",
-            name: "Apex Memory",
+            name: "Mutation Insight",
             icon: "fa-crown",
-            desc: "Unlocks and boosts rare Apex rolls forever.",
+            desc: "Unlocks and boosts natural mutation odds forever.",
             costs: [4, 7, 11, 16, 22],
-            format: (level) => `+${Math.round(level * 6)}% Apex odds`
+            format: (level) => `+${Math.round(level * 6)}% mutation odds`
         },
         {
             id: "abyssBounty",
@@ -1125,11 +1129,11 @@
         },
         {
             id: "apexCartography",
-            name: "Apex Cartography",
+            name: "Mutation Mapping",
             icon: "fa-location-crosshairs",
-            desc: "Apex rolls become less impossible forever.",
+            desc: "Natural mutation odds improve forever.",
             costs: [7, 13, 21, 32, 46],
-            format: (level) => `+${Math.round(level * 9)}% Apex odds`
+            format: (level) => `+${Math.round(level * 9)}% mutation odds`
         },
         {
             id: "mutationFoundry",
@@ -1164,10 +1168,15 @@
         { id: "speed", name: "Roll Speed", icon: "fa-bolt", sprite: "images/RNG/upgrades/roll_speed.png", levelKey: "rollSpeedLevel", listKey: "speed" },
         { id: "auto", name: "Auto Roll", icon: "fa-robot", sprite: "images/RNG/upgrades/autoroll.png", levelKey: "autoRollLevel", listKey: "auto" },
         { id: "mutation", name: "Mutation Luck", icon: "fa-dna", sprite: "images/RNG/upgrades/mutation_luck.png", levelKey: "mutationLevel", listKey: "mutation" },
-        { id: "apex", name: "Apex Instinct", icon: "fa-crown", sprite: "images/RNG/upgrades/apex_instinct.png", levelKey: "apexLevel", listKey: "apex" },
+        { id: "mutationRarity", name: "Mutation Rarity", icon: "fa-wand-magic-sparkles", sprite: "images/RNG/upgrades/mutation_rarity.png", levelKey: "mutationRarityLevel", listKey: "mutationRarity" },
         { id: "mutationBounty", name: "Mutation Bounty", icon: "fa-sack-dollar", sprite: "images/RNG/upgrades/mutation_bounty.png", levelKey: "mutationBountyLevel", listKey: "mutationBounty" },
         { id: "potionRestock", name: "Potion Restock", icon: "fa-hourglass-half", sprite: "images/RNG/upgrades/potion_restock.png", levelKey: "potionRestockLevel", listKey: "potionRestock" },
-        { id: "xp", name: "Research XP", icon: "fa-book-open", sprite: "images/RNG/upgrades/research_xp.png", levelKey: "xpLevel", listKey: "xp" }
+        { id: "xp", name: "Research XP", icon: "fa-book-open", sprite: "images/RNG/upgrades/research_xp.png", levelKey: "xpLevel", listKey: "xp" },
+        { id: "potionDuration", name: "Potion Duration", icon: "fa-hourglass-half", sprite: "images/RNG/upgrades/potion_duration.png", levelKey: "potionDurationLevel", listKey: "potionDuration" },
+        { id: "potionDiscount", name: "Potion Discount", icon: "fa-tags", sprite: "images/RNG/upgrades/potion_discount.png", levelKey: "potionDiscountLevel", listKey: "potionDiscount" },
+        { id: "discoveryBounty", name: "Discovery Bounty", icon: "fa-magnifying-glass", sprite: "images/RNG/upgrades/discovery_bounty.png", levelKey: "discoveryBountyLevel", listKey: "discoveryBounty" },
+        { id: "duplicateBounty", name: "Duplicate Bounty", icon: "fa-layer-group", sprite: "images/RNG/upgrades/duplicate_bounty.png", levelKey: "duplicateBountyLevel", listKey: "duplicateBounty" },
+        { id: "compassRestock", name: "Compass Restock", icon: "fa-compass", sprite: "images/RNG/upgrades/compass_restock.png", levelKey: "compassRestockLevel", listKey: "compassRestock" }
     ];
 
     function buildIndexRewardDefs() {
@@ -1479,27 +1488,10 @@
         return list;
     }
 
-    const APEX_UPGRADE_BASE_ONE_IN = 12_000_000;
-    const APEX_UPGRADE_MIN_ONE_IN = 50_000;
-    const APEX_PRESTIGE_UNLOCK_ONE_IN = 7_500_000;
-    const APEX_SURGE_POTION_ONE_IN = 100_000;
-    const APEX_SURGE_POTION_ODDS_MULTIPLIER = 4;
-
-    function buildApexUpgrades() {
-        const list = [];
-        for (let i = 1; i <= 45; i++) {
-            // Apex is natural-only, so even max level keeps it rarer than normal mutations.
-            const chanceOneIn = Math.round(APEX_UPGRADE_BASE_ONE_IN / Math.pow(1.15, i - 1));
-            list.push({
-                level: i,
-                chance: Math.max(APEX_UPGRADE_MIN_ONE_IN, chanceOneIn),
-                cost: getSmoothUpgradeCost(250_000, 1.28, i),
-                shopTier: getShopTierName(i + 20),
-                tierClass: getShopTierClass(i + 20)
-            });
-        }
-        return list;
-    }
+    // Retained only to refund coins spent on the removed Apex Instinct upgrade.
+    const LEGACY_APEX_UPGRADE_COSTS = Array.from({ length: 45 }, (_, index) =>
+        getSmoothUpgradeCost(250_000, 1.28, index + 1)
+    );
 
     function buildMutationBountyUpgrades() {
         const list = [];
@@ -1562,8 +1554,20 @@
         return list;
     }
 
+    function buildUtilityUpgrades(baseCost, growthRate, maxLevel, bonusPerLevel) {
+        return Array.from({ length: maxLevel }, (_, index) => {
+            const level = index + 1;
+            return {
+                level,
+                bonus: Math.round(level * bonusPerLevel * 1000) / 1000,
+                cost: getSmoothUpgradeCost(baseCost, growthRate, level),
+                shopTier: getShopTierName(level),
+                tierClass: getShopTierClass(level)
+            };
+        });
+    }
+
     const MUTATION_UPGRADES = buildMutationUpgrades();
-    const APEX_MUTATION_UPGRADES = buildApexUpgrades();
     const MUTATION_STACK_UPGRADES = buildMutationStackUpgrades();
     const STACK_BOUNTY_UPGRADES = buildStackBountyUpgrades();
 
@@ -1574,12 +1578,17 @@
         speed: buildRollSpeedUpgrades(),
         auto: buildAutoRollUpgrades(),
         mutation: MUTATION_UPGRADES,
-        apex: APEX_MUTATION_UPGRADES,
+        mutationRarity: buildUtilityUpgrades(500_000, 1.55, 40, 0.0075),
         mutationBounty: buildMutationBountyUpgrades(),
         mutationStack: MUTATION_STACK_UPGRADES,
         stackBounty: STACK_BOUNTY_UPGRADES,
         potionRestock: buildPotionRestockUpgrades(),
-        xp: buildXpUpgrades()
+        xp: buildXpUpgrades(),
+        potionDuration: buildUtilityUpgrades(25_000, 1.6, 25, 0.04),
+        potionDiscount: buildUtilityUpgrades(50_000, 1.65, 20, 0.01),
+        discoveryBounty: buildUtilityUpgrades(75_000, 1.7, 30, 0.05),
+        duplicateBounty: buildUtilityUpgrades(100_000, 1.7, 30, 0.025),
+        compassRestock: buildUtilityUpgrades(10_000_000, 1.75, 30, 0.025)
     };
 
     const LUCK_UPGRADES = UPGRADE_LISTS.luck;
@@ -1588,7 +1597,6 @@
     const ROLL_SPEED_UPGRADES = UPGRADE_LISTS.speed;
     const AUTO_ROLL_UPGRADES = UPGRADE_LISTS.auto;
     const MUTATION_LUCK_UPGRADES = UPGRADE_LISTS.mutation;
-    const APEX_LUCK_UPGRADES = UPGRADE_LISTS.apex;
     const MUTATION_BOUNTY_UPGRADES = UPGRADE_LISTS.mutationBounty;
     const POTION_RESTOCK_UPGRADES = UPGRADE_LISTS.potionRestock;
     const XP_UPGRADES = UPGRADE_LISTS.xp;
@@ -1715,9 +1723,9 @@
         },
         apexSurge: {
             sprite: "images/RNG/potions/ApexSurge1.png",
-            name: "Apex Surge Potion",
+            name: "Mutation Surge Potion",
             icon: "\u{1F988}",
-            desc: "4x better natural Apex odds for your next roll action, or 1 in 100,000 if better; not guaranteed",
+            desc: "4x better natural mutation odds for your next roll action, or 1 in 100,000 if better; capped at 1 in 2",
             cost: 1000000000,
             rolls: 1,
             maxOwned: 1,
@@ -1818,7 +1826,7 @@
 
     // === MUTATION SYSTEM ===
     // Visual mutations can roll on any species and massively inflate its oneIn.
-    // Apex is natural-only and uses its own upgrade path or temporary odds boost.
+    // Apex shares the same mutation pool and unlocks as every standard mutation.
     // With no mutation Luck upgrades the base chance is essentially zero.
     const MUTATION_TYPES = {
         melanistic: {
@@ -2203,9 +2211,8 @@
             oneInMult: 1250,
             color: "#fb923c",
             scoreBonus: 110,
-            apexChanceMult: 1,
-            cutsceneMark: "APEX",
-            naturalOnly: true
+            rollWeight: 0.0530909891671,
+            cutsceneMark: "APEX"
         }
     };
 
@@ -2213,61 +2220,184 @@
         MUTATION_TYPES[def.key] = { name: def.name, legacyName: def.legacyName, icon: def.icon, oneInMult: def.oneInMult, rollWeight: def.rollWeight, color: def.color, scoreBonus: 400, endgame: true };
     }
 
-    const STANDARD_MUTATION_KEYS = Object.keys(MUTATION_TYPES)
-        .filter((key) => !MUTATION_TYPES[key].naturalOnly);
-    const MUTATION_CHANCE_ORDER = [
-        "melanistic",      // Melanistic
-        "obsidian",       // Obsidian
-        "albino",         // Albino
-        "piebald",        // Piebald
-        "shiny",          // Silver
-        "pearl",          // Pearlescent
-        "leucistic",      // Leucistic
-        "bioluminescent", // Bioluminescent
-        "sapphire",       // Sapphire
-        "copper",         // Copper
-        "emerald",        // Emerald
-        "ruby",           // Ruby
-        "golden",         // Gilded
-        "amethyst",       // Amethyst
-        "frostbite",      // Frostbitten
-        "neon",           // Neon
-        "spectral",       // Spectral
-        "tideborn",       // Iridescent
-        "coral",          // Overgrown
-        "abyssal",        // Abyssal
-        "prism",          // Prismatic
-        "volcanic",       // Volcanic
-        "megatooth",      // Megatooth
-        "stormcharged",   // Electrified
-        "chrome",         // Chrome
-        "void",           // Void
-        "cosmic",         // Cosmic
-        "radioactive",    // Toxic
-        "phantom",        // Phantom
-        "glitch",         // Glitched
-        "primordial",     // Prehistoric
-        "leviathan",      // Leviathan
-        "abyssbreaker",   // Armoured
-        "maelstrom",      // Chaotic
-        "riftborn",       // Bloodstained
-        "eventhorizon",   // Oil Slick
-        "vortex",         // Twisted
-        "oblivion",       // Corrosive
-        "cataclysm",      // Colossal
-        "titanium",       // Titanium
-        "dreamglass",     // Crystalline
-        "sunkenstar",     // Celestial
-        "worldeater",     // Dark Matter
-        "chronoshark",    // Temporal
-        "eldritch",       // Divine
-        "godfin",         // Corrupted
-        "singularity",    // Singularity
-        ...ENDGAME_MUTATION_DEFS.map((def) => def.key),
-        "apex"            // Apex — natural only
+    // Fixed intermediate variants keep existing mutation rarities and saves stable.
+    const FILLER_MUTATION_DEFS = [
+        { key: "mossy", name: "Mossy", icon: "🌿", color: "#86efac", oneInMult: 3.46410161514, rollWeight: 47.9583152331, scoreBonus: 19 },
+        { key: "fern", name: "Fern", icon: "🌿", color: "#86efac", oneInMult: 4.472135955, rollWeight: 43.9545219517, scoreBonus: 25 },
+        { key: "bamboo", name: "Bamboo", icon: "🌿", color: "#86efac", oneInMult: 5.47722557505, rollWeight: 38.8844441904, scoreBonus: 27 },
+        { key: "ivy", name: "Ivy", icon: "🌿", color: "#86efac", oneInMult: 6.48074069841, rollWeight: 31.7490157328, scoreBonus: 23 },
+        { key: "mosswood", name: "Mosswood", icon: "🌿", color: "#86efac", oneInMult: 7.48331477355, rollWeight: 26.9814751265, scoreBonus: 24 },
+        { key: "clover", name: "Clover", icon: "🌿", color: "#86efac", oneInMult: 8.48528137424, rollWeight: 24.9799919936, scoreBonus: 26 },
+        { key: "lotus", name: "Lotus", icon: "🌿", color: "#86efac", oneInMult: 9.48683298051, rollWeight: 22.9782505862, scoreBonus: 21 },
+        { key: "lily", name: "Lily", icon: "🌿", color: "#86efac", oneInMult: 10.9544511501, rollWeight: 20.9761769634, scoreBonus: 22 },
+        { key: "bonsai", name: "Bonsai", icon: "🌿", color: "#86efac", oneInMult: 12.9614813968, rollWeight: 18.4390889146, scoreBonus: 24 },
+        { key: "willow", name: "Willow", icon: "🌿", color: "#86efac", oneInMult: 14.9666295471, rollWeight: 15.9687194227, scoreBonus: 22 },
+        { key: "birch", name: "Birch", icon: "🌿", color: "#86efac", oneInMult: 16.9705627485, rollWeight: 14.4913767462, scoreBonus: 27 },
+        { key: "oak", name: "Oak", icon: "🌿", color: "#86efac", oneInMult: 18.973665961, rollWeight: 12.9614813968, scoreBonus: 29 },
+        { key: "maple", name: "Maple", icon: "🌿", color: "#86efac", oneInMult: 20.9761769634, rollWeight: 11.4891252931, scoreBonus: 30 },
+        { key: "mangrove", name: "Mangrove", icon: "🌿", color: "#86efac", oneInMult: 22.9782505862, rollWeight: 10.4880884817, scoreBonus: 32 },
+        { key: "redwood", name: "Redwood", icon: "🌿", color: "#86efac", oneInMult: 25.9229627936, rollWeight: 9.48683298051, scoreBonus: 33 },
+        { key: "sequoia", name: "Sequoia", icon: "🌿", color: "#86efac", oneInMult: 28.9827534924, rollWeight: 8.48528137424, scoreBonus: 34 },
+        { key: "blooming", name: "Blooming", icon: "🌸", color: "#fda4af", oneInMult: 31.9374388453, rollWeight: 7.48331477355, scoreBonus: 35 },
+        { key: "rose", name: "Rose", icon: "🌸", color: "#fda4af", oneInMult: 35.9444015112, rollWeight: 6.48074069841, scoreBonus: 35 },
+        { key: "orchid", name: "Orchid", icon: "🌸", color: "#fda4af", oneInMult: 38.9871773792, rollWeight: 6, scoreBonus: 36 },
+        { key: "lavender", name: "Lavender", icon: "🌸", color: "#fda4af", oneInMult: 42.4264068712, rollWeight: 5.47722557505, scoreBonus: 37 },
+        { key: "hibiscus", name: "Hibiscus", icon: "🌸", color: "#fda4af", oneInMult: 46.4758001545, rollWeight: 5, scoreBonus: 38 },
+        { key: "magnolia", name: "Magnolia", icon: "🌸", color: "#fda4af", oneInMult: 51.3809303147, rollWeight: 4.472135955, scoreBonus: 38 },
+        { key: "poppy", name: "Poppy", icon: "🌸", color: "#fda4af", oneInMult: 56.4800849858, rollWeight: 4, scoreBonus: 39 },
+        { key: "dahlia", name: "Dahlia", icon: "🌸", color: "#fda4af", oneInMult: 60.9261848469, rollWeight: 3.46410161514, scoreBonus: 41 },
+        { key: "peony", name: "Peony", icon: "🌸", color: "#fda4af", oneInMult: 66.9328021227, rollWeight: 3, scoreBonus: 41 },
+        { key: "marigold", name: "Marigold", icon: "🌸", color: "#fda4af", oneInMult: 74.8331477355, rollWeight: 2.44948974278, scoreBonus: 42 },
+        { key: "sunflower", name: "Sunflower", icon: "🌸", color: "#fda4af", oneInMult: 84.8528137424, rollWeight: 2, scoreBonus: 43 },
+        { key: "wisteria", name: "Wisteria", icon: "🌸", color: "#fda4af", oneInMult: 101.734949747, rollWeight: 1.41421356237, scoreBonus: 46 },
+        { key: "petal", name: "Petal", icon: "🌸", color: "#fda4af", oneInMult: 131.339255366, rollWeight: 1, scoreBonus: 49 },
+        { key: "blossom", name: "Blossom", icon: "🌸", color: "#fda4af", oneInMult: 181.659021246, rollWeight: 0.894427191, scoreBonus: 53 },
+        { key: "honey", name: "Cracked", legacyName: "Honey", icon: "◇", color: "#fdba74", oneInMult: 281.424945589, rollWeight: 0.669328021227, scoreBonus: 60 },
+        { key: "caramel", name: "Fractured", legacyName: "Caramel", icon: "◇", color: "#fdba74", oneInMult: 393.446311458, rollWeight: 0.49638694584, scoreBonus: 67 },
+        { key: "toffee", name: "Shattered", legacyName: "Toffee", icon: "◇", color: "#fdba74", oneInMult: 468.294778959, rollWeight: 0.386781592116, scoreBonus: 70 },
+        { key: "butterscotch", name: "Chipped", legacyName: "Butterscotch", icon: "◇", color: "#fdba74", oneInMult: 557.763390695, rollWeight: 0.297321374946, scoreBonus: 74 },
+        { key: "marshmallow", name: "Jagged", legacyName: "Marshmallow", icon: "◇", color: "#fdba74", oneInMult: 653.452370108, rollWeight: 0.216333076528, scoreBonus: 78 },
+        { key: "popcorn", name: "Rough", legacyName: "Popcorn", icon: "◇", color: "#fdba74", oneInMult: 757.627876995, rollWeight: 0.152970585408, scoreBonus: 83 },
+        { key: "waffle", name: "Smooth", legacyName: "Waffle", icon: "◇", color: "#fdba74", oneInMult: 896.437393241, rollWeight: 0.108166538264, scoreBonus: 90 },
+        { key: "pancake", name: "Polished", legacyName: "Pancake", icon: "◇", color: "#fdba74", oneInMult: 1047.6640683, rollWeight: 0.0734846922835, scoreBonus: 98 },
+        { key: "donut", name: "Glossy", legacyName: "Donut", icon: "◇", color: "#fdba74", oneInMult: 1274.36258577, rollWeight: 0.0519615242271, scoreBonus: 111 },
+        { key: "cupcake", name: "Matte", legacyName: "Cupcake", icon: "◇", color: "#fdba74", oneInMult: 1615.54944214, rollWeight: 0.039686269666, scoreBonus: 129 },
+        { key: "cheesecake", name: "Opaque", legacyName: "Cheesecake", icon: "◇", color: "#fdba74", oneInMult: 1989.97487421, rollWeight: 0.030166206258, scoreBonus: 147 },
+        { key: "brownie", name: "Translucent", legacyName: "Brownie", icon: "◇", color: "#fdba74", oneInMult: 2569.04651573, rollWeight: 0.0216333076528, scoreBonus: 168 },
+        { key: "fudge", name: "Transparent", legacyName: "Fudge", icon: "◇", color: "#fdba74", oneInMult: 3549.64786986, rollWeight: 0.0146969384567, scoreBonus: 195 },
+        { key: "truffle", name: "Mirrored", legacyName: "Truffle", icon: "◇", color: "#fdba74", oneInMult: 4849.74226119, rollWeight: 0.00979795897113, scoreBonus: 228 },
+        { key: "lemon", name: "Sandy", legacyName: "Lemon", icon: "▰", color: "#fcd34d", oneInMult: 6480.74069841, rollWeight: 0.00632455532034, scoreBonus: 265 },
+        { key: "lime", name: "Dusty", legacyName: "Lime", icon: "▰", color: "#fcd34d", oneInMult: 8660.25403784, rollWeight: 0.00387298334621, scoreBonus: 313 },
+        { key: "peach", name: "Muddy", legacyName: "Peach", icon: "▰", color: "#fcd34d", oneInMult: 14422.4957031, rollWeight: 0.00283911698065, scoreBonus: 360 },
+        { key: "mango", name: "Claybound", legacyName: "Mango", icon: "▰", color: "#fcd34d", oneInMult: 20800.8382305, rollWeight: 0.00268686174328, scoreBonus: 380 },
+        { key: "papaya", name: "Chalky", legacyName: "Papaya", icon: "▰", color: "#fcd34d", oneInMult: 44814.0474656, rollWeight: 0.00239372166652, scoreBonus: 400 },
+        { key: "guava", name: "Slated", legacyName: "Guava", icon: "▰", color: "#fcd34d", oneInMult: 66943.2950082, rollWeight: 0.00225340861003, scoreBonus: 400 },
+        { key: "lychee", name: "Granitic", legacyName: "Lychee", icon: "▰", color: "#fcd34d", oneInMult: 144224.957031, rollWeight: 0.00200755882672, scoreBonus: 400 },
+        { key: "coconut", name: "Basaltic", legacyName: "Coconut", icon: "▰", color: "#fcd34d", oneInMult: 208008.382305, rollWeight: 0.00189989811664, scoreBonus: 400 },
+        { key: "pineapple", name: "Pumice", legacyName: "Pineapple", icon: "▰", color: "#fcd34d", oneInMult: 448140.474656, rollWeight: 0.00169261680829, scoreBonus: 400 },
+        { key: "watermelon", name: "Petrified", legacyName: "Watermelon", icon: "▰", color: "#fcd34d", oneInMult: 669432.950082, rollWeight: 0.00159340051853, scoreBonus: 400 },
+        { key: "blueberry", name: "Fossilised", legacyName: "Blueberry", icon: "▰", color: "#fcd34d", oneInMult: 1442249.57031, rollWeight: 0.00142686256906, scoreBonus: 400 },
+        { key: "raspberry", name: "Weathered", legacyName: "Raspberry", icon: "▰", color: "#fcd34d", oneInMult: 2080083.82305, rollWeight: 0.00135729119398, scoreBonus: 400 },
+        { key: "blackberry", name: "Eroded", legacyName: "Blackberry", icon: "▰", color: "#fcd34d", oneInMult: 4481404.74656, rollWeight: 0.00122228594379, scoreBonus: 400 },
+        { key: "cherry", name: "Sedimentary", legacyName: "Cherry", icon: "▰", color: "#fcd34d", oneInMult: 6694329.50082, rollWeight: 0.00115712883809, scoreBonus: 400 },
+        { key: "pomegranate", name: "Carbonised", legacyName: "Pomegranate", icon: "▰", color: "#fcd34d", oneInMult: 14422495.7031, rollWeight: 0.00104203306721, scoreBonus: 400 },
+        { key: "dewdrop", name: "Dewdrop", icon: "🌧", color: "#7dd3fc", oneInMult: 20800838.2305, rollWeight: 0.000991225313956, scoreBonus: 400 },
+        { key: "drizzle", name: "Drizzle", icon: "🌧", color: "#7dd3fc", oneInMult: 44814047.4656, rollWeight: 0.000892631430029, scoreBonus: 400 },
+        { key: "rainfall", name: "Rainfall", icon: "🌧", color: "#7dd3fc", oneInMult: 66943295.0082, rollWeight: 0.000845047421168, scoreBonus: 400 },
+        { key: "monsoon", name: "Monsoon", icon: "🌧", color: "#7dd3fc", oneInMult: 144224957.031, rollWeight: 0.0007711366439, scoreBonus: 400 },
+        { key: "typhoon", name: "Typhoon", icon: "🌧", color: "#7dd3fc", oneInMult: 208008382.305, rollWeight: 0.000743314654457, scoreBonus: 400 },
+        { key: "cyclone", name: "Cyclone", icon: "🌧", color: "#7dd3fc", oneInMult: 448140474.656, rollWeight: 0.00068821624155, scoreBonus: 400 },
+        { key: "tornado", name: "Tornado", icon: "🌧", color: "#7dd3fc", oneInMult: 669432950.082, rollWeight: 0.000661052247395, scoreBonus: 400 },
+        { key: "thunder", name: "Thunder", icon: "🌧", color: "#7dd3fc", oneInMult: 1442249570.31, rollWeight: 0.000612051560379, scoreBonus: 400 },
+        { key: "hailstorm", name: "Hailstorm", icon: "🌧", color: "#7dd3fc", oneInMult: 2080083823.05, rollWeight: 0.000589969233929, scoreBonus: 400 },
+        { key: "sandstorm", name: "Sandstorm", icon: "🌧", color: "#7dd3fc", oneInMult: 4481404746.56, rollWeight: 0.000546237594964, scoreBonus: 400 },
+        { key: "dustdevil", name: "Dustdevil", icon: "🌧", color: "#7dd3fc", oneInMult: 6694329500.82, rollWeight: 0.000524677517794, scoreBonus: 400 },
+        { key: "mist", name: "Mist", icon: "🌧", color: "#7dd3fc", oneInMult: 14422495703.1, rollWeight: 0.000485785646436, scoreBonus: 400 },
+        { key: "foggy", name: "Foggy", icon: "🌧", color: "#7dd3fc", oneInMult: 20800838230.5, rollWeight: 0.000468258892658, scoreBonus: 400 },
+        { key: "cloudburst", name: "Cloudburst", icon: "🌧", color: "#7dd3fc", oneInMult: 44814047465.6, rollWeight: 0.000433549067503, scoreBonus: 400 },
+        { key: "rusty", name: "Rusty", icon: "⚙", color: "#cbd5e1", oneInMult: 66943295008.2, rollWeight: 0.000416436822341, scoreBonus: 400 },
+        { key: "riveted", name: "Riveted", icon: "⚙", color: "#cbd5e1", oneInMult: 144224957031, rollWeight: 0.00038556832195, scoreBonus: 400 },
+        { key: "steampunk", name: "Steampunk", icon: "⚙", color: "#cbd5e1", oneInMult: 208008382305, rollWeight: 0.000371657327229, scoreBonus: 400 },
+        { key: "clockwork", name: "Clockwork", icon: "⚙", color: "#cbd5e1", oneInMult: 448140474656, rollWeight: 0.000344108120775, scoreBonus: 400 },
+        { key: "gearbound", name: "Gearbound", icon: "⚙", color: "#cbd5e1", oneInMult: 669432950082, rollWeight: 0.000330526123697, scoreBonus: 400 },
+        { key: "hydraulic", name: "Hydraulic", icon: "⚙", color: "#cbd5e1", oneInMult: 1442249570310, rollWeight: 0.00030602578019, scoreBonus: 400 },
+        { key: "pneumatic", name: "Pneumatic", icon: "⚙", color: "#cbd5e1", oneInMult: 2080083823050, rollWeight: 0.000294984616965, scoreBonus: 400 },
+        { key: "magnetic", name: "Magnetic", icon: "⚙", color: "#cbd5e1", oneInMult: 4481404746560, rollWeight: 0.000273118797482, scoreBonus: 400 },
+        { key: "cobalt", name: "Cobalt", icon: "⚙", color: "#cbd5e1", oneInMult: 6694329500820, rollWeight: 0.000262338758897, scoreBonus: 400 },
+        { key: "bronze", name: "Bronze", icon: "⚙", color: "#cbd5e1", oneInMult: 14422495703100, rollWeight: 0.000242892821424, scoreBonus: 400 },
+        { key: "brass", name: "Brass", icon: "⚙", color: "#cbd5e1", oneInMult: 20800838230500, rollWeight: 0.000234129442871, scoreBonus: 400 },
+        { key: "steel", name: "Steel", icon: "⚙", color: "#cbd5e1", oneInMult: 44814047465600, rollWeight: 0.00021677453055, scoreBonus: 400 },
+        { key: "tungsten", name: "Tungsten", icon: "⚙", color: "#cbd5e1", oneInMult: 66943295008200, rollWeight: 0.000208218409633, scoreBonus: 400 },
+        { key: "carbon", name: "Carbon", icon: "⚙", color: "#cbd5e1", oneInMult: 144224957031000, rollWeight: 0.000192784162769, scoreBonus: 400 },
+        { key: "mothwing", name: "Inked", legacyName: "Mothwing", icon: "▧", color: "#c4b5fd", oneInMult: 208008382305000, rollWeight: 0.000185828667072, scoreBonus: 400 },
+        { key: "butterfly", name: "Splattered", legacyName: "Butterfly", icon: "▧", color: "#c4b5fd", oneInMult: 448140474656000, rollWeight: 0.000172054065396, scoreBonus: 400 },
+        { key: "dragonfly", name: "Striped", legacyName: "Dragonfly", icon: "▧", color: "#c4b5fd", oneInMult: 669432950082000, rollWeight: 0.000165263066857, scoreBonus: 400 },
+        { key: "firefly", name: "Spotted", legacyName: "Firefly", icon: "▧", color: "#c4b5fd", oneInMult: 1442249570310000, rollWeight: 0.000153012891514, scoreBonus: 400 },
+        { key: "beetle", name: "Speckled", legacyName: "Beetle", icon: "▧", color: "#c4b5fd", oneInMult: 2080083823050000, rollWeight: 0.000147492306573, scoreBonus: 400 },
+        { key: "scarab", name: "Checkered", legacyName: "Scarab", icon: "▧", color: "#c4b5fd", oneInMult: 4481404746560000, rollWeight: 0.000136559393733, scoreBonus: 400 },
+        { key: "cicada", name: "Dotted", legacyName: "Cicada", icon: "▧", color: "#c4b5fd", oneInMult: 6694329500820000, rollWeight: 0.00013116937444, scoreBonus: 400 },
+        { key: "mantis", name: "Swirled", legacyName: "Mantis", icon: "▧", color: "#c4b5fd", oneInMult: 14422495703100000, rollWeight: 0.000121446407499, scoreBonus: 400 },
+        { key: "hornet", name: "Wavy", legacyName: "Hornet", icon: "▧", color: "#c4b5fd", oneInMult: 20800838230500000, rollWeight: 0.000117064719887, scoreBonus: 400 },
+        { key: "scorpion", name: "Zigzag", legacyName: "Scorpion", icon: "▧", color: "#c4b5fd", oneInMult: 44814047465600000, rollWeight: 0.000108387265275, scoreBonus: 400 },
+        { key: "spider", name: "Harlequin", legacyName: "Spider", icon: "▧", color: "#c4b5fd", oneInMult: 66943295008200000, rollWeight: 0.000104109204816, scoreBonus: 400 },
+        { key: "centipede", name: "Stencilled", legacyName: "Centipede", icon: "▧", color: "#c4b5fd", oneInMult: 144224957031000000, rollWeight: 0.0000963920806669, scoreBonus: 400 },
+        { key: "draconic", name: "Blazing", legacyName: "Draconic", icon: "🔥", color: "#f0abfc", oneInMult: 208008382305000000, rollWeight: 0.000092914332153, scoreBonus: 400 },
+        { key: "phoenix", name: "Smouldering", legacyName: "Phoenix", icon: "🔥", color: "#f0abfc", oneInMult: 448140474656000000, rollWeight: 0.0000860270306946, scoreBonus: 400 },
+        { key: "griffin", name: "Charred", legacyName: "Griffin", icon: "🔥", color: "#f0abfc", oneInMult: 669432950082000000, rollWeight: 0.0000826315314251, scoreBonus: 400 },
+        { key: "basilisk", name: "Molten", legacyName: "Basilisk", icon: "🔥", color: "#f0abfc", oneInMult: 1442249570310000000, rollWeight: 0.0000765064451894, scoreBonus: 400 },
+        { key: "chimera", name: "Ashen", legacyName: "Chimera", icon: "🔥", color: "#f0abfc", oneInMult: 2080083823050000000, rollWeight: 0.0000737461540502, scoreBonus: 400 },
+        { key: "hydra", name: "Cindered", legacyName: "Hydra", icon: "🔥", color: "#f0abfc", oneInMult: 4481404746560000000, rollWeight: 0.0000682796988696, scoreBonus: 400 },
+        { key: "gorgon", name: "Sooty", legacyName: "Gorgon", icon: "🔥", color: "#f0abfc", oneInMult: 6694329500820000000, rollWeight: 0.0000655846892234, scoreBonus: 400 },
+        { key: "minotaur", name: "Ember", legacyName: "Minotaur", icon: "🔥", color: "#f0abfc", oneInMult: 14422495703100000000, rollWeight: 0.0000607232053936, scoreBonus: 400 },
+        { key: "cerberus", name: "Scorched", legacyName: "Cerberus", icon: "🔥", color: "#f0abfc", oneInMult: 20800838230500000000, rollWeight: 0.0000585323612545, scoreBonus: 400 },
+        { key: "wyvern", name: "Infernal", legacyName: "Wyvern", icon: "🔥", color: "#f0abfc", oneInMult: 44814047465600000000, rollWeight: 0.0000541936332778, scoreBonus: 400 },
+        { key: "gargoyle", name: "Incandescent", legacyName: "Gargoyle", icon: "🔥", color: "#f0abfc", oneInMult: 66943295008200000000, rollWeight: 0.0000520546027157, scoreBonus: 400 },
+        { key: "runic", name: "Runic", icon: "✧", color: "#f0abfc", oneInMult: 144224957031000000000, rollWeight: 0.0000481960403335, scoreBonus: 400 },
+        { key: "enchanted", name: "Enchanted", icon: "✧", color: "#f0abfc", oneInMult: 208008382305000000000, rollWeight: 0.0000464571660765, scoreBonus: 400 },
+        { key: "arcane", name: "Arcane", icon: "✧", color: "#f0abfc", oneInMult: 448140474656000000000, rollWeight: 0.0000430135151666, scoreBonus: 400 },
+        { key: "sorcerous", name: "Sorcerous", icon: "✧", color: "#f0abfc", oneInMult: 669432950082000000000, rollWeight: 0.0000413157653655, scoreBonus: 400 },
+        { key: "barnacled", name: "Briny", legacyName: "Barnacled", icon: "🌊", color: "#5eead4", oneInMult: 1.44224957031e+21, rollWeight: 0.0000382532222734, scoreBonus: 400 },
+        { key: "kelp", name: "Kelp", icon: "🌊", color: "#5eead4", oneInMult: 2.08008382305e+21, rollWeight: 0.0000368730768703, scoreBonus: 400 },
+        { key: "seagrass", name: "Seagrass", icon: "🌊", color: "#5eead4", oneInMult: 4.48140474656e+21, rollWeight: 0.0000341398494348, scoreBonus: 400 },
+        { key: "anemone", name: "Foamy", legacyName: "Anemone", icon: "🌊", color: "#5eead4", oneInMult: 6.69432950082e+21, rollWeight: 0.0000327923446117, scoreBonus: 400 },
+        { key: "nautilus", name: "Bubbly", legacyName: "Nautilus", icon: "🌊", color: "#5eead4", oneInMult: 1.44224957031e+22, rollWeight: 0.0000303616025174, scoreBonus: 400 },
+        { key: "cuttlefish", name: "Saline", legacyName: "Cuttlefish", icon: "🌊", color: "#5eead4", oneInMult: 2.08008382305e+22, rollWeight: 0.0000292661802814, scoreBonus: 400 },
+        { key: "jellyfish", name: "Waterlogged", legacyName: "Jellyfish", icon: "🌊", color: "#5eead4", oneInMult: 4.48140474656e+22, rollWeight: 0.0000270968163187, scoreBonus: 400 },
+        { key: "octopus", name: "Drenched", legacyName: "Octopus", icon: "🌊", color: "#5eead4", oneInMult: 6.69432950082e+22, rollWeight: 0.0000260273012041, scoreBonus: 400 },
+        { key: "urchin", name: "Rippled", legacyName: "Urchin", icon: "🌊", color: "#5eead4", oneInMult: 1.44224957031e+23, rollWeight: 0.0000238146295081, scoreBonus: 400 },
+        { key: "starfish", name: "Sunken", legacyName: "Starfish", icon: "🌊", color: "#5eead4", oneInMult: 2.08008382305e+23, rollWeight: 0.0000226854631443, scoreBonus: 400 },
+        { key: "seahorse", name: "Tidal", legacyName: "Seahorse", icon: "🌊", color: "#5eead4", oneInMult: 4.48140474656e+23, rollWeight: 0.0000204895344056, scoreBonus: 400 },
+        { key: "lionfish", name: "Brackish", legacyName: "Lionfish", icon: "🌊", color: "#5eead4", oneInMult: 6.69432950082e+23, rollWeight: 0.0000194273117185, scoreBonus: 400 },
+        { key: "graffiti", name: "Graffiti", icon: "🎨", color: "#fbbf24", oneInMult: 1.44224957031e+24, rollWeight: 0.0000175467686235, scoreBonus: 400 },
+        { key: "mosaic", name: "Mosaic", icon: "🎨", color: "#fbbf24", oneInMult: 2.08008382305e+24, rollWeight: 0.0000167147917972, scoreBonus: 400 },
+        { key: "origami", name: "Origami", icon: "🎨", color: "#fbbf24", oneInMult: 4.48140474656e+24, rollWeight: 0.0000150968179423, scoreBonus: 400 },
+        { key: "papercraft", name: "Papercraft", icon: "🎨", color: "#fbbf24", oneInMult: 6.69432950082e+24, rollWeight: 0.000014314165768, scoreBonus: 400 },
+        { key: "porcelain", name: "Porcelain", icon: "🎨", color: "#fbbf24", oneInMult: 1.44224957031e+25, rollWeight: 0.0000129285699557, scoreBonus: 400 },
+        { key: "ceramic", name: "Ceramic", icon: "🎨", color: "#fbbf24", oneInMult: 2.08008382305e+25, rollWeight: 0.0000123155642006, scoreBonus: 400 },
+        { key: "terracotta", name: "Terracotta", icon: "🎨", color: "#fbbf24", oneInMult: 4.48140474656e+25, rollWeight: 0.0000111234307879, scoreBonus: 400 },
+        { key: "marble", name: "Marble", icon: "🎨", color: "#fbbf24", oneInMult: 6.69432950082e+25, rollWeight: 0.0000105467676508, scoreBonus: 400 }
     ];
-    const NATURAL_ONLY_MUTATION_KEYS = MUTATION_CHANCE_ORDER
-        .filter((key) => MUTATION_TYPES[key]?.naturalOnly);
+    for (const def of FILLER_MUTATION_DEFS) {
+        MUTATION_TYPES[def.key] = def;
+    }
+
+    // Event availability is manual: Christmas stays off until explicitly enabled.
+    const SEASONAL_MUTATION_EVENTS = {
+        summer: true,
+        halloween: true,
+        christmas: false
+    };
+    const SEASONAL_MUTATION_DEFS = [
+        { key: "popsicle", name: "Popsicle", season: "summer", icon: "❄", color: "#7dd3fc", oneInMult: 650, rollWeight: 0.219416905753, scoreBonus: 78 },
+        { key: "sunburnt", name: "Sunburnt", season: "summer", icon: "☀", color: "#fb7185", oneInMult: 85, rollWeight: 2, scoreBonus: 43 },
+        { key: "sunbleached", name: "Sunbleached", season: "summer", icon: "☀", color: "#fef3c7", oneInMult: 105, rollWeight: 1.29336357017, scoreBonus: 46 },
+        { key: "heathazed", name: "Heat-hazed", spriteFile: "heat-hazed.png", season: "summer", icon: "♨", color: "#fb923c", oneInMult: 12500, rollWeight: 0.00290091393836, scoreBonus: 352 },
+        { key: "melting", name: "Melting", season: "summer", icon: "♨", color: "#fdba74", oneInMult: 2750, rollWeight: 0.0199560803513, scoreBonus: 173 },
+        { key: "tropical", name: "Tropical", season: "summer", icon: "✿", color: "#2dd4bf", oneInMult: 26, rollWeight: 9.46761159296, scoreBonus: 33 },
+        { key: "pumpkin", name: "Pumpkin", season: "halloween", icon: "🎃", color: "#f97316", oneInMult: 1250, rollWeight: 0.0530909891671, scoreBonus: 110 },
+        { key: "vampiric", name: "Vampiric", season: "halloween", icon: "🩸", color: "#e11d48", oneInMult: 2500, rollWeight: 0.022343494211, scoreBonus: 166 },
+        { key: "stitched", name: "Stitched", season: "halloween", icon: "✕", color: "#a3e635", oneInMult: 125, rollWeight: 1, scoreBonus: 48 },
+        { key: "mummified", name: "Mummified", season: "halloween", icon: "▤", color: "#d6d3b3", oneInMult: 320, rollWeight: 0.609866982656, scoreBonus: 63 },
+        { key: "decaying", name: "Decaying", season: "halloween", icon: "☠", color: "#84cc16", oneInMult: 900, rollWeight: 0.107285080765, scoreBonus: 90 },
+        { key: "possessed", name: "Possessed", season: "halloween", icon: "◉", color: "#c084fc", oneInMult: 9000, rollWeight: 0.00361718742477, scoreBonus: 320 },
+        { key: "gingerbread", name: "Gingerbread", season: "christmas", icon: "✧", color: "#d6a16e", oneInMult: 135, rollWeight: 1, scoreBonus: 49 },
+        { key: "mistletoe", name: "Mistletoe", spriteFile: "Mistletoe.png", season: "christmas", icon: "❧", color: "#4ade80", oneInMult: 450, rollWeight: 0.410788039279, scoreBonus: 69 },
+        { key: "peppermint", name: "Peppermint", season: "christmas", icon: "⦿", color: "#fda4af", oneInMult: 1350, rollWeight: 0.0487287939693, scoreBonus: 115 },
+        { key: "sugarcoated", name: "Sugarcoated", season: "christmas", icon: "✧", color: "#fce7f3", oneInMult: 65, rollWeight: 3, scoreBonus: 41 },
+        { key: "snowcapped", name: "Snowcapped", season: "christmas", icon: "❄", color: "#e0f2fe", oneInMult: 2300, rollWeight: 0.0246652112099, scoreBonus: 159 },
+        { key: "glittering", name: "Glittering", season: "christmas", icon: "✦", color: "#fde047", oneInMult: 32, rollWeight: 7.46770749047, scoreBonus: 35 }
+    ];
+    for (const def of SEASONAL_MUTATION_DEFS) {
+        if (SEASONAL_MUTATION_EVENTS[def.season]) {
+            MUTATION_TYPES[def.key] = def;
+        }
+    }
+
+    const STANDARD_MUTATION_KEYS = Object.keys(MUTATION_TYPES)
+        .sort((a, b) => MUTATION_TYPES[a].oneInMult - MUTATION_TYPES[b].oneInMult);
+    const MUTATION_REFERENCE_ROLL_WEIGHT = Math.max(...STANDARD_MUTATION_KEYS.map((key) => MUTATION_TYPES[key].rollWeight));
+    const MUTATION_CHANCE_ORDER = [...STANDARD_MUTATION_KEYS];
+    let mutationRollWeightsCache = null;
     const MAX_MUTATION_STACK_SIZE = 1;
     const STACKED_MUTATION_EXTRA_CHANCE_MULT = 2;
 
@@ -2301,12 +2431,16 @@ let rollPool = [];
     let rngCloudSaveDueAtMs = 0;
     let rngCloudSaveDirty = false;
     let rngCloudSaveInFlight = false;
+    let rngCloudSaveCompletion = null;
     let rngCloudHydratedUid = null;
+    let rngProfileOwnerUid = null;
+    let rngAccountSession = 0;
+    let rngAccountSwitching = false;
+    let rngSigningOut = false;
     let collectionSortRarestFirst = true;
     let collectionGridDirty = false;
     let collectionRenderTimer = null;
     let collectionRenderToken = 0;
-    let indexMutationComboCache = null;
     let localSaveTimer = null;
     let localSaveDirty = false;
     let localSaveError = false;
@@ -2406,12 +2540,18 @@ let rollPool = [];
             rollSpeedLevel: 0,
             autoRollLevel: 0,
             mutationLevel: 0,
+            mutationRarityLevel: 0,
             mutationStackLevel: 0,
             apexLevel: 0,
             mutationBountyLevel: 0,
             stackBountyLevel: 0,
             potionRestockLevel: 0,
             xpLevel: 0,
+            potionDurationLevel: 0,
+            potionDiscountLevel: 0,
+            discoveryBountyLevel: 0,
+            duplicateBountyLevel: 0,
+            compassRestockLevel: 0,
             collection: {},
             claimedIndexRewards: [],
             adminNextRollConsumedIds: [],
@@ -2455,6 +2595,7 @@ let rollPool = [];
             },
             rngXp: 0,
             rngXpCurveVersion: 3,
+            rngAccountInitialized: false,
             prestigeLevel: 0,
             prestigePoints: 0,
             totalPrestigePoints: 0,
@@ -2667,7 +2808,72 @@ let rollPool = [];
     }
 
     function getRngCurrentUser() {
-        return rngLeaderboardAuth?.currentUser || rngLeaderboardUser || null;
+        return rngLeaderboardAuth ? rngLeaderboardAuth.currentUser : rngLeaderboardUser;
+    }
+
+    function getRngStorageKey(uid = rngProfileOwnerUid) {
+        return uid ? `${STORAGE_KEY}_${uid}` : STORAGE_KEY;
+    }
+
+    function isRngAccountSessionCurrent(uid, session) {
+        return session === rngAccountSession && rngProfileOwnerUid === uid
+            && (getRngCurrentUser()?.uid || null) === uid;
+    }
+
+    function isRngProfileOwnedBy(profile, uid = rngProfileOwnerUid) {
+        return (!profile?.rngOwnerUid || profile.rngOwnerUid === uid)
+            && (!profile?.uid || profile.uid === uid);
+    }
+
+    function canPlayRngAccount() {
+        const uid = getRngCurrentUser()?.uid || null;
+        return !rngAccountSwitching && !rngSigningOut && uid === rngProfileOwnerUid
+            && (!uid || rngCloudHydratedUid === uid || player.rngAccountInitialized === true);
+    }
+
+    async function switchRngAccount(user) {
+        const uid = user?.uid || null;
+        // Save the outgoing account under its own key, even after Auth has changed.
+        if (localSaveDirty) saveLocalProfile();
+        const session = ++rngAccountSession;
+        rngAccountSwitching = true;
+        [localSaveTimer, rngCloudSaveTimer, rngLeaderboardSyncTimer].forEach(timer => {
+            if (timer) clearTimeout(timer);
+        });
+        localSaveTimer = rngCloudSaveTimer = rngLeaderboardSyncTimer = null;
+        rngCloudSaveDueAtMs = 0;
+        rngCloudSaveDirty = rngCloudSaveInFlight = false;
+        rngCloudSaveCompletion = null;
+        rngCloudHydratedUid = null;
+        rngLeaderboardProfileCache = null;
+        rngLeaderboardLastSyncAt = 0;
+        setAutoRoll(false);
+        closeRarePopup();
+        closeUltraCutscene();
+        if (cooldownInterval) clearInterval(cooldownInterval);
+        cooldownInterval = null;
+        isRolling = false;
+        rollLockedUntil = 0;
+        rngProfileOwnerUid = uid;
+        player = createDefaultPlayer();
+        localSaveDirty = localSaveError = cloudSaveError = false;
+        localSavedAtMs = 0;
+        try {
+            await loadDeviceProfile();
+            if (!isRngAccountSessionCurrent(uid, session)) return false;
+            updateAllUi({ forceCollectionGrid: true });
+            updateSettingsUi();
+            updateSaveStatusUi();
+            if (uid) await hydrateRngProfileFromFirebase({ force: true, duringAccountSwitch: true });
+            return isRngAccountSessionCurrent(uid, session);
+        } finally {
+            if (isRngAccountSessionCurrent(uid, session)) {
+                rngAccountSwitching = false;
+                updateSaveStatusUi();
+                updateRollButtonState();
+                if (rngCloudSaveDirty) scheduleRngCloudProfileSync(1000);
+            }
+        }
     }
 
     function ensureRngLeaderboardServices() {
@@ -2752,8 +2958,8 @@ let rollPool = [];
 
     function getRawLocalRngProfile() {
         try {
-            const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
-            return parsed && typeof parsed === "object" ? parsed : {};
+            const parsed = JSON.parse(localStorage.getItem(getRngStorageKey()) || "{}");
+            return parsed && typeof parsed === "object" && isRngProfileOwnedBy(parsed) ? parsed : {};
         } catch (error) {
             return {};
         }
@@ -2821,15 +3027,31 @@ let rollPool = [];
     }
 
     function mergeRngProfilesForHydration(localProfile = {}, remoteProfile = {}) {
+        if (localProfile.rngOwnerUid && remoteProfile.rngOwnerUid
+            && localProfile.rngOwnerUid !== remoteProfile.rngOwnerUid) {
+            throw new Error("Cannot merge RNG saves from different accounts");
+        }
         localProfile = migrateRankXpProfile(localProfile);
         remoteProfile = migrateRankXpProfile(remoteProfile);
+        const localReset = Number(localProfile.rngResetAtMs) || 0;
+        const remoteReset = Number(remoteProfile.rngResetAtMs) || 0;
+        if (localReset !== remoteReset) {
+            const resetProfile = cloneRngData(localReset > remoteReset ? localProfile : remoteProfile);
+            resetProfile.adminNextRollConsumedIds = [...new Set([
+                ...(localProfile.adminNextRollConsumedIds || []), ...(remoteProfile.adminNextRollConsumedIds || [])
+            ])].slice(-RNG_ADMIN_NEXT_ROLL_CONSUMED_LIMIT);
+            return resetProfile;
+        }
         // Currency and potion use can reduce balances without changing a progress rank.
         // Prefer the latest actual gameplay change, not whichever profile has more coins.
         const localUpdated = Number(localProfile.rngStateUpdatedAtMs) || Number(localProfile.rngCloudUpdatedAtMs) || 0;
         const remoteUpdated = Number(remoteProfile.rngStateUpdatedAtMs) || Number(remoteProfile.rngCloudUpdatedAtMs) || 0;
-        const preferRemote = localUpdated === remoteUpdated
-            ? compareRngProfileProgress(remoteProfile, localProfile) >= 0
-            : remoteUpdated > localUpdated;
+        const localPrestige = Math.max(0, Number(localProfile.prestigeLevel) || 0);
+        const remotePrestige = Math.max(0, Number(remoteProfile.prestigeLevel) || 0);
+        const preferRemote = localPrestige !== remotePrestige ? remotePrestige > localPrestige
+            : localUpdated === remoteUpdated
+                ? compareRngProfileProgress(remoteProfile, localProfile) >= 0
+                : remoteUpdated > localUpdated;
         const preferred = preferRemote ? remoteProfile : localProfile;
         const secondary = preferRemote ? localProfile : remoteProfile;
         const merged = {
@@ -2849,6 +3071,19 @@ let rollPool = [];
         merged.quests = mergeRngQuestStates(localProfile.quests, remoteProfile.quests);
         delete merged.dailyMissions;
         merged.bestOneIn = Math.max(Number(localProfile.bestOneIn) || 0, Number(remoteProfile.bestOneIn) || 0);
+        ["totalPrestigePoints", "highestPrestigeGain"].forEach(key => {
+            merged[key] = Math.max(Number(localProfile[key]) || 0, Number(remoteProfile[key]) || 0);
+        });
+        merged.prestigeUpgrades = { ...(localProfile.prestigeUpgrades || {}), ...(remoteProfile.prestigeUpgrades || {}) };
+        Object.keys(merged.prestigeUpgrades).forEach(key => {
+            merged.prestigeUpgrades[key] = Math.max(Number(localProfile.prestigeUpgrades?.[key]) || 0, Number(remoteProfile.prestigeUpgrades?.[key]) || 0);
+        });
+        if (localPrestige === remotePrestige) {
+            const progressionKeys = Object.keys(createDefaultPlayer()).filter(key => /Level$/.test(key));
+            ["rolls", "rngXp", ...progressionKeys].forEach(key => {
+                merged[key] = Math.max(Number(localProfile[key]) || 0, Number(remoteProfile[key]) || 0);
+            });
+        }
 
         // Run-only stats must never leak backwards across a prestige boundary.
         // If one profile is from a newer prestige, its run stats are authoritative.
@@ -2903,8 +3138,8 @@ let rollPool = [];
         return merged;
     }
 
-    function buildRngCloudProfilePayload() {
-        const rawPlayer = cloneRngData(player);
+    function buildRngCloudProfilePayload(profile = player) {
+        const rawPlayer = cloneRngData(profile);
         const collection = rawPlayer.collection && typeof rawPlayer.collection === "object"
             ? rawPlayer.collection
             : {};
@@ -2934,34 +3169,46 @@ let rollPool = [];
         };
     }
 
-    async function getRngProfileSnapshot(ref) {
-        try {
-            return await ref.get({ source: "server" });
-        } catch (error) {
-            console.warn("Falling back to cached RNG profile snapshot:", error);
-            return ref.get();
-        }
-    }
-
-    async function readRngProfileFromFirebase(user) {
+    async function readRngProfileFromFirebase(user, transaction = null) {
         if (!rngLeaderboardDb || !user?.uid) return null;
+        // A transaction reads metadata and every collection chunk from one server revision.
+        // Cached/missing chunks must never turn into an authoritative empty collection.
+        if (!transaction) {
+            return rngLeaderboardDb.runTransaction(tx => readRngProfileFromFirebase(user, tx));
+        }
         const profileRef = rngLeaderboardDb.collection(RNG_PROFILE_COLLECTION).doc(user.uid);
-        const snapshot = await getRngProfileSnapshot(profileRef);
+        const snapshot = await transaction.get(profileRef);
         if (!snapshot.exists) return null;
 
         const metadata = snapshot.data() || {};
-        const chunkCount = Math.min(400, Math.max(0, Math.floor(Number(metadata.chunkCount) || 0)));
+        if (!isRngProfileOwnedBy(metadata, user.uid)) throw new Error("RNG save owner mismatch");
+        const chunkCount = Number(metadata.chunkCount) || 0;
+        if (!Number.isInteger(chunkCount) || chunkCount < 0 || chunkCount > 400) {
+            throw new Error("Unsupported RNG collection size");
+        }
         const chunkRefs = Array.from({ length: chunkCount }, (_, index) =>
             profileRef.collection(RNG_PROFILE_CHUNK_COLLECTION).doc(`chunk_${String(index).padStart(4, "0")}`)
         );
-        const chunkSnapshots = await Promise.all(chunkRefs.map(ref => ref.get()));
-        const collection = {};
+        const chunkSnapshots = await Promise.all(chunkRefs.map(ref => transaction.get(ref)));
+        const collection = chunkCount ? {} : cloneRngData(metadata.collection);
 
-        chunkSnapshots
-            .map((doc, index) => ({
-                index,
-                entries: doc.exists && Array.isArray(doc.data()?.entries) ? doc.data().entries : []
-            }))
+        const decodedChunks = await Promise.all(chunkSnapshots
+            .map(async (doc, index) => {
+                const data = doc.exists ? doc.data() : null;
+                if (!data || (data.updatedAtMs && metadata.updatedAtMs && data.updatedAtMs !== metadata.updatedAtMs)) {
+                    throw new Error("Incomplete RNG cloud collection; keeping device save");
+                }
+                let entries = data.entries;
+                if (!Array.isArray(entries) && typeof data.entriesGzip === "string") {
+                    if (typeof DecompressionStream === "undefined") throw new Error("Update your browser to load this large cloud save");
+                    const bytes = Uint8Array.from(atob(data.entriesGzip), char => char.charCodeAt(0));
+                    const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream("gzip"));
+                    entries = JSON.parse(await new Response(stream).text());
+                }
+                if (!Array.isArray(entries)) throw new Error("Incomplete RNG cloud collection; keeping device save");
+                return { index, entries };
+            }));
+        decodedChunks
             .sort((a, b) => a.index - b.index)
             .forEach(chunk => {
                 chunk.entries.forEach(item => {
@@ -2972,19 +3219,65 @@ let rollPool = [];
                     }
                 });
             });
+        const expectedCount = metadata.collectionEntryCount ?? metadata.collectionCount;
+        if (expectedCount !== undefined && Number(expectedCount) !== Object.keys(collection).length) {
+            throw new Error("Incomplete RNG cloud collection; keeping device save");
+        }
 
         const profile = cloneRngData(metadata);
         delete profile.chunkCount;
         delete profile.collectionCount;
         delete profile.collectionEntryCount;
         delete profile.schemaVersion;
+        delete profile.collectionEncoding;
         profile.collection = collection;
+        profile.rngOwnerUid = user.uid;
         profile.rngCloudUpdatedAtMs = Number(metadata.rngCloudUpdatedAtMs) || Number(metadata.updatedAtMs) || 0;
         return profile;
     }
 
+    function getRngCloudPayloadBytes(value) {
+        const text = JSON.stringify(value);
+        return typeof TextEncoder !== "undefined" ? new TextEncoder().encode(text).byteLength : text.length * 3;
+    }
+
+    async function prepareRngCloudProfilePayload(profile) {
+        const { metadata, chunks } = buildRngCloudProfilePayload(profile);
+        // Leave ample space below Firestore's 10 MiB request and 1 MiB document limits.
+        const requestBudget = 4 * 1024 * 1024;
+        const rawBytes = getRngCloudPayloadBytes(metadata)
+            + chunks.reduce((size, entries) => size + getRngCloudPayloadBytes({ entries }) + 512, 0);
+        const compress = rawBytes > requestBudget / 2
+            || chunks.some(entries => getRngCloudPayloadBytes({ entries }) > 256 * 1024);
+        if (compress && typeof CompressionStream === "undefined") {
+            throw new Error("Update your browser or download a backup to save this large collection");
+        }
+        const preparedChunks = [];
+        let requestBytes = getRngCloudPayloadBytes(metadata);
+        for (const entries of chunks) {
+            let data = { entries };
+            if (compress) {
+                const stream = new Blob([JSON.stringify(entries)]).stream().pipeThrough(new CompressionStream("gzip"));
+                const bytes = new Uint8Array(await new Response(stream).arrayBuffer());
+                let binary = "";
+                for (let offset = 0; offset < bytes.length; offset += 32768) {
+                    binary += String.fromCharCode(...bytes.subarray(offset, offset + 32768));
+                }
+                data = { entriesGzip: btoa(binary) };
+            }
+            const bytes = getRngCloudPayloadBytes(data) + 512;
+            if (bytes > 768 * 1024) throw new Error("Cloud collection chunk is too large; keeping device save");
+            requestBytes += bytes;
+            preparedChunks.push(data);
+        }
+        if (requestBytes > requestBudget) throw new Error("Cloud save is too large; download a progress backup");
+        if (compress) metadata.collectionEncoding = "gzip-json-v1";
+        return { metadata, chunks: preparedChunks };
+    }
+
     function applyRngProfileData(profileData, options = {}) {
         if (!profileData || typeof profileData !== "object") return false;
+        if (!isRngProfileOwnedBy(profileData)) return false;
         loadLocalProfile(profileData);
         if (options.saveLocal !== false) {
             saveLocalProfile();
@@ -2997,33 +3290,41 @@ let rollPool = [];
     async function hydrateRngProfileFromFirebase(options = {}) {
         if (!ensureRngLeaderboardServices()) return false;
         const user = getRngCurrentUser();
-        if (!user) return false;
+        if (!user || (rngAccountSwitching && !options.duringAccountSwitch) || rngProfileOwnerUid !== user.uid) return false;
         if (!options.force && rngCloudHydratedUid === user.uid) return true;
+        const session = rngAccountSession;
 
         try {
             const remoteProfile = await readRngProfileFromFirebase(user);
+            if (!isRngAccountSessionCurrent(user.uid, session)) return false;
             const localProfile = cloneRngData(player);
             rngCloudHydratedUid = user.uid;
 
             if (!remoteProfile) {
+                player.rngAccountInitialized = true;
                 if (getRngProgressRank(localProfile).some(value => value > 0)) {
+                    rngCloudSaveDirty = true;
                     scheduleRngCloudProfileSync(1000);
                 }
                 return false;
             }
 
             const mergedProfile = mergeRngProfilesForHydration(localProfile, remoteProfile);
+            mergedProfile.rngAccountInitialized = true;
             applyRngProfileData(mergedProfile);
 
-            if (JSON.stringify(mergedProfile.collection || {}) !== JSON.stringify(remoteProfile.collection || {})
+            if (rngCloudSaveDirty || JSON.stringify(mergedProfile.collection || {}) !== JSON.stringify(remoteProfile.collection || {})
+                || (Number(mergedProfile.rngStateUpdatedAtMs) || 0) > (Number(remoteProfile.rngStateUpdatedAtMs) || 0)
                 || compareRngProfileProgress(mergedProfile, remoteProfile) > 0
                 || rngQuestStateDiffers(mergedProfile, remoteProfile)) {
+                rngCloudSaveDirty = true;
                 scheduleRngCloudProfileSync(1000);
             }
 
             showToast("Cloud RNG progress loaded.");
             return true;
         } catch (error) {
+            if (!isRngAccountSessionCurrent(user.uid, session)) return false;
             cloudSaveError = true;
             updateSaveStatusUi();
             console.warn("Unable to hydrate RNG profile from Firebase:", error);
@@ -3034,7 +3335,8 @@ let rollPool = [];
     async function syncRngProfileToFirebase(options = {}) {
         if (!ensureRngLeaderboardServices()) return false;
         const user = getRngCurrentUser();
-        if (!user) return false;
+        if (!user || rngAccountSwitching || rngProfileOwnerUid !== user.uid) return false;
+        const session = rngAccountSession;
 
         if (rngCloudSaveInFlight) {
             rngCloudSaveDirty = true;
@@ -3047,53 +3349,69 @@ let rollPool = [];
         }
         rngCloudSaveDueAtMs = 0;
         rngCloudSaveInFlight = true;
+        let finishSave;
+        const completion = new Promise(resolve => { finishSave = resolve; });
+        rngCloudSaveCompletion = completion;
         cloudSaveError = false;
         updateSaveStatusUi();
         try {
             const profileRef = rngLeaderboardDb.collection(RNG_PROFILE_COLLECTION).doc(user.uid);
-            const { metadata, chunks } = buildRngCloudProfilePayload();
-            const batch = rngLeaderboardDb.batch();
-            const payload = {
-                ...metadata,
-                uid: user.uid,
-                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-            };
-
-            batch.set(profileRef, payload, { merge: false });
-            chunks.forEach((entries, index) => {
-                batch.set(
-                    profileRef.collection(RNG_PROFILE_CHUNK_COLLECTION).doc(`chunk_${String(index).padStart(4, "0")}`),
-                    {
-                        index,
-                        entries,
-                        updatedAtMs: metadata.updatedAtMs,
-                        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-                    },
-                    { merge: false }
-                );
+            const localSnapshot = cloneRngData(player);
+            localSnapshot.rngOwnerUid = user.uid;
+            const result = await rngLeaderboardDb.runTransaction(async transaction => {
+                const remoteProfile = await readRngProfileFromFirebase(user, transaction);
+                if (!isRngAccountSessionCurrent(user.uid, session)) throw new Error("RNG account changed during save");
+                const merged = remoteProfile
+                    ? mergeRngProfilesForHydration(localSnapshot, remoteProfile) : localSnapshot;
+                merged.rngAccountInitialized = true;
+                const { metadata, chunks } = await prepareRngCloudProfilePayload(merged);
+                if (!isRngAccountSessionCurrent(user.uid, session)) throw new Error("RNG account changed during save");
+                if (chunks.length > 400) throw new Error("RNG collection is too large to save safely");
+                transaction.set(profileRef, {
+                    ...metadata, uid: user.uid, rngOwnerUid: user.uid,
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                }, { merge: false });
+                chunks.forEach((chunk, index) => {
+                    transaction.set(
+                        profileRef.collection(RNG_PROFILE_CHUNK_COLLECTION).doc(`chunk_${String(index).padStart(4, "0")}`),
+                        { index, ...chunk, updatedAtMs: metadata.updatedAtMs,
+                            updatedAt: firebase.firestore.FieldValue.serverTimestamp() },
+                        { merge: false }
+                    );
+                });
+                return { merged, metadata };
             });
-
-            await batch.commit();
-            player.rngCloudUpdatedAtMs = metadata.rngCloudUpdatedAtMs;
+            if (!isRngAccountSessionCurrent(user.uid, session)) return false;
+            const changedDuringSave = (Number(player.rngStateUpdatedAtMs) || 0) !== (Number(localSnapshot.rngStateUpdatedAtMs) || 0);
+            const mergedForDevice = mergeRngProfilesForHydration(cloneRngData(player), result.merged);
+            mergedForDevice.rngAccountInitialized = true;
+            mergedForDevice.rngCloudUpdatedAtMs = result.metadata.rngCloudUpdatedAtMs;
+            applyRngProfileData(mergedForDevice);
             rngCloudHydratedUid = user.uid;
-            rngCloudSaveDirty = (Number(player.rngStateUpdatedAtMs) || 0) !== (Number(metadata.rngStateUpdatedAtMs) || 0);
+            rngCloudSaveDirty = changedDuringSave;
             return true;
         } catch (error) {
+            if (!isRngAccountSessionCurrent(user.uid, session)) return false;
             cloudSaveError = true;
             console.warn("Unable to sync full RNG profile:", error);
             rngCloudSaveDirty = true;
             return false;
         } finally {
-            rngCloudSaveInFlight = false;
-            updateSaveStatusUi();
-            if (rngCloudSaveDirty && !rngCloudSaveTimer) {
-                scheduleRngCloudProfileSync(RNG_CLOUD_SAVE_INTERVAL_MS);
+            finishSave();
+            if (rngCloudSaveCompletion === completion) rngCloudSaveCompletion = null;
+            if (isRngAccountSessionCurrent(user.uid, session)) {
+                rngCloudSaveInFlight = false;
+                updateSaveStatusUi();
+                if (rngCloudSaveDirty && !rngCloudSaveTimer) {
+                    scheduleRngCloudProfileSync(RNG_CLOUD_SAVE_INTERVAL_MS);
+                }
             }
         }
     }
 
     function scheduleRngCloudProfileSync(delayMs = RNG_CLOUD_SAVE_INTERVAL_MS) {
-        if (!ensureRngLeaderboardServices() || !getRngCurrentUser()) return;
+        if (!ensureRngLeaderboardServices() || !getRngCurrentUser()
+            || rngAccountSwitching || rngProfileOwnerUid !== getRngCurrentUser().uid) return;
         rngCloudSaveDirty = true;
         if (rngCloudSaveTimer) return;
         const delay = Math.max(1000, delayMs);
@@ -3136,6 +3454,7 @@ let rollPool = [];
         try {
             const data = await getLeaderboardIdentityData("userStats", user.uid);
             const existingRngData = await getLeaderboardIdentityData(RNG_LEADERBOARD_COLLECTION, user.uid);
+            if (getRngCurrentUser()?.uid !== user.uid) return fallback;
             const username = pickRngUsername(
                 user,
                 data.username,
@@ -3154,6 +3473,7 @@ let rollPool = [];
             return rngLeaderboardProfileCache;
         } catch (error) {
             console.warn("Unable to load RNG leaderboard profile:", error);
+            if (getRngCurrentUser()?.uid !== user.uid) return fallback;
             rngLeaderboardProfileCache = fallback;
             return fallback;
         }
@@ -3203,12 +3523,14 @@ let rollPool = [];
 
     function normalizeRngLeaderboardRow(doc, source = "rngLeaderboard") {
         const data = doc.data() || {};
+        if (window.SharkdleLeaderboardBlacklist?.isRecordBlacklisted(data, doc.id)) return null;
+        if (data.uid && data.uid !== doc.id) return null;
         const fallbackSource = source === "userStats";
         const bestOneIn = toSafeNumber(fallbackSource ? data.rngBestOneIn : data.bestOneIn);
         const bestTier = (fallbackSource ? data.rngBestTier : data.bestTier) || tierNameFromOneIn(bestOneIn);
 
         return {
-            uid: data.uid || doc.id,
+            uid: doc.id,
             username: data.username || "Anonymous",
             rolls: toSafeNumber(fallbackSource ? (data.rngGlobalRolls || data.rngRolls) : (data.globalRolls || data.rolls)),
             bestOneIn,
@@ -3225,6 +3547,7 @@ let rollPool = [];
         const byUid = new Map();
 
         for (const row of rows) {
+            if (!row || window.SharkdleLeaderboardBlacklist?.isRecordBlacklisted(row)) continue;
             const key = row.uid || row.username;
             const existing = byUid.get(key);
             if (!existing || compareRngLeaderboardRows(row, existing) < 0) {
@@ -3236,15 +3559,22 @@ let rollPool = [];
     }
 
     function renderRngLeaderboardSelf() {
+        const user = getRngCurrentUser();
+        const restricted = window.SharkdleLeaderboardBlacklist?.isBlacklisted(user?.uid);
+        window.SharkdleLeaderboardBlacklist?.renderNotice(
+            document.getElementById("rng-leaderboard-blacklist-notice"), user?.uid
+        );
         const self = document.getElementById("rng-leaderboard-self");
         if (!self) return;
 
         const best = getBestCollectionEntry();
-        const signedIn = Boolean(rngLeaderboardUser || rngLeaderboardAuth?.currentUser);
+        const signedIn = Boolean(user);
         const bestText = best
             ? `Best: 1 in ${formatOneIn(best.oneIn)} (${best.tier})`
             : "Best: no pulls yet";
-        const syncText = signedIn
+        const syncText = restricted
+            ? "Your RNG scores are excluded from the leaderboards."
+            : signedIn
             ? "Your RNG stats are being synced globally."
             : "Login to publish your RNG stats globally.";
 
@@ -3259,6 +3589,7 @@ let rollPool = [];
     }
 
     function renderRngLeaderboardRows(rows) {
+        rows = rows.filter(row => row && !window.SharkdleLeaderboardBlacklist?.isRecordBlacklisted(row));
         const list = document.getElementById("rng-leaderboard-list");
         if (!list) return;
 
@@ -3311,9 +3642,18 @@ let rollPool = [];
             setRngLeaderboardStatus("Showing global Top 10. Login to publish your RNG card.");
             return false;
         }
+        if (window.SharkdleLeaderboardBlacklist?.isBlacklisted(user.uid)) {
+            setRngLeaderboardStatus("Your RNG scores are excluded from the leaderboards.");
+            return false;
+        }
+        if (rngAccountSwitching || rngProfileOwnerUid !== user.uid || rngCloudHydratedUid !== user.uid) return false;
+        const session = rngAccountSession;
 
         try {
+            const account = await rngLeaderboardDb.collection("userStats").doc(user.uid).get({ source: "server" });
+            if (!account.exists || !isRngAccountSessionCurrent(user.uid, session)) return false;
             const profile = await getRngLeaderboardProfile(user);
+            if (!isRngAccountSessionCurrent(user.uid, session)) return false;
             const payload = buildRngLeaderboardPayload(user, profile);
             let synced = false;
 
@@ -3326,16 +3666,18 @@ let rollPool = [];
             } catch (primaryError) {
                 console.warn("Dedicated RNG leaderboard sync failed; using userStats fallback:", primaryError);
             }
+            if (!isRngAccountSessionCurrent(user.uid, session)) return false;
 
             try {
                 await rngLeaderboardDb
                     .collection(RNG_LEADERBOARD_FALLBACK_COLLECTION)
                     .doc(user.uid)
-                    .set(buildRngLeaderboardFallbackPayload(payload), { merge: true });
+                    .update(buildRngLeaderboardFallbackPayload(payload));
                 synced = true;
             } catch (fallbackError) {
                 console.warn("RNG leaderboard fallback sync failed:", fallbackError);
             }
+            if (!isRngAccountSessionCurrent(user.uid, session)) return false;
 
             if (!synced) {
                 throw new Error("No RNG leaderboard sync targets were available.");
@@ -3346,6 +3688,7 @@ let rollPool = [];
             return true;
         } catch (error) {
             console.warn("Unable to sync RNG leaderboard entry:", error);
+            if (!isRngAccountSessionCurrent(user.uid, session)) return false;
             setRngLeaderboardStatus("Could not sync RNG leaderboard yet. Local RNG still works.");
             return false;
         }
@@ -3353,6 +3696,8 @@ let rollPool = [];
 
     function scheduleRngLeaderboardSync() {
         if (!ensureRngLeaderboardServices()) return;
+        if (rngAccountSwitching || rngProfileOwnerUid !== getRngCurrentUser()?.uid) return;
+        if (window.SharkdleLeaderboardBlacklist?.isBlacklisted(getRngCurrentUser()?.uid)) return;
         if (rngLeaderboardSyncTimer) return;
 
         const elapsed = Date.now() - rngLeaderboardLastSyncAt;
@@ -3388,31 +3733,41 @@ let rollPool = [];
             }
 
             const rows = [];
+            const accountChecks = new Map();
+            const readCandidates = async (collectionName, field, source) => {
+                let after = null;
+                let validCount = 0;
+                while (validCount < RNG_LEADERBOARD_LIMIT) {
+                    let query = rngLeaderboardDb.collection(collectionName).orderBy(field, "desc")
+                        .limit(RNG_LEADERBOARD_QUERY_LIMIT);
+                    if (after) query = query.startAfter(after);
+                    const snapshot = await query.get({ source: "server" });
+                    const candidates = await Promise.all(snapshot.docs.map(async doc => {
+                        const row = normalizeRngLeaderboardRow(doc, source);
+                        if (!row || !(row.bestOneIn > 0 || row.rolls > 0)) return null;
+                        if (source !== "userStats") {
+                            if (!accountChecks.has(row.uid)) {
+                                accountChecks.set(row.uid, rngLeaderboardDb.collection("userStats").doc(row.uid)
+                                    .get({ source: "server" }).then(account => account.exists));
+                            }
+                            if (!await accountChecks.get(row.uid)) return null;
+                        }
+                        return row;
+                    }));
+                    candidates.filter(Boolean).forEach(row => { rows.push(row); validCount++; });
+                    if (snapshot.docs.length < RNG_LEADERBOARD_QUERY_LIMIT) break;
+                    after = snapshot.docs[snapshot.docs.length - 1];
+                }
+            };
 
             try {
-                const snapshot = await rngLeaderboardDb
-                    .collection(RNG_LEADERBOARD_COLLECTION)
-                    .orderBy("bestOneIn", "desc")
-                    .limit(RNG_LEADERBOARD_QUERY_LIMIT)
-                    .get();
-                snapshot.forEach((doc) => {
-                    const row = normalizeRngLeaderboardRow(doc);
-                    if (row.bestOneIn > 0 || row.rolls > 0) rows.push(row);
-                });
+                await readCandidates(RNG_LEADERBOARD_COLLECTION, "bestOneIn");
             } catch (primaryError) {
                 console.warn("Dedicated RNG leaderboard load failed; trying userStats fallback:", primaryError);
             }
 
             try {
-                const fallbackSnapshot = await rngLeaderboardDb
-                    .collection(RNG_LEADERBOARD_FALLBACK_COLLECTION)
-                    .orderBy("rngBestOneIn", "desc")
-                    .limit(RNG_LEADERBOARD_QUERY_LIMIT)
-                    .get();
-                fallbackSnapshot.forEach((doc) => {
-                    const row = normalizeRngLeaderboardRow(doc, "userStats");
-                    if (row.bestOneIn > 0 || row.rolls > 0) rows.push(row);
-                });
+                await readCandidates(RNG_LEADERBOARD_FALLBACK_COLLECTION, "rngBestOneIn", "userStats");
             } catch (fallbackError) {
                 console.warn("RNG leaderboard fallback load failed:", fallbackError);
             }
@@ -3451,6 +3806,7 @@ let rollPool = [];
         if (!commandRef) return;
 
         rngAdminNextRollUnsubscribe = commandRef.onSnapshot((snapshot) => {
+            if (getRngCurrentUser()?.uid !== user.uid) return;
             rngAdminNextRollCommand = snapshot.exists ? snapshot.data() || null : null;
         }, (error) => {
             console.warn("Unable to listen for RNG admin next-roll command:", error);
@@ -3463,28 +3819,25 @@ let rollPool = [];
 
         if (!ensureRngLeaderboardServices()) {
             setRngLeaderboardStatus("RNG leaderboard is unavailable right now.");
-            return;
+            return switchRngAccount(null);
         }
 
-        rngLeaderboardAuth.onAuthStateChanged((user) => {
-            rngLeaderboardUser = user || null;
-            updateSaveStatusUi();
-            rngLeaderboardProfileCache = null;
-            subscribeRngAdminNextRollCommand(user);
-            if (!user) {
-                rngCloudHydratedUid = null;
-            }
-            renderRngLeaderboardSelf();
-            if (user) {
-                hydrateRngProfileFromFirebase({ force: true }).then(() => {
-                    loadRngLeaderboard();
-                });
-            } else {
-                loadRngLeaderboard();
-            }
+        return new Promise(resolve => {
+            rngLeaderboardAuth.onAuthStateChanged(async user => {
+                rngLeaderboardUser = user || null;
+                subscribeRngAdminNextRollCommand(user);
+                try {
+                    if (await switchRngAccount(user)) {
+                        renderRngLeaderboardSelf();
+                        loadRngLeaderboard();
+                    }
+                } catch (error) {
+                    console.warn("Unable to switch RNG account:", error);
+                } finally {
+                    resolve();
+                }
+            });
         });
-
-        loadRngLeaderboard();
     }
 
     function hashString(value) {
@@ -3960,7 +4313,7 @@ let rollPool = [];
 
     function getMutationSpritePath(key) {
         const mutation = MUTATION_TYPES[key];
-        return `images/RNG/mutations/${getSpriteFileName(mutation?.name || key)}.png`;
+        return `images/RNG/mutations/${mutation?.spriteFile || `${getSpriteFileName(mutation?.name || key)}.png`}`;
     }
 
     function getMutationSpriteHtml(key, className = "") {
@@ -3986,47 +4339,12 @@ let rollPool = [];
         return unique.sort((a, b) => getMutationSortIndex(a) - getMutationSortIndex(b));
     }
 
-    function getMutationComboPower(keys) {
-        return normalizeMutationKeys(keys)
-            .reduce((product, key) => product * Math.max(1, Number(MUTATION_TYPES[key]?.oneInMult) || 1), 1);
-    }
-
-    function buildMutationCombos() {
-        const keys = MUTATION_CHANCE_ORDER.filter((key) => MUTATION_TYPES[key]);
-        const combos = [];
-
-        function walk(startIndex, combo) {
-            if (combo.length) combos.push([...combo]);
-            if (combo.length >= MAX_MUTATION_STACK_SIZE) return;
-
-            for (let i = startIndex; i < keys.length; i++) {
-                combo.push(keys[i]);
-                walk(i + 1, combo);
-                combo.pop();
-            }
-        }
-
-        walk(0, []);
-        return combos.sort((a, b) => {
-            const powerDiff = getMutationComboPower(b) - getMutationComboPower(a);
-            if (powerDiff !== 0) return powerDiff;
-            return getMutationStackLabel(a).localeCompare(getMutationStackLabel(b));
-        });
-    }
-
-    function getIndexMutationCombos() {
-        if (!indexMutationComboCache) {
-            indexMutationComboCache = buildMutationCombos();
-        }
-        return indexMutationComboCache;
-    }
-
     function getIndexStackedMutationCombos() {
         return [];
     }
 
     function getIndexVariantCountPerSpecies() {
-        return 1 + STANDARD_MUTATION_KEYS.length + NATURAL_ONLY_MUTATION_KEYS.length;
+        return 1 + STANDARD_MUTATION_KEYS.length;
     }
 
     function getMutationKeys(shark) {
@@ -4184,19 +4502,6 @@ let rollPool = [];
         return normalizeMutationKeys(parts.map(resolveSingleRngMutationKey).filter(Boolean));
     }
 
-    function resolveRngMutationKey(input = "base") {
-        return resolveRngMutationKeys(input)[0] || null;
-    }
-
-    function getRngMutationKeyForCommand(input = "base") {
-        try {
-            return resolveRngMutationKey(input);
-        } catch (error) {
-            console.warn("Unable to resolve queued RNG next-roll mutation:", error);
-            return null;
-        }
-    }
-
     function getMutationKeysFromCollectionName(name) {
         const match = String(name || "").match(/\s\(([^()]+)\)$/);
         if (!match) return [];
@@ -4215,10 +4520,6 @@ let rollPool = [];
             }
             return null;
         }).filter(Boolean));
-    }
-
-    function getMutationKeyFromCollectionName(name) {
-        return getMutationKeysFromCollectionName(name)[0] || null;
     }
 
     function getStoredMutationKeys(entry, name = "") {
@@ -4574,10 +4875,16 @@ let rollPool = [];
         return 1 + (stacks * level * 0.04);
     }
 
+    function getUtilityUpgradeBonus(key, level = player[`${key}Level`]) {
+        const list = UPGRADE_LISTS[key];
+        const index = Math.min(list.length, Math.max(0, Math.floor(Number(level) || 0))) - 1;
+        return list[index]?.bonus || 0;
+    }
+
     function getPotionEffectRolls(def) {
         const baseRolls = Math.max(1, Math.floor(Number(def?.rolls) || 0));
         if (def?.fixedRolls) return baseRolls;
-        return Math.max(1, Math.round(baseRolls * getPrestigePotionDurationMultiplier()));
+        return Math.max(1, Math.round(baseRolls * getPrestigePotionDurationMultiplier() * (1 + getUtilityUpgradeBonus("potionDuration"))));
     }
 
     function getLuckPotionStacks() {
@@ -4645,15 +4952,13 @@ let rollPool = [];
             + getPrestigeUpgradeBonus("mutagenArchive", 0.08)
             + getPrestigeUpgradeBonus("chainMemory", 0.12)
             + getPrestigeUpgradeBonus("comboCartography", 0.15)
+            + getPrestigeUpgradeBonus("apexMemory", 0.06)
+            + getPrestigeUpgradeBonus("apexCartography", 0.09)
             + getPrestigeUpgradeBonus("mutationFoundry", 0.1);
     }
 
     function getPrestigeMutationStackOddsMultiplier() {
         return 1 + getPrestigeUpgradeBonus("chainMemory", 0.12) + getPrestigeUpgradeBonus("comboCartography", 0.15);
-    }
-
-    function getPrestigeApexOddsMultiplier() {
-        return 1 + (getPrestigeDepthBonus() * 0.35) + ((getMutationGalleryOddsMultiplier() - 1) * 0.35) + getPrestigeUpgradeBonus("apexMemory", 0.06) + getPrestigeUpgradeBonus("apexCartography", 0.09);
     }
 
     function getPrestigeMutationBountyBonus() {
@@ -4664,10 +4969,6 @@ let rollPool = [];
 
     function getPrestigeStackBountyBonus() {
         return getPrestigeUpgradeBonus("stackDividend", 0.08) + getPrestigeUpgradeBonus("stackRoyalty", 0.1);
-    }
-
-    function getPrestigeGainMultiplier() {
-        return 1 + getPrestigeUpgradeBonus("legacyTide", 0.1);
     }
 
     function getPrestigeDepthBonus() {
@@ -4872,8 +5173,9 @@ let rollPool = [];
         const mutationBountyMult = getMutationBountyMultiplier(rolled);
         const rarePullMult = isRarePull(rolled) ? 1 + getPrestigeRareCoinBonus() : 1;
         const ultraPullMult = isUltraRarePull(rolled) ? 1 + getPrestigeUltraCoinBonus() : 1;
-        if (!rolled.potionSource) return getCoinMultiplier() * mutationBountyMult * rarePullMult * ultraPullMult;
-        return Math.min(getCoinMultiplier(), GUARANTEED_ROLL_COIN_MULTIPLIER_CAP) * mutationBountyMult * rarePullMult * ultraPullMult;
+        const collectionMult = 1 + getUtilityUpgradeBonus(getCollectionEntryForShark(rolled) ? "duplicateBounty" : "discoveryBounty");
+        if (!rolled.potionSource) return getCoinMultiplier() * mutationBountyMult * rarePullMult * ultraPullMult * collectionMult;
+        return Math.min(getCoinMultiplier(), GUARANTEED_ROLL_COIN_MULTIPLIER_CAP) * mutationBountyMult * rarePullMult * ultraPullMult * collectionMult;
     }
 
     function getRewardRate(rolled) {
@@ -4895,52 +5197,25 @@ let rollPool = [];
         return Math.max(500, Math.round((baseInterval - getPrestigeAutoIntervalReduction()) * potionMult));
     }
 
+    function getPermanentMutationChance(level = player.mutationLevel) {
+        const prestigeUnlocked = ["mutagenArchive", "apexMemory", "apexCartography"]
+            .some((id) => getPrestigeUpgradeLevel(id) > 0);
+        const upgrade = level > 0
+            ? MUTATION_LUCK_UPGRADES[Math.min(Math.floor(level), MUTATION_LUCK_UPGRADES.length) - 1]
+            : null;
+        const baseChance = upgrade?.chance || (prestigeUnlocked ? 80_000 : null);
+        return baseChance ? Math.max(2, Math.round(baseChance / getPrestigeMutationOddsMultiplier())) : null;
+    }
+
     function getMutationChance() {
-        const prestigeLevel = getPrestigeUpgradeLevel("mutagenArchive");
-        const upgrade = player.mutationLevel > 0
-            ? MUTATION_LUCK_UPGRADES.find((entry) => entry.level === player.mutationLevel)
-            : null;
-        const baseChance = upgrade?.chance || (prestigeLevel > 0 ? 80_000 : null);
-        return baseChance ? Math.max(1, Math.round(baseChance / getPrestigeMutationOddsMultiplier())) : null;
-    }
-
-    function getApexMutationBaseChance() {
-        const prestigeLevel = getPrestigeUpgradeLevel("apexMemory");
-        const upgrade = player.apexLevel > 0
-            ? APEX_LUCK_UPGRADES.find((entry) => entry.level === player.apexLevel)
-            : null;
-        const baseChance = upgrade?.chance || (prestigeLevel > 0 ? APEX_PRESTIGE_UNLOCK_ONE_IN : null);
-        const naturalChance = baseChance
-            ? Math.max(1, Math.round(baseChance / getPrestigeApexOddsMultiplier()))
-            : null;
+        const naturalChance = getPermanentMutationChance();
+        // Keep owned and active legacy surge potions useful for the shared mutation pool.
         if (!(player.activeEffects.apexSurge?.remaining > 0)) return naturalChance;
-        if (naturalChance === null) return APEX_SURGE_POTION_ONE_IN;
+        if (naturalChance === null) return 100_000;
         return Math.min(
-            APEX_SURGE_POTION_ONE_IN,
-            Math.max(1, Math.round(naturalChance / APEX_SURGE_POTION_ODDS_MULTIPLIER))
+            100_000,
+            Math.max(2, Math.round(naturalChance / 4))
         );
-    }
-
-    function getApexMutationChance(key = "apex") {
-        const baseChance = getApexMutationBaseChance();
-        if (baseChance === null) return null;
-        const multiplier = Math.max(1, Number(MUTATION_TYPES[key]?.apexChanceMult) || 1);
-        return Math.max(1, Math.round(baseChance * multiplier));
-    }
-
-    function rollApexPathMutationKey() {
-        const keys = [...NATURAL_ONLY_MUTATION_KEYS]
-            .sort((a, b) => {
-                const aMult = Number(MUTATION_TYPES[a]?.apexChanceMult) || 1;
-                const bMult = Number(MUTATION_TYPES[b]?.apexChanceMult) || 1;
-                return bMult - aMult;
-            });
-
-        for (const key of keys) {
-            const chance = getApexMutationChance(key);
-            if (chance !== null && Math.random() < (1 / chance)) return key;
-        }
-        return null;
     }
 
     function getActiveGuaranteedPotionKey() {
@@ -5122,17 +5397,31 @@ let rollPool = [];
         consumeEffectRolls();
     }
 
-    function getMutationRollWeightTotal(keys = STANDARD_MUTATION_KEYS) {
-        return keys.reduce((sum, key) => sum + Math.max(0, MUTATION_TYPES[key]?.rollWeight || 0), 0);
+    function getMutationRollWeights(rarityLevel = player.mutationRarityLevel) {
+        const bias = getUtilityUpgradeBonus("mutationRarity", rarityLevel);
+        if (mutationRollWeightsCache?.bias === bias) return mutationRollWeightsCache;
+        const weights = {};
+        let total = 0;
+        // A bounded flattening of the distribution gives rarer mutations a larger boost.
+        // Keep their stored power and base weights intact so existing catches stay stable.
+        for (const key of STANDARD_MUTATION_KEYS) {
+            const base = Math.max(0, MUTATION_TYPES[key]?.rollWeight || 0);
+            const weight = base && bias ? base * Math.pow(MUTATION_REFERENCE_ROLL_WEIGHT / base, bias) : base;
+            weights[key] = weight;
+            total += weight;
+        }
+        mutationRollWeightsCache = { bias, weights, total };
+        return mutationRollWeightsCache;
     }
 
-    function formatMutationPickPercent(weight, total) {
-        if (!(weight > 0) || !(total > 0)) return "0%";
-        const percent = (weight / total) * 100;
-        if (percent < 0.001) return "<0.001%";
-        if (percent < 1) return `${Number(percent.toPrecision(2))}%`;
-        if (percent < 10) return `${Math.round(percent * 10) / 10}%`;
-        return `${Math.round(percent)}%`;
+    function getMutationRollWeight(key, rarityLevel = player.mutationRarityLevel) {
+        return getMutationRollWeights(rarityLevel).weights[key] || 0;
+    }
+
+    function getMutationRollWeightTotal(keys = STANDARD_MUTATION_KEYS, rarityLevel = player.mutationRarityLevel) {
+        const distribution = getMutationRollWeights(rarityLevel);
+        return keys === STANDARD_MUTATION_KEYS ? distribution.total
+            : keys.reduce((sum, key) => sum + (distribution.weights[key] || 0), 0);
     }
 
     function pickWeightedMutationKey(keys = STANDARD_MUTATION_KEYS) {
@@ -5142,7 +5431,7 @@ let rollPool = [];
 
         let rng = Math.random() * totalWeight;
         for (const key of weightedKeys) {
-            rng -= MUTATION_TYPES[key].rollWeight;
+            rng -= getMutationRollWeight(key);
             if (rng <= 0) return key;
         }
         return weightedKeys[weightedKeys.length - 1];
@@ -5189,44 +5478,60 @@ let rollPool = [];
         return normalizeMutationKeys(mutationKeys);
     }
 
-    function getNaturalMutationChanceOneIn(key) {
-        if (NATURAL_ONLY_MUTATION_KEYS.includes(key)) return getApexMutationChance(key);
+    function getNaturalMutationChanceOneIn(key, rarityLevel = player.mutationRarityLevel) {
         if (!STANDARD_MUTATION_KEYS.includes(key)) return null;
 
         const baseChance = getMutationChance();
-        const weight = MUTATION_TYPES[key]?.rollWeight || 0;
-        const totalWeight = getMutationRollWeightTotal();
+        const weight = getMutationRollWeight(key, rarityLevel);
+        const totalWeight = getMutationRollWeightTotal(STANDARD_MUTATION_KEYS, rarityLevel);
         if (baseChance === null || weight <= 0 || totalWeight <= 0) return null;
 
         return Math.round(baseChance * (totalWeight / weight));
     }
 
-    function getNextStackMutationChanceOneIn(currentStackSize = 1) {
-        const baseChance = getMutationStackBaseChance();
-        return baseChance === null ? null : getStackedMutationChance(baseChance, currentStackSize);
+    function getEffectiveUpgradeValues(list, level) {
+        level = Math.min(list.length, Math.max(0, Math.floor(Number(level) || 0)));
+        // Temporary potion effects must not make permanent upgrades appear capped.
+        if (list === MUTATION_LUCK_UPGRADES) return [getPermanentMutationChance(level) ?? Infinity];
+        if (list === POTION_RESTOCK_UPGRADES) {
+            return ["ultra", "omega"]
+                .map((key) => getEffectivePotionRestockRolls(key, level));
+        }
+        if (list === UPGRADE_LISTS.compassRestock) {
+            return ["abyssalCompass", "omniversalCompass"]
+                .map((key) => getEffectivePotionRestockRolls(key, undefined, level));
+        }
+        if (list === ROLL_SPEED_UPGRADES) {
+            const reduction = list.slice(0, level).reduce((sum, upgrade) => sum + upgrade.reduction, 0);
+            return [Math.max(180, Math.round(BASE_ROLL_COOLDOWN_MS - reduction - getPrestigeCooldownReduction()))];
+        }
+        if (list === AUTO_ROLL_UPGRADES) {
+            if (!level) return [Infinity]; // Level 1 unlocks auto roll.
+            return [Math.max(500, Math.round(list[level - 1].interval - getPrestigeAutoIntervalReduction()))];
+        }
+        return null;
+    }
+
+    function getUpgradeProgress(list, currentLevel) {
+        const finalValues = getEffectiveUpgradeValues(list, list.length);
+        let maxLevel = list.length;
+        if (finalValues) {
+            const isFinal = (values) => values.every((value, index) => value === finalValues[index]);
+            maxLevel = isFinal(getEffectiveUpgradeValues(list, 0)) ? 0
+                : (list.find((upgrade) => isFinal(getEffectiveUpgradeValues(list, upgrade.level)))?.level || list.length);
+        }
+        const level = Math.min(maxLevel, Math.max(0, Math.floor(Number(currentLevel) || 0)));
+        return { level, maxLevel, percent: maxLevel ? Math.round(level / maxLevel * 100) : 100 };
     }
 
     function getNextUpgrade(list, currentLevel) {
-        // Keep saved level numbers, but never sell a level with the same effective benefit.
-        if (list === MUTATION_LUCK_UPGRADES && currentLevel > 0) {
-            const multiplier = getPrestigeMutationOddsMultiplier();
-            const effectiveChance = (upgrade) => Math.max(1, Math.round(upgrade.chance / multiplier));
-            const current = list[Math.min(currentLevel, list.length) - 1];
-            return list.slice(currentLevel).find((upgrade) => effectiveChance(upgrade) < effectiveChance(current)) || null;
-        }
-        if (list === POTION_RESTOCK_UPGRADES) {
-            const multiplier = 1 - getPrestigeRestockReduction();
-            const effectiveRestock = (value) => Math.max(1, Math.round(value * multiplier));
-            const current = list[Math.min(currentLevel, list.length) - 1] || {
-                ultraRestock: POTION_DEFS.ultra.restockRolls,
-                omegaRestock: POTION_DEFS.omega.restockRolls
-            };
-            return list.slice(currentLevel).find((upgrade) => (
-                effectiveRestock(upgrade.ultraRestock) < effectiveRestock(current.ultraRestock)
-                || effectiveRestock(upgrade.omegaRestock) < effectiveRestock(current.omegaRestock)
-            )) || null;
-        }
-        return list[currentLevel] || null;
+        currentLevel = Math.max(0, Math.floor(Number(currentLevel) || 0));
+        const currentValues = getEffectiveUpgradeValues(list, currentLevel);
+        if (!currentValues) return list[currentLevel] || null;
+        // Retain saved IDs and skip entries that add no permanent benefit.
+        return list.slice(currentLevel).find((upgrade) => (
+            getEffectiveUpgradeValues(list, upgrade.level).some((value, index) => value < currentValues[index])
+        )) || null;
     }
 
 
@@ -5279,7 +5584,7 @@ let rollPool = [];
         return baseMultiplier * (1 + ((overchargeTarget - 1) * overchargePressure));
     }
 
-    function pickTierForRoll(luck) {
+    function pickTierForRoll(luck, options = {}) {
         const weightedTiers = [];
 
         for (const tier of TIERS) {
@@ -5292,13 +5597,13 @@ let rollPool = [];
             });
         }
 
-        // Beyond the old overcharge limit, keep shifting weight toward rarer populated tiers.
+        // High luck keeps improving rare-tier weighting, with much gentler diminishing returns.
         // Normalize against the rarest available tier so even enormous luck stays finite.
         const overchargeLimit = LUCK_BALANCE_REFERENCE * Math.pow(2, LUCK_OVERCHARGE_SPAN);
         const safeLuck = Math.max(1, Number(luck) || 1);
         if (safeLuck > overchargeLimit && weightedTiers.length) {
             const rarestOdds = Math.max(...weightedTiers.map((entry) => getTierMeta(entry.tier).baseOneIn));
-            const strength = Math.log10(safeLuck / overchargeLimit) / 3;
+            const strength = Math.log10(safeLuck / overchargeLimit) / HIGH_LUCK_TILT_SPAN;
             for (const entry of weightedTiers) {
                 const relativeOdds = getTierMeta(entry.tier).baseOneIn / rarestOdds;
                 entry.weight *= Math.pow(relativeOdds, strength);
@@ -5308,13 +5613,25 @@ let rollPool = [];
         const totalWeight = weightedTiers.reduce((sum, entry) => sum + entry.weight, 0);
         if (!Number.isFinite(totalWeight) || totalWeight <= 0) return "Common";
 
-        let rng = Math.random() * totalWeight;
+        // Mix normalized distributions so low base tiers cannot disappear at high luck.
+        const baselineShare = options.mutation ? MUTATION_BASELINE_ROLL_SHARE : NORMAL_BASELINE_ROLL_SHARE;
+        const baselineTotal = weightedTiers.reduce((sum, entry) => sum + (1 / getTierMeta(entry.tier).baseOneIn), 0);
+        for (const entry of weightedTiers) {
+            const baselineChance = (1 / getTierMeta(entry.tier).baseOneIn) / baselineTotal;
+            entry.weight = (baselineShare * baselineChance) + ((1 - baselineShare) * entry.weight / totalWeight);
+        }
+        let rng = Math.random();
         for (const entry of weightedTiers) {
             rng -= entry.weight;
             if (rng <= 0) return entry.tier;
         }
 
         return weightedTiers[0]?.tier || "Common";
+    }
+
+    function pickMutationBaseShark() {
+        return pickRandomFromTier(pickTierForRoll(getRollLuckMultiplier(), { mutation: true }))
+            || rollPool[Math.floor(Math.random() * rollPool.length)];
     }
 
     function pickRandomFromTier(tierName) {
@@ -5575,7 +5892,16 @@ let rollPool = [];
         return scaleRankXp(getLegacyXpForLevel(level));
     }
 
+    function migrateLegacyApexProfile(profile) {
+        const level = Math.min(LEGACY_APEX_UPGRADE_COSTS.length, Math.max(0, Math.floor(Number(profile.apexLevel) || 0)));
+        if (!level) return profile;
+        const refund = LEGACY_APEX_UPGRADE_COSTS.slice(0, level).reduce((sum, cost) => sum + cost, 0);
+        // Clear the old level in the same snapshot as the refund, before cloud merging.
+        return { ...profile, coins: Math.max(0, Number(profile.coins) || 0) + refund, apexLevel: 0 };
+    }
+
     function migrateRankXpProfile(profile) {
+        profile = migrateLegacyApexProfile(profile);
         if (Number(profile.rngXpCurveVersion) >= 3) return profile;
         return {
             ...profile,
@@ -5714,22 +6040,6 @@ function rollForShark(actionContext = createRollActionContext(1)) {
     }
 
     // =========================================
-    // RANDOM APEX-PATH MUTATION ROLL
-    // =========================================
-
-    if (!rolled && !hasForcedMutation) {
-
-        const apexMutationKey = rollApexPathMutationKey();
-
-        if (apexMutationKey) {
-            const picked = pickRandomFromTier(pickTierForRoll(getRollLuckMultiplier()))
-                || rollPool[Math.floor(Math.random() * rollPool.length)];
-
-            rolled = applyStableMutationStack(picked, rollStandardMutationStack([apexMutationKey]));
-        }
-    }
-
-    // =========================================
     // RANDOM STANDARD MUTATION ROLL
     // =========================================
 
@@ -5738,9 +6048,8 @@ function rollForShark(actionContext = createRollActionContext(1)) {
         const mutationKeys = rollStandardMutationStack([], { rollInitial: true });
 
         if (mutationKeys.length) {
-            // Natural mutations use the same luck-adjusted base selection as normal rolls.
-            const picked = pickRandomFromTier(pickTierForRoll(getRollLuckMultiplier()))
-                || rollPool[Math.floor(Math.random() * rollPool.length)];
+            // Natural mutations keep a broad base pool instead of inheriting only top-tier luck rolls.
+            const picked = pickMutationBaseShark();
 
             rolled = applyStableMutationStack(picked, mutationKeys);
         }
@@ -5753,7 +6062,7 @@ function rollForShark(actionContext = createRollActionContext(1)) {
     if (!rolled) {
 
         const luck = getRollLuckMultiplier();
-        const tier = pickTierForRoll(luck);
+        const tier = pickTierForRoll(luck, { mutation: Boolean(hasForcedMutation) });
         rolled = pickRandomFromTier(tier);
 
         // fallback
@@ -5785,7 +6094,7 @@ function rollForShark(actionContext = createRollActionContext(1)) {
     });
 }
 
-    function accessRngDeviceStore(mode, snapshot) {
+    function accessRngDeviceStore(mode, snapshot, storageKey = getRngStorageKey()) {
         return new Promise((resolve, reject) => {
             const request = indexedDB.open("sharkRngSaves", 1);
             request.onupgradeneeded = () => request.result.createObjectStore("profiles");
@@ -5797,7 +6106,7 @@ function rollForShark(actionContext = createRollActionContext(1)) {
                 try {
                     transaction = db.transaction("profiles", mode);
                     const store = transaction.objectStore("profiles");
-                    const operation = mode === "readwrite" ? store.put(snapshot, STORAGE_KEY) : store.get(STORAGE_KEY);
+                    const operation = mode === "readwrite" ? store.put(snapshot, storageKey) : store.get(storageKey);
                     let result;
                     operation.onsuccess = () => { result = operation.result; };
                     transaction.oncomplete = () => { db.close(); resolve(result); };
@@ -5808,23 +6117,43 @@ function rollForShark(actionContext = createRollActionContext(1)) {
     }
 
     async function loadDeviceProfile() {
-        let fallback = null;
-        if (typeof indexedDB !== "undefined") {
+        const owner = rngProfileOwnerUid;
+        const session = rngAccountSession;
+        const readFallback = async key => {
+            if (typeof indexedDB === "undefined") return null;
             try {
-                const raw = await accessRngDeviceStore("readonly");
-                if (raw) fallback = JSON.parse(raw);
+                const raw = await accessRngDeviceStore("readonly", undefined, key);
+                return raw ? JSON.parse(raw) : null;
             } catch (error) { console.warn("Unable to read larger device save:", error); }
-        }
+            return null;
+        };
+        const fallback = await readFallback(getRngStorageKey(owner));
+        if (owner !== rngProfileOwnerUid || session !== rngAccountSession) return false;
         const local = getRawLocalRngProfile();
+        const candidates = [local, fallback].filter(profile => profile && Object.keys(profile).length && isRngProfileOwnedBy(profile, owner));
+        if (owner) {
+            // Old shared saves are retained for recovery, but only an explicit owner
+            // permits migration. Signing in must never claim another player's save.
+            const legacyFallback = await readFallback(STORAGE_KEY);
+            if (owner !== rngProfileOwnerUid || session !== rngAccountSession) return false;
+            const legacyLocal = readStoredJson(STORAGE_KEY);
+            [legacyLocal, legacyFallback].forEach(profile => {
+                if ((profile?.rngOwnerUid || profile?.uid) === owner) candidates.push(profile);
+            });
+        }
         const savedAt = (profile) => Number(profile?.rngDeviceSavedAtMs) || Number(profile?.rngStateUpdatedAtMs) || 0;
-        if (fallback && savedAt(fallback) >= savedAt(local)) loadLocalProfile(fallback);
-        else loadLocalProfile();
+        candidates.sort((a, b) => savedAt(b) - savedAt(a));
+        if (candidates[0] && Object.keys(candidates[0]).length) loadLocalProfile(candidates[0]);
+        return true;
     }
 
     let fallbackSaveQueue = Promise.resolve();
 
     function saveToLargerDeviceStore() {
         const snapshot = JSON.stringify(player);
+        const storageKey = getRngStorageKey();
+        const owner = rngProfileOwnerUid;
+        const session = rngAccountSession;
         const savedAt = player.rngDeviceSavedAtMs;
         const revision = Number(player.rngStateUpdatedAtMs) || 0;
         localSaveDirty = true;
@@ -5832,7 +6161,8 @@ function rollForShark(actionContext = createRollActionContext(1)) {
         updateSaveStatusUi();
         fallbackSaveQueue = fallbackSaveQueue.then(async () => {
             try {
-                await accessRngDeviceStore("readwrite", snapshot);
+                await accessRngDeviceStore("readwrite", snapshot, storageKey);
+                if (owner !== rngProfileOwnerUid || session !== rngAccountSession) return true;
                 if (savedAt >= localSavedAtMs) {
                     localSavedAtMs = savedAt;
                     localSaveDirty = revision !== (Number(player.rngStateUpdatedAtMs) || 0);
@@ -5841,6 +6171,7 @@ function rollForShark(actionContext = createRollActionContext(1)) {
                 updateSaveStatusUi();
                 return true;
             } catch (error) {
+                if (owner !== rngProfileOwnerUid || session !== rngAccountSession) return false;
                 localSaveDirty = true;
                 localSaveError = true;
                 updateSaveStatusUi();
@@ -5872,6 +6203,7 @@ function rollForShark(actionContext = createRollActionContext(1)) {
         const localText = localSaveError ? "Device save failed" : localSaveDirty ? "Saving on device..." : localSavedAtMs ? "Saved on device" : "Not saved yet";
         const cloudSeconds = Math.max(0, Math.ceil((rngCloudSaveDueAtMs - Date.now()) / 1000));
         const cloudText = !getRngCurrentUser() ? "Cloud: sign in to sync"
+            : rngAccountSwitching ? "Cloud: loading account..."
             : cloudSaveError ? (rngCloudSaveDueAtMs ? "Cloud failed - retry in " + cloudSeconds + "s" : "Cloud save failed - retry")
             : rngCloudSaveInFlight ? "Cloud: saving..."
             : rngCloudSaveDirty ? (rngCloudSaveDueAtMs ? "Cloud save in " + cloudSeconds + "s" : "Cloud: waiting to sync")
@@ -5886,16 +6218,36 @@ function rollForShark(actionContext = createRollActionContext(1)) {
     }
 
     async function saveRngProgressNow() {
+        const uid = rngProfileOwnerUid;
+        const session = rngAccountSession;
         await saveLocalProfile();
+        if (rngCloudSaveCompletion) await rngCloudSaveCompletion;
+        if (!isRngAccountSessionCurrent(uid, session)) return false;
+        let synced = false;
         if (ensureRngLeaderboardServices() && getRngCurrentUser()) {
             if (rngCloudSaveTimer) {
                 clearTimeout(rngCloudSaveTimer);
                 rngCloudSaveTimer = null;
                 rngCloudSaveDueAtMs = 0;
             }
-            await syncRngProfileToFirebase({ force: true });
+            synced = await syncRngProfileToFirebase({ force: true });
         }
         updateSaveStatusUi();
+        return synced;
+    }
+
+    async function saveRngProgressBeforeSignOut() {
+        if (!getRngCurrentUser() || rngProfileOwnerUid !== getRngCurrentUser().uid) return;
+        rngSigningOut = true;
+        setAutoRoll(false);
+        closeRarePopup();
+        closeUltraCutscene();
+        try {
+            const synced = await saveRngProgressNow();
+            if (!synced) showToast("RNG progress is saved on this device. Cloud sync is still pending.", "error");
+        } finally {
+            rngSigningOut = false;
+        }
     }
 
     function saveLocalProfile() {
@@ -5904,8 +6256,13 @@ function rollForShark(actionContext = createRollActionContext(1)) {
             localSaveTimer = null;
         }
         try {
+            player.rngOwnerUid = rngProfileOwnerUid;
+            if (rngProfileOwnerUid) {
+                player.uid = rngProfileOwnerUid;
+                player.rngAccountInitialized = player.rngAccountInitialized === true || rngCloudHydratedUid === rngProfileOwnerUid;
+            }
             player.rngDeviceSavedAtMs = Math.max(Date.now(), (Number(player.rngDeviceSavedAtMs) || 0) + 1);
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(player));
+            localStorage.setItem(getRngStorageKey(), JSON.stringify(player));
             localSaveDirty = false;
             localSaveError = false;
             localSavedAtMs = player.rngDeviceSavedAtMs;
@@ -5956,9 +6313,10 @@ function rollForShark(actionContext = createRollActionContext(1)) {
 
     function loadLocalProfile(profileOverride) {
         try {
-            const raw = profileOverride ? null : localStorage.getItem(STORAGE_KEY);
+            const raw = profileOverride ? null : localStorage.getItem(getRngStorageKey());
             if (!raw && !profileOverride) return;
             const original = profileOverride || JSON.parse(raw);
+            if (!isRngProfileOwnedBy(original)) return;
             const parsed = migrateRankXpProfile(original);
             const parsedPrestigeLevel = Math.max(0, Math.floor(Number(parsed.prestigeLevel) || 0));
             const parsedCollectionCount = parsed.collection && typeof parsed.collection === "object"
@@ -5967,17 +6325,24 @@ function rollForShark(actionContext = createRollActionContext(1)) {
             player = {
                 ...createDefaultPlayer(),
                 ...parsed,
+                rngAccountInitialized: Boolean(rngProfileOwnerUid) && parsed.rngAccountInitialized !== false,
                 rollSpeedLevel: Math.min(parsed.rollSpeedLevel || 0, ROLL_SPEED_UPGRADES.length),
                 autoRollLevel: Math.min(
                     parsed.autoRollLevel ?? Math.min(parsed.autoSpeedLevel || 0, 1),
                     AUTO_ROLL_UPGRADES.length
                 ),
                 mutationStackLevel: Math.min(parsed.mutationStackLevel || 0, MUTATION_STACK_UPGRADES.length),
-                apexLevel: Math.min(parsed.apexLevel || 0, APEX_LUCK_UPGRADES.length),
+                mutationRarityLevel: Math.min(UPGRADE_LISTS.mutationRarity.length, Math.max(0, Math.floor(Number(parsed.mutationRarityLevel) || 0))),
+                apexLevel: 0,
                 mutationBountyLevel: Math.min(parsed.mutationBountyLevel || 0, MUTATION_BOUNTY_UPGRADES.length),
                 stackBountyLevel: Math.min(parsed.stackBountyLevel || 0, STACK_BOUNTY_UPGRADES.length),
                 potionRestockLevel: Math.min(parsed.potionRestockLevel || 0, POTION_RESTOCK_UPGRADES.length),
                 xpLevel: Math.min(parsed.xpLevel || 0, XP_UPGRADES.length),
+                potionDurationLevel: Math.min(UPGRADE_LISTS.potionDuration.length, Math.max(0, Math.floor(Number(parsed.potionDurationLevel) || 0))),
+                potionDiscountLevel: Math.min(UPGRADE_LISTS.potionDiscount.length, Math.max(0, Math.floor(Number(parsed.potionDiscountLevel) || 0))),
+                discoveryBountyLevel: Math.min(UPGRADE_LISTS.discoveryBounty.length, Math.max(0, Math.floor(Number(parsed.discoveryBountyLevel) || 0))),
+                duplicateBountyLevel: Math.min(UPGRADE_LISTS.duplicateBounty.length, Math.max(0, Math.floor(Number(parsed.duplicateBountyLevel) || 0))),
+                compassRestockLevel: Math.min(UPGRADE_LISTS.compassRestock.length, Math.max(0, Math.floor(Number(parsed.compassRestockLevel) || 0))),
                 potions: { ...createDefaultPotions(), ...(parsed.potions || {}) },
                 potionRestock: {
                     ...createDefaultPlayer().potionRestock,
@@ -6130,19 +6495,22 @@ function rollForShark(actionContext = createRollActionContext(1)) {
         return Math.max(0, player.potionRestock?.[key] || 0);
     }
 
-    function getEffectivePotionRestockRolls(key) {
+    function getEffectivePotionRestockRolls(key, level = player.potionRestockLevel || 0, compassLevel = player.compassRestockLevel || 0) {
         const baseRestock = POTION_DEFS[key]?.restockRolls || 0;
         if (!baseRestock) return 0;
 
-        const upgrade = (player.potionRestockLevel || 0) > 0
+        const upgrade = level > 0
             ? POTION_RESTOCK_UPGRADES[Math.min(
                 POTION_RESTOCK_UPGRADES.length - 1,
-                player.potionRestockLevel - 1
+                level - 1
             )]
             : null;
         let restock = baseRestock;
         if (key === "ultra") restock = upgrade?.ultraRestock || baseRestock;
         if (key === "omega") restock = upgrade?.omegaRestock || baseRestock;
+        if (key === "abyssalCompass" || key === "omniversalCompass") {
+            restock *= 1 - getUtilityUpgradeBonus("compassRestock", compassLevel);
+        }
         return Math.max(1, Math.round(restock * (1 - getPrestigeRestockReduction())));
     }
 
@@ -6159,7 +6527,7 @@ function rollForShark(actionContext = createRollActionContext(1)) {
         const def = POTION_DEFS[key];
         if (!def) return 0;
         if (!isPotionPurchasable(key)) return 0;
-        return Math.max(1, Math.round(def.cost * (1 - getPrestigePotionDiscount())));
+        return Math.max(1, Math.round(def.cost * (1 - getPrestigePotionDiscount()) * (1 - getUtilityUpgradeBonus("potionDiscount"))));
     }
 
     function normalizePotionBuyAmount(value = selectedPotionBuyAmount) {
@@ -6305,13 +6673,6 @@ function rollForShark(actionContext = createRollActionContext(1)) {
                 ? `Use all ${formatCompactNumber(Math.floor(player.potions[key]))} stored ${POTION_DEFS[key]?.name || "potion"}s`
                 : "Store more than one to use all";
         });
-    }
-
-    function updatePotionShopLightUi(keys = []) {
-        updatePotionShopSummaryUi();
-        [...new Set(keys)].forEach(updatePotionCardUi);
-        updateStatsUi();
-        updateActiveEffectsUi();
     }
 
     function updatePotionShopImmediateUi(keys = []) {
@@ -6619,7 +6980,7 @@ function updateActiveEffectsUi() {
              parts.push(makePotionPart("omega", "Omega", "ready"));
          }
          if (player.activeEffects.apexSurge?.remaining > 0) {
-             parts.push(makePotionPart("apexSurge", "Apex surge", player.activeEffects.apexSurge.remaining));
+             parts.push(makePotionPart("apexSurge", "Mutation surge", player.activeEffects.apexSurge.remaining));
          }
          if (player.activeEffects.abyssalCompass?.remaining > 0) {
              parts.push(makePotionPart("abyssalCompass", "500M+ compass", "ready"));
@@ -6648,10 +7009,6 @@ function updateActiveEffectsUi() {
          const mChance = getMutationChance();
          if (mChance !== null) {
              parts.push(`\u{1F9EC} Mutation: 1 in ${formatOneIn(mChance)}`);
-         }
-         const apexChance = getApexMutationChance();
-         if (apexChance !== null) {
-             parts.push(`\u{1F988} Apex: 1 in ${formatOneIn(apexChance)}`);
          }
 
          // Keep existing sprites and layout when the polling tick has no changes.
@@ -6725,7 +7082,7 @@ function updateActiveEffectsUi() {
              ? `Roll ${multiRollCount} times at once`
              : "Roll";
 
-         rollBtn.disabled = isOnCooldown || isRolling;
+         rollBtn.disabled = !canPlayRngAccount() || isOnCooldown || isRolling;
          if (isOnCooldown) {
              rollBtn.classList.add("rng-btn-cooldown");
          } else {
@@ -6763,7 +7120,10 @@ function updateActiveEffectsUi() {
              topPrestige.textContent = `${formatCompactNumber(getPrestigePoints())} (${formatCompactNumber(player.prestigeLevel || 0)})`;
              topPrestige.title = `${getPrestigePoints().toLocaleString()} unspent prestige tokens \u00b7 ${getTotalPrestigePoints().toLocaleString()} earned \u00b7 ${player.prestigeLevel || 0} prestiges`;
          }
-         if (topLuck) topLuck.textContent = `x${getLuckMultiplier().toFixed(2)}`;
+         if (topLuck) {
+             topLuck.textContent = `x${getLuckMultiplier().toFixed(2)}`;
+             topLuck.title = "Luck improves weighted rarity chances with diminishing returns. Low base rarities remain possible, including on mutation rolls.";
+         }
          if (topCollection) {
              const collectionCount = getCollectionCount();
              const collectionTarget = getCollectionTargetCount();
@@ -6822,21 +7182,27 @@ function updateActiveEffectsUi() {
             return `Lv.${next.level} \u00b7 +${Math.round(next.bonus * 100)}% coins`;
         }
         if (def.listKey === "speed") {
-            return `Lv.${next.level} \u00b7 -${next.reduction}ms cooldown`;
+            const list = getUpgradeList(def);
+            const reduction = getEffectiveUpgradeValues(list, currentLevel)[0] - getEffectiveUpgradeValues(list, next.level)[0];
+            return `Lv.${next.level} \u00b7 -${reduction}ms cooldown`;
         }
         if (def.listKey === "auto") {
             return next.level === 1
                 ? `Lv.1 \u00b7 unlock auto roll (${(next.interval / 1000).toFixed(1)}s)`
-                : `Lv.${next.level} \u00b7 auto every ${(next.interval / 1000).toFixed(1)}s`;
+                : `Lv.${next.level} \u00b7 auto every ${(getEffectiveUpgradeValues(getUpgradeList(def), next.level)[0] / 1000).toFixed(2)}s`;
         }
         if (def.listKey === "mutation") {
-            return `Lv.${next.level} \u00b7 1 in ${formatOneIn(next.chance)} chance`;
+            return `Lv.${next.level} \u00b7 1 in ${formatOneIn(getPermanentMutationChance(next.level))} chance`;
+        }
+        if (def.listKey === "mutationRarity") {
+            const rarestKey = STANDARD_MUTATION_KEYS[STANDARD_MUTATION_KEYS.length - 1];
+            const chance = getNaturalMutationChanceOneIn(rarestKey, next.level);
+            return chance === null
+                ? `Lv.${next.level} \u00b7 favours rarer mutations`
+                : `Lv.${next.level} \u00b7 ${MUTATION_TYPES[rarestKey].name} 1 in ${formatOneIn(chance)}`;
         }
         if (def.listKey === "mutationStack") {
             return `Lv.${next.level} \u00b7 \u00d7${next.mult} extra layer odds`;
-        }
-        if (def.listKey === "apex") {
-            return `Lv.${next.level} \u00b7 Apex 1 in ${formatOneIn(next.chance)}`;
         }
         if (def.listKey === "mutationBounty") {
             return `Lv.${next.level} \u00b7 +${Math.round(next.bonus * 100)}% mutated roll coins`;
@@ -6845,7 +7211,24 @@ function updateActiveEffectsUi() {
             return `Lv.${next.level} \u00b7 +${Math.round(next.bonus * 100)}% coins per extra mutation`;
         }
         if (def.listKey === "potionRestock") {
-            return `Lv.${next.level} \u00b7 Abyss ${next.ultraRestock} rolls \u00b7 Omega ${next.omegaRestock} rolls`;
+            const [abyss, omega] = getEffectiveUpgradeValues(getUpgradeList(def), next.level);
+            return `Lv.${next.level} \u00b7 Abyss ${abyss} rolls \u00b7 Omega ${omega} rolls`;
+        }
+        if (def.listKey === "compassRestock") {
+            const [compass, omni] = getEffectiveUpgradeValues(getUpgradeList(def), next.level);
+            return `Lv.${next.level} \u00b7 500M compass ${compass} rolls \u00b7 1B compass ${omni} rolls`;
+        }
+        if (def.listKey === "potionDuration") {
+            return `Lv.${next.level} \u00b7 +${Math.round(next.bonus * 100)}% potion duration`;
+        }
+        if (def.listKey === "potionDiscount") {
+            return `Lv.${next.level} \u00b7 ${Math.round(next.bonus * 100)}% cheaper potions`;
+        }
+        if (def.listKey === "discoveryBounty") {
+            return `Lv.${next.level} \u00b7 +${Math.round(next.bonus * 100)}% coins for new catches`;
+        }
+        if (def.listKey === "duplicateBounty") {
+            return `Lv.${next.level} \u00b7 +${Number((next.bonus * 100).toFixed(1))}% coins for repeat catches`;
         }
         if (def.listKey === "xp") {
             return `Lv.${next.level} \u00b7 +${Math.round(next.bonus * 100)}% XP`;
@@ -6968,11 +7351,14 @@ function updateActiveEffectsUi() {
             const currentLevel = player[def.levelKey] || 0;
             const next = getNextUpgrade(list, currentLevel);
             const maxed = !next;
-            const tierClass = maxed ? getShopTierClass(currentLevel) : next.tierClass;
+            const progress = getUpgradeProgress(list, currentLevel);
+            const detail = maxed ? "MAX TIER" : formatUpgradeDetail(def, next, currentLevel);
+            const state = JSON.stringify([currentLevel, progress.level, progress.maxLevel, next?.level, detail]);
+            const tierClass = maxed ? getShopTierClass(progress.level) : next.tierClass;
 
             let card = shop.querySelector('[data-upgrade-key="' + def.levelKey + '"]');
             const existingButton = card?.querySelector("button");
-            if (card?.dataset.level === String(currentLevel)) {
+            if (card?.dataset.upgradeState === state) {
                 existingButton.disabled = maxed || player.coins < next.cost;
                 continue;
             }
@@ -6980,6 +7366,7 @@ function updateActiveEffectsUi() {
             if (!card) card = document.createElement("article");
             card.dataset.upgradeKey = def.levelKey;
             card.dataset.level = String(currentLevel);
+            card.dataset.upgradeState = state;
             card.className = `rng-upgrade-card ${tierClass}${maxed ? " maxed" : ""}`;
             card.innerHTML = `
                 <div class="rng-upgrade-head">
@@ -6989,13 +7376,13 @@ function updateActiveEffectsUi() {
                             : `<i class="fa-solid ${def.icon}"></i>`}</span>
                         <div>
                             <h3>${def.name}</h3>
-                            <span class="rng-upgrade-tier">${maxed ? getShopTierName(currentLevel) : next.shopTier}</span>
+                            <span class="rng-upgrade-tier">${maxed ? getShopTierName(progress.level || 1) : next.shopTier}</span>
                         </div>
                     </div>
-                    <span class="rng-upgrade-lv">${currentLevel}/${list.length}</span>
+                    <span class="rng-upgrade-lv">${progress.maxLevel ? `${progress.level}/${progress.maxLevel}` : "MAX"}</span>
                 </div>
-                <p class="rng-upgrade-detail">${maxed ? "MAX TIER" : formatUpgradeDetail(def, next, currentLevel)}</p>
-                <div class="rng-upgrade-progress"><span style="width:${Math.round((currentLevel / list.length) * 100)}%"></span></div>
+                <p class="rng-upgrade-detail">${detail}</p>
+                <div class="rng-upgrade-progress"><span style="width:${progress.percent}%"></span></div>
             `;
 
             const btn = existingButton || document.createElement("button");
@@ -7004,6 +7391,7 @@ function updateActiveEffectsUi() {
             if (!existingButton) btn.addEventListener("click", () => buyUpgradeByDef(def));
             if (maxed) {
                 btn.textContent = "MAX";
+                btn.title = "Fully upgraded";
                 btn.disabled = true;
             } else {
                 btn.textContent = formatCompactCoins(next.cost);
@@ -7212,14 +7600,9 @@ function updateAllUi(options = {}) {
             const mutation = MUTATION_TYPES[key];
             if (!mutation) return "";
             const chance = getNaturalMutationChanceOneIn(key);
-            const standardWeightTotal = getMutationRollWeightTotal();
-            const pickPercent = STANDARD_MUTATION_KEYS.includes(key) && standardWeightTotal > 0
-                ? formatMutationPickPercent(mutation.rollWeight || 0, standardWeightTotal)
-                : null;
             const chanceText = chance === null
-                ? (NATURAL_ONLY_MUTATION_KEYS.includes(key) ? "Apex Instinct locked" : `${pickPercent}% of mutation rolls`)
+                ? "Mutation Luck locked"
                 : `1 in ${formatOneIn(chance)}`;
-            const pickText = chance !== null && pickPercent !== null ? ` · ${pickPercent}% pick` : "";
 
             return `
                 <div class="rng-tier-row rng-mutation-chance-row ${key}" style="border-left-color:${mutation.color}">
@@ -7227,7 +7610,7 @@ function updateAllUi(options = {}) {
                         ${getMutationSpriteHtml(key)}
                         <span>${mutation.name}</span>
                     </span>
-                    <span>${chanceText}${pickText} · ${formatCompactNumber(mutation.oneInMult)}x</span>
+                    <span class="rng-mutation-odds">${chanceText}</span>
                 </div>
             `;
         });
@@ -7880,11 +8263,11 @@ function updateAllUi(options = {}) {
     }
 
     function isApexPull(shark) {
-        return getMutationKeys(shark).some((key) => MUTATION_TYPES[key]?.naturalOnly);
+        return getMutationKeys(shark).includes("apex");
     }
 
     function getApexPathMutationKey(shark) {
-        return getMutationKeys(shark).find((key) => MUTATION_TYPES[key]?.naturalOnly) || "apex";
+        return getMutationKeys(shark).find((key) => key === "apex") || "apex";
     }
 
     function getApexPathMutationDef(shark) {
@@ -8063,6 +8446,7 @@ function updateAllUi(options = {}) {
     }
 
     async function animateRoll(finalShark, rollContext = {}) {
+        const session = rngAccountSession;
         const display = document.getElementById("rng-roll-display");
         const result = document.getElementById("rng-result");
         const stage = document.querySelector(".rng-roll-stage");
@@ -8104,6 +8488,7 @@ function updateAllUi(options = {}) {
                 display.className = `rng-roll-display ${randomShark.className}`;
             }
             await new Promise((resolve) => setTimeout(resolve, frameDelay));
+            if (session !== rngAccountSession) return;
         }
 
         const finalMutationClasses = getMutationClassNames(finalShark);
@@ -8477,7 +8862,8 @@ function updateAllUi(options = {}) {
     }
 
 async function performRoll() {
-         if (isRolling || Date.now() < rollLockedUntil) return;
+         if (!canPlayRngAccount() || isRolling || Date.now() < rollLockedUntil) return;
+         const session = rngAccountSession;
          if (document.getElementById("rng-cutscene")?.classList.contains("visible")) return;
          isRolling = true;
          GameFx.resumeAudio();
@@ -8493,6 +8879,7 @@ async function performRoll() {
          // Commit the entire burst before any animation or dismissible reveal can pause it.
          scheduleLocalProfileSave();
          await saveLocalProfile();
+         if (session !== rngAccountSession) return;
          scheduleCloudSync();
          const finalShark = getBestBurstRoll(burstRolls);
          const rollContext = {
@@ -8503,9 +8890,11 @@ async function performRoll() {
          };
          const revealShark = getRollRevealShark(burstRolls, finalShark);
          await animateRoll(finalShark, rollContext);
+         if (session !== rngAccountSession) return;
          applyRollJuice(revealShark, rollContext);
          publishRngGlobalRollBroadcast(revealShark, rollContext);
          await showRollReveal(revealShark);
+         if (session !== rngAccountSession) return;
          persistPlayerState({ deferCollectionGridDuringRoll: true, lightUi: true });
 
          rollLockedUntil = Date.now() + getRollCooldownMs();
@@ -8813,6 +9202,8 @@ async function performRoll() {
 
         player = {
             ...fresh,
+            rngOwnerUid: rngProfileOwnerUid,
+            rngResetAtMs: previous.rngResetAtMs || 0,
             collection: previous.collection && typeof previous.collection === "object" ? previous.collection : {},
             claimedIndexRewards: Array.isArray(previous.claimedIndexRewards) ? previous.claimedIndexRewards : [],
             dailyQuests: normalizeRngDailyQuestState(previous.dailyQuests || previous.dailyMissions),
@@ -8855,7 +9246,10 @@ async function performRoll() {
             ? player.adminNextRollConsumedIds.map(String).filter(Boolean).slice(-RNG_ADMIN_NEXT_ROLL_CONSUMED_LIMIT)
             : [];
 
+        const resetAtMs = Math.max(Date.now(), (Number(player.rngResetAtMs) || 0) + 1);
         player = createDefaultPlayer();
+        player.rngOwnerUid = rngProfileOwnerUid;
+        player.rngResetAtMs = resetAtMs;
         // A full progress reset should not reset security/replay bookkeeping.
         player.adminNextRollConsumedIds = consumedAdminRollIds;
         persistPlayerState();
@@ -9472,7 +9866,7 @@ async function performRoll() {
 async function initRngMode() {
          initImageLoadingVisibility();
          buildRollPool();
-         await loadDeviceProfile();
+         rngAccountSwitching = true;
          updateSaveStatusUi();
          initAmbientBubbles();
          installRngDevCommands();
@@ -9481,12 +9875,12 @@ async function initRngMode() {
          bindUi();
           updateAllUi();
           updateSettingsUi();
-          initRngLeaderboard();
+          await initRngLeaderboard();
           startPotionUiTicker();
-          await hydrateRngProfileFromFirebase();
           GameFx.initAudio();
           updateRollButtonState();
      }
 
+    window.flushRngBeforeSignOut = saveRngProgressBeforeSignOut;
     window.initRngMode = initRngMode;
 })();

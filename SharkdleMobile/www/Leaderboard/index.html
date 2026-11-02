@@ -16,6 +16,7 @@
     <!-- Firebase Auth -->
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
     <script src="Leaderboard/cosmetics-display.js"></script>
+    <script src="leaderboard-blacklist.js?v=20261021-13-account-blocks"></script>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="page-shell.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -1644,6 +1645,7 @@ body.leaderboards-page #friendProfileModal .profile-modal-content .stat-value {
             </div>
         </div>
         <h1>🦈 Sharkdle Global Leaderboards</h1>
+        <p id="leaderboard-blacklist-notice" role="status" hidden style="display:none;padding:14px 16px;margin:0 0 16px;border:1px solid #f59e0b;border-radius:10px;background:#422006;color:#fef3c7;line-height:1.5;"></p>
         <div class="leaderboard-layout">
             <main class="leaderboard-board-panel">
                 <div id="leaderboard-loading" class="loading">Loading leaderboard...</div>
@@ -2015,6 +2017,13 @@ body.leaderboards-page #friendProfileModal .profile-modal-content .stat-value {
 
         let leaderboardResetTimer = null;
 
+        function renderLeaderboardBlacklistNotice() {
+            window.SharkdleLeaderboardBlacklist.renderNotice(
+                document.getElementById("leaderboard-blacklist-notice"),
+                auth.currentUser?.uid
+            );
+        }
+
         function matchesLeaderboardUser(userRef) {
             if (!userRef) return false;
             return Boolean(
@@ -2060,6 +2069,7 @@ body.leaderboards-page #friendProfileModal .profile-modal-content .stat-value {
         }
 
         async function grantPermanentLeaderPfp(pfpDef) {
+            if (window.SharkdleLeaderboardBlacklist.isBlacklisted(currentUserUID)) return false;
             if (!currentUserUID) return false;
             const profileData = loadCachedLeaderboardProfileData();
             if (!profileData.earnedCosmetics) profileData.earnedCosmetics = [];
@@ -2069,7 +2079,6 @@ body.leaderboards-page #friendProfileModal .profile-modal-content .stat-value {
             await db.collection("userStats").doc(currentUserUID).set({
                 earnedCosmetics: profileData.earnedCosmetics
             }, { merge: true });
-            if (typeof loadAvailablePFPs === "function") loadAvailablePFPs();
             if (typeof loadEarnedCosmetics === "function") loadEarnedCosmetics();
             return true;
         }
@@ -2092,7 +2101,6 @@ body.leaderboards-page #friendProfileModal .profile-modal-content .stat-value {
                 profilePicture: profileData.profilePicture,
                 profilePic: profileData.profilePic
             }, { merge: true }).then(() => {
-                if (typeof loadAvailablePFPs === "function") loadAvailablePFPs();
                 if (typeof loadEarnedCosmetics === "function") loadEarnedCosmetics();
                 return true;
             });
@@ -2169,6 +2177,7 @@ body.leaderboards-page #friendProfileModal .profile-modal-content .stat-value {
         }
 
         async function recordPreviousLeaderboardWinner(rangeType, meta, pfpDef) {
+            if (window.SharkdleLeaderboardBlacklist.isBlacklisted(meta?.leaderUid)) return null;
             if (!meta?.leaderUid || !meta?.periodKey) return null;
             const winner = {
                 id: `${rangeType}_${meta.periodKey}`,
@@ -2202,6 +2211,7 @@ body.leaderboards-page #friendProfileModal .profile-modal-content .stat-value {
             const container = document.getElementById(rangeType === "daily" ? "previous-daily-winners" : "previous-monthly-winners");
             if (!container) return;
             const filtered = winners
+                .filter(winner => !window.SharkdleLeaderboardBlacklist.isRecordBlacklisted(winner))
                 .filter(winner => winner.rangeType === rangeType)
                 .slice(0, PREVIOUS_WINNER_LIMIT);
 
@@ -2295,6 +2305,7 @@ body.leaderboards-page #friendProfileModal .profile-modal-content .stat-value {
         }
 
         async function computePersonalLeaderboardRank(rangeConfig, candidateRows) {
+            if (window.SharkdleLeaderboardBlacklist.isBlacklisted(currentUserUID)) return null;
             const match = findPersonalRankInRows(candidateRows);
             if (match) {
                 return {
@@ -2328,6 +2339,7 @@ body.leaderboards-page #friendProfileModal .profile-modal-content .stat-value {
                 higherSnapshot.forEach(doc => {
                     if (doc.id === currentUserUID) return;
                     const data = doc.data() || {};
+                    if (window.SharkdleLeaderboardBlacklist.isRecordBlacklisted(data, doc.id)) return;
                     const candidateMetric = getLeaderboardMetricValue(data, rangeConfig.id);
                     if (candidateMetric > metricValue) higherCount++;
                 });
@@ -2349,16 +2361,28 @@ body.leaderboards-page #friendProfileModal .profile-modal-content .stat-value {
         }
 
         async function renderPersonalLeaderboardPosition(rangeConfig, candidateRows) {
+            renderLeaderboardBlacklistNotice();
+            if (window.SharkdleLeaderboardBlacklist.isBlacklisted(auth.currentUser?.uid)) {
+                updatePersonalRankCard({
+                    name: "Your account",
+                    state: rangeConfig.label,
+                    position: "Blacklisted",
+                    metric: "Not ranked",
+                    copy: "Your scores are excluded from the leaderboards."
+                });
+                return;
+            }
             if (!currentUserUID) {
                 renderPersonalRankSignedOut(rangeConfig);
                 return;
             }
 
             const expectedRangeId = rangeConfig.id;
+            const expectedUid = currentUserUID;
             renderPersonalRankLoading(rangeConfig);
             try {
                 const personalRank = await computePersonalLeaderboardRank(rangeConfig, candidateRows);
-                if (selectedLeaderboardRange !== expectedRangeId) return;
+                if (selectedLeaderboardRange !== expectedRangeId || currentUserUID !== expectedUid) return;
                 if (!personalRank) {
                     updatePersonalRankCard({
                         avatar: "images/pfp/shark1.png",
@@ -2392,7 +2416,7 @@ body.leaderboards-page #friendProfileModal .profile-modal-content .stat-value {
                 });
             } catch (error) {
                 console.warn("Personal leaderboard position failed:", error);
-                if (selectedLeaderboardRange !== expectedRangeId) return;
+                if (selectedLeaderboardRange !== expectedRangeId || currentUserUID !== expectedUid) return;
                 updatePersonalRankCard({
                     avatar: "images/pfp/shark1.png",
                     name: currentUserEmail || "Your account",
@@ -2557,6 +2581,10 @@ body.leaderboards-page #friendProfileModal .profile-modal-content .stat-value {
 
         // Wait for auth state before loading leaderboard
         auth.onAuthStateChanged(async user => {
+            currentUserUID = user?.uid || null;
+            currentUserEmail = user?.email || null;
+            if (!user) currentUsername = null;
+            renderLeaderboardBlacklistNotice();
             if (user) {
                 currentUserUID = user.uid;
                 currentUserEmail = user.email;
@@ -2584,7 +2612,7 @@ body.leaderboards-page #friendProfileModal .profile-modal-content .stat-value {
             let lastDoc = null;
             let pageCount = 0;
             const maxPages = rangeConfig.id === "all_time"
-                ? Math.max(1, Math.ceil(maxCandidates / queryLimit))
+                ? Math.max(1, Math.ceil(LEADERBOARD_SCAN_LIMIT / queryLimit))
                 : 8;
             let orderField = rangeConfig.orderField;
             let usingFallbackOrder = false;
@@ -2617,6 +2645,7 @@ body.leaderboards-page #friendProfileModal .profile-modal-content .stat-value {
 
                 for (const doc of snapshot.docs) {
                     const data = doc.data();
+                    if (window.SharkdleLeaderboardBlacklist.isRecordBlacklisted(data, doc.id)) continue;
                     const totalWins = Number(data?.wins) || 0;
                     if (totalWins <= 0) continue;
 
@@ -2639,6 +2668,7 @@ body.leaderboards-page #friendProfileModal .profile-modal-content .stat-value {
         }
 
         async function loadLeaderboard(rangeKey = selectedLeaderboardRange) {
+            renderLeaderboardBlacklistNotice();
             selectedLeaderboardRange = rangeKey;
             updateLeaderboardRangeUI(selectedLeaderboardRange);
             const rangeConfig = getRangeConfig(selectedLeaderboardRange);
@@ -2826,6 +2856,7 @@ body.leaderboards-page #friendProfileModal .profile-modal-content .stat-value {
                     let r = 1;
                     let placement = null;
                     snapshot.forEach(d => {
+                        if (window.SharkdleLeaderboardBlacklist.isRecordBlacklisted(d.data(), d.id)) return;
                         if (placement !== null) return;
                         if (d.id === uid) placement = r;
                         r++;

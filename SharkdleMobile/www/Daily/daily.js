@@ -7,17 +7,201 @@ function getTodayInLocalTimezone() {
     return `${year}-${month}-${day}`;
 }
 
+function getRequestedSpeciesMode() {
+    const requestedMode = new URLSearchParams(window.location.search).get("pool") || "sharks";
+    const normalizedMode = requestedMode.toLowerCase();
+    if (["ray", "rays"].includes(normalizedMode)) return "rays";
+    if (["mixed", "all", "elasmobranch", "elasmobranchs"].includes(normalizedMode)) return "mixed";
+    return "sharks";
+}
+
+const HERO_ART = {
+    sharkBg: "images/home-v3/shark-bg.png",
+    sharkFg: "images/home-v3/shark-fg.png",
+    manta: "images/home-v3/manta-ray.png"
+};
+
+function getSpeciesModeConfig(modeKey) {
+    const configs = {
+        sharks: {
+            key: "sharks",
+            title: "Sharkdle - Daily",
+            kicker: "Daily Challenge",
+            heading: "Guess the Shark",
+            lead: "Think you know this shark? Make your guess below.",
+            placeholder: "Enter shark name...",
+            animal: "shark",
+            animalTitle: "Shark",
+            shareTitle: "Sharkdle Daily",
+            recentMode: "Daily",
+            heroBackground: HERO_ART.sharkBg,
+            heroForeground: HERO_ART.sharkFg
+        },
+        rays: {
+            key: "rays",
+            title: "Relatives - Daily",
+            kicker: "Daily Relatives",
+            heading: "Guess the Relative",
+            lead: "Think you know this shark relative? Make your guess below.",
+            placeholder: "Enter relative name...",
+            animal: "relative",
+            animalTitle: "Relative",
+            shareTitle: "Relatives Daily",
+            recentMode: "Daily Relatives",
+            heroBackground: HERO_ART.manta,
+            heroForeground: HERO_ART.manta
+        },
+        mixed: {
+            key: "mixed",
+            title: "Sharkdle - Mixed Daily",
+            kicker: "Mixed Daily",
+            heading: "Guess the Species",
+            lead: "Sharks and relatives share the board. Make your guess below.",
+            placeholder: "Enter shark or relative name...",
+            animal: "species",
+            animalTitle: "Species",
+            shareTitle: "Sharkdle Mixed Daily",
+            recentMode: "Daily Mixed",
+            heroBackground: HERO_ART.sharkBg,
+            heroForeground: HERO_ART.manta
+        }
+    };
+
+    return configs[modeKey] || configs.sharks;
+}
+
+function getActiveSpeciesPool(modeKey) {
+    const sharkPool = Array.isArray(window.sharks) ? window.sharks : [];
+    const rayPool = Array.isArray(window.rays) ? window.rays : [];
+    if (modeKey === "rays") return rayPool.length ? rayPool : sharkPool;
+    if (modeKey === "mixed") return [...sharkPool, ...rayPool];
+    return sharkPool;
+}
+
+const speciesMode = getSpeciesModeConfig(getRequestedSpeciesMode());
+const speciesPool = getActiveSpeciesPool(speciesMode.key);
+
+function getDailyStorageKey() {
+    return speciesMode.key === "sharks" ? `daily_${today}` : `daily_${speciesMode.key}_${today}`;
+}
+
+function getDailyFirestoreState(firebaseData) {
+    if (speciesMode.key === "sharks") return firebaseData;
+    return firebaseData?.modes?.[speciesMode.key] || null;
+}
+
+function getDailyFirestorePayload(state) {
+    if (speciesMode.key === "sharks") {
+        return {
+            ...state,
+            lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+        };
+    }
+
+    return {
+        modes: {
+            [speciesMode.key]: {
+                ...state,
+                lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+            }
+        }
+    };
+}
+
+function applySpeciesModeCopy() {
+    document.title = speciesMode.title;
+    document.body.classList.remove("species-mode-sharks", "species-mode-rays", "species-mode-mixed");
+    document.body.classList.add(`species-mode-${speciesMode.key}`);
+
+    document.querySelectorAll("[data-pool-mode]").forEach(link => {
+        link.classList.toggle("active", link.dataset.poolMode === speciesMode.key);
+    });
+
+    const title = document.getElementById("mode-title");
+    const kicker = document.getElementById("mode-kicker");
+    const heading = document.getElementById("guess-heading");
+    const lead = document.getElementById("mode-lead");
+    const input = document.getElementById("sharkGuess");
+    const heroBackground = document.querySelector(".guess-hero-bg");
+    const heroForeground = document.querySelector(".guess-hero-fg");
+
+    if (title) title.textContent = speciesMode.title;
+    if (kicker) kicker.textContent = speciesMode.kicker;
+    if (heading) heading.textContent = speciesMode.heading;
+    if (lead) lead.textContent = speciesMode.lead;
+    if (input) input.placeholder = speciesMode.placeholder;
+    if (heroBackground) heroBackground.src = speciesMode.heroBackground;
+    if (heroForeground) heroForeground.src = speciesMode.heroForeground;
+}
+
+applySpeciesModeCopy();
+
+function getInfiniteModeHref() {
+    const path = speciesMode.key === "sharks"
+        ? "infinite.html"
+        : `Infinite/index.html?pool=${speciesMode.key}`;
+    return typeof resolveAppPath === "function" ? resolveAppPath(path) : path;
+}
+
+function getDailyModeHref(modeKey) {
+    const path = modeKey === "sharks"
+        ? "Daily/index.html"
+        : `Daily/index.html?pool=${modeKey}`;
+    return typeof resolveAppPath === "function" ? resolveAppPath(path) : path;
+}
+
+function getSharchiveReviewHref() {
+    const path = typeof resolveAppPath === "function" ? resolveAppPath("Library/index.html") : "Library/index.html";
+    return `${path}?species=${encodeURIComponent(targetShark.name)}`;
+}
+
+function appendSharchiveReviewButton(container) {
+    const actionRows = container.querySelectorAll('div');
+    const actions = actionRows[actionRows.length - 1];
+    if (!actions) return;
+    actions.style.flexWrap = 'wrap';
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.textContent = 'Review in Sharchive';
+    button.style.cssText = 'padding:12px 18px;font-size:15px;cursor:pointer;background:rgba(70,229,139,0.18);border:1px solid rgba(70,229,139,0.5);border-radius:6px;color:#b8ffd2;font-weight:bold;';
+    button.addEventListener('click', () => {
+        window.location.href = getSharchiveReviewHref();
+    });
+    actions.appendChild(button);
+}
+
+function getDailyVariantSwitcherHtml() {
+    const variants = [
+        { key: "sharks", label: "Sharks" },
+        { key: "rays", label: "Relatives" },
+        { key: "mixed", label: "Mixed" }
+    ];
+
+    const links = variants.map(variant => {
+        const activeClass = variant.key === speciesMode.key ? " active" : "";
+        const currentAttr = variant.key === speciesMode.key ? ' aria-current="page"' : "";
+        return `<a class="daily-result-variant${activeClass}" href="${getDailyModeHref(variant.key)}"${currentAttr}>${variant.label}</a>`;
+    }).join("");
+
+    return `
+<div class="daily-result-variants" aria-label="Daily variants">
+    <span>Play another Daily</span>
+    <div class="daily-result-variant-list">${links}</div>
+</div>`;
+}
+
 // --- Share Results (Daily) ---
 function generateDailyShareText() {
-    const title = `Sharkdle Daily ${today} - ${gameWon ? guesses.length : 'X'}/${12}`;
+    const title = `${speciesMode.shareTitle} ${today} - ${gameWon ? guesses.length : 'X'}/${12}`;
     // Build grid: 6 categories per guess -> green for correct, black for incorrect
     const rows = guesses.map(g => {
-        const order = ['family','order','genus','size','depth','yod'];
+        const order = ['order','family','genus','size','depth','yod'];
         return order.map(cat => (g.feedback && g.feedback[cat]) ? '🟩' : '⬛').join('');
     });
     const body = rows.join('\n');
-    const url = new URL("./", window.location.href).href;
-    return `${title}\n${body}\n\nPlay: ${url}`;
+    const url = window.location.href.split("#")[0];
+    const tag = " #Sharkdle";
+    return `${title}\n${body}\n\nPlay: ${url}\n\n${tag}`;
 }
 
 async function shareDailyResults() {
@@ -48,31 +232,31 @@ async function shareDailyResults() {
 }
 
 // Get the next midnight in the user's local timezone
-function getNextMidnightTime() {
-    const now = new Date();
-    const tomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 0, 0);
-    return tomorrow.getTime();
-}
-
 const today = getTodayInLocalTimezone()
+const dailyStorageKey = getDailyStorageKey()
+const dailyTargetSeed = speciesMode.key === "sharks" ? today : `${today}:${speciesMode.key}`
 
-// Daily target must be fully deterministic so every player gets the same shark.
-const dailySharkIndex = hashDate(today) % sharks.length
-const targetShark = sharks[dailySharkIndex]
+// Daily target must be fully deterministic so every player gets the same species.
+const dailySharkIndex = hashDate(dailyTargetSeed) % speciesPool.length
+const targetShark = speciesPool[dailySharkIndex]
 
 let attempts = 12
 let guesses = []
 let gameCompleted = false
 let gameWon = false
 let lastLoadedDate = today
+let categoryReveal = null
 const dailySpeciesTrackerRoundId = window.SharkdleSpeciesTracker
-    ? window.SharkdleSpeciesTracker.createRoundId("daily", `${today}-sharks`)
-    : `daily-${today}-sharks`
+    ? window.SharkdleSpeciesTracker.createRoundId("daily", `${today}-${speciesMode.key}`)
+    : `daily-${today}-${speciesMode.key}`
+
+const dailyFairPlayRound = window.SharkdleFairPlay?.startRound('daily', speciesMode.key, dailySpeciesTrackerRoundId);
 
 function recordDailySpeciesHistory(won) {
+    void window.SharkdleFairPlay?.finishRound(dailyFairPlayRound, won, guesses.length);
     if (!window.SharkdleSpeciesTracker) return;
     void window.SharkdleSpeciesTracker.recordRound({
-        mode: "daily-sharks",
+        mode: `daily-${speciesMode.key}`,
         roundId: dailySpeciesTrackerRoundId,
         targetSpecies: targetShark,
         guesses: guesses.map(entry => entry.shark),
@@ -80,26 +264,6 @@ function recordDailySpeciesHistory(won) {
         guessesTaken: guesses.length,
         won
     });
-}
-
-function getSharchiveReviewHref() {
-    const path = typeof resolveAppPath === "function" ? resolveAppPath("Library/index.html") : "Library/index.html";
-    return `${path}?species=${encodeURIComponent(targetShark.name)}`;
-}
-
-function appendSharchiveReviewButton(container) {
-    const actionRows = container.querySelectorAll('div');
-    const actions = actionRows[actionRows.length - 1];
-    if (!actions) return;
-    actions.style.flexWrap = 'wrap';
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.textContent = 'Review in Sharchive';
-    button.style.cssText = 'padding:12px 18px;font-size:15px;cursor:pointer;background:rgba(70,229,139,0.18);border:1px solid rgba(70,229,139,0.5);border-radius:6px;color:#b8ffd2;font-weight:bold;';
-    button.addEventListener('click', () => {
-        window.location.href = getSharchiveReviewHref();
-    });
-    actions.appendChild(button);
 }
 
 const messageDiv = document.getElementById("message");
@@ -143,7 +307,7 @@ function normalizeSavedGuess(guess) {
     const savedShark = guess?.shark || guess?.species || guess;
     if (!savedShark?.name) return null;
 
-    const currentSpecies = sharks.find(species => species.name === savedShark.name);
+    const currentSpecies = speciesPool.find(species => species.name === savedShark.name);
     const shark = { ...savedShark, ...(currentSpecies || {}) };
 
     return {
@@ -157,14 +321,73 @@ function normalizeSavedGuesses(savedGuesses) {
     return savedGuesses.map(normalizeSavedGuess).filter(Boolean);
 }
 
-const MYSTERY_PROFILE_FIELDS = [
-    { key: "family", getValue: shark => shark.family },
-    { key: "order", getValue: shark => shark.order },
-    { key: "genus", getValue: shark => shark.genus },
-    { key: "size", getValue: shark => getSizeWithThreshold(shark.size) },
-    { key: "depth", getValue: shark => getDepthWithClue(shark.depth) },
-    { key: "yod", getValue: shark => shark.yod }
+const CATEGORY_REVEAL_PRICE = 25;
+const CATEGORY_REVEAL_OPTIONS = [
+    { key: "order", label: "Order", getValue: shark => shark.order },
+    { key: "family", label: "Family", getValue: shark => shark.family },
+    { key: "genus", label: "Genus", getValue: shark => shark.genus },
+    { key: "size", label: "Size", getValue: shark => getSizeWithThreshold(shark.size) },
+    { key: "depth", label: "Depth", getValue: shark => getDepthWithClue(shark.depth) },
+    { key: "yod", label: "Year of Discovery", getValue: shark => shark.yod }
 ];
+
+function getCategoryRevealOption(key) {
+    return CATEGORY_REVEAL_OPTIONS.find(option => option.key === key) || null;
+}
+
+function normalizeCategoryRevealState(rawReveal) {
+    if (!rawReveal || typeof rawReveal !== "object") return null;
+    const option = getCategoryRevealOption(rawReveal.key);
+    if (!option) return null;
+    return {
+        key: option.key,
+        revealedAt: Number(rawReveal.revealedAt) || null
+    };
+}
+
+function getDiscoveredCategoryKeys() {
+    const discovered = new Set();
+
+    guesses.forEach(guess => {
+        const feedback = guess && guess.feedback;
+        if (!feedback || typeof feedback !== "object") return;
+
+        CATEGORY_REVEAL_OPTIONS.forEach(option => {
+            if (feedback[option.key]) {
+                discovered.add(option.key);
+            }
+        });
+    });
+
+    if (categoryReveal?.key) {
+        discovered.add(categoryReveal.key);
+    }
+
+    return discovered;
+}
+
+function getAvailableCategoryRevealOptions() {
+    const discovered = getDiscoveredCategoryKeys();
+    return CATEGORY_REVEAL_OPTIONS.filter(option => !discovered.has(option.key));
+}
+
+function getCategoryRevealCommonName(option) {
+    if (!["family", "order", "genus"].includes(option.key)) return "";
+    const value = option.getValue(targetShark);
+    return typeof window.getSharkTaxonomyCommonName === "function"
+        ? window.getSharkTaxonomyCommonName(value)
+        : "";
+}
+
+function formatCategoryRevealText(option) {
+    const value = option.getValue(targetShark);
+    const commonName = getCategoryRevealCommonName(option);
+    return commonName ? `${option.label}: ${value} (${commonName})` : `${option.label}: ${value}`;
+}
+
+function hasCorrectGuessForProfileField(key) {
+    return guesses.some(guess => guess?.feedback?.[key]);
+}
 
 function isMysteryProfileSpeciesDiscovered() {
     return gameWon || guesses.some(guess => guess?.shark?.name === targetShark.name);
@@ -199,7 +422,7 @@ function formatYearDiscoveryClueRange(range) {
 }
 
 function hasProfileFilterValue(key) {
-    return guesses.some(guess => guess?.feedback?.[key]);
+    return hasCorrectGuessForProfileField(key) || categoryReveal?.key === key;
 }
 
 function getMysteryProfileFilterState() {
@@ -324,24 +547,26 @@ function updateMysteryProfilePanel(animate = false) {
     let narrowedCount = 0;
     const rowsToAnimate = [];
 
-    MYSTERY_PROFILE_FIELDS.forEach(field => {
-        const row = panel.querySelector(`[data-profile-key="${field.key}"]`);
+    CATEGORY_REVEAL_OPTIONS.forEach(option => {
+        const row = panel.querySelector(`[data-profile-key="${option.key}"]`);
         if (!row) return;
 
         const valueElement = row.querySelector(".mystery-profile-value");
         const wasVisible = row.classList.contains("revealed") || row.classList.contains("narrowed");
         const previousValue = valueElement?.textContent || "";
-        const isConfirmed = guesses.some(guess => guess?.feedback?.[field.key]);
-        const rangeValue = field.key === "yod" && !isConfirmed
+        const confirmedByGuess = hasCorrectGuessForProfileField(option.key);
+        const confirmedByReveal = categoryReveal?.key === option.key;
+        const isConfirmed = confirmedByGuess || confirmedByReveal;
+        const rangeValue = option.key === "yod" && !isConfirmed
             ? formatYearDiscoveryClueRange(getYearDiscoveryClueRange())
             : "";
         const isNarrowed = Boolean(rangeValue);
-        const value = isConfirmed ? String(field.getValue(targetShark) ?? "") : rangeValue;
+        const value = isConfirmed ? String(option.getValue(targetShark) ?? "") : rangeValue;
 
         row.classList.remove("profile-revealing");
         row.classList.toggle("revealed", isConfirmed);
         row.classList.toggle("narrowed", isNarrowed);
-        row.classList.remove("purchased");
+        row.classList.toggle("purchased", confirmedByReveal && !confirmedByGuess);
         if (animate && (isConfirmed || isNarrowed) && (!wasVisible || previousValue !== value)) {
             rowsToAnimate.push(row);
         }
@@ -367,7 +592,7 @@ function updateMysteryProfilePanel(animate = false) {
     const status = panel.querySelector(".mystery-profile-target small");
     if (status) {
         if (confirmedCount > 0) {
-            status.textContent = `${confirmedCount}/${MYSTERY_PROFILE_FIELDS.length} clues confirmed`;
+            status.textContent = `${confirmedCount}/${CATEGORY_REVEAL_OPTIONS.length} clues confirmed`;
         } else if (narrowedCount > 0) {
             status.textContent = `${narrowedCount} clue narrowed`;
         } else {
@@ -386,13 +611,212 @@ function updateMysteryProfilePanel(animate = false) {
     }
 }
 
+function getCategoryRevealProfile() {
+    if (typeof window.getBestLocalProfile === "function") {
+        return window.getBestLocalProfile();
+    }
+
+    try {
+        return JSON.parse(localStorage.getItem("userProfile") || "{}");
+    } catch (error) {
+        return {};
+    }
+}
+
+function getCategoryRevealPearls(profileData) {
+    if (typeof window.getPearlCount === "function") {
+        return window.getPearlCount(profileData);
+    }
+
+    return Math.max(0, Math.floor(Number(profileData?.pearls ?? profileData?.tidePearls) || 0));
+}
+
+function spendCategoryRevealPearls(profileData, amount) {
+    const currentPearls = getCategoryRevealPearls(profileData);
+    const nextPearls = currentPearls - amount;
+
+    if (typeof window.setPearlCount === "function") {
+        window.setPearlCount(profileData, nextPearls);
+    } else {
+        profileData.pearls = Math.max(0, nextPearls);
+    }
+
+    return Math.max(0, nextPearls);
+}
+
+async function persistCategoryRevealProfile(profileData, authUser) {
+    const nextProfile = {
+        ...profileData,
+        uid: window.currentUser?.uid || authUser?.uid || profileData.uid
+    };
+
+    if (typeof window.saveUserProfileLocally === "function") {
+        window.saveUserProfileLocally(nextProfile, { skipRemoteSync: true });
+    } else {
+        localStorage.setItem("userProfile", JSON.stringify(nextProfile));
+    }
+
+    if (authUser && typeof db !== "undefined") {
+        try {
+            await db.collection("userStats").doc(authUser.uid).set({
+                pearls: getCategoryRevealPearls(nextProfile),
+                lastCategoryRevealPurchase: {
+                    mode: speciesMode.recentMode,
+                    gameKey: today,
+                    targetShark: targetShark.name,
+                    category: categoryReveal?.key || "",
+                    price: CATEGORY_REVEAL_PRICE,
+                    purchasedAt: new Date()
+                },
+                lastUpdated: new Date()
+            }, { merge: true });
+        } catch (error) {
+            console.warn("Error saving category reveal pearl spend:", error);
+        }
+    }
+
+    if (typeof updateHomeV3Sidebar === "function") {
+        updateHomeV3Sidebar(nextProfile);
+    }
+    if (typeof renderPearlShop === "function") {
+        renderPearlShop(nextProfile);
+    }
+}
+
+function setCategoryRevealMessage(text, type = "info") {
+    if (messageDiv) messageDiv.textContent = text;
+    if (typeof showNotification === "function") {
+        showNotification(text, type, 3000);
+    }
+}
+
+function updateCategoryRevealPanel() {
+    const panel = document.getElementById("category-reveal-panel");
+    if (!panel) return;
+
+    const result = document.getElementById("category-reveal-result");
+    const balance = document.getElementById("category-reveal-balance");
+    const button = document.getElementById("category-reveal-btn");
+    const authUser = firebase.auth().currentUser;
+    const profileData = getCategoryRevealProfile();
+    const pearls = getCategoryRevealPearls(profileData);
+    const revealedOption = categoryReveal?.key ? getCategoryRevealOption(categoryReveal.key) : null;
+    const availableOptions = getAvailableCategoryRevealOptions();
+
+    panel.classList.toggle("revealed", Boolean(revealedOption));
+
+    if (balance) {
+        balance.textContent = authUser ? `${pearls.toLocaleString()} pearls available` : "Login required to spend pearls";
+    }
+
+    if (revealedOption) {
+        if (result) result.textContent = `Revealed: ${formatCategoryRevealText(revealedOption)}`;
+        if (button) {
+            button.disabled = true;
+            button.textContent = "Category Revealed";
+        }
+        return;
+    }
+
+    if (!availableOptions.length) {
+        if (result) result.textContent = "Every category has already been discovered.";
+        if (button) {
+            button.disabled = true;
+            button.textContent = "All Categories Found";
+        }
+        return;
+    }
+
+    if (gameCompleted) {
+        if (result) result.textContent = "Category reveal is unavailable after the game ends.";
+        if (button) {
+            button.disabled = true;
+            button.textContent = "Game Complete";
+        }
+        return;
+    }
+
+    if (!authUser) {
+        if (result) result.textContent = `Reveal one undiscovered category for ${CATEGORY_REVEAL_PRICE} pearls.`;
+        if (button) {
+            button.disabled = true;
+            button.textContent = "Login Required";
+        }
+        return;
+    }
+
+    if (pearls < CATEGORY_REVEAL_PRICE) {
+        if (result) result.textContent = `Reveal one undiscovered category for ${CATEGORY_REVEAL_PRICE} pearls.`;
+        if (button) {
+            button.disabled = true;
+            button.textContent = `Need ${CATEGORY_REVEAL_PRICE - pearls} More`;
+        }
+        return;
+    }
+
+    if (result) result.textContent = "Reveal one random category you have not discovered yet.";
+    if (button) {
+        button.disabled = false;
+        button.textContent = `Reveal Category - ${CATEGORY_REVEAL_PRICE}p`;
+    }
+}
+
+async function buyCategoryReveal() {
+    if (gameCompleted) {
+        setCategoryRevealMessage("Category reveal is unavailable after the game ends.", "error");
+        updateCategoryRevealPanel();
+        return;
+    }
+
+    if (categoryReveal?.key) {
+        setCategoryRevealMessage("You already revealed a category this game.", "error");
+        updateCategoryRevealPanel();
+        return;
+    }
+
+    const availableOptions = getAvailableCategoryRevealOptions();
+    if (!availableOptions.length) {
+        setCategoryRevealMessage("You already discovered every category.", "info");
+        updateCategoryRevealPanel();
+        return;
+    }
+
+    const authUser = firebase.auth().currentUser;
+    if (!authUser) {
+        setCategoryRevealMessage("Login to spend pearls on a category reveal.", "error");
+        updateCategoryRevealPanel();
+        return;
+    }
+
+    const profileData = getCategoryRevealProfile();
+    const pearls = getCategoryRevealPearls(profileData);
+    if (pearls < CATEGORY_REVEAL_PRICE) {
+        setCategoryRevealMessage(`You need ${CATEGORY_REVEAL_PRICE - pearls} more pearls.`, "error");
+        updateCategoryRevealPanel();
+        return;
+    }
+
+    const option = availableOptions[Math.floor(Math.random() * availableOptions.length)];
+    categoryReveal = {
+        key: option.key,
+        revealedAt: Date.now()
+    };
+
+    spendCategoryRevealPearls(profileData, CATEGORY_REVEAL_PRICE);
+    await persistCategoryRevealProfile(profileData, authUser);
+    await saveGameState();
+    updateCategoryRevealPanel();
+    updateMysteryProfilePanel();
+    setCategoryRevealMessage(`${formatCategoryRevealText(option)} revealed.`, "success");
+}
+
 
 
 
 // Load game state from localStorage and Firestore
 async function loadGameState() {
     // First, check localStorage for today's game
-    const stored = localStorage.getItem(`daily_${today}`)
+    const stored = localStorage.getItem(dailyStorageKey)
     if (stored) {
         const state = JSON.parse(stored)
         // Validate that stored state is actually for today (not from device date manipulation)
@@ -401,11 +825,12 @@ async function loadGameState() {
             attempts = state.attempts || 12
             gameCompleted = state.completed || false
             gameWon = state.won || false
+            categoryReveal = normalizeCategoryRevealState(state.categoryReveal)
             lastLoadedDate = today
         } else {
             // Date mismatch in localStorage - device date was likely changed. Start fresh.
             console.warn("localStorage date mismatch. Resetting game.");
-            localStorage.removeItem(`daily_${today}`);
+            localStorage.removeItem(dailyStorageKey);
         }
     }
 
@@ -415,27 +840,30 @@ async function loadGameState() {
         try {
             const dailyRef = db.collection("userDaily").doc(currentUser.uid);
             const doc = await dailyRef.get();
-            
+
             if (doc.exists) {
                 const firebaseData = doc.data();
-                
+                const modeData = getDailyFirestoreState(firebaseData);
+                if (!modeData) return;
+
                 // Check server timestamp to prevent device date manipulation
-                if (firebaseData.lastUpdated) {
-                    const lastPlayDate = firebaseData.lastUpdated.toDate();
-                    const lastPlayUTC = lastPlayDate.getUTCFullYear() + '-' + 
+                if (modeData.lastUpdated) {
+                    const lastPlayDate = modeData.lastUpdated.toDate();
+                    const lastPlayUTC = lastPlayDate.getUTCFullYear() + '-' +
                                        String(lastPlayDate.getUTCMonth() + 1).padStart(2, '0') + '-' +
                                        String(lastPlayDate.getUTCDate()).padStart(2, '0');
-                    
+
                     // If they played today (according to server time), load their game
                     // regardless of what their client date says
                     if (lastPlayUTC === today) {
-                        guesses = normalizeSavedGuesses(firebaseData.guesses)
-                        attempts = firebaseData.attempts || 12
-                        gameCompleted = firebaseData.completed || false
-                        gameWon = firebaseData.won || false
+                        guesses = normalizeSavedGuesses(modeData.guesses)
+                        attempts = modeData.attempts || 12
+                        gameCompleted = modeData.completed || false
+                        gameWon = modeData.won || false
+                        categoryReveal = normalizeCategoryRevealState(modeData.categoryReveal)
                         lastLoadedDate = today
                         return; // Don't allow resetting if already played today
-                    } else if (lastPlayUTC !== today && firebaseData.date === today) {
+                    } else if (lastPlayUTC !== today && modeData.date === today) {
                         // Server says they played a different day, but stored date says today
                         // This means device date was manipulated. Use server truth.
                         console.warn("Device date manipulation detected. Resetting game.");
@@ -443,25 +871,28 @@ async function loadGameState() {
                         attempts = 12
                         gameCompleted = false
                         gameWon = false
+                        categoryReveal = null
                         lastLoadedDate = today
                         return;
                     }
                 }
-                
+
                 // Fallback: validate the saved date against stored date field
-                if (firebaseData.date === today) {
-                    guesses = normalizeSavedGuesses(firebaseData.guesses)
-                    attempts = firebaseData.attempts || 12
-                    gameCompleted = firebaseData.completed || false
-                    gameWon = firebaseData.won || false
+                if (modeData.date === today) {
+                    guesses = normalizeSavedGuesses(modeData.guesses)
+                    attempts = modeData.attempts || 12
+                    gameCompleted = modeData.completed || false
+                    gameWon = modeData.won || false
+                    categoryReveal = normalizeCategoryRevealState(modeData.categoryReveal)
                     lastLoadedDate = today
-                } else if (firebaseData.date && firebaseData.date !== today) {
+                } else if (modeData.date && modeData.date !== today) {
                     // Date mismatch: likely device date was changed. Reset the game
                     console.warn("Date mismatch detected. Device date may have been manipulated.");
                     guesses = []
                     attempts = 12
                     gameCompleted = false
                     gameWon = false
+                    categoryReveal = null
                     lastLoadedDate = today
                 }
             }
@@ -478,23 +909,21 @@ async function saveGameState() {
         attempts: attempts,
         completed: gameCompleted,
         won: gameWon,
+        categoryReveal: categoryReveal,
+        mode: speciesMode.key,
         date: today
     }
-    
+
     // Save to localStorage
-    localStorage.setItem(`daily_${today}`, JSON.stringify(state))
-    
+    localStorage.setItem(dailyStorageKey, JSON.stringify(state))
+
     // Save to Firestore if user is logged in
     // Use firebase.auth().currentUser for more reliable auth check
     const currentUser = firebase.auth().currentUser;
     if (currentUser && typeof db !== 'undefined') {
         try {
             const dailyRef = db.collection("userDaily").doc(currentUser.uid);
-            await dailyRef.set({
-                ...state,
-                // Use server timestamp so device time manipulation can't affect recorded state
-                lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
-            }, { merge: true });
+            await dailyRef.set(getDailyFirestorePayload(state), { merge: true });
         } catch (error) {
             console.warn("Error saving daily game to Firestore:", error);
         }
@@ -504,7 +933,7 @@ async function saveGameState() {
 // Initialize game
 async function initializeGame() {
     await loadGameState()
-    
+
     // Set attempts display if game not completed
     if (!gameCompleted) {
         document.getElementById("attempts-left").textContent = "Attempts left: " + attempts;
@@ -538,6 +967,7 @@ async function initializeGame() {
         }
     });
 
+    updateCategoryRevealPanel();
     updateMysteryProfilePanel();
 }
 
@@ -556,9 +986,9 @@ function updateCountdown() {
     const now = new Date();
     // Calculate next UTC midnight
     const nextMidnight = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1, 0, 0, 0, 0));
-    
+
     const timeUntil = nextMidnight - now;
-    
+
     let timeStr;
     if (timeUntil <= 0) {
         timeStr = "00:00:00";
@@ -566,14 +996,14 @@ function updateCountdown() {
         const hours = Math.floor(timeUntil / (1000 * 60 * 60));
         const minutes = Math.floor((timeUntil % (1000 * 60 * 60)) / (1000 * 60));
         const seconds = Math.floor((timeUntil % (1000 * 60)) / 1000);
-        
+
         timeStr = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
     }
-    
+
     if (countdownDiv) {
         countdownDiv.textContent = `Next puzzle: ${timeStr}`;
     }
-    
+
     if (winCountdown) {
         winCountdown.textContent = timeStr;
     }
@@ -600,6 +1030,24 @@ return Math.abs(hash)
 
 
 document.getElementById("guessBtn").onclick = makeGuess
+document.getElementById("category-reveal-btn")?.addEventListener("click", buyCategoryReveal)
+
+if (typeof firebase !== "undefined" && firebase.auth) {
+    firebase.auth().onAuthStateChanged(() => updateCategoryRevealPanel());
+}
+
+function normalizeInput(input) {
+    return String(input || "").replace(/\s+/g, "").toLowerCase();
+}
+
+function escapeHtml(value) {
+    return String(value)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+}
 
 const sharkGuessInput = document.getElementById("sharkGuess");
 const suggestionsDiv = document.getElementById("suggestions");
@@ -644,32 +1092,34 @@ sharkGuessInput.addEventListener("keydown", function(event) {
 });
 
 sharkGuessInput.addEventListener("input", function() {
-    const input = this.value.toLowerCase().trim();
-    
+    const input = normalizeInput(this.value);
+
     if (input.length === 0) {
         suggestionsDiv.classList.remove("active");
         highlightedSuggestionIndex = -1;
         return;
     }
-    
-    // Filter sharks that match the input
-    const matches = sharks.filter(shark => 
-        shark.name.toLowerCase().includes(input)
+
+    // Filter species that match the input
+    const matches = speciesPool.filter(shark =>
+        normalizeInput(shark.name).includes(input)
     );
-    
+
     if (matches.length === 0) {
         suggestionsDiv.classList.remove("active");
         highlightedSuggestionIndex = -1;
         return;
     }
-    
+
     // Build suggestions HTML
     suggestionsDiv.innerHTML = matches.map(shark => {
         const isGuessed = guesses.some(g => g.shark.name === shark.name);
         const guessedClass = isGuessed ? 'guessed' : '';
-        return `<div class="suggestion-item ${guessedClass}" onclick="${isGuessed ? '' : `selectShark('${shark.name}')`}">${shark.name}</div>`;
+        const speciesName = encodeURIComponent(shark.name);
+        const disabledAttr = isGuessed ? 'aria-disabled="true"' : `data-species-name="${speciesName}"`;
+        return `<div class="suggestion-item ${guessedClass}" ${disabledAttr}>${escapeHtml(shark.name)}</div>`;
     }).join("");
-    
+
     suggestionsDiv.classList.add("active");
     highlightedSuggestionIndex = -1;
 });
@@ -679,6 +1129,12 @@ document.addEventListener("click", function(event) {
     if (event.target !== sharkGuessInput && !event.target.closest(".suggestions-dropdown")) {
         suggestionsDiv.classList.remove("active");
     }
+});
+
+suggestionsDiv.addEventListener("click", function(event) {
+    const item = event.target.closest(".suggestion-item[data-species-name]");
+    if (!item) return;
+    selectShark(decodeURIComponent(item.dataset.speciesName));
 });
 
 function selectShark(sharkName) {
@@ -716,26 +1172,26 @@ function makeGuess(){
 if (gameCompleted) return
 
 const input = document.getElementById("sharkGuess")
-const guess = input.value.trim().toLowerCase()
+const guess = normalizeInput(input.value)
 
 // Clear previous message
 if (messageDiv) messageDiv.textContent = "";
 
 if (!guess) {
-    if (messageDiv) messageDiv.textContent = "Enter a shark name.";
+    if (messageDiv) messageDiv.textContent = `Enter a ${speciesMode.animal} name.`;
     return;
 }
 
-const shark = sharks.find(s => s.name.toLowerCase() === guess)
+const shark = speciesPool.find(s => normalizeInput(s.name) === guess)
 
 if(!shark) {
-    if (messageDiv) messageDiv.textContent = "Shark not found in the list.";
+    if (messageDiv) messageDiv.textContent = `${speciesMode.animalTitle} not found in the list.`;
     return;
 }
 
 // Check if already guessed
 if (guesses.some(g => g.shark.name === shark.name)) {
-    if (messageDiv) messageDiv.textContent = "You already guessed this shark.";
+    if (messageDiv) messageDiv.textContent = `You already guessed this ${speciesMode.animal}.`;
     return;
 }
 
@@ -753,6 +1209,7 @@ const feedback = {
 }
 
 guesses.push({ shark: shark, feedback: feedback })
+window.SharkdleFairPlay?.noteGuess(dailyFairPlayRound)
 // Save game state to both localStorage and Firestore (fire and forget for better UX)
 saveGameState()
 
@@ -773,7 +1230,8 @@ if (cards.length > 0) {
     openGuessFeedback(newestFeedback, true);
 }
 
-scheduleMysteryProfileReveal()
+updateCategoryRevealPanel();
+scheduleMysteryProfileReveal();
 
 if(shark.name === targetShark.name){
 
@@ -812,7 +1270,7 @@ if(shark.name === targetShark.name){
     if (!profileData.bestGame || profileData.bestGame === 'N/A' || guessesTaken < parseInt(profileData.bestGame)) {
         profileData.bestGame = guessesTaken;
     }
-    
+
     // Calculate and save average guesses
     if (profileData.gamesPlayed > 0) {
         profileData.averageGuesses = (profileData.totalGuesses / profileData.gamesPlayed).toFixed(2);
@@ -846,7 +1304,7 @@ if(shark.name === targetShark.name){
         result: 'Win',
         guesses: guessesTaken,
         sharkName: targetShark.name,
-        mode: 'Daily'
+        mode: speciesMode.recentMode
     });
     localStorage.setItem('recentGames', JSON.stringify(recentGames.slice(0, 20)));
 
@@ -859,6 +1317,7 @@ if(shark.name === targetShark.name){
     gameWon = true
     saveGameState()
     recordDailySpeciesHistory(true)
+    updateCategoryRevealPanel()
 
     // Update display
     if (typeof window.updateIndexStats !== 'undefined') {
@@ -866,11 +1325,13 @@ if(shark.name === targetShark.name){
     }
 
     if (typeof window.maybeAwardCrateDrop === 'function') {
-        window.maybeAwardCrateDrop('daily win');
+        window.maybeAwardCrateDrop(`${speciesMode.recentMode.toLowerCase()} win`);
     }
 
     if (typeof window.contributeCommunityBossWin === 'function') {
-        window.contributeCommunityBossWin('daily', { contributionKey: today });
+        window.SharkdleChristmas?.recordWin('daily');
+        const contributionKey = speciesMode.key === "sharks" ? today : `${today}_${speciesMode.key}`;
+        window.contributeCommunityBossWin('daily', { contributionKey });
     }
 
     showWin(xpGain, guessesTaken, false, pearlsEarned);
@@ -894,7 +1355,7 @@ if(attempts===0 && !gameWon){
         profileData.currentLossStreak = (profileData.currentLossStreak || 0) + 1;
         const previousWinStreak = Math.max(0, Number(profileData.currentStreak) || 0);
         const streakShieldUsed = typeof window.applyStreakShieldOnLoss === 'function'
-            ? window.applyStreakShieldOnLoss(profileData, { mode: "Daily" })
+            ? window.applyStreakShieldOnLoss(profileData, { mode: speciesMode.recentMode })
             : false;
         if (!streakShieldUsed) {
             profileData.currentStreak = 0; // Reset streak on loss when no shield is available
@@ -909,7 +1370,7 @@ if(attempts===0 && !gameWon){
                 profileData.unlockedBadges = [...new Set([...(Array.isArray(profileData.unlockedBadges) ? profileData.unlockedBadges : ["starter"]), "im-not-okay"])];
             }
         }
-        
+
         // Calculate and save average guesses
         if (profileData.gamesPlayed > 0) {
             profileData.averageGuesses = (profileData.totalGuesses / profileData.gamesPlayed).toFixed(2);
@@ -934,7 +1395,7 @@ if(attempts===0 && !gameWon){
             result: 'Loss',
             guesses: 'X',
             sharkName: targetShark.name,
-            mode: 'Daily'
+            mode: speciesMode.recentMode
         });
         localStorage.setItem('recentGames', JSON.stringify(recentGames.slice(0, 20)));
 
@@ -948,6 +1409,7 @@ if(attempts===0 && !gameWon){
     gameWon = false
     saveGameState()
     recordDailySpeciesHistory(false)
+    updateCategoryRevealPanel()
 
     // Update display
     if (typeof window.updateIndexStats !== 'undefined') {
@@ -976,8 +1438,8 @@ card.innerHTML = `<b style="color: ${nameColor};">${shark.name}</b> (click)`
 const feedbackDiv = document.createElement("div")
 feedbackDiv.className="feedback"
 
-feedbackDiv.appendChild(createCategory("Family", shark.family, feedback.family))
 feedbackDiv.appendChild(createCategory("Order", shark.order, feedback.order))
+feedbackDiv.appendChild(createCategory("Family", shark.family, feedback.family))
 feedbackDiv.appendChild(createCategory("Genus", shark.genus, feedback.genus))
 feedbackDiv.appendChild(createCategory("Size", getSizeWithThreshold(shark.size), feedback.size))
 feedbackDiv.appendChild(createCategory("Depth", getDepthWithClue(shark.depth ?? "Unknown"), feedback.depth))
@@ -1049,7 +1511,7 @@ function createBubbles(container) {
         bubble.style.height = bubble.style.width;
         bubble.style.left = `${Math.random() * 100}%`;
         bubble.style.animationDelay = `${Math.random() * 2}s`;
-        bubble.style.bottom = '0';  
+        bubble.style.bottom = '0';
         container.appendChild(bubble);
     }
 }
@@ -1068,14 +1530,15 @@ let headerText = alreadyCompleted ? "✓ Already Discovered" : "🎉 You Guessed
 win.innerHTML = `
 <button onclick="document.getElementById('win-screen').style.display='none'; document.getElementById('show-results-btn').style.display='block';" style="position: absolute; top: 8px; right: 8px; width: 32px; height: 32px; background: rgba(0,0,0,0.3); border: none; border-radius: 50%; color: inherit; font-size: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.2s; font-weight: bold;">×</button>
 <h2 style="margin-top: 0; font-size: 32px; margin-bottom: 20px;">${headerText}</h2>
-<p style="font-size: 18px; margin: 10px 0; color: inherit;">The shark was <b>${targetShark.name}</b></p>
+<p style="font-size: 18px; margin: 10px 0; color: inherit;">The ${speciesMode.animal} was <b>${targetShark.name}</b></p>
 <p style="font-size: 16px; margin: 10px 0; opacity: 0.9;">Discovered in ${targetShark.yod}</p>
 <p style="font-size: 16px; margin: 10px 0; opacity: 0.9;">You took ${guessesTaken} guess${guessesTaken !== 1 ? 'es' : ''}.</p>
 ${!alreadyCompleted ? `<div style="margin: 20px 0; padding: 15px; background: rgba(255,255,255,0.2); border-radius: 8px;"><p style="font-size: 28px; font-weight: bold; margin: 0; color: inherit;">+${xpGained} XP</p>${pearlsGained ? `<p style="font-size: 20px; font-weight: bold; margin: 8px 0 0; color: #8ff5ef;">+${pearlsGained} Pearls</p>` : ''}</div>` : ''}
 <div style="margin: 20px 0; padding: 12px; background: rgba(255,0,0,0.1); border-radius: 6px; font-size: 14px; text-align: center; color: #ff4444; font-weight: 600;">Next puzzle: <span id="win-countdown">--:--:--</span></div>
+${getDailyVariantSwitcherHtml()}
 <div style="display: flex; gap: 10px; margin-top: 25px; justify-content: center;">
     <button onclick="shareDailyResults()" style="padding: 12px 18px; font-size: 15px; cursor: pointer; background: #0097a7; border: none; border-radius: 6px; color: white; font-weight: bold; transition: filter 0.2s;">🦈 Share Results</button>
-    <button onclick="window.location.href=resolveAppPath('infinite.html')" style="padding: 12px 25px; font-size: 15px; cursor: pointer; background: rgba(255,255,255,0.3); border: none; border-radius: 6px; color: inherit; font-weight: bold; transition: background 0.3s;">Play Infinite</button>
+    <button onclick="window.location.href='${getInfiniteModeHref()}'" style="padding: 12px 25px; font-size: 15px; cursor: pointer; background: rgba(255,255,255,0.3); border: none; border-radius: 6px; color: inherit; font-weight: bold; transition: background 0.3s;">Play Infinite</button>
     <button onclick="window.location.href=resolveAppPath('index.html')" style="padding: 12px 25px; font-size: 15px; cursor: pointer; background: rgba(0,0,0,0.3); border: none; border-radius: 6px; color: inherit; font-weight: bold; transition: background 0.3s;">Back to Home</button>
 </div>
 `
@@ -1098,17 +1561,18 @@ if (!alreadyCompleted && window.checkAchievements) {
 
 const win = document.getElementById("win-screen")
 
-let headerText = alreadyCompleted ? "✗ You could not discover today's Daily Shark" : "😢 You Lost";
+let headerText = alreadyCompleted ? `✗ You could not discover today's Daily ${speciesMode.animalTitle}` : "😢 You Lost";
 
 win.innerHTML = `
 <button onclick="document.getElementById('win-screen').style.display='none'; document.getElementById('show-results-btn').style.display='block';" style="position: absolute; top: 8px; right: 8px; width: 32px; height: 32px; background: rgba(0,0,0,0.3); border: none; border-radius: 50%; color: inherit; font-size: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.2s; font-weight: bold;">×</button>
 <h2 style="margin-top: 0; font-size: 32px; margin-bottom: 20px;">${headerText}</h2>
-<p style="font-size: 18px; margin: 10px 0; color: inherit;">The shark was <b>${targetShark.name}</b></p>
+<p style="font-size: 18px; margin: 10px 0; color: inherit;">The ${speciesMode.animal} was <b>${targetShark.name}</b></p>
 <p style="font-size: 16px; margin: 10px 0; opacity: 0.9;">Discovered in ${targetShark.yod}</p>
 <div style="margin: 20px 0; padding: 12px; background: rgba(255,0,0,0.1); border-radius: 6px; font-size: 14px; text-align: center; color: #ff4444; font-weight: 600;">Next puzzle: <span id="win-countdown">--:--:--</span></div>
+${getDailyVariantSwitcherHtml()}
 <div style="display: flex; gap: 10px; margin-top: 25px; justify-content: center;">
     <button onclick="shareDailyResults()" style="padding: 12px 18px; font-size: 15px; cursor: pointer; background: #0097a7; border: none; border-radius: 6px; color: white; font-weight: bold; transition: filter 0.2s;">🦈 Share Results</button>
-    <button onclick="window.location.href=resolveAppPath('infinite.html')" style="padding: 12px 25px; font-size: 15px; cursor: pointer; background: rgba(255,255,255,0.3); border: none; border-radius: 6px; color: inherit; font-weight: bold; transition: background 0.3s;">Play Infinite</button>
+    <button onclick="window.location.href='${getInfiniteModeHref()}'" style="padding: 12px 25px; font-size: 15px; cursor: pointer; background: rgba(255,255,255,0.3); border: none; border-radius: 6px; color: inherit; font-weight: bold; transition: background 0.3s;">Play Infinite</button>
     <button onclick="window.location.href=resolveAppPath('index.html')" style="padding: 12px 25px; font-size: 15px; cursor: pointer; background: rgba(0,0,0,0.3); border: none; border-radius: 6px; color: inherit; font-weight: bold; transition: background 0.3s;">Back to Home</button>
 </div>
 `
@@ -1126,7 +1590,7 @@ window.revealShark = function() {
         console.log("Access denied. This command is for developers only.");
         return;
     }
-    console.log("TESTING ONLY: The target shark is: " + targetShark.name);
+    console.log(`TESTING ONLY: The target ${speciesMode.animal} is: ${targetShark.name}`);
 };
 
 // Hint functionality
@@ -1164,27 +1628,3 @@ const common_names = [
     {"scientific": "Pseudocarchariidae", "Common": "Crocodile Sharks"},
     {"scientific": "Somniosidae", "Common": "Sleeper Sharks"},
 ];
-
-async function submitStatsToLeaderboard(won, guesses) {
-    try {
-        // Only submit if user is authenticated
-        if (!firebase.auth().currentUser) {
-            console.log("User not authenticated, skipping leaderboard submission");
-            return;
-        }
-
-        const username = firebase.auth().currentUser.displayName || firebase.auth().currentUser.email || "Anonymous";
-        const docRef = db.collection("leaderboard").doc();
-        await docRef.set({
-            username: username,
-            won: won,
-            guesses: guesses,
-            timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-            mode: "daily",
-            userId: firebase.auth().currentUser.uid
-        });
-        console.log("Stats submitted successfully");
-    } catch (error) {
-        console.error("Error submitting stats:", error);
-    }
-}

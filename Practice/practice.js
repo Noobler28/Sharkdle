@@ -202,18 +202,18 @@ function makeGuess() {
 
     guessedShark.guessed = true;
     guessesMade++;
-    
+
     const feedback = [
-        { category: "Family", value: guessedShark.family, correct: guessedShark.family === targetShark.family },
         { category: "Order", value: guessedShark.order, correct: guessedShark.order === targetShark.order },
+        { category: "Family", value: guessedShark.family, correct: guessedShark.family === targetShark.family },
         { category: "Genus", value: guessedShark.genus, correct: guessedShark.genus === targetShark.genus },
         { category: "Size", value: guessedShark.size, correct: guessedShark.size === targetShark.size },
         { category: "Depth", value: guessedShark.depth, correct: guessedShark.depth === targetShark.depth },
         { category: "Year of Discovery", value: guessedShark.yod, correct: guessedShark.yod === targetShark.yod }
     ];
-    
+
     renderGuess(guessedShark, feedback);
-    
+
     // Close guesses with no correct information, then open the newest
     const cards = document.querySelectorAll('#guesses .guess-card');
     cards.forEach(card => {
@@ -228,12 +228,12 @@ function makeGuess() {
         const newestFeedback = cards[0].querySelector('.feedback');
         newestFeedback.style.display = 'flex';
     }
-    
+
     if (normalizeInput(guessedShark.name) === normalizeInput(targetShark.name)) {
         // Disable input
         document.getElementById("sharkGuess").disabled = true;
         document.getElementById("guessBtn").disabled = true;
-        
+
         // Display win screen - no XP or stats
         winLoseScreen.innerHTML = `
             <button onclick="document.getElementById('win-lose-screen').style.display='none'; document.getElementById('show-results-btn').style.display='block';" style="position: absolute; top: 8px; right: 8px; width: 32px; height: 32px; background: rgba(0,0,0,0.3); border: none; border-radius: 50%; color: inherit; font-size: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.2s; font-weight: bold;">×</button>
@@ -254,7 +254,7 @@ function makeGuess() {
         winLoseScreen.style.display = "block";
         document.getElementById('show-results-btn').style.display = 'none';
         createBubbles();
-        
+
     } else {
         messageDiv.textContent = "";
     }

@@ -3809,7 +3809,7 @@ body.home-v3-page .hero-alert button {
 }
 
 .home-v3-explore-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
 }
 
 .home-v3-mode-card {
@@ -5033,12 +5033,36 @@ body.home-v3-page .home-crates-modal-content {
 
 body.home-v3-page .pearl-shop-modal-content {
     position: relative;
-    width: min(94vw, 980px) !important;
+    width: min(94vw, 1040px) !important;
+    height: min(88vh, 860px);
     max-height: 88vh;
-    overflow-y: auto;
-    padding: 24px !important;
+    overflow-x: hidden;
+    overflow-y: scroll;
+    overscroll-behavior: contain;
+    scrollbar-color: rgba(142,239,235,.62) rgba(2,10,20,.58);
+    scrollbar-width: thin;
+    padding: 26px !important;
     display: grid;
-    gap: 18px;
+    gap: 20px;
+    background:
+        radial-gradient(circle at 12% 0%, rgba(142,239,235,.14), transparent 30%),
+        radial-gradient(circle at 88% 8%, rgba(255,196,87,.13), transparent 28%),
+        linear-gradient(180deg, rgba(3,16,28,.98), rgba(2,10,20,.98)) !important;
+}
+
+body.home-v3-page .pearl-shop-modal-content::-webkit-scrollbar {
+    width: 10px;
+}
+
+body.home-v3-page .pearl-shop-modal-content::-webkit-scrollbar-track {
+    background: rgba(2,10,20,.58);
+    border-radius: 999px;
+}
+
+body.home-v3-page .pearl-shop-modal-content::-webkit-scrollbar-thumb {
+    border: 2px solid rgba(2,10,20,.58);
+    border-radius: 999px;
+    background: linear-gradient(180deg, rgba(142,239,235,.86), rgba(255,215,120,.72));
 }
 
 .pearl-shop-hero {
@@ -5051,10 +5075,11 @@ body.home-v3-page .pearl-shop-modal-content {
     border: 1px solid rgba(142,239,235,.18);
     border-radius: 10px;
     background:
-        linear-gradient(90deg, rgba(2,13,24,.92), rgba(4,35,48,.76)),
+        linear-gradient(90deg, rgba(2,13,24,.94), rgba(4,35,48,.68)),
         url("images/home-v3/shark-bg.png") right center / contain no-repeat,
-        linear-gradient(135deg, rgba(44,196,196,.16), rgba(232,168,34,.10));
+        linear-gradient(135deg, rgba(44,196,196,.18), rgba(232,168,34,.14));
     overflow: hidden;
+    box-shadow: 0 24px 54px rgba(0,0,0,.32);
 }
 
 .pearl-shop-hero h2 {
@@ -5114,10 +5139,90 @@ body.home-v3-page .pearl-shop-modal-content {
     line-height: 1;
 }
 
+.shark-shop-impact {
+    display: grid;
+    grid-template-columns: 52px minmax(0, 1fr);
+    gap: 14px;
+    align-items: center;
+    padding: 15px 16px;
+    border: 1px solid rgba(129, 235, 199, .32);
+    border-radius: 10px;
+    background:
+        linear-gradient(135deg, rgba(15, 90, 76, .48), rgba(8, 34, 51, .9)),
+        radial-gradient(circle at 95% 0%, rgba(255, 214, 116, .22), transparent 28%);
+    box-shadow: 0 14px 30px rgba(0,0,0,.22);
+}
+
+.shark-shop-impact i {
+    width: 52px;
+    height: 52px;
+    display: grid;
+    place-items: center;
+    border-radius: 10px;
+    background: rgba(232, 255, 240, .12);
+    color: #b6ffd8;
+    font-size: 22px;
+}
+
+.shark-shop-impact strong,
+.shark-shop-impact span {
+    display: block;
+}
+
+.shark-shop-impact strong {
+    color: #f5fff9;
+    font-family: "Barlow Condensed", sans-serif;
+    font-size: 22px;
+    font-weight: 900;
+    letter-spacing: .4px;
+    text-transform: uppercase;
+}
+
+.shark-shop-impact span {
+    margin-top: 3px;
+    color: rgba(224, 245, 240, .76);
+    font-size: 13px;
+}
+
+.shark-shop-section-head {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(180px, 360px);
+    gap: 16px;
+    align-items: end;
+    padding: 4px 2px 0;
+}
+
+.shark-shop-section-head span {
+    display: block;
+    color: #87f0eb;
+    font-family: "Barlow Condensed", sans-serif;
+    font-size: 12px;
+    font-weight: 900;
+    letter-spacing: 1.6px;
+    text-transform: uppercase;
+}
+
+.shark-shop-section-head h3 {
+    margin: 3px 0 0;
+    color: #fff;
+    font-family: "Barlow Condensed", sans-serif;
+    font-size: 30px;
+    font-weight: 900;
+    line-height: 1;
+    text-transform: uppercase;
+}
+
+.shark-shop-section-head p {
+    margin: 0;
+    color: rgba(212,234,248,.68);
+    font-size: 13px;
+    line-height: 1.45;
+}
+
 .pearl-shop-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 12px;
+    gap: 14px;
 }
 
 .pearl-shop-grid .home-v3-shop-item {
@@ -5128,111 +5233,19 @@ body.home-v3-page .pearl-shop-modal-content {
     background:
         radial-gradient(circle at 0% 0%, rgba(142,239,235,.13), transparent 38%),
         linear-gradient(135deg, rgba(4,21,37,.96), rgba(7,36,48,.86));
+    border: 1px solid rgba(142,239,235,.14);
+    box-shadow: 0 14px 28px rgba(0,0,0,.18);
+    transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease;
+}
+
+.pearl-shop-grid .home-v3-shop-item:hover {
+    transform: translateY(-2px);
+    border-color: rgba(142,239,235,.32);
+    box-shadow: 0 18px 36px rgba(0,0,0,.26);
 }
 
 .pearl-shop-grid .home-v3-shop-item.featured {
     grid-column: 1 / -1;
-}
-
-.pearl-shop-grid .home-v3-shop-item.bottle-pack-featured {
-    position: relative;
-    grid-column: 1 / -1;
-    min-height: 160px;
-    grid-template-columns: minmax(180px, 260px) minmax(0, 1fr) auto;
-    gap: 18px;
-    overflow: hidden;
-    border: 1px solid rgba(255, 255, 255, .34);
-    background:
-        radial-gradient(circle at 14% 18%, rgba(255, 255, 255, .38), transparent 22%),
-        linear-gradient(120deg, rgba(255, 92, 158, .92), rgba(255, 204, 94, .9) 28%, rgba(98, 231, 169, .9) 53%, rgba(84, 190, 255, .92) 76%, rgba(190, 132, 255, .94));
-    box-shadow:
-        0 18px 42px rgba(0, 0, 0, .32),
-        0 0 0 1px rgba(255, 255, 255, .16) inset;
-}
-
-.pearl-shop-grid .home-v3-shop-item.bottle-pack-featured::before {
-    content: "";
-    position: absolute;
-    inset: 1px;
-    border-radius: 9px;
-    background: linear-gradient(135deg, rgba(4, 20, 34, .38), rgba(0, 0, 0, .12));
-    pointer-events: none;
-}
-
-.pearl-shop-sticker {
-    position: absolute;
-    top: 12px;
-    right: 14px;
-    z-index: 2;
-    padding: 5px 9px;
-    border: 1px solid rgba(255, 255, 255, .5);
-    border-radius: 999px;
-    background: rgba(3, 20, 34, .76);
-    color: #fff7d0;
-    font-family: "Barlow Condensed", sans-serif;
-    font-size: 12px;
-    font-weight: 900;
-    letter-spacing: .9px;
-    text-transform: uppercase;
-}
-
-.pearl-shop-bottle-stack {
-    position: relative;
-    z-index: 1;
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 8px;
-    align-items: end;
-}
-
-.pearl-shop-bottle-stack div {
-    display: grid;
-    justify-items: center;
-    gap: 4px;
-    min-width: 0;
-}
-
-.pearl-shop-bottle-stack img {
-    width: 100%;
-    max-width: 54px;
-    height: 86px;
-    object-fit: contain;
-    filter: drop-shadow(0 10px 12px rgba(0, 0, 0, .32));
-}
-
-.pearl-shop-bottle-stack span {
-    display: inline-grid;
-    min-width: 30px;
-    min-height: 24px;
-    place-items: center;
-    border-radius: 999px;
-    background: rgba(2, 21, 36, .8);
-    color: #fff;
-    font-family: "Barlow Condensed", sans-serif;
-    font-size: 14px;
-    font-weight: 900;
-}
-
-.pearl-shop-grid .home-v3-shop-item.bottle-pack-featured .pearl-shop-bottle-copy,
-.pearl-shop-grid .home-v3-shop-item.bottle-pack-featured button {
-    position: relative;
-    z-index: 1;
-}
-
-.pearl-shop-grid .home-v3-shop-item.bottle-pack-featured strong {
-    color: #fff;
-    text-shadow: 0 2px 12px rgba(0, 0, 0, .32);
-}
-
-.pearl-shop-grid .home-v3-shop-item.bottle-pack-featured span {
-    color: rgba(255, 255, 255, .92);
-}
-
-.pearl-shop-grid .home-v3-shop-item.bottle-pack-featured button {
-    min-width: 112px;
-    border-color: rgba(255, 255, 255, .62);
-    background: linear-gradient(135deg, #fffdf0, #fff0a8 55%, #9cffef);
-    color: #082237;
 }
 
 .pearl-shop-grid .home-v3-shop-item > i {
@@ -5254,6 +5267,184 @@ body.home-v3-page .pearl-shop-modal-content {
     min-width: 92px;
     min-height: 42px;
     font-size: 15px;
+}
+
+.supporter-shop-head {
+    margin-top: 4px;
+}
+
+.supporter-shop-head span {
+    color: #ffd778;
+}
+
+.supporter-pack-grid {
+    display: grid;
+    gap: 14px;
+}
+
+.supporter-pack-card {
+    display: grid;
+    grid-template-columns: minmax(160px, 230px) minmax(0, 1fr) auto;
+    gap: 18px;
+    align-items: center;
+    padding: 18px;
+    border: 1px solid rgba(255, 215, 120, .3);
+    border-radius: 10px;
+    background:
+        radial-gradient(circle at 18% 0%, rgba(255, 215, 120, .22), transparent 34%),
+        linear-gradient(135deg, rgba(20, 27, 43, .98), rgba(7, 41, 54, .92));
+    box-shadow: 0 18px 42px rgba(0,0,0,.28);
+}
+
+.supporter-pack-media {
+    min-height: 140px;
+    display: grid;
+    place-items: center;
+    align-content: center;
+    gap: 10px;
+    border: 1px solid rgba(255,255,255,.18);
+    border-radius: 10px;
+    background:
+        radial-gradient(circle at 30% 22%, rgba(255,255,255,.22), transparent 26%),
+        linear-gradient(145deg, rgba(92, 118, 255, .74), rgba(58, 218, 194, .54));
+}
+
+.supporter-pack-media i {
+    color: #fff;
+    font-size: 42px;
+    filter: drop-shadow(0 10px 18px rgba(0,0,0,.25));
+}
+
+.supporter-pack-media span {
+    color: #fff;
+    font-family: "Barlow Condensed", sans-serif;
+    font-size: 28px;
+    font-weight: 900;
+    letter-spacing: .6px;
+    text-transform: uppercase;
+}
+
+.supporter-pack-media img {
+    width: 100%;
+    height: 100%;
+    min-height: 140px;
+    object-fit: cover;
+    border-radius: 8px;
+    display: block;
+}
+
+.scroll-pack-media {
+    padding: 0;
+    overflow: hidden;
+    background:
+        radial-gradient(circle at 32% 18%, rgba(255,255,255,.22), transparent 26%),
+        linear-gradient(145deg, rgba(255, 178, 95, .72), rgba(116, 222, 190, .56));
+}
+
+.supporter-pack-copy {
+    min-width: 0;
+}
+
+.supporter-pack-topline {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+    margin-bottom: 6px;
+}
+
+.supporter-pack-topline span,
+.supporter-pack-topline strong {
+    display: inline-grid;
+    place-items: center;
+    min-height: 28px;
+    padding: 4px 9px;
+    border-radius: 999px;
+    font-family: "Barlow Condensed", sans-serif;
+    font-size: 14px;
+    font-weight: 900;
+    letter-spacing: .8px;
+    text-transform: uppercase;
+}
+
+.supporter-pack-topline span {
+    border: 1px solid rgba(255, 215, 120, .38);
+    color: #ffe7a2;
+    background: rgba(255, 215, 120, .1);
+}
+
+.supporter-pack-topline strong {
+    color: #071724;
+    background: linear-gradient(135deg, #fff8d6, #ffd778);
+}
+
+.supporter-pack-copy h4 {
+    margin: 0 0 10px;
+    color: #fff;
+    font-family: "Barlow Condensed", sans-serif;
+    font-size: 34px;
+    font-weight: 900;
+    line-height: 1;
+    text-transform: uppercase;
+}
+
+.supporter-pack-copy ul {
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 7px;
+    list-style: none;
+}
+
+.supporter-pack-copy li {
+    color: rgba(236, 248, 255, .82);
+    font-size: 14px;
+}
+
+.supporter-pack-copy li::before {
+    content: "+";
+    display: inline-grid;
+    place-items: center;
+    width: 18px;
+    height: 18px;
+    margin-right: 7px;
+    border-radius: 999px;
+    background: rgba(129, 235, 199, .14);
+    color: #9cffd1;
+    font-weight: 900;
+}
+
+.supporter-pack-button {
+    min-width: 170px;
+    min-height: 48px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 12px 16px;
+    border-radius: 10px;
+    border: 1px solid rgba(255,255,255,.22);
+    background: linear-gradient(135deg, #ffe07a, #7df2d7);
+    color: #092235;
+    font-family: "Barlow Condensed", sans-serif;
+    font-size: 16px;
+    font-weight: 900;
+    letter-spacing: .6px;
+    text-decoration: none;
+    text-transform: uppercase;
+    box-shadow: 0 16px 28px rgba(0,0,0,.26);
+    transition: transform .18s ease, box-shadow .18s ease;
+}
+
+.supporter-pack-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 20px 36px rgba(0,0,0,.34);
+}
+
+.supporter-pack-actions {
+    display: grid;
+    gap: 10px;
+    justify-items: stretch;
 }
 
 .home-crates-heading h2 {
@@ -5545,6 +5736,26 @@ body.home-v3-page #crateDropsModal button[onclick="closeCrateDropsModal()"] {
         padding: 18px;
     }
 
+    .shark-shop-impact {
+        grid-template-columns: 44px minmax(0, 1fr);
+        padding: 13px;
+    }
+
+    .shark-shop-impact i {
+        width: 44px;
+        height: 44px;
+        font-size: 18px;
+    }
+
+    .shark-shop-impact strong {
+        font-size: 18px;
+    }
+
+    .shark-shop-section-head {
+        grid-template-columns: 1fr;
+        gap: 6px;
+    }
+
     .pearl-shop-grid {
         grid-template-columns: 1fr;
     }
@@ -5553,17 +5764,26 @@ body.home-v3-page #crateDropsModal button[onclick="closeCrateDropsModal()"] {
         grid-template-columns: 42px minmax(0, 1fr);
     }
 
-    .pearl-shop-grid .home-v3-shop-item.bottle-pack-featured {
-        grid-template-columns: 1fr;
-        padding-top: 46px;
-    }
 
-    .pearl-shop-bottle-stack {
-        max-width: 280px;
-    }
 
     .pearl-shop-grid .home-v3-shop-item button {
         grid-column: 1 / -1;
+        width: 100%;
+    }
+
+    .supporter-pack-card {
+        grid-template-columns: 1fr;
+    }
+
+    .supporter-pack-media {
+        min-height: 118px;
+    }
+
+    .supporter-pack-copy h4 {
+        font-size: 28px;
+    }
+
+    .supporter-pack-button {
         width: 100%;
     }
 
@@ -7833,69 +8053,6 @@ cursor:pointer;
     background: rgba(255,255,255,0.13);
 }
 
-/* Avatar/PFP Selector Scrolling */
-.avatar-selector {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(95px, 1fr));
-    gap: 12px;
-    padding: 8px;
-    overflow-y: auto;
-    max-height: 250px;
-    -webkit-overflow-scrolling: touch;
-}
-
-.avatar-selector > div {
-    position: relative;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: flex-start;
-    min-height: 128px;
-    border-radius: 16px !important;
-    background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.015));
-    border: 1px solid rgba(77, 208, 225, 0.12);
-    box-shadow: 0 10px 24px rgba(0,0,0,0.16);
-    padding: 10px 8px !important;
-    overflow: visible;
-}
-
-.avatar-selector > div::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: radial-gradient(circle at top, rgba(255,255,255,0.06), transparent 34%);
-    pointer-events: none;
-}
-
-.avatar-selector > div:hover {
-    border-color: rgba(77, 208, 225, 0.28) !important;
-    box-shadow: 0 14px 28px rgba(0,0,0,0.22);
-}
-
-.avatar-selector > div p {
-    display: block !important;
-    margin: 8px 0 0 0 !important;
-    color: #e8fbff !important;
-    font-size: 12px !important;
-    line-height: 1.4 !important;
-    font-weight: 700 !important;
-    text-align: center !important;
-    white-space: normal !important;
-    word-break: break-word !important;
-    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.22);
-    max-width: 100%;
-}
-
-.avatar-selector > div > div {
-    border-radius: 14px !important;
-    box-shadow: 0 10px 20px rgba(0,0,0,0.18);
-}
-
-/* Profile picture picker */
-#profilePicModal .pfp-picker-modal-content {
-    overflow: hidden;
-}
-
 /* Username Edit Styles */
 .username-editor-shell {
     display: flex;
@@ -8929,488 +9086,10 @@ transform:translateY(-4px);
     overflow-y: auto;
     padding-right: 4px;
 }
-
-.badge-select-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-    gap: 12px;
-    width: 100%;
-}
-
-.badge-option {
-    min-width: 0;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 9px;
-    text-align: center;
-    cursor: pointer;
-    padding: 16px 12px 14px;
-    border-radius: 18px;
-    border: 1px solid rgba(77, 208, 225, 0.18);
-    background:
-        radial-gradient(circle at top, rgba(255,255,255,0.05), transparent 28%),
-        linear-gradient(180deg, rgba(12,30,44,0.98), rgba(7,20,31,1));
-    box-shadow: 0 10px 22px rgba(0,0,0,0.18);
-    transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
-    position: relative;
-    overflow: hidden;
-}
-
-.badge-option:hover,
-.badge-option.active {
-    transform: translateY(-2px);
-    border-color: rgba(77, 208, 225, 0.42);
-    background:
-        radial-gradient(circle at top, rgba(255,255,255,0.07), transparent 28%),
-        linear-gradient(180deg, rgba(16,40,58,0.98), rgba(8,25,38,1));
-    box-shadow: 0 12px 24px rgba(0,0,0,0.18);
-}
-
-.badge-option::before {
-    content: '';
-    position: absolute;
-    top: 10px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 26px;
-    height: 12px;
-    background: rgba(255,255,255,0.06);
-    clip-path: polygon(50% 0, 100% 100%, 0 100%);
-    opacity: 0.7;
-}
-
-.badge-option-kicker {
-    font-size: 10px;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: #8ecde1;
-    font-weight: 800;
-    margin-top: 4px;
-}
-
-.badge-option-emoji {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 78px;
-    height: 78px;
-    padding: 8px;
-    border-radius: 20px;
-    border: 2px solid rgba(77, 208, 225, 0.3);
-    line-height: 1;
-    font-size: 38px;
-    box-shadow: inset 0 1px 0 rgba(255,255,255,0.08);
-}
-
-.badge-option-emoji svg,
 .profile-badge-emblem svg {
     width: 100%;
     height: 100%;
     display: block;
-}
-
-.badge-option-name {
-    font-size: 13px;
-    font-weight: 700;
-    line-height: 1.25;
-    word-break: break-word;
-}
-
-.badge-option-rarity {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    padding: 5px 10px;
-    border-radius: 999px;
-    font-size: 10px;
-    font-weight: 800;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    border: 1px solid rgba(255,255,255,0.08);
-}
-
-.badge-option.rarity-core {
-    border-color: rgba(77,208,225,0.24);
-}
-
-.badge-option.rarity-code {
-    border-color: rgba(255,138,61,0.36);
-}
-
-.badge-option.rarity-special {
-    border-color: rgba(162,89,230,0.32);
-}
-
-.badge-option.rarity-common {
-    border-color: rgba(99,255,178,0.22);
-}
-
-.badge-option.rarity-rare {
-    border-color: rgba(77,208,225,0.28);
-}
-
-.badge-option.rarity-epic {
-    border-color: rgba(120,119,255,0.28);
-}
-
-.badge-option.rarity-legendary {
-    border-color: rgba(255,196,87,0.34);
-}
-
-.badge-option-rarity.rarity-core {
-    background: rgba(77,208,225,0.12);
-    color: #8fe9ff;
-}
-
-.badge-option-rarity.rarity-code {
-    background: rgba(255,138,61,0.15);
-    color: #ffc18d;
-}
-
-.badge-option-rarity.rarity-special {
-    background: rgba(162,89,230,0.14);
-    color: #d5b0ff;
-}
-
-.badge-option-rarity.rarity-common {
-    background: rgba(99,255,178,0.12);
-    color: #98f2bf;
-}
-
-.badge-option-rarity.rarity-rare {
-    background: rgba(77,208,225,0.12);
-    color: #97efff;
-}
-
-.badge-option-rarity.rarity-epic {
-    background: rgba(120,119,255,0.14);
-    color: #c9c5ff;
-}
-
-.badge-option-rarity.rarity-legendary {
-    background: rgba(255,196,87,0.16);
-    color: #ffd895;
-}
-
-.badge-picker-modal-content #badge-select-container {
-    padding: 6px 2px 4px 2px !important;
-    gap: 14px;
-}
-
-.badge-picker-modal-content > p {
-    margin-bottom: 16px !important;
-}
-
-.pfp-picker-modal-content {
-    width: min(96vw, 920px);
-    max-height: 90vh;
-    overflow-y: auto;
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-}
-
-.pfp-picker-subtitle {
-    margin: 0 !important;
-    color: #9ed4e8 !important;
-    font-size: 14px;
-    line-height: 1.5;
-}
-
-.pfp-picker-preview {
-    display: flex;
-    align-items: center;
-    gap: 18px;
-    padding: 16px 18px;
-    border-radius: 20px;
-    background:
-        radial-gradient(circle at top right, rgba(77, 208, 225, 0.12), transparent 34%),
-        linear-gradient(135deg, rgba(12, 42, 62, 0.96), rgba(8, 26, 40, 0.98));
-    border: 1px solid rgba(77, 208, 225, 0.16);
-}
-
-.pfp-picker-preview-frame {
-    position: relative;
-    flex: 0 0 auto;
-    width: 96px;
-    height: 96px;
-    border-radius: 22px;
-    overflow: hidden;
-    border: 2px solid rgba(77, 208, 225, 0.34);
-    box-shadow: 0 14px 28px rgba(0, 0, 0, 0.28);
-    background: rgba(8, 24, 38, 0.9);
-}
-
-.pfp-picker-preview-frame img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    display: block;
-}
-
-.pfp-picker-preview-crown {
-    position: absolute;
-    top: -10px;
-    left: 50%;
-    transform: translateX(-50%);
-    font-size: 1.6rem;
-    filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.45));
-}
-
-.pfp-picker-preview-crown.hidden {
-    display: none;
-}
-
-.pfp-picker-preview-copy {
-    min-width: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-}
-
-.pfp-picker-preview-label {
-    font-size: 10px;
-    font-weight: 800;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    color: #8ecde1;
-}
-
-.pfp-picker-preview-name {
-    font-size: 22px;
-    font-weight: 800;
-    color: #f4fdff;
-    line-height: 1.2;
-}
-
-.pfp-picker-preview-source {
-    font-size: 13px;
-    color: #9ed4e8;
-}
-
-.pfp-picker-toolbar {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-}
-
-.pfp-picker-search {
-    width: 100%;
-    padding: 12px 14px;
-    border-radius: 14px;
-    border: 1px solid rgba(77, 208, 225, 0.2);
-    background: rgba(8, 28, 43, 0.92);
-    color: #f0fcff;
-    font-family: inherit;
-    font-size: 14px;
-    outline: none;
-    transition: border-color 0.2s ease, box-shadow 0.2s ease;
-}
-
-.pfp-picker-search::placeholder {
-    color: #6f9eb0;
-}
-
-.pfp-picker-search:focus {
-    border-color: rgba(77, 208, 225, 0.48);
-    box-shadow: 0 0 0 3px rgba(77, 208, 225, 0.12);
-}
-
-.pfp-picker-tabs {
-    flex-wrap: wrap;
-}
-
-.pfp-picker-meta {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    font-size: 12px;
-    font-weight: 700;
-    color: #8ecde1;
-    letter-spacing: 0.04em;
-}
-
-.pfp-picker-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(132px, 1fr));
-    gap: 12px;
-    max-height: min(48vh, 420px);
-    overflow-y: auto;
-    padding: 4px 2px 8px;
-}
-
-.pfp-option {
-    min-width: 0;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 8px;
-    padding: 14px 10px 12px;
-    border-radius: 18px;
-    border: 1px solid rgba(77, 208, 225, 0.18);
-    background:
-        radial-gradient(circle at top, rgba(255, 255, 255, 0.05), transparent 28%),
-        linear-gradient(180deg, rgba(12, 30, 44, 0.98), rgba(7, 20, 31, 1));
-    box-shadow: 0 10px 22px rgba(0, 0, 0, 0.18);
-    cursor: pointer;
-    transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
-    position: relative;
-}
-
-.pfp-option:hover:not(.pfp-option-locked) {
-    transform: translateY(-2px);
-    border-color: rgba(77, 208, 225, 0.42);
-    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.22);
-}
-
-.pfp-option.active {
-    border-color: rgba(255, 215, 0, 0.72);
-    box-shadow: 0 0 0 1px rgba(255, 215, 0, 0.28), 0 14px 28px rgba(0, 0, 0, 0.24);
-}
-
-.pfp-option.active::after {
-    content: 'Equipped';
-    position: absolute;
-    top: 8px;
-    right: 8px;
-    padding: 3px 7px;
-    border-radius: 999px;
-    background: rgba(255, 215, 0, 0.18);
-    border: 1px solid rgba(255, 215, 0, 0.42);
-    color: #ffe9a8;
-    font-size: 9px;
-    font-weight: 800;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-}
-
-.pfp-option-locked {
-    opacity: 0.55;
-    cursor: not-allowed;
-}
-
-.pfp-option-kicker {
-    font-size: 10px;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: #8ecde1;
-    font-weight: 800;
-}
-
-.pfp-option-frame {
-    position: relative;
-    width: 78px;
-    height: 78px;
-    border-radius: 18px;
-    overflow: hidden;
-    border: 2px solid rgba(77, 208, 225, 0.28);
-    background: rgba(8, 24, 38, 0.88);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
-}
-
-.pfp-option-frame img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    display: block;
-}
-
-.pfp-option-crown {
-    position: absolute;
-    top: -8px;
-    left: 50%;
-    transform: translateX(-50%);
-    font-size: 1.35rem;
-    filter: drop-shadow(0 2px 5px rgba(0, 0, 0, 0.4));
-}
-
-.pfp-option-lock {
-    position: absolute;
-    inset: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: rgba(4, 14, 24, 0.58);
-    color: #dff8ff;
-    font-size: 22px;
-}
-
-.pfp-option-name {
-    font-size: 12px;
-    font-weight: 700;
-    color: #f0fcff;
-    text-align: center;
-    line-height: 1.25;
-    max-width: 100%;
-    word-break: break-word;
-}
-
-.pfp-option-rarity {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    padding: 4px 9px;
-    border-radius: 999px;
-    font-size: 9px;
-    font-weight: 800;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    border: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-.pfp-option.rarity-core { border-color: rgba(77, 208, 225, 0.24); }
-.pfp-option.rarity-common { border-color: rgba(99, 255, 178, 0.22); }
-.pfp-option.rarity-rare { border-color: rgba(77, 208, 225, 0.28); }
-.pfp-option.rarity-epic { border-color: rgba(120, 119, 255, 0.28); }
-.pfp-option.rarity-legendary { border-color: rgba(255, 196, 87, 0.34); }
-.pfp-option.rarity-special { border-color: rgba(255, 107, 107, 0.34); }
-
-.pfp-option-rarity.rarity-core { background: rgba(77, 208, 225, 0.12); color: #8fe9ff; }
-.pfp-option-rarity.rarity-common { background: rgba(90, 220, 165, 0.12); color: #9dffd0; }
-.pfp-option-rarity.rarity-rare { background: rgba(77, 208, 225, 0.14); color: #9cf4ff; }
-.pfp-option-rarity.rarity-epic { background: rgba(120, 119, 255, 0.14); color: #d2cbff; }
-.pfp-option-rarity.rarity-legendary { background: rgba(255, 196, 87, 0.16); color: #ffd895; }
-.pfp-option-rarity.rarity-special { background: rgba(255, 107, 107, 0.14); color: #ffb0b0; }
-
-.pfp-option-frame.rarity-legendary.is-leader {
-    border-color: rgba(212, 175, 55, 0.72);
-    background: linear-gradient(135deg, rgba(34, 34, 34, 0.92), rgba(212, 175, 55, 0.22));
-}
-
-.pfp-picker-empty {
-    margin: 0;
-    text-align: center;
-    color: #8ecde1;
-    font-size: 14px;
-    line-height: 1.5;
-}
-
-.pfp-picker-empty.hidden {
-    display: none;
-}
-
-.pfp-picker-close-btn {
-    width: 100%;
-    padding: 12px 16px;
-    margin-top: 4px;
-    border: none;
-    border-radius: 14px;
-    background: linear-gradient(135deg, rgba(0, 180, 216, 0.92), rgba(42, 157, 143, 0.92));
-    color: #062232;
-    font-family: inherit;
-    font-size: 15px;
-    font-weight: 800;
-    cursor: pointer;
-    flex-shrink: 0;
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-
-.pfp-picker-close-btn:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 10px 22px rgba(0, 180, 216, 0.22);
 }
 
 .profile-badge-emblem {
@@ -11673,24 +11352,6 @@ border:1px dashed #4dd0e1;
         font-size: 14px;
     }
 
-    .avatar-selector {
-        max-height: 250px;
-    }
-
-    /* PROFILE PIC MODAL */
-    .avatar-selector {
-        display: grid !important;
-        grid-template-columns: repeat(auto-fit, minmax(80px, 1fr)) !important;
-        gap: 12px !important;
-        padding: 8px !important;
-        margin: 10px 0 !important;
-    }
-
-    /* PFP Modal Section Containment */
-    #profilePicModal > .modal-content > div {
-        max-height: calc(50vh - 80px);
-    }
-
     /* PROFILE MODAL - STATS GRID */
     .stats-detail {
         grid-template-columns: 1fr;
@@ -12050,10 +11711,6 @@ border:1px dashed #4dd0e1;
         margin-bottom: 10px;
     }
 
-    .avatar-selector {
-        max-height: 280px;
-    }
-
     /* PROFILE MODAL - STATS GRID */
     .stats-detail {
         grid-template-columns: 1fr;
@@ -12138,53 +11795,6 @@ border:1px dashed #4dd0e1;
         padding: 10px 12px !important;
         font-size: 14px !important;
         width: 100% !important;
-    }
-
-    /* PROFILE PIC MODAL */
-    .pfp-picker-modal-content {
-        max-width: 100%;
-        max-height: 92vh;
-        padding: 16px 12px !important;
-    }
-
-    .pfp-picker-preview {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 12px;
-    }
-
-    .pfp-picker-preview-name {
-        font-size: 18px;
-    }
-
-    .pfp-picker-grid {
-        grid-template-columns: repeat(auto-fill, minmax(108px, 1fr));
-        max-height: 38vh;
-    }
-
-    .pfp-option-frame {
-        width: 68px;
-        height: 68px;
-    }
-
-    .avatar-selector {
-        display: grid !important;
-        grid-template-columns: repeat(auto-fit, minmax(70px, 1fr)) !important;
-        gap: 8px !important;
-        padding: 6px !important;
-        margin: 8px 0 !important;
-        max-height: 200px !important;
-    }
-
-    .avatar-selector > div {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-    }
-
-    .avatar-selector > div > div {
-        width: 70px !important;
-        height: 70px !important;
     }
 
     /* END PAGE */
@@ -12462,29 +12072,6 @@ border:1px dashed #4dd0e1;
         font-size: 24px;
     }
 
-    .badge-select-grid {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-
-    .badge-option {
-        padding: 14px 10px 12px;
-    }
-
-    .badge-option-emoji {
-        width: 68px;
-        height: 68px;
-        font-size: 34px;
-    }
-
-    .avatar-selector {
-        grid-template-columns: repeat(auto-fill, minmax(88px, 1fr));
-        max-height: min(52vh, 360px);
-    }
-
-    .avatar-selector > div {
-        min-height: 122px;
-    }
-
     .friends-header {
         flex-direction: column;
         align-items: flex-start;
@@ -12646,49 +12233,9 @@ border:1px dashed #4dd0e1;
     .picker-section {
         padding: 12px;
     }
-
-    .avatar-selector {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 10px;
-        padding: 4px;
-    }
-
-    .avatar-selector > div {
-        min-height: 108px;
-        padding: 7px 5px !important;
-    }
-
-    .avatar-selector > div > div {
-        width: 56px !important;
-        height: 56px !important;
-    }
-
-    .badge-select-grid,
     .pass-stat-grid,
     .pass-loadout-grid {
         grid-template-columns: 1fr;
-    }
-
-    .badge-option-name {
-        font-size: 11px;
-    }
-
-    .badge-option {
-        padding: 11px 8px 10px;
-        border-radius: 14px;
-        gap: 7px;
-    }
-
-    .badge-option-emoji {
-        width: 52px;
-        height: 52px;
-        font-size: 26px;
-        border-radius: 16px;
-    }
-
-    .badge-option-rarity {
-        padding: 4px 8px;
-        font-size: 9px;
     }
 
     .pass-level-line,
@@ -12792,34 +12339,6 @@ border:1px dashed #4dd0e1;
     .stat-label {
         font-size: 10px;
         margin-bottom: 8px;
-    }
-
-    .badge-option-emoji {
-        width: 48px;
-        height: 48px;
-        font-size: 23px;
-    }
-
-    .avatar-selector {
-        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-        max-height: min(50vh, 320px) !important;
-    }
-
-    .avatar-selector > div {
-        min-height: 98px;
-        border-radius: 12px !important;
-    }
-
-    .avatar-selector > div > div {
-        width: 50px !important;
-        height: 50px !important;
-        border-radius: 12px !important;
-    }
-
-    .avatar-selector > div p {
-        font-size: 10px !important;
-        line-height: 1.2 !important;
-        margin-top: 6px !important;
     }
 
     .friends-stats {
@@ -13700,8 +13219,10 @@ body.home-page .home-action-card h3 {
 
 /* Final home V3 ordering guard: older home media rules live above this point. */
 body.home-v3-page {
+    height: auto;
     min-height: 100vh;
     overflow-x: hidden;
+    overflow-y: auto;
     background:
         radial-gradient(ellipse 55% 45% at 65% 15%, rgba(6,55,95,.35) 0%, transparent 70%),
         radial-gradient(ellipse 40% 35% at 20% 85%, rgba(2,35,65,.25) 0%, transparent 60%),
@@ -19956,1344 +19477,68 @@ body.home-v3-page .profile-inventory-hero .profile-avatar-orb img {
     display: block !important;
 }
 
-.lost-treasures-home-card {
-    position: relative;
-    overflow: hidden;
-    min-height: 158px;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    background:
-        linear-gradient(135deg, rgba(6, 58, 72, .88), rgba(12, 28, 54, .98)),
-        radial-gradient(circle at 82% 18%, rgba(255, 214, 124, .24), transparent 28%) !important;
-    border-color: rgba(255, 210, 125, .32) !important;
-}
-
-.lost-treasures-home-card > * {
-    position: relative;
-    z-index: 1;
-}
-
-.lost-treasures-home-card::after {
-    content: "";
-    position: absolute;
-    right: -24px;
-    bottom: -34px;
-    width: 112px;
-    height: 148px;
-    background: url("images/lostTreasure/Bottles/BottleRare.png") center / contain no-repeat;
-    opacity: .42;
-    transform: rotate(13deg);
-    pointer-events: none;
-}
-
-@media (max-width: 1100px) {
-    .lost-treasures-home-card {
-        min-height: 138px;
-    }
-}
-
-.lost-treasures-modal {
-    position: fixed;
-    inset: 0;
-    z-index: 10000;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 18px;
-    background: rgba(1, 12, 20, .78);
-    backdrop-filter: blur(12px);
-}
-
-.lost-treasures-modal.hidden {
-    display: none;
-}
-
-.lost-treasures-card {
-    position: relative;
-    width: min(1240px, 96vw);
-    max-height: 92vh;
-    overflow-y: auto;
+/* Compact Christmas community event */
+#community-boss-event-modal .winter-dialog {
+    width: min(620px, 100%);
+    max-height: calc(100dvh - 32px);
     padding: 0;
-    border: 1px solid rgba(126, 232, 255, .22);
-    border-radius: 16px;
-    background:
-        radial-gradient(circle at 12% 8%, rgba(255, 214, 124, .16), transparent 28%),
-        radial-gradient(circle at 88% 12%, rgba(107, 225, 214, .16), transparent 30%),
-        linear-gradient(145deg, rgba(5, 44, 56, .98), rgba(7, 20, 39, .98));
-    box-shadow: 0 28px 80px rgba(0,0,0,.48);
-    color: #eaffff;
-}
-
-.lost-treasures-close {
-    position: absolute;
-    top: 14px;
-    right: 14px;
-    z-index: 2;
-}
-
-.lost-treasures-hero {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(380px, 440px);
-    gap: 14px;
-    align-items: stretch;
-    padding: 16px;
-    border-bottom: 1px solid rgba(126, 232, 255, .14);
-    background:
-        linear-gradient(180deg, rgba(6, 56, 67, .48), rgba(3, 20, 34, .16)),
-        radial-gradient(circle at 20% 18%, rgba(255, 217, 138, .2), transparent 34%);
-}
-
-.lost-treasures-copy {
-    min-height: 168px;
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-end;
-    padding: 18px 20px;
-    border-left: 4px solid rgba(255, 217, 138, .72);
-    border-radius: 8px;
-    background:
-        linear-gradient(90deg, rgba(0, 12, 22, .54), rgba(0, 12, 22, .08)),
-        radial-gradient(circle at 18% 22%, rgba(255, 210, 125, .14), transparent 34%);
-}
-
-.lost-treasures-copy span,
-.lost-treasures-grand span,
-.lost-treasures-album-head span {
-    color: #ffd98a;
-    font-family: "Barlow Condensed", sans-serif;
-    font-size: 12px;
-    font-weight: 900;
-    letter-spacing: 1.3px;
-    text-transform: uppercase;
-}
-
-.lost-treasures-copy h2 {
-    margin: 5px 0 6px;
-    color: #fff;
-    font-family: "Barlow Condensed", sans-serif;
-    font-size: clamp(38px, 5vw, 62px);
-    line-height: .9;
-    text-transform: uppercase;
-}
-
-.lost-treasures-copy p {
-    max-width: 560px;
-    margin: 0 0 12px;
-    color: rgba(220, 248, 255, .78);
-}
-
-.lost-treasures-progress {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 120px));
-    gap: 10px;
-}
-
-.lost-treasures-progress div {
-    padding: 8px 10px;
-    border: 1px solid rgba(126, 232, 255, .16);
-    border-radius: 8px;
-    background: rgba(1, 19, 32, .56);
-}
-
-.lost-treasures-progress strong {
-    display: block;
-    color: #fff;
-    font-size: 20px;
-    line-height: 1;
-}
-
-.lost-treasures-progress span {
-    color: rgba(180, 235, 244, .72);
-    font-size: 11px;
-}
-
-.lost-treasures-bottle-stage {
-    display: grid;
-    grid-template-columns: 150px minmax(0, 1fr) minmax(0, 1fr);
-    gap: 8px 10px;
-    align-items: center;
-    justify-items: stretch;
-    padding: 12px;
-    border: 1px solid rgba(255, 217, 138, .18);
-    border-radius: 10px;
-    background:
-        linear-gradient(180deg, rgba(2, 30, 43, .86), rgba(1, 16, 28, .68));
-}
-
-.lost-treasures-dock-head {
-    grid-column: 2 / 4;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 10px;
-}
-
-.lost-treasures-dock h3 {
-    margin: 0;
-    color: #fff;
-    font-family: "Barlow Condensed", sans-serif;
-    font-size: 20px;
-    letter-spacing: .8px;
-    text-transform: uppercase;
-}
-
-.lost-treasures-bottle-stage .lost-treasures-buy-bottles {
-    min-height: 30px;
-    padding: 5px 10px;
-    border-color: rgba(126, 232, 255, .34);
-    background: rgba(126, 232, 255, .12);
-    color: #dffcff;
-    font-size: 12px;
-}
-
-.lost-treasures-bottle-stage img {
-    grid-row: 1 / 5;
-    width: 190px;
-    justify-self: center;
-    align-self: center;
-    aspect-ratio: 1 / 1.25;
-    object-fit: contain;
-    filter: drop-shadow(0 18px 28px rgba(0,0,0,.36));
-}
-
-.lost-treasures-bottle-list {
-    grid-column: 2 / 4;
-    width: 100%;
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 7px;
-}
-
-.lost-treasures-bottle-list button {
-    min-height: 58px;
-    display: grid;
-    grid-template-rows: 24px auto auto;
-    justify-items: center;
-    gap: 2px;
-    padding: 6px;
-    border: 1px solid rgba(255,255,255,.12);
-    border-radius: 8px;
-    background: rgba(1, 19, 32, .58);
-    color: #dffcff;
-    font-family: "Barlow Condensed", sans-serif;
-    cursor: pointer;
-}
-
-.lost-treasures-bottle-list button.active {
-    border-color: rgba(255, 217, 138, .72);
-    box-shadow: 0 0 0 1px rgba(255, 217, 138, .22) inset;
-}
-
-.lost-treasures-bottle-list img {
-    grid-row: auto;
-    width: 20px;
-    height: 24px;
-    object-fit: contain;
-    filter: none;
-}
-
-.lost-treasures-bottle-list span {
-    max-width: 100%;
-    overflow: hidden;
-    color: rgba(225, 249, 252, .78);
-    font-size: 10px;
-    font-weight: 800;
-    text-overflow: ellipsis;
-    text-transform: uppercase;
-    white-space: nowrap;
-}
-
-.lost-treasures-bottle-list small {
-    color: rgba(210, 238, 244, .56);
-    font-size: 8px;
-    font-weight: 800;
-    text-transform: uppercase;
-}
-
-.lost-treasures-bottle-list strong {
-    color: #ffd98a;
-    font-size: 12px;
-    line-height: 1;
-}
-
-.lost-treasures-selected-bottle {
-    grid-column: 2 / 4;
-    width: 100%;
-    padding: 7px 9px;
-    border: 1px solid rgba(126, 232, 255, .16);
-    border-radius: 8px;
-    background: rgba(1, 19, 32, .54);
-    color: rgba(225, 249, 252, .78);
-    font-family: "Barlow Condensed", sans-serif;
-    font-size: 13px;
-    font-weight: 900;
-    letter-spacing: .8px;
-    text-align: center;
-    text-transform: uppercase;
-}
-
-.lost-treasures-open-amount {
-    grid-column: 2 / 4;
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 6px;
-    width: 100%;
-}
-
-.lost-treasures-open-amount.hidden {
-    display: none;
-}
-
-.lost-treasures-bottle-stage .lost-treasures-open-amount button {
-    min-height: 28px;
-    border-color: rgba(126, 232, 255, .22);
-    background: rgba(1, 19, 32, .58);
-    color: rgba(225, 249, 252, .82);
-    font-size: 12px;
-}
-
-.lost-treasures-bottle-stage .lost-treasures-open-amount button.active {
-    border-color: rgba(255, 217, 138, .7);
-    background: rgba(255, 217, 138, .18);
-    color: #fff7d0;
-}
-
-.lost-treasures-bottle-stage button,
-.lost-treasures-album-head button,
-.lost-treasures-grand button {
-    min-height: 36px;
-    border: 1px solid rgba(255, 217, 138, .42);
-    border-radius: 8px;
-    background: linear-gradient(135deg, #fff7d0, #ffd36d 55%, #72d8d0);
-    color: #082237;
-    font-family: "Barlow Condensed", sans-serif;
-    font-size: 14px;
-    font-weight: 900;
-    letter-spacing: 1px;
-    text-transform: uppercase;
-    cursor: pointer;
-}
-
-#lost-treasures-open-bottle-btn {
-    grid-column: 2 / 4;
-    width: 100%;
-}
-
-.lost-treasures-bottle-stage .lost-treasures-fake-purchase {
-    grid-column: 3;
-}
-
-.lost-treasures-bottle-stage .lost-treasures-reset {
-    grid-column: 2 / 4;
-}
-
-.lost-treasures-bottle-stage .lost-treasures-fake-purchase.hidden,
-.lost-treasures-bottle-stage .lost-treasures-reset.hidden {
-    display: none;
-}
-
-.lost-treasures-bottle-stage button:disabled,
-.lost-treasures-album-head button:disabled,
-.lost-treasures-grand button:disabled {
-    cursor: not-allowed;
-    color: rgba(224, 244, 248, .56);
-    background: rgba(255,255,255,.08);
-    border-color: rgba(255,255,255,.12);
-}
-
-.lost-treasures-bottle-stage .lost-treasures-fake-purchase {
-    border-color: rgba(126, 232, 255, .32);
-    background: rgba(126, 232, 255, .12);
-    color: #dffcff;
-}
-
-.lost-treasures-bottle-stage .lost-treasures-reset {
-    border-color: rgba(255, 129, 129, .32);
-    background: rgba(255, 129, 129, .10);
-    color: #ffd7d7;
-}
-
-.lost-treasures-meter {
-    height: 10px;
-    margin: 14px 22px;
-    overflow: hidden;
-    border-radius: 999px;
-    background: rgba(1, 16, 28, .72);
-}
-
-.lost-treasures-meter span {
-    display: block;
-    height: 100%;
-    width: 0;
-    border-radius: inherit;
-    background: linear-gradient(90deg, #72d8d0, #ffd36d);
-    transition: width .24s ease;
-}
-
-.lost-treasures-opening {
-    position: fixed;
-    inset: 0;
-    z-index: 10002;
-    display: grid;
-    place-items: center;
-    padding: 22px;
-    border: 1px solid rgba(255, 217, 138, .22);
-    background:
-        radial-gradient(circle at 50% 18%, rgba(255, 217, 138, .22), transparent 34%),
-        rgba(0, 10, 18, .78);
-    opacity: 1;
-    transition: opacity .26s ease, transform .26s ease;
-}
-
-.lost-treasures-opening-flash {
-    position: absolute;
-    inset: 0;
-    z-index: 1;
-    pointer-events: none;
-    opacity: 0;
-    background:
-        radial-gradient(circle at 50% 45%, rgba(255, 255, 255, .94), rgba(255, 225, 138, .42) 22%, transparent 56%);
-    mix-blend-mode: screen;
-}
-
-.lost-treasures-opening.flash-common .lost-treasures-opening-flash {
-    animation: lostBottleFlashCommon .9s ease-out both;
-}
-
-.lost-treasures-opening.flash-rare .lost-treasures-opening-flash {
-    background:
-        radial-gradient(circle at 50% 45%, rgba(255, 255, 255, 1), rgba(126, 232, 255, .68) 20%, rgba(255, 112, 176, .38) 38%, transparent 64%);
-    animation: lostBottleFlashRare 1s ease-out both;
-}
-
-.lost-treasures-opening.hidden {
-    display: none;
-}
-
-.lost-treasures-opening.closing {
-    opacity: 0;
-    transform: scale(.98);
-}
-
-.lost-treasures-opening-actions {
-    position: absolute;
-    top: 16px;
-    right: 16px;
-    z-index: 3;
-    display: flex;
-    gap: 8px;
-}
-
-.lost-treasures-opening-actions button {
-    min-height: 34px;
-    padding: 7px 12px;
-    border: 1px solid rgba(255, 217, 138, .46);
-    border-radius: 8px;
-    background: linear-gradient(135deg, #fff7d0, #ffd36d 55%, #72d8d0);
-    color: #082237;
-    font-family: "Barlow Condensed", sans-serif;
-    font-size: 13px;
-    font-weight: 900;
-    letter-spacing: .8px;
-    text-transform: uppercase;
-    cursor: pointer;
-}
-
-.lost-treasures-opening-actions button.hidden {
-    display: none;
-}
-
-.lost-treasures-opening-bottle {
-    position: relative;
-    z-index: 2;
-    display: grid;
-    justify-items: center;
-    gap: 8px;
-    color: #ffd98a;
-    font-family: "Barlow Condensed", sans-serif;
-    font-size: 14px;
-    font-weight: 900;
-    letter-spacing: 1px;
-    text-transform: uppercase;
-}
-
-.lost-treasures-opening-bottle img {
-    width: min(245px, 48vw);
-    height: min(305px, 58vh);
-    object-fit: contain;
-    animation: lostBottleShake .9s ease-in-out both;
-}
-
-.lost-treasures-opening.revealed .lost-treasures-opening-bottle {
-    opacity: 1;
-    transform: translateY(72px) scale(.9);
-    transition: opacity .22s ease, transform .22s ease;
-}
-
-.lost-treasures-opening-scrolls {
-    position: absolute;
-    left: 50%;
-    top: 50%;
-    z-index: 3;
-    display: flex;
-    width: min(840px, 94vw);
-    gap: 9px;
-    justify-content: center;
-    align-items: flex-end;
-    overflow-x: auto;
-    overscroll-behavior-x: contain;
-    padding: 0 16px 150px;
-    background: transparent;
-    box-shadow: none;
-    scroll-snap-type: x proximity;
-    scrollbar-color: rgba(255, 217, 138, .62) rgba(1, 19, 32, .56);
-    scrollbar-width: thin;
-    transform: translate(-50%, -42%);
-}
-
-.lost-treasures-opening-scrolls::-webkit-scrollbar {
-    height: 10px;
-}
-
-.lost-treasures-opening-scrolls::-webkit-scrollbar-track {
-    border-radius: 999px;
-    background: rgba(1, 19, 32, .56);
-}
-
-.lost-treasures-opening-scrolls::-webkit-scrollbar-thumb {
-    border-radius: 999px;
-    background: rgba(255, 217, 138, .62);
-}
-
-.lost-treasures-opening-scroll {
-    flex: 0 0 126px;
-    min-height: 124px;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    gap: 7px;
-    padding: 9px;
-    border: 1px solid rgba(255,255,255,.12);
-    border-radius: 8px;
-    background:
-        radial-gradient(circle at 50% 18%, color-mix(in srgb, var(--category-color) 24%, transparent), transparent 36%),
-        linear-gradient(160deg, rgba(3, 42, 54, .95), rgba(3, 15, 30, .98));
-    opacity: 0;
-    scroll-snap-align: start;
-    transform: translateY(150px) scale(.16) rotate(-10deg);
-    transform-origin: 50% 100%;
-    animation: lostScrollPopFromBottle .56s cubic-bezier(.18, 1.35, .32, 1) forwards;
-    animation-delay: calc(var(--reveal-index) * 120ms);
-}
-
-.lost-treasures-opening-scroll.rarity-rare {
-    border-color: rgba(126, 232, 255, .5);
-    background:
-        linear-gradient(160deg, rgba(3, 42, 54, .95), rgba(3, 15, 30, .98)) padding-box,
-        linear-gradient(135deg, #ff6b9d, #ffd36d, #65f2a6, #72d8ff, #c58cff) border-box;
-    box-shadow:
-        0 0 0 1px rgba(255,255,255,.12) inset,
-        0 0 22px rgba(114, 216, 255, .16);
-}
-
-.lost-treasures-opening-scroll.duplicate {
-    filter: saturate(.75);
-    opacity: .8;
-}
-
-.lost-treasures-opening-scroll strong {
-    color: #fff;
-    font-size: 12px;
-    line-height: 1.05;
-}
-
-.lost-treasures-opening-scroll small {
-    color: #ffd98a;
-    font-weight: 900;
-    text-transform: uppercase;
-}
-
-.lost-treasures-opening-scroll.rarity-rare small,
-.lost-treasures-slot.rarity-rare small {
-    background: linear-gradient(90deg, #ff7aa8, #ffe56f, #66f0a8, #72dcff, #c78cff);
-    background-clip: text;
-    -webkit-background-clip: text;
-    color: transparent;
-    font-weight: 900;
-    text-transform: uppercase;
-}
-
-@keyframes lostBottleShake {
-    0% { transform: rotate(0deg) scale(1); }
-    15% { transform: rotate(-9deg) scale(1.03); }
-    30% { transform: rotate(10deg) scale(1.06); }
-    46% { transform: rotate(-8deg) scale(1.08); }
-    62% { transform: rotate(6deg) scale(1.06); }
-    78% { transform: rotate(-3deg) scale(1.1); }
-    100% { transform: rotate(0deg) scale(1.03); }
-}
-
-@keyframes lostBottleFlashCommon {
-    0%, 55% { opacity: 0; }
-    68% { opacity: .62; }
-    100% { opacity: 0; }
-}
-
-@keyframes lostBottleFlashRare {
-    0%, 48% { opacity: 0; }
-    58% { opacity: .95; }
-    68% { opacity: .45; }
-    78% { opacity: .82; }
-    100% { opacity: 0; }
-}
-
-@keyframes lostScrollPopFromBottle {
-    0% {
-        opacity: 0;
-        transform: translateY(150px) scale(.16) rotate(-10deg);
-    }
-    24% {
-        opacity: 1;
-        transform: translateY(96px) scale(.46) rotate(7deg);
-    }
-    62% {
-        opacity: 1;
-        transform: translateY(-14px) scale(1.08) rotate(3deg);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0) scale(1) rotate(0deg);
-    }
-}
-
-.lost-treasures-main {
-    display: grid;
-    grid-template-columns: 230px minmax(0, 1fr);
-    gap: 16px;
-    padding: 0 22px 22px;
-}
-
-.lost-treasures-side {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    min-width: 0;
-}
-
-.lost-treasures-side-panel,
-.lost-treasures-album-shell {
-    border: 1px solid rgba(126, 232, 255, .14);
-    border-radius: 10px;
-    background: rgba(1, 19, 32, .42);
-}
-
-.lost-treasures-side-panel {
-    padding: 12px;
-}
-
-.lost-treasures-album-shell {
-    min-width: 0;
-    padding: 14px;
-    background:
-        linear-gradient(180deg, rgba(4, 33, 47, .6), rgba(1, 16, 28, .38));
-}
-
-.lost-treasures-exchange-panel > span,
-.lost-treasures-side-panel > span {
-    display: block;
-    margin-bottom: 8px;
-    color: #ffd98a;
-    font-family: "Barlow Condensed", sans-serif;
-    font-size: 12px;
-    font-weight: 900;
-    letter-spacing: 1.2px;
-    text-transform: uppercase;
-}
-
-.lost-treasures-exchange {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 8px;
-}
-
-.lost-treasures-exchange button {
-    min-height: 42px;
-    padding: 8px;
-    border: 1px solid rgba(126, 232, 255, .22);
-    border-radius: 8px;
-    background: rgba(126, 232, 255, .10);
-    color: #dffcff;
-    cursor: pointer;
-    display: grid;
-    grid-template-columns: 34px minmax(0, 1fr);
-    align-items: center;
-    gap: 9px;
-    text-align: left;
-}
-
-.lost-treasures-exchange button:disabled {
-    cursor: not-allowed;
-    opacity: .52;
-}
-
-.lost-treasures-exchange img {
-    width: 30px;
-    height: 38px;
-    object-fit: contain;
-    filter: drop-shadow(0 8px 10px rgba(0,0,0,.35));
-}
-
-.lost-treasures-exchange strong,
-.lost-treasures-exchange span,
-.lost-treasures-exchange small {
-    display: block;
-}
-
-.lost-treasures-exchange strong {
-    font-size: 12px;
-}
-
-.lost-treasures-exchange small {
-    color: #ffd98a;
-    font-size: 11px;
-    font-weight: 900;
-    font-style: normal;
-}
-
-.lost-treasures-categories {
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 8px;
-}
-
-.lost-treasures-categories button {
-    position: relative;
-    min-height: 64px;
-    padding: 10px 10px 10px 13px;
-    border: 1px solid rgba(255,255,255,.10);
-    border-radius: 8px;
-    background:
-        linear-gradient(90deg, color-mix(in srgb, var(--category-color) 14%, transparent), rgba(1, 19, 32, .64));
-    color: #dffcff;
-    text-align: left;
-    cursor: pointer;
-}
-
-.lost-treasures-categories button::before {
-    content: "";
-    position: absolute;
-    inset: 9px auto 9px 0;
-    width: 3px;
-    border-radius: 999px;
-    background: var(--category-color);
-    opacity: .72;
-}
-
-.lost-treasures-categories button.active {
-    border-color: var(--category-color);
-    box-shadow: 0 0 0 1px color-mix(in srgb, var(--category-color) 35%, transparent) inset;
-}
-
-.lost-treasures-categories button.complete {
-    background: linear-gradient(135deg, color-mix(in srgb, var(--category-color) 24%, transparent), rgba(1, 19, 32, .74));
-}
-
-.lost-treasures-categories strong,
-.lost-treasures-categories span {
-    display: block;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.lost-treasures-categories strong {
-    font-size: 12px;
-}
-
-.lost-treasures-categories span {
-    margin-top: 3px;
-    color: rgba(210, 238, 244, .68);
-    font-size: 11px;
-}
-
-.lost-treasures-album-head,
-.lost-treasures-grand {
-    display: flex;
-    justify-content: space-between;
-    gap: 14px;
-    align-items: center;
-    margin-top: 14px;
-    padding: 14px;
-    border: 1px solid rgba(126, 232, 255, .14);
-    border-radius: 8px;
-    background: rgba(0, 13, 24, .46);
-}
-
-.lost-treasures-album-head > div:first-child,
-.lost-treasures-grand > div:first-child {
-    min-width: 0;
-}
-
-.lost-treasures-category-reward {
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
-    gap: 10px;
-    flex-wrap: wrap;
-}
-
-.lost-treasures-grand-rewards {
-    display: flex;
-    align-items: stretch;
-    flex-wrap: wrap;
-    gap: 8px;
-    margin-top: 10px;
-}
-
-.lost-treasures-reward-chip {
-    min-height: 54px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    padding: 8px 10px;
-    border: 1px solid rgba(255,255,255,.11);
-    border-radius: 8px;
-    background: linear-gradient(155deg, rgba(255,255,255,.08), rgba(255,255,255,.025));
-    color: #e9fbff;
-    box-shadow: 0 10px 24px rgba(0,0,0,.18);
-}
-
-.lost-treasures-reward-chip b,
-.lost-treasures-reward-chip strong,
-.lost-treasures-reward-chip span {
-    display: block;
-    line-height: 1.05;
-}
-
-.lost-treasures-reward-chip strong {
-    font-size: 24px;
-}
-
-.lost-treasures-reward-chip b {
-    color: #fff;
-    font-size: 13px;
-    font-weight: 900;
-}
-
-.lost-treasures-reward-chip span {
-    color: rgba(218, 244, 248, .72);
-    font-size: 11px;
-    font-weight: 800;
-    text-transform: uppercase;
-    letter-spacing: .04em;
-}
-
-.lost-treasures-reward-chip.pearl {
-    border-color: rgba(255, 220, 120, .24);
-    background:
-        radial-gradient(circle at 18% 20%, rgba(255, 238, 174, .2), transparent 32%),
-        linear-gradient(155deg, rgba(99, 208, 211, .14), rgba(255, 196, 87, .08));
-}
-
-.lost-treasures-reward-chip.pearl::before {
-    content: "";
-    width: 24px;
-    height: 24px;
-    flex: 0 0 auto;
-    border-radius: 999px;
-    background:
-        radial-gradient(circle at 34% 28%, #fff 0 10%, #e8fbff 24%, #8fe8f2 58%, #4eb9c8 100%);
-    box-shadow: 0 0 18px rgba(145, 238, 255, .28);
-}
-
-.lost-treasures-reward-chip.badge {
-    border-color: rgba(255, 211, 109, .28);
-}
-
-.lost-treasures-reward-chip.badge::before {
-    content: none;
-    width: 26px;
-    height: 26px;
-    flex: 0 0 auto;
-    border-radius: 8px;
-    background:
-        radial-gradient(circle at 50% 38%, #fff7d8 0 16%, #ffd36d 17% 52%, #a96f23 100%);
-    box-shadow: 0 0 18px rgba(255, 211, 109, .24);
-    transform: rotate(45deg);
-}
-
-.lost-treasures-reward-chip.pfp {
-    justify-content: flex-start;
-}
-
-.lost-treasures-reward-chip.pfp img {
-    width: 42px;
-    height: 42px;
-    flex: 0 0 auto;
-    border-radius: 8px;
-    object-fit: cover;
-    border: 1px solid rgba(255,255,255,.18);
-}
-
-.lost-treasures-album-head h3 {
-    margin: 3px 0 0;
-    color: #fff;
-    font-family: "Barlow Condensed", sans-serif;
-    font-size: 30px;
-    text-transform: uppercase;
-}
-
-.lost-treasures-album-head p {
-    margin: 4px 0 0;
-    color: rgba(218, 244, 248, .62);
-    font-size: 13px;
-}
-
-.lost-treasures-grid {
-    display: grid;
-    grid-template-columns: repeat(5, minmax(116px, 1fr));
-    gap: 10px;
-    margin-top: 12px;
-}
-
-.lost-treasures-slot {
-    appearance: none;
-    position: relative;
-    min-height: 190px;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    gap: 7px;
-    padding: 10px;
-    border: 1px solid rgba(255,255,255,.10);
-    border-radius: 8px;
-    background:
-        radial-gradient(circle at 50% 18%, color-mix(in srgb, var(--category-color) 24%, transparent), transparent 36%),
-        linear-gradient(160deg, rgba(3, 42, 54, .92), rgba(3, 15, 30, .98));
-    color: inherit;
-    cursor: pointer;
-    text-align: left;
-    transition: border-color .18s ease, transform .18s ease, opacity .18s ease;
-}
-
-.lost-treasures-slot:hover {
-    transform: translateY(-2px);
-    border-color: color-mix(in srgb, var(--category-color) 50%, rgba(255,255,255,.2));
-}
-
-.lost-treasures-slot.rarity-rare {
-    border-color: rgba(126, 232, 255, .42);
-    background:
-        radial-gradient(circle at 18% 18%, rgba(255, 122, 168, .2), transparent 28%),
-        radial-gradient(circle at 78% 20%, rgba(114, 220, 255, .2), transparent 30%),
-        radial-gradient(circle at 44% 86%, rgba(102, 240, 168, .18), transparent 34%),
-        linear-gradient(160deg, rgba(10, 39, 54, .94), rgba(5, 19, 35, .98));
-    box-shadow: 0 0 0 1px rgba(255,255,255,.08) inset;
-}
-
-.lost-treasures-slot.rarity-rare::before {
-    content: "";
-    position: absolute;
-    inset: -1px;
-    border-radius: inherit;
-    padding: 1px;
-    background: linear-gradient(135deg, #ff6b9d, #ffd36d, #65f2a6, #72d8ff, #c58cff);
-    mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-    mask-composite: exclude;
-    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-    -webkit-mask-composite: xor;
-    pointer-events: none;
-}
-
-.lost-treasures-slot.locked {
-    opacity: .78;
-}
-
-.lost-treasures-slot.locked .lost-treasures-scroll-art {
-    filter: grayscale(.22) saturate(.82);
-}
-
-.lost-treasures-scroll-art {
-    position: relative;
-    width: min(92%, 132px);
-    min-height: 122px;
-    aspect-ratio: 3 / 4;
-    display: grid;
-    place-items: center;
-    align-self: center;
-    overflow: hidden;
-    border-radius: 5px;
-    background: transparent;
-}
-
-.lost-treasures-scroll-art img {
-    position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    object-fit: contain;
-    z-index: 0;
-}
-
-.lost-treasures-scroll-art.has-species-art .lost-treasures-species-card {
-    inset: 21% 16% 22%;
-    width: 68%;
-    height: 57%;
-    object-fit: contain;
-    z-index: 1;
-    filter: drop-shadow(0 8px 12px rgba(0,0,0,.28));
-}
-
-.lost-treasures-frame-card {
-    z-index: 0;
-}
-
-.lost-treasures-slot.locked .lost-treasures-species-card {
-    opacity: .12;
-    filter: grayscale(1) blur(1px);
-}
-
-.lost-treasures-opening-scroll .lost-treasures-scroll-art {
-    width: 100%;
-    min-height: 96px;
-}
-
-.lost-treasures-slot.rarity-rare .lost-treasures-scroll-art {
-    filter:
-        drop-shadow(0 0 9px rgba(255, 122, 168, .18))
-        drop-shadow(0 0 12px rgba(114, 220, 255, .16));
-}
-
-.lost-treasures-scroll-art b {
-    position: relative;
-    z-index: 2;
-    max-width: 78%;
-    color: #fff;
-    font-family: "Barlow Condensed", sans-serif;
-    font-size: clamp(13px, 1.5vw, 19px);
-    font-weight: 900;
-    letter-spacing: 1px;
-    line-height: .9;
-    text-align: center;
-    text-transform: uppercase;
-    text-shadow: 0 2px 10px rgba(0,0,0,.38);
-}
-
-.lost-treasures-slot.owned .lost-treasures-scroll-art b,
-.lost-treasures-opening-scroll .lost-treasures-scroll-art b,
-.lost-treasures-slot.owned .lost-treasures-scroll-number,
-.lost-treasures-opening-scroll .lost-treasures-scroll-number {
-    display: none;
-}
-
-.lost-treasures-slot.locked .lost-treasures-scroll-art b {
-    color: rgba(255,255,255,.54);
-    font-size: 22px;
-}
-
-.lost-treasures-scroll-number {
-    position: absolute;
-    top: 10%;
-    left: 10%;
-    width: 22px;
-    height: 22px;
-    display: grid;
-    place-items: center;
-    border-radius: 999px;
-    background: rgba(255,255,255,.10);
-    color: #fff;
-    font-size: 10px;
-    font-weight: 900;
-    z-index: 3;
-}
-
-.lost-treasures-slot strong {
-    color: #fff;
-    font-size: 13px;
-    line-height: 1.1;
-    min-height: 30px;
-}
-
-.lost-treasures-slot small {
-    color: rgba(218, 244, 248, .64);
-    font-size: 11px;
-    line-height: 1;
-}
-
-.lost-treasures-grand strong,
-.lost-treasures-grand p {
-    display: block;
-    margin: 3px 0 0;
-}
-
-.lost-treasures-grand p {
-    color: rgba(218, 244, 248, .68);
-}
-
-.lost-treasures-detail {
-    position: fixed;
-    inset: 0;
-    z-index: 10001;
-    display: grid;
-    place-items: center;
-    padding: 18px;
-    background: rgba(0, 10, 18, .72);
-}
-
-.lost-treasures-detail.hidden {
-    display: none;
-}
-
-.lost-treasures-detail-card {
-    position: relative;
-    width: min(760px, 94vw);
-    display: grid;
-    grid-template-columns: minmax(220px, 320px) minmax(0, 1fr);
-    gap: 20px;
-    align-items: center;
-    padding: 18px;
-    border: 1px solid rgba(126, 232, 255, .22);
-    border-radius: 12px;
-    background:
-        radial-gradient(circle at 18% 20%, rgba(255, 217, 138, .16), transparent 32%),
-        linear-gradient(145deg, rgba(5, 44, 56, .98), rgba(7, 20, 39, .98));
-    box-shadow: 0 26px 72px rgba(0,0,0,.48);
-}
-
-.lost-treasures-detail-card.rarity-rare {
-    border-color: rgba(126, 232, 255, .46);
-    box-shadow:
-        0 26px 72px rgba(0,0,0,.48),
-        0 0 0 1px rgba(255,255,255,.08) inset,
-        0 0 26px rgba(114, 220, 255, .12);
-}
-
-.lost-treasures-detail-card.rarity-rare::before {
-    content: "";
-    position: absolute;
-    inset: -1px;
-    border-radius: inherit;
-    padding: 1px;
-    background: linear-gradient(135deg, #ff6b9d, #ffd36d, #65f2a6, #72d8ff, #c58cff);
-    mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-    mask-composite: exclude;
-    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-    -webkit-mask-composite: xor;
-    pointer-events: none;
-}
-
-.lost-treasures-detail-nav {
-    position: absolute;
-    top: 50%;
-    z-index: 3;
-    width: 42px;
-    height: 52px;
-    display: grid;
-    place-items: center;
-    border: 1px solid rgba(126, 232, 255, .34);
-    border-radius: 8px;
-    background: rgba(4, 22, 36, .88);
-    color: #fff;
-    font-size: 34px;
-    font-weight: 900;
-    line-height: 1;
-    cursor: pointer;
-    transform: translateY(-50%);
-    box-shadow: 0 14px 28px rgba(0,0,0,.28);
-}
-
-.lost-treasures-detail-nav:hover {
-    border-color: rgba(255, 217, 138, .7);
-    background: rgba(10, 45, 62, .96);
-}
-
-.lost-treasures-detail-nav.previous {
-    left: -20px;
-}
-
-.lost-treasures-detail-nav.next {
-    right: -20px;
-}
-
-.lost-treasures-detail-art {
-    position: relative;
-    width: 100%;
-    aspect-ratio: 3 / 4;
-    display: grid;
-    place-items: center;
-    overflow: hidden;
-    border-radius: 6px;
-}
-
-.lost-treasures-detail-art > img {
-    position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    object-fit: contain;
-}
-
-.lost-treasures-detail-art.has-species-art .lost-treasures-species-card {
-    inset: 21% 15% 21%;
-    width: 70%;
-    height: 58%;
-    object-fit: contain;
-    z-index: 1;
-    filter: drop-shadow(0 12px 18px rgba(0,0,0,.34));
-}
-
-.lost-treasures-detail-card h3 {
-    margin: 6px 0 8px;
-    color: #fff;
-    font-family: "Barlow Condensed", sans-serif;
-    font-size: clamp(34px, 5vw, 56px);
-    line-height: .92;
-    text-transform: uppercase;
-}
-
-.lost-treasures-detail-card p {
-    margin: 0 0 14px;
-    color: rgba(218, 244, 248, .68);
-}
-
-.lost-treasures-detail-card dl {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 8px;
-    margin: 0;
-}
-
-.lost-treasures-detail-card dl div {
-    padding: 9px;
-    border: 1px solid rgba(255,255,255,.10);
-    border-radius: 8px;
-    background: rgba(0, 12, 22, .46);
-}
-
-.lost-treasures-detail-card dt,
-.lost-treasures-detail-card dd {
-    margin: 0;
-}
-
-.lost-treasures-detail-card dt {
-    color: #ffd98a;
-    font-size: 11px;
-    font-weight: 900;
-    text-transform: uppercase;
-}
-
-.lost-treasures-detail-card dd {
-    color: #fff;
-    font-size: 14px;
-    font-weight: 800;
-}
-
-@media (max-width: 760px) {
-    .lost-treasures-card {
-        width: 96vw;
-        max-height: 92vh;
-    }
-
-    .lost-treasures-hero {
-        grid-template-columns: 1fr;
-        padding: 14px;
-    }
-
-    .lost-treasures-copy {
-        min-height: 156px;
-        padding: 16px;
-    }
-
-    .lost-treasures-copy h2 {
-        font-size: clamp(36px, 13vw, 54px);
-    }
-
-    .lost-treasures-progress {
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-    }
-
-    .lost-treasures-bottle-stage {
-        grid-template-columns: 124px minmax(0, 1fr);
-    }
-
-    .lost-treasures-dock h3,
-    .lost-treasures-dock-head,
-    .lost-treasures-bottle-list,
-    .lost-treasures-open-amount,
-    .lost-treasures-selected-bottle {
-        grid-column: 2;
-    }
-
-    .lost-treasures-bottle-stage > img {
-        width: 150px;
-    }
-
-    #lost-treasures-open-bottle-btn,
-    .lost-treasures-bottle-stage .lost-treasures-fake-purchase,
-    .lost-treasures-bottle-stage .lost-treasures-reset {
-        grid-column: 1 / 3;
-    }
-
-    .lost-treasures-main,
-    .lost-treasures-detail-card {
-        grid-template-columns: 1fr;
-    }
-
-    .lost-treasures-detail-nav {
-        top: 34%;
-        width: 38px;
-        height: 48px;
-    }
-
-    .lost-treasures-detail-nav.previous {
-        left: 8px;
-    }
-
-    .lost-treasures-detail-nav.next {
-        right: 8px;
-    }
-
-    .lost-treasures-main {
-        padding: 0 14px 14px;
-    }
-
-    .lost-treasures-categories {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-
-    .lost-treasures-grid {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-
-    .lost-treasures-slot {
-        min-height: 178px;
-    }
-
-    .lost-treasures-meter {
-        margin-left: 14px;
-        margin-right: 14px;
-    }
-
-    .lost-treasures-album-head,
-    .lost-treasures-grand {
-        align-items: stretch;
-        flex-direction: column;
-    }
-
-    .lost-treasures-category-reward {
-        justify-content: flex-start;
-    }
-
-    .lost-treasures-category-reward button,
-    .lost-treasures-grand button {
-        width: 100%;
-    }
-
-    .lost-treasures-reward-chip {
-        min-height: 48px;
-    }
+    border: 1px solid #314854;
+    border-radius: 20px;
+    background: #0d1b26;
+    box-shadow: 0 28px 90px #0009;
+    color: #f1f5f5;
+    font-family: 'Barlow', sans-serif;
+}
+.winter-event { padding: 28px; }
+.winter-header { padding-right: 26px; }
+.winter-kicker { color: #9cd6cb; font-size: 11px; font-weight: 700; letter-spacing: 1.8px; }
+.winter-header h2 { margin: 10px 0 8px; color: #f4f8f7; font-family: 'Barlow', sans-serif; font-size: clamp(24px, 4vw, 30px); font-weight: 700; line-height: 1.15; letter-spacing: -.7px; }
+.winter-header p { max-width: 470px; margin: 0; color: #a4b7c3; font-size: 14px; line-height: 1.5; }
+.winter-boss-art { display: flex; justify-content: center; margin: 16px 0 0; }
+.winter-boss-art img { display: block; width: min(360px, 100%); height: auto; max-height: 120px; object-fit: contain; filter: drop-shadow(0 8px 14px #0005); }
+.winter-progress-section { margin: 22px 0 24px; }
+.winter-progress-label { display: flex; align-items: baseline; justify-content: space-between; color: #a4b7c3; font-size: 12px; }
+.winter-progress-label strong { color: #f4f8f7; font-size: 30px; font-weight: 600; }
+.winter-progress-track { height: 6px; margin: 10px 0; overflow: hidden; border-radius: 9px; background: #243746; }
+.winter-progress-track > div { height: 100%; border-radius: inherit; background: #a6dfcf; transition: width .4s ease; }
+.winter-progress-note { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 5px 12px; color: #a4b7c3; font-size: 12px; line-height: 1.4; }
+.winter-progress-note > span:first-child { color: #b5e5d6; }
+.winter-rewards-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 4px; }
+.winter-rewards-head h3 { margin: 0; color: #f1f5f5; font-size: 14px; font-weight: 600; }
+.winter-rewards-head > span { color: #a4b7c3; font-size: 12px; }
+.winter-reward { display: flex; align-items: center; gap: 15px; padding: 15px 0; border-bottom: 1px solid #273844; }
+.winter-goal { flex: 0 0 48px; display: grid; gap: 1px; justify-items: center; padding: 7px 0; border: 1px solid #344c59; border-radius: 10px; background: #152835; }
+.winter-goal b { color: #dbe8ec; font-size: 17px; line-height: 1; }
+.winter-goal span { color: #9fb3c0; font-size: 10px; }
+.winter-reward-copy { flex: 1; min-width: 0; }
+.winter-reward-copy h4 { margin: 0 0 4px; color: #eaf1f3; font-size: 15px; font-weight: 600; }
+.winter-reward-copy p { margin: 0; color: #9fb3c0; font-size: 12px; line-height: 1.4; }
+.winter-reward-status { color: #91a8b6; font-size: 11px; }
+.winter-reward.unlocked .winter-goal, .winter-reward.claimed .winter-goal { background: #1b3c38; border-color: #527e71; }
+.winter-reward.unlocked .winter-reward-status, .winter-reward.claimed .winter-reward-status { color: #b5e5d6; }
+.winter-bonus { display: flex; align-items: center; gap: 13px; padding: 16px 0 18px; }
+.winter-bonus > i { color: #d8bd7d; font-size: 18px; width: 48px; text-align: center; }
+.winter-bonus p { margin: 0; display: flex; flex-wrap: wrap; gap: 4px 10px; font-size: 12px; }
+.winter-bonus strong { color: #dfca9b; font-weight: 600; }
+.winter-bonus span { color: #a4b7c3; }
+.winter-footer { padding-top: 16px; border-top: 1px solid #273844; }
+.winter-primary-actions { display: grid; grid-template-columns: 1.3fr 1fr; gap: 10px; }
+.winter-primary-actions button { min-height: 43px; padding: 10px 12px; border: 1px solid #3c5564; border-radius: 9px; background: #1c303e; color: #e7f0f3; font: 600 13px 'Barlow', sans-serif; cursor: pointer; }
+#community-boss-event-modal .winter-event #community-boss-modal-claim-btn { background: #b8e5d5; color: #102d29; border-color: #b8e5d5; }
+#community-boss-event-modal .winter-event #community-boss-modal-claim-btn:disabled { background: #243943; color: #a9bbc4; border-color: #344c59; cursor: default; }
+.winter-primary-actions button:hover:not(:disabled) { filter: brightness(1.12); }
+.winter-secondary-actions { display: flex; justify-content: space-between; gap: 15px; padding-top: 12px; }
+.winter-secondary-actions button { padding: 3px 0; border: 0; background: none; color: #b6c9d2; font: 500 12px 'Barlow', sans-serif; cursor: pointer; }
+.winter-secondary-actions button:hover { color: white; }
+.winter-event button:focus-visible { outline: 2px solid #b8e5d5; outline-offset: 3px; }
+@media (max-width: 480px) {
+    .winter-event { padding: 22px 18px 18px; }
+    .winter-reward { gap: 10px; }
+    .winter-reward-copy h4 { font-size: 14px; }
+    .winter-reward-status { font-size: 10px; }
+    .winter-header p { font-size: 13px; }
+    .winter-primary-actions { grid-template-columns: 1fr; }
+    .winter-progress-section { margin: 16px 0 20px; }
 }
 
 /* Christmas theme overhaul */
@@ -21828,6 +20073,7 @@ body.home-v3-page.index-theme-christmas .halloween-web-texture-hills {
     --halloween-web-ratio: 1204 / 560;
     --halloween-web-filter: drop-shadow(0 -10px 24px rgba(155, 232, 255, 0.12));
     --halloween-web-blend: normal;
+    translate: 0 -225px;
     z-index: 1;
     pointer-events: none;
 }
@@ -23067,4 +21313,146 @@ body.home-v3-page .profile-inventory-hero .profile-overhaul-equipped strong {
     -webkit-line-clamp: 2 !important;
     overflow: hidden !important;
     line-height: 1.08 !important;
+}
+
+body.home-v3-page #pearlShopModal .pearl-shop-modal-content {
+    height: 76vh !important;
+    max-height: 76vh !important;
+    overflow-x: hidden !important;
+    overflow-y: scroll !important;
+    padding-right: 34px !important;
+    overscroll-behavior: contain !important;
+    scrollbar-color: rgba(142,239,235,.9) rgba(2,10,20,.72) !important;
+    scrollbar-width: auto !important;
+}
+
+body.home-v3-page #pearlShopModal .pearl-shop-modal-content::-webkit-scrollbar {
+    width: 14px !important;
+}
+
+body.home-v3-page #pearlShopModal .pearl-shop-modal-content::-webkit-scrollbar-track {
+    background: rgba(2,10,20,.72) !important;
+    border-radius: 999px !important;
+}
+
+body.home-v3-page #pearlShopModal .pearl-shop-modal-content::-webkit-scrollbar-thumb {
+    border: 3px solid rgba(2,10,20,.72) !important;
+    border-radius: 999px !important;
+    background: linear-gradient(180deg, #8eefeb, #ffd778) !important;
+}
+
+body.home-v3-page #pearlShopModal .pearl-shop-modal-content::after {
+    content: "Scroll for more";
+    position: sticky;
+    bottom: -1px;
+    z-index: 5;
+    display: block;
+    margin: 2px -24px -26px;
+    padding: 10px 14px;
+    border-top: 1px solid rgba(142,239,235,.22);
+    background: linear-gradient(180deg, rgba(2,10,20,0), rgba(2,10,20,.94) 32%, rgba(2,10,20,.98));
+    color: rgba(233,251,255,.78);
+    font-family: "Barlow Condensed", sans-serif;
+    font-size: 12px;
+    font-weight: 900;
+    letter-spacing: 1.4px;
+    text-align: center;
+    text-transform: uppercase;
+    pointer-events: none;
+}
+
+/* Christmas sidebar card must retain its content height in the flex sidebar. */
+body.home-v3-page #home-community-boss-event {
+    flex: 0 0 auto;
+    min-width: 0;
+    min-height: auto;
+    height: auto;
+    max-height: none;
+    align-self: stretch;
+    display: block;
+    padding: 15px;
+    border: 1px solid #3b615c;
+    border-radius: 12px;
+    background: linear-gradient(145deg, #142e32, #10212d);
+    color: #eaf5f2;
+    font-family: 'Barlow', sans-serif;
+    text-transform: none;
+}
+#home-community-boss-event .home-boss-kicker {
+    color: #b2dbcc;
+    font: 700 10px 'Barlow', sans-serif;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+}
+#home-community-boss-event .home-boss-heading { display: flex; align-items: center; gap: 10px; margin: 10px 0 8px; }
+#home-community-boss-event .home-boss-heading strong {
+    flex: 1;
+    min-width: 0;
+    margin: 0;
+    color: #f2f8f6;
+    font: 600 18px/1.25 'Barlow', sans-serif;
+    letter-spacing: -.2px;
+    text-transform: none;
+    overflow-wrap: anywhere;
+}
+#home-community-boss-event .home-boss-heading img { display: block; flex: 0 0 72px; width: 72px; height: 36px; object-fit: contain; }
+#home-community-boss-event p { margin: 0 0 13px; color: #b0c4cb; font: 400 12px/1.5 'Barlow', sans-serif; text-transform: none; }
+#home-community-boss-event progress { display: block; width: 100%; height: 5px; margin: 0 0 9px; appearance: none; border: 0; border-radius: 8px; overflow: hidden; background: #2c424d; accent-color: #b6e5d0; }
+#home-community-boss-event progress::-webkit-progress-bar { background: #2c424d; border-radius: 8px; }
+#home-community-boss-event progress::-webkit-progress-value { background: #b6e5d0; border-radius: 8px; }
+#home-community-boss-event progress::-moz-progress-bar { background: #b6e5d0; border-radius: 8px; }
+#home-community-boss-event .home-boss-footer { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 6px; }
+#home-community-boss-event .home-boss-footer span { color: #b0c4cb; font: 500 10px/1.4 'Barlow', sans-serif; letter-spacing: 0; text-transform: none; }
+#home-community-boss-event .home-boss-footer span:last-child { color: #d5f2e8; }
+
+/* Keep the home page in the viewport; content panes own their scrolling. */
+html:has(> body.home-v3-page) {
+    height: 100%;
+    overflow: hidden;
+    overscroll-behavior: none;
+}
+body.home-v3-page {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100dvh;
+    min-height: 0;
+    margin: 0;
+    box-sizing: border-box;
+    overflow: hidden;
+    overscroll-behavior: none;
+}
+body.home-v3-page > .home-v3-shell {
+    height: 100%;
+    min-height: 0;
+    overflow: hidden;
+}
+body.home-v3-page .home-v3-shell > .home-v3-left,
+body.home-v3-page .home-v3-shell > .home-v3-center,
+body.home-v3-page .home-v3-shell > .home-v3-right {
+    min-height: 0;
+    min-width: 0;
+    height: 100%;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+}
+body.home-v3-page .home-v3-center > .home-footer { flex: 0 0 auto; }
+@media (min-width: 901px) {
+    body.home-v3-page > .home-v3-shell {
+        display: grid;
+        grid-template-columns: clamp(150px, 16vw, 220px) minmax(0, 1fr) clamp(230px, 23vw, 292px);
+        grid-template-rows: minmax(0, 1fr);
+    }
+    body.home-v3-page .home-v3-shell > .home-v3-right {
+        grid-column: auto;
+        display: flex;
+        flex-direction: column;
+    }
+}
+@media (max-width: 900px) {
+    body.home-v3-page > .home-v3-shell { overflow-y: auto; overscroll-behavior: contain; }
+    body.home-v3-page .home-v3-shell > .home-v3-left,
+    body.home-v3-page .home-v3-shell > .home-v3-center,
+    body.home-v3-page .home-v3-shell > .home-v3-right { flex: 0 0 auto; height: auto; overflow: visible; }
 }

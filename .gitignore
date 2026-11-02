@@ -1,0 +1,16 @@
+# Local tooling, attachments and credentials
+.codex-remote-attachments/
+.codex/
+.agents/
+node_modules/
+.env
+.env.*
+!.env.example
+*-debug.log
+
+# Generated verification output
+verification/*-results.json
+verification/stress-results.json
+verification/*.png
+verification/*.jpg
+verification/firebase-emulator/results.json

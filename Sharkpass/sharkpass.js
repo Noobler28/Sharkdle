@@ -267,30 +267,6 @@ function createRewardMarkup(reward, unlocked, isNextReward, variant = "default")
     `;
 }
 
-function createFutureTierMarkup(level, rewards, totalXP, nextLevel) {
-    const xpNeeded = Math.max(0, getXPForLevel(level) - totalXP);
-    const distance = level - nextLevel;
-    const tierLabel = distance === 1 ? "Coming Right After" : `${distance} Levels Away`;
-
-    return `
-        <article class="pass-tier future-tier">
-            <div class="pass-tier-head compact">
-                <div>
-                    <div class="pass-tier-kicker">${tierLabel}</div>
-                    <h3>Level ${level}</h3>
-                </div>
-                <div class="pass-tier-meta">
-                    <span class="pass-tier-state">${xpNeeded} XP needed</span>
-                    <span class="pass-tier-count">${rewards.length} reward${rewards.length === 1 ? "" : "s"}</span>
-                </div>
-            </div>
-            <div class="pass-tier-grid compact">
-                ${rewards.map(reward => createRewardMarkup(reward, false, false, "compact")).join("")}
-            </div>
-        </article>
-    `;
-}
-
 function createRewardTierMarkup(level, rewards, profileData, nextLevel) {
     const userLevel = getCurrentPlayerLevel(profileData);
     const totalXP = getSharkPassXP(profileData);
@@ -319,31 +295,6 @@ function createRewardTierMarkup(level, rewards, profileData, nextLevel) {
                 <div class="pass-tier-grid compact">
                     ${rewards.map(reward => createRewardMarkup(reward, unlocked, isNext, "compact")).join("")}
                 </div>
-            </div>
-        </article>
-    `;
-}
-
-function renderFocusTrack(profileData) {
-    const focusShell = document.getElementById("pass-focus-shell");
-    if (!focusShell) return;
-
-    const nextReward = getNextLockedReward(profileData);
-    const nextTierRewards = nextReward ? sharkPassRewards.filter(reward => reward.level === nextReward.level) : [];
-    const xpNeeded = nextReward ? Math.max(0, getXPForLevel(nextReward.level) - getSharkPassXP(profileData)) : 0;
-
-    focusShell.innerHTML = `
-        <article class="pass-focus-card next">
-            <div class="pass-focus-topline">
-                <span class="pass-focus-kicker">Next Tier</span>
-                <span class="pass-focus-level">${nextReward ? `Level ${nextReward.level}` : "Complete"}</span>
-            </div>
-            <h3>${nextReward ? `${xpNeeded} XP Needed` : "Pass fully cleared"}</h3>
-            <p>${nextReward ? `Reach level ${nextReward.level} to unlock this next reward wave.` : "You’ve claimed every free reward in the pass."}</p>
-            <div class="pass-focus-list">
-                ${nextTierRewards.length
-                    ? nextTierRewards.map(reward => `<span class="pass-focus-chip ${reward.rarity}">${reward.name}</span>`).join("")
-                    : `<span class="pass-focus-empty">No more locked rewards</span>`}
             </div>
         </article>
     `;
