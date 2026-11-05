@@ -137,6 +137,11 @@ function applySpeciesModeCopy() {
 }
 
 const speciesMode = getSpeciesModeConfig(getRequestedSpeciesMode());
+const maxAttempts = speciesMode.key === "mixed" ? 12 : 8;
+const relativeNames = new Set((window.rays || []).map(species => species.name));
+function getSpeciesType(species) {
+    return relativeNames.has(species.name) ? "relative" : "shark";
+}
 const activeSpecies = getActiveSpeciesPool(speciesMode.key).map(species => ({ ...species, guessed: false }));
 const infiniteLastFamilyKey = speciesMode.key === "sharks" ? "infiniteLastFamily" : `infiniteLastFamily_${speciesMode.key}`;
 
@@ -149,7 +154,8 @@ do {
 } while (lastFamily && activeSpecies.length > 1 && activeSpecies[targetIndex].family === lastFamily);
 let targetShark = activeSpecies[targetIndex];
 localStorage.setItem(infiniteLastFamilyKey, targetShark.family);
-let attempts = 12;
+let attempts = maxAttempts;
+document.getElementById("attempts-left").textContent = `Attempts left: ${attempts}`;
 let categoryReveal = null;
 let categoryRevealGameCompleted = false;
 let speciesTrackerGuesses = [];
@@ -160,7 +166,7 @@ const infiniteSpeciesTrackerRoundId = window.SharkdleSpeciesTracker
 const infiniteFairPlayRound = window.SharkdleFairPlay?.startRound('infinite', speciesMode.key, infiniteSpeciesTrackerRoundId);
 
 function recordInfiniteSpeciesHistory(won) {
-    void window.SharkdleFairPlay?.finishRound(infiniteFairPlayRound, won, 12 - attempts);
+    void window.SharkdleFairPlay?.finishRound(infiniteFairPlayRound, won, maxAttempts - attempts);
     if (!window.SharkdleSpeciesTracker) return;
     void window.SharkdleSpeciesTracker.recordRound({
         mode: `infinite-${speciesMode.key}`,
@@ -168,7 +174,7 @@ function recordInfiniteSpeciesHistory(won) {
         targetSpecies: targetShark,
         guesses: speciesTrackerGuesses.map(entry => entry.species),
         categoryResults: speciesTrackerGuesses.map(entry => entry.feedback),
-        guessesTaken: 12 - attempts,
+        guessesTaken: maxAttempts - attempts,
         won
     });
 }
@@ -854,6 +860,7 @@ function makeGuess() {
     attemptsLeftDiv.textContent = `Attempts left: ${attempts}`;
 
     const feedback = [
+        ...(speciesMode.key === "mixed" ? [{ category: "Type", value: getSpeciesType(guessedShark), correct: getSpeciesType(guessedShark) === getSpeciesType(targetShark) }] : []),
         { category: "Order", value: guessedShark.order, correct: guessedShark.order === targetShark.order },
         { category: "Family", value: guessedShark.family, correct: guessedShark.family === targetShark.family },
         { category: "Genus", value: guessedShark.genus, correct: guessedShark.genus === targetShark.genus },
@@ -885,7 +892,7 @@ function makeGuess() {
     scheduleMysteryProfileReveal();
 
     if (normalizeInput(guessedShark.name) === normalizeInput(targetShark.name)) {
-        const guessesTaken = 12 - attempts;
+        const guessesTaken = maxAttempts - attempts;
         const baseXpGain = Math.max(50, 170 - guessesTaken * 10);
         const xpAward = typeof window.applyLimitedTimeXpBonus === 'function'
             ? window.applyLimitedTimeXpBonus(baseXpGain)
@@ -968,7 +975,7 @@ function makeGuess() {
 
         // Check achievements for loss conditions
         if (window.checkAchievements) {
-            window.checkAchievements(false, 12, false);
+            window.checkAchievements(false, maxAttempts, false);
         }
 
         // Disable input
@@ -1175,7 +1182,7 @@ window.revealShark = function() {
 // --- Share Results (Infinite) ---
 function generateInfiniteShareText(isWin) {
     const dateStr = new Date().toLocaleDateString();
-    const title = `${speciesMode.shareTitle} ${dateStr} - ${isWin ? (12 - attempts) + '/12' : 'X/12'}`;
+    const title = `${speciesMode.shareTitle} ${dateStr} - ${isWin ? (maxAttempts - attempts) : 'X'}/${maxAttempts}`;
     // Build rows from guesses DOM: each guess-card -> .feedback .category.correct
     const guessCards = Array.from(document.querySelectorAll('#guesses .guess-card'));
     const rows = guessCards.map(card => {

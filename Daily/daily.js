@@ -79,6 +79,11 @@ function getActiveSpeciesPool(modeKey) {
 }
 
 const speciesMode = getSpeciesModeConfig(getRequestedSpeciesMode());
+const maxAttempts = speciesMode.key === "mixed" ? 12 : 8;
+const relativeNames = new Set((window.rays || []).map(species => species.name));
+function getSpeciesType(species) {
+    return relativeNames.has(species.name) ? "relative" : "shark";
+}
 const speciesPool = getActiveSpeciesPool(speciesMode.key);
 
 function getDailyStorageKey() {
@@ -192,10 +197,10 @@ function getDailyVariantSwitcherHtml() {
 
 // --- Share Results (Daily) ---
 function generateDailyShareText() {
-    const title = `${speciesMode.shareTitle} ${today} - ${gameWon ? guesses.length : 'X'}/${12}`;
+    const title = `${speciesMode.shareTitle} ${today} - ${gameWon ? guesses.length : 'X'}/${maxAttempts}`;
     // Build grid: 6 categories per guess -> green for correct, black for incorrect
     const rows = guesses.map(g => {
-        const order = ['order','family','genus','size','depth','yod'];
+        const order = [...(speciesMode.key === 'mixed' ? ['type'] : []), 'order','family','genus','size','depth','yod'];
         return order.map(cat => (g.feedback && g.feedback[cat]) ? '🟩' : '⬛').join('');
     });
     const body = rows.join('\n');
@@ -243,7 +248,7 @@ const dailyTargetSeed = speciesMode.key === "sharks" ? today : `${today}:${speci
 const dailySharkIndex = hashDate(dailyTargetSeed) % speciesPool.length
 const targetShark = speciesPool[dailySharkIndex]
 
-let attempts = 12
+let attempts = maxAttempts
 let guesses = []
 let gameCompleted = false
 let gameWon = false
@@ -297,6 +302,7 @@ function getDepthWithClue(depth) {
 
 function normalizeSavedFeedback(shark, savedFeedback = {}) {
     return {
+        ...(speciesMode.key === "mixed" ? { type: getSpeciesType(shark) === getSpeciesType(targetShark) } : {}),
         family: savedFeedback.family ?? shark.family === targetShark.family,
         order: savedFeedback.order ?? shark.order === targetShark.order,
         genus: savedFeedback.genus ?? shark.genus === targetShark.genus,
@@ -828,7 +834,7 @@ async function loadGameState() {
         // Validate that stored state is actually for today (not from device date manipulation)
         if (state.date === today) {
             guesses = normalizeSavedGuesses(state.guesses)
-            attempts = state.attempts || 12
+            attempts = Math.max(0, maxAttempts - guesses.length)
             gameCompleted = state.completed || false
             gameWon = state.won || false
             categoryReveal = normalizeCategoryRevealState(state.categoryReveal)
@@ -863,7 +869,7 @@ async function loadGameState() {
                     // regardless of what their client date says
                     if (lastPlayUTC === today) {
                         guesses = normalizeSavedGuesses(modeData.guesses)
-                        attempts = modeData.attempts || 12
+                        attempts = Math.max(0, maxAttempts - guesses.length)
                         gameCompleted = modeData.completed || false
                         gameWon = modeData.won || false
                         categoryReveal = normalizeCategoryRevealState(modeData.categoryReveal)
@@ -874,7 +880,7 @@ async function loadGameState() {
                         // This means device date was manipulated. Use server truth.
                         console.warn("Device date manipulation detected. Resetting game.");
                         guesses = []
-                        attempts = 12
+                        attempts = maxAttempts
                         gameCompleted = false
                         gameWon = false
                         categoryReveal = null
@@ -886,7 +892,7 @@ async function loadGameState() {
                 // Fallback: validate the saved date against stored date field
                 if (modeData.date === today) {
                     guesses = normalizeSavedGuesses(modeData.guesses)
-                    attempts = modeData.attempts || 12
+                    attempts = Math.max(0, maxAttempts - guesses.length)
                     gameCompleted = modeData.completed || false
                     gameWon = modeData.won || false
                     categoryReveal = normalizeCategoryRevealState(modeData.categoryReveal)
@@ -895,7 +901,7 @@ async function loadGameState() {
                     // Date mismatch: likely device date was changed. Reset the game
                     console.warn("Date mismatch detected. Device date may have been manipulated.");
                     guesses = []
-                    attempts = 12
+                    attempts = maxAttempts
                     gameCompleted = false
                     gameWon = false
                     categoryReveal = null
@@ -939,6 +945,12 @@ async function saveGameState() {
 // Initialize game
 async function initializeGame() {
     await loadGameState()
+
+    if (!gameCompleted && attempts === 0) {
+        gameCompleted = true;
+        gameWon = guesses.some(guess => guess.shark.name === targetShark.name);
+        saveGameState();
+    }
 
     // Set attempts display if game not completed
     if (!gameCompleted) {
@@ -1206,6 +1218,7 @@ attempts--
 document.getElementById("attempts-left").textContent="Attempts left: "+attempts
 
 const feedback = {
+    ...(speciesMode.key === "mixed" ? { type: getSpeciesType(shark) === getSpeciesType(targetShark) } : {}),
     family: shark.family === targetShark.family,
     order: shark.order === targetShark.order,
     genus: shark.genus === targetShark.genus,
@@ -1242,7 +1255,7 @@ scheduleMysteryProfileReveal();
 if(shark.name === targetShark.name){
 
     // Track total guesses for this game
-    const guessesTaken = 12 - attempts;
+    const guessesTaken = maxAttempts - attempts;
 
     // Calculate XP gain (170 - 10 per guess, minimum 50)
     const baseXpGain = Math.max(50, 170 - guessesTaken * 10);
@@ -1351,8 +1364,8 @@ if(attempts===0 && !gameWon){
             ? getBestLocalProfile()
             : JSON.parse(localStorage.getItem("userProfile") || "{}");
 
-        // Track total guesses for this game (all 12 attempts used)
-        const guessesTaken = 12;
+        // Track total guesses for this game (all attempts used)
+        const guessesTaken = guesses.length;
         profileData.totalGuesses = (profileData.totalGuesses || 0) + guessesTaken;
 
         // Update stats
@@ -1443,6 +1456,8 @@ card.innerHTML = `<b style="color: ${nameColor};">${shark.name}</b> (click)`
 
 const feedbackDiv = document.createElement("div")
 feedbackDiv.className="feedback"
+
+if (speciesMode.key === "mixed") feedbackDiv.appendChild(createCategory("Type", getSpeciesType(shark), feedback.type))
 
 feedbackDiv.appendChild(createCategory("Order", shark.order, feedback.order))
 feedbackDiv.appendChild(createCategory("Family", shark.family, feedback.family))
@@ -1563,7 +1578,7 @@ function showLose(alreadyCompleted = false){
 
 // Check achievements for loss conditions (only on first completion)
 if (!alreadyCompleted && window.checkAchievements) {
-    window.checkAchievements(false, 12, false);
+    window.checkAchievements(false, maxAttempts, false);
 }
 
 const win = document.getElementById("win-screen")

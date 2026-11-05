@@ -131,6 +131,11 @@ function applySpeciesModeCopy() {
 }
 
 const speciesMode = getSpeciesModeConfig(getRequestedSpeciesMode());
+const maxAttempts = speciesMode.key === "mixed" ? 12 : 8;
+const relativeNames = new Set((window.rays || []).map(species => species.name));
+function getSpeciesType(species) {
+    return relativeNames.has(species.name) ? "relative" : "shark";
+}
 const activeSpecies = getActiveSpeciesPool(speciesMode.key).map(species => ({ ...species, guessed: false }));
 
 applySpeciesModeCopy();
@@ -204,6 +209,7 @@ function makeGuess() {
     guessesMade++;
 
     const feedback = [
+        ...(speciesMode.key === "mixed" ? [{ category: "Type", value: getSpeciesType(guessedShark), correct: getSpeciesType(guessedShark) === getSpeciesType(targetShark) }] : []),
         { category: "Order", value: guessedShark.order, correct: guessedShark.order === targetShark.order },
         { category: "Family", value: guessedShark.family, correct: guessedShark.family === targetShark.family },
         { category: "Genus", value: guessedShark.genus, correct: guessedShark.genus === targetShark.genus },
