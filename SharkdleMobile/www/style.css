@@ -21412,6 +21412,7 @@ html:has(> body.home-v3-page) {
     overscroll-behavior: none;
 }
 body.home-v3-page {
+    display: block;
     position: fixed;
     inset: 0;
     width: 100%;
@@ -21460,4 +21461,20 @@ body.home-v3-page .home-v3-center > .home-footer { flex: 0 0 auto; }
 body.home-v3-page .social-rewards-platform-lsfsw,
 body.home-v3-page .social-reward-group-lsfsw {
     --platform-accent: #a6dfcf;
+}
+
+/* Keep the Infinite action readable even over bright seasonal artwork. */
+body.home-v3-page .home-v3-hero-actions .home-v3-ghost-btn {
+    color: #f4fcff;
+    background: #073b52;
+    border-color: #4b9db6;
+    box-shadow: 0 3px 12px rgba(0, 15, 25, .25);
+}
+body.home-v3-page .home-v3-hero-actions .home-v3-ghost-btn:hover {
+    background: #0b506a;
+    border-color: #9be8ff;
+}
+body.home-v3-page .home-v3-hero-actions .home-v3-ghost-btn:focus-visible {
+    outline: 3px solid #ffffff;
+    outline-offset: 3px;
 }
