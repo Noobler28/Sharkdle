@@ -147,6 +147,21 @@ function harness(file, db = database()) {
         assert.equal(actualSpin.db.records.get('userStats/A').lastSpinWheelDate, '');
         await actualSpin.context.spinDailyWheel();
         assert.equal(actualSpin.db.records.get('userStats/A').totalXP, 10273, 'A fourth bonus spin is blocked');
+        const permissions = harness(file);
+        permissions.context.db = { collection: () => ({ doc: () => ({ collection: () => ({ doc: () => ({}) }) }) }),
+            runTransaction: async () => { throw Object.assign(new Error('blocked'), { code: 'permission-denied' }); } };
+        await permissions.claim('ThankYou100');
+        assert.match(permissions.messages.at(-1).message, /database permissions/);
+        assert.equal(permissions.profile().totalXP, 123);
+        const unverified = harness(file); unverified.context.currentUser.emailVerified = false;
+        await unverified.claim('ThankYou100');
+        assert.match(unverified.messages.at(-1).message, /verify your email/);
+        assert.equal(unverified.db.records.size, 0);
+        const savedWithUiFailure = harness(file); savedWithUiFailure.db.put('userStats/A', clone(savedWithUiFailure.profile()));
+        savedWithUiFailure.context.saveUserProfileLocally = () => { throw new Error('cache unavailable'); };
+        await savedWithUiFailure.claim('ThankYou100');
+        assert.match(savedWithUiFailure.messages.at(-1).message, /redeemed and saved/);
+        assert.equal(savedWithUiFailure.db.records.get('userStats/A').totalXP, 10123);
         console.log(file + ': PASS offline redemption cannot multiply XP, 20 rapid duplicate claims, concurrent devices, LSFSW XP/pearls/icon, malformed cache and account switching during commit');
     }
 })().catch(error => { console.error(error); process.exitCode = 1; });

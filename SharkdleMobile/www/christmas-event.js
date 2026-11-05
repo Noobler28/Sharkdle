@@ -47,6 +47,7 @@
             state.wins = new Set(wins.docs.map(doc => Number(doc.id)));
             state.claims = new Set(claims.docs.map(doc => Number(doc.id)));
             state.loaded = true;
+            window.SharkdleCorners?.check('calendar', { gifts: state.claims.size });
         } catch (error) {
             console.warn("Christmas calendar could not load:", error);
         } finally {
@@ -155,6 +156,7 @@
             committed = true;
             saveUserProfileLocally(result, { skipRemoteSync: true });
             state.uid = uid; state.claims.add(day);
+            window.SharkdleCorners?.check('calendar', { gifts: state.claims.size });
             updateHomeV3Sidebar(result); renderCratesButton();
             markGiftOpened(day);
             await animateGift(reward, false, uid);

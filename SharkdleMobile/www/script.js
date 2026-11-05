@@ -224,6 +224,8 @@ window.shareFriendCode = async function() {
             await navigator.clipboard.writeText(shareText);
             showNotification("Friend code share text copied.", "success", 2600);
         }
+        else { return; }
+        unlockDuelAchievement('friend_shared');
         await grantLocalShareReward();
     } catch (error) {
         if (error?.name !== "AbortError") {
@@ -383,11 +385,7 @@ const SHARKDLE_ACTIVITY_ROUTES = Object.freeze([
     { match: "/updates/", label: "Updates" },
     { match: "/updates.html", label: "Updates" },
     { match: "/shark-rescue/", label: "Shark Rescue" },
-    { match: "/secret.html", label: "Shark Rescue" },
-    { match: "/minigames/sharkslots/", label: "Shark Slots" },
-    { match: "/slots.html", label: "Shark Slots" },
-    { match: "/minigames/sharklagoon/", label: "Shark Lagoon" },
-    { match: "/lagoon.html", label: "Shark Lagoon" }
+    { match: "/secret.html", label: "Shark Rescue" }
 ]);
 
 function getCurrentSharkdleActivityLabel() {
@@ -477,6 +475,26 @@ function unlockDuelAchievement(achievementId) {
         syncUnlockedAchievementToFirebase(achievementId, unlocked);
     }
 }
+
+// Shared event hook also works on pages that do not load the achievement catalog.
+window.recordSharkdleAchievement = unlockDuelAchievement;
+
+function checkAccountProgressAchievements(profile) {
+    const level = getLevelFromXP(Number(profile.totalXP) || 0);
+    [10, 20, 30, 40, 50].forEach(v => { if (level >= v) unlockDuelAchievement('account_level_' + v); });
+    [7, 14, 30].forEach(v => { if (Number(profile.loginStreak) >= v) unlockDuelAchievement('login_days_' + v); });
+    if (profile.socialRewardsClaimed?.length) unlockDuelAchievement('social_reward_claimed');
+    if (profile.redeemedCodes?.length) unlockDuelAchievement('code_redeemed');
+    if (profile.referralRewards?.claimedShareRewards?.length) unlockDuelAchievement('friend_shared');
+}
+
+window.checkRngProgressAchievements = function(profile) {
+    [1000000, 50000000, 100000000, 1000000000, 50000000000, 100000000000].forEach(v => {
+        if (Number(profile.bestOneIn) > v) unlockDuelAchievement('rng_odds_' + v);
+    });
+    [1, 5, 10].forEach(v => { if (Number(profile.prestigeLevel) >= v) unlockDuelAchievement('rng_prestige_' + v); });
+    [100, 1000, 10000].forEach(v => { if (Number(profile.rolls) >= v) unlockDuelAchievement('rng_rolls_' + v); });
+};
 
 function getDuelOpponentUid(duelData, uid) {
     return (duelData?.participants || []).find(participant => participant !== uid) || null;
@@ -739,6 +757,7 @@ window.craftSeasonalCrate = async function() {
     }
     if (currentUser?.uid !== uid) return;
     if (craftedProfile) {
+        window.SharkdleCorners?.award('explore_crafted_crate');
         saveUserProfileLocally(craftedProfile, { skipRemoteSync: true });
         showNotification(`Crafted 1 ${activeCrateName} from ${SEASONAL_CRATE_CRAFT_COST} Cosmetic Crates!`, "success", 2500);
     }
@@ -2134,7 +2153,7 @@ const sharkPassSeasons = [
             { id: "season-streak-signal", title: "Streak Signal", description: "Reach a 3 win streak.", metric: "highestStreak", goal: 3, xp: 850, icon: "fa-fire", progressMode: "absolute" },
             { id: "season-deep-research", title: "Deep Research", description: "Earn 7,500 XP this season.", metric: "totalXP", goal: 7500, xp: 1200, icon: "fa-book-open" },
             { id: "season-crate-current", title: "Crate Current", description: "Open 2 cosmetic crates this season.", metric: "cratesOpened", goal: 2, xp: 1000, icon: "fa-box-open" },
-            { id: "season-shiver-run", title: "Shiver Run", description: "Play 20 games this season.", metric: "gamesPlayed", goal: 20, xp: 1800, icon: "fa-water" },
+            { id: "season-shiver-run", title: "Ocean Run", description: "Play 20 games this season.", metric: "gamesPlayed", goal: 20, xp: 1800, icon: "fa-water" },
             { id: "season-apex-hunt", title: "Apex Hunt", description: "Win 15 games this season.", metric: "wins", goal: 15, xp: 2400, icon: "fa-crown" },
             { id: "season-treasure-tide", title: "Treasure Tide", description: "Open 5 cosmetic crates this season.", metric: "cratesOpened", goal: 5, xp: 2100, icon: "fa-box-open" },
             { id: "season-master-current", title: "Master Current", description: "Earn 25,000 XP this season.", metric: "totalXP", goal: 25000, xp: 4200, icon: "fa-star" }
@@ -2811,6 +2830,7 @@ function setProfileShowcaseAchievement(achievementId, shouldShow = true) {
         ? [achievementId, ...current].slice(0, PROFILE_ACHIEVEMENT_SHOWCASE_LIMIT)
         : current;
     profileData.showcasedAchievements = next;
+    if (shouldShow) window.SharkdleCorners?.award('explore_showcase');
     localStorage.setItem("showcasedAchievements", JSON.stringify(next));
     saveUserProfileLocally(profileData);
     if (currentUser && db) {
@@ -3410,6 +3430,7 @@ function markDailySpinUsed(profileData = getCurrentProfileData()) {
     const uid = getSpinWheelAuthUid();
     const today = getLocalDateKey();
     const bonusSpins = getDailySpinBonusCount(profileData, uid);
+    if (hasUnlockedDailySpinToday(profileData)) window.recordSharkdleAchievement?.('daily_spin_used');
     if (bonusSpins > 0) {
         setDailySpinBonusCount(profileData, bonusSpins - 1, uid);
         return profileData;
@@ -3778,55 +3799,35 @@ function collectAllUnlockableBadgeIds(uid = currentUser?.uid) {
 }
 
 window.unlockAllCosmetics = async function() {
-    if (!currentUser || !isDeveloperUid(currentUser.uid)) {
-        console.log("? Access denied. unlockAllCosmetics() is for developers only.");
-        showNotification("Dev command: Access denied.", "error", 4000);
-        return;
-    }
-
-    const profileData = getCurrentProfileData();
+    if (!isDeveloperSessionActive() || !db || currentUser.emailVerified === false) throw new Error("Verified developer access required.");
+    const owner = currentUser.uid;
     const allPfps = collectAllUnlockablePfps();
-    const allBadgeIds = collectAllUnlockableBadgeIds(currentUser.uid);
-    const allThemeIds = [...new Set(["default", ...sharkPassCardThemes.map(theme => theme.id)])];
+    const allBadgeIds = collectAllUnlockableBadgeIds(owner);
     const activePassSeason = getActiveSharkPassSeason();
-    const passCapLevel = sharkPassRewards.reduce((max, reward) => Math.max(max, Number(reward.level) || 0), 0);
-    const passCapXp = passCapLevel > 0 ? getXPForLevel(passCapLevel) : 0;
-    const currentSeasonPassXp = activePassSeason?.id && profileData.sharkPassProgressSeasonId === activePassSeason.id
-        ? Math.max(0, Number(profileData.sharkPassXP) || 0)
-        : 0;
-
-    profileData.earnedCosmetics = getUnifiedCosmeticList(profileData.earnedCosmetics, allPfps, "imagePath");
-    profileData.unlockedBadges = [...new Set(["starter", ...allBadgeIds])];
-    profileData.unlockedCardThemes = allThemeIds;
-    if (activePassSeason?.id) {
-        profileData.sharkPassProgressSeasonId = activePassSeason.id;
-        profileData.sharkPassSeasonId = activePassSeason.id;
-    }
-    profileData.sharkPassXP = Math.max(currentSeasonPassXp, passCapXp);
-    if (allBadgeIds.includes("tester")) {
-        profileData.testerBadgeUnlocked = true;
-    }
-
-    saveUserProfileLocally(profileData);
-
-    if (db) {
-        await db.collection("userStats").doc(currentUser.uid).set({
-            earnedCosmetics: profileData.earnedCosmetics,
-            unlockedBadges: profileData.unlockedBadges,
-            unlockedCardThemes: profileData.unlockedCardThemes,
-            sharkPassProgressSeasonId: profileData.sharkPassProgressSeasonId,
-            sharkPassSeasonId: profileData.sharkPassSeasonId,
-            sharkPassXP: profileData.sharkPassXP,
-            testerBadgeUnlocked: profileData.testerBadgeUnlocked === true
-        }, { merge: true });
-    }
-
-    if (typeof renderThemeSelection === "function") renderThemeSelection();
-    if (typeof loadEarnedCosmetics === "function") loadEarnedCosmetics();
-    if (typeof updateProfileBadgeUI === "function") updateProfileBadgeUI();
-
-    console.log(`? Unlocked ${profileData.earnedCosmetics.length} profile icons, ${profileData.unlockedBadges.length} badges, and ${profileData.unlockedCardThemes.length} themes.`);
-    showNotification("Unlocked all profile icons, badges, and themes.", "success", 4200);
+    const passCapXp = getXPForLevel(sharkPassRewards.reduce((max, reward) => Math.max(max, Number(reward.level) || 0), 1));
+    const ref = db.collection("userStats").doc(owner);
+    await db.runTransaction(async transaction => {
+        const snapshot = await transaction.get(ref);
+        if (!isDeveloperSessionActive() || currentUser.uid !== owner) throw new Error("Developer account changed. Try again.");
+        const profile = snapshot.exists ? snapshot.data() : {};
+        const sameSeason = profile.sharkPassProgressSeasonId === activePassSeason?.id;
+        const payload = {
+            earnedCosmetics: getUnifiedCosmeticList(profile.earnedCosmetics, allPfps, "imagePath"),
+            unlockedBadges: [...new Set(["starter", ...(profile.unlockedBadges || []), ...allBadgeIds])],
+            unlockedCardThemes: [...new Set(["default", ...(profile.unlockedCardThemes || []), ...sharkPassCardThemes.map(theme => theme.id)])],
+            unlockedTitles: [...new Set([...(profile.unlockedTitles || []), ...profileTitleDefs.map(title => title.id).filter(Boolean)])],
+            sharkPassProgressSeasonId: activePassSeason?.id || "",
+            sharkPassSeasonId: activePassSeason?.id || "",
+            sharkPassXP: Math.max(sameSeason ? Number(profile.sharkPassXP) || 0 : 0, passCapXp),
+            testerBadgeUnlocked: true,
+            lastUpdated: Date.now()
+        };
+        transaction.set(ref, payload, { merge: true });
+    });
+    if (!currentUser || currentUser.uid !== owner) return;
+    await loadUserProfile({ rethrowErrors: true });
+    renderThemeSelection(); loadEarnedCosmetics(); updateProfileBadgeUI(); renderTitleSelection();
+    showNotification("Unlocked all portraits, badges, themes and titles.", "success", 4200);
 };
 
 window.resetDailySpin = function() {
@@ -5090,6 +5091,7 @@ async function contributeCommunityBossWin(mode = "infinite", options = {}) {
         });
 
         if (didIncrement) {
+            unlockDuelAchievement('global_contest_joined');
             await refreshCommunityBossParticipation();
             if (storageKey) localStorage.setItem(storageKey, "true");
             showNotification(`Community boss progress +${contributionValue}`, "success", 2600);
@@ -5512,169 +5514,6 @@ const RETIRED_TREASURE_PFPS = Object.freeze([
         source: "Lost Treasures"
     }
 ]);
-
-const SHIVER_SEASON_ID = "tide-clash-2026-07";
-const SHIVER_WIN_POINTS = Object.freeze({
-    daily: 5,
-    infinite: 2
-});
-
-function getShiverWinPoints(mode = "infinite") {
-    return mode === "daily" ? SHIVER_WIN_POINTS.daily : SHIVER_WIN_POINTS.infinite;
-}
-
-function getShiverContributionStorageKey(mode, options = {}) {
-    if (!currentUser?.uid || mode !== "daily") return "";
-    const contributionKey = options.contributionKey || getUtcDateKey();
-    return `shiverContribution_${SHIVER_SEASON_ID}_${currentUser.uid}_${mode}_${contributionKey}`;
-}
-
-function resolveShiverProfilePicturePath(path) {
-    const storedPath = String(path || "").trim();
-    if (!storedPath) return "images/pfp/shark1.png";
-    if (/^https?:\/\//i.test(storedPath) || storedPath.startsWith("images/")) return storedPath;
-    if (storedPath.includes("/")) return `images/${storedPath.replace(/^\/+/, "")}`;
-    return `images/pfp/${storedPath}`;
-}
-
-async function contributeShiverWin(mode = "infinite", options = {}) {
-    const normalizedMode = mode === "daily" ? "daily" : "infinite";
-    if (typeof firebase === "undefined" || !db) return { contributed: false, reason: "unavailable" };
-    const authUser = currentUser || firebase.auth?.().currentUser || null;
-    if (!authUser) return { contributed: false, reason: "login-required" };
-
-    const storageKey = getShiverContributionStorageKey(normalizedMode, options);
-    if (storageKey && localStorage.getItem(storageKey) === "true") {
-        return { contributed: false, reason: "already-counted" };
-    }
-
-    const membershipRef = db.collection("userShivers").doc(authUser.uid);
-    const points = getShiverWinPoints(normalizedMode);
-    const modeWinField = normalizedMode === "daily" ? "dailyWins" : "infiniteWins";
-    const modePointField = normalizedMode === "daily" ? "dailyPoints" : "infinitePoints";
-    const now = firebase.firestore.FieldValue.serverTimestamp();
-    let didIncrement = false;
-    let shiverSummary = null;
-
-    try {
-        await db.runTransaction(async transaction => {
-            const membershipSnap = await transaction.get(membershipRef);
-            if (!membershipSnap.exists) return;
-
-            const membership = membershipSnap.data() || {};
-            const shiverId = membership.shiverId;
-            if (!shiverId) return;
-
-            const shiverRef = db.collection("shivers").doc(shiverId);
-            const memberRef = shiverRef.collection("members").doc(authUser.uid);
-            const seasonRef = db.collection("shiverSeasons").doc(SHIVER_SEASON_ID).collection("entries").doc(shiverId);
-            const seasonMemberRef = seasonRef.collection("members").doc(authUser.uid);
-
-            const shiverSnap = await transaction.get(shiverRef);
-            const memberSnap = await transaction.get(memberRef);
-            if (!shiverSnap.exists || !memberSnap.exists) return;
-
-            const shiver = shiverSnap.data() || {};
-            if (shiver.status === "disbanded") return;
-
-            const profileData = getCurrentProfileData();
-            const username = String(profileData.username || authUser.email?.split("@")[0] || "Sharkdle Player").slice(0, 32);
-            const profilePicture = resolveShiverProfilePicturePath(profileData.profilePicture || profileData.profilePic);
-            const shiverName = shiver.name || membership.shiverName || "Unnamed Shiver";
-            const shiverTag = shiver.tag || membership.shiverTag || "----";
-            const shiverColor = shiver.color || membership.shiverColor || "reef";
-            const shiverMemberCount = Math.max(1, Number(shiver.memberCount) || 1);
-
-            transaction.update(shiverRef, {
-                totalPoints: firebase.firestore.FieldValue.increment(points),
-                seasonPoints: firebase.firestore.FieldValue.increment(points),
-                battlePoints: firebase.firestore.FieldValue.increment(points),
-                wins: firebase.firestore.FieldValue.increment(1),
-                [modeWinField]: firebase.firestore.FieldValue.increment(1),
-                [modePointField]: firebase.firestore.FieldValue.increment(points),
-                seasonId: SHIVER_SEASON_ID,
-                updatedAt: now,
-                lastContributionAt: now,
-                lastContributionMode: normalizedMode,
-                lastContributionUid: authUser.uid
-            });
-
-            transaction.set(memberRef, {
-                username,
-                profilePicture,
-                points: firebase.firestore.FieldValue.increment(points),
-                wins: firebase.firestore.FieldValue.increment(1),
-                [modeWinField]: firebase.firestore.FieldValue.increment(1),
-                updatedAt: now,
-                lastContributionMode: normalizedMode
-            }, { merge: true });
-
-            transaction.set(membershipRef, {
-                username,
-                profilePicture,
-                shiverName,
-                shiverTag,
-                shiverColor,
-                points: firebase.firestore.FieldValue.increment(points),
-                wins: firebase.firestore.FieldValue.increment(1),
-                [modeWinField]: firebase.firestore.FieldValue.increment(1),
-                updatedAt: now,
-                lastContributionMode: normalizedMode
-            }, { merge: true });
-
-            transaction.set(seasonRef, {
-                shiverId,
-                name: shiverName,
-                tag: shiverTag,
-                color: shiverColor,
-                memberCount: shiverMemberCount,
-                points: firebase.firestore.FieldValue.increment(points),
-                wins: firebase.firestore.FieldValue.increment(1),
-                [modeWinField]: firebase.firestore.FieldValue.increment(1),
-                seasonId: SHIVER_SEASON_ID,
-                updatedAt: now,
-                lastContributionMode: normalizedMode,
-                lastContributionUid: authUser.uid
-            }, { merge: true });
-
-            transaction.set(seasonMemberRef, {
-                uid: authUser.uid,
-                username,
-                profilePicture,
-                points: firebase.firestore.FieldValue.increment(points),
-                wins: firebase.firestore.FieldValue.increment(1),
-                [modeWinField]: firebase.firestore.FieldValue.increment(1),
-                updatedAt: now,
-                lastContributionMode: normalizedMode
-            }, { merge: true });
-
-            shiverSummary = { shiverId, shiverName, shiverTag, shiverColor };
-            didIncrement = true;
-        });
-
-        if (didIncrement) {
-            if (storageKey) localStorage.setItem(storageKey, "true");
-            if (shiverSummary) {
-                const profileData = getCurrentProfileData();
-                profileData.shiverId = shiverSummary.shiverId;
-                profileData.shiverName = shiverSummary.shiverName;
-                profileData.shiverTag = shiverSummary.shiverTag;
-                profileData.shiverColor = shiverSummary.shiverColor;
-                profileData.shiverSeasonId = SHIVER_SEASON_ID;
-                saveUserProfileLocally(profileData, { skipRemoteSync: true });
-            }
-            showNotification(`Shiver +${points} teeth`, "success", 2200);
-            return { contributed: true, points };
-        }
-
-        return { contributed: false, reason: "no-shiver" };
-    } catch (error) {
-        console.warn("Unable to contribute Shiver win:", error);
-        return { contributed: false, reason: "error" };
-    }
-}
-
-window.contributeShiverWin = contributeShiverWin;
 
 const SHARKDLE_SETTINGS_KEY = "sharkdle_qol_settings_v2";
 const SHARKDLE_SETTINGS_DEFAULTS = {
@@ -7660,6 +7499,7 @@ function setEquippedCardTheme(themeId) {
     const profileData = getCurrentProfileData();
     syncAchievementThemeUnlocks(profileData);
     profileData.equippedCardTheme = themeId;
+    if (themeId && themeId !== 'default') window.SharkdleCorners?.award('explore_profile_theme');
     saveUserProfileLocally(profileData);
     if (currentUser && db) {
         db.collection("userStats").doc(currentUser.uid).set(buildCosmeticSyncPayload(profileData), { merge: true });
@@ -7915,6 +7755,7 @@ function getEquippedBadge(profileData = getCurrentProfileData()) {
 function setEquippedBadge(badgeId) {
     const profileData = getCurrentProfileData();
     profileData.equippedBadge = normalizeBadgeId(badgeId);
+    if (profileData.equippedBadge !== 'starter') window.SharkdleCorners?.award('explore_profile_badge');
     saveUserProfileLocally(profileData);
     // Save to Firestore if logged in
     if (currentUser && db) {
@@ -7963,6 +7804,13 @@ function updateProfileBadgeUI() {
         badgeLabel.style.color = textColor;
     }
 }
+
+const profileTitleDefs = [
+    { id: "", name: "No title", description: "Keep your profile title hidden." },
+    { id: "reef-architect", name: "Reef Architect", description: "A developer collection title." },
+    { id: "ocean-overseer", name: "Ocean Overseer", description: "A developer collection title." },
+    { id: "apex-commander", name: "Apex Commander", description: "A developer collection title." }
+];
 
 function getProfileTitleMeta(titleId) {
     return profileTitleDefs.find(title => title.id === titleId) || profileTitleDefs[0];
@@ -8024,6 +7872,7 @@ function setEquippedProfileTitle(titleId) {
     if (normalizedTitleId && !getUnlockedProfileTitleIds(profileData).includes(normalizedTitleId)) return;
 
     profileData.equippedTitle = normalizedTitleId;
+    if (normalizedTitleId) window.SharkdleCorners?.award('explore_profile_title');
     saveUserProfileLocally(profileData);
     if (currentUser && db) {
         db.collection("userStats").doc(currentUser.uid).set(buildCosmeticSyncPayload(profileData), { merge: true });
@@ -8174,10 +8023,11 @@ function showAdminCompensationPopup(notice) {
     popup.setAttribute("role", "status");
     popup.innerHTML = `
         <div class="admin-compensation-popup-header">
-            <span>Admin Compensation</span>
-            <button class="admin-compensation-popup-close" type="button" aria-label="Close compensation popup">x</button>
+            <span>A gift from Connor</span>
+            <button class="admin-compensation-popup-close" type="button" aria-label="Close gift popup">x</button>
         </div>
-        <h3>U have been compensated by an admin</h3>
+        <h3>Thank you for playing Sharkdle!</h3>
+        <p>Enjoy these gifts from Connor, the developer of Sharkdle.</p>
         <ul>
             ${normalizedNotice.grants.map(grant => `
                 <li>
@@ -8267,8 +8117,6 @@ const APP_ROUTE_MAP = Object.freeze({
     "Story/": "Story/index.html",
     "rng.html": "Minigames/SharkRNG/index.html",
     "Minigames/SharkRNG/": "Minigames/SharkRNG/index.html",
-    "lagoon.html": "Minigames/SharkLagoon/index.html",
-    "Minigames/SharkLagoon/": "Minigames/SharkLagoon/index.html",
     "secret.html": "shark-rescue/index.html",
     "shark-rescue/": "shark-rescue/index.html",
     "updates.html": "Updates/index.html",
@@ -8647,13 +8495,15 @@ function setupAdminCompensationNoticeListener() {
     if (adminCompensationNoticeUnsubscribe) {
         adminCompensationNoticeUnsubscribe();
     }
-    adminCompensationNoticeUnsubscribe = db.collection("userStats").doc(currentUser.uid).onSnapshot(snapshot => {
+    const recipientUid = currentUser.uid;
+    adminCompensationNoticeUnsubscribe = db.collection("userStats").doc(recipientUid).onSnapshot(snapshot => {
         if (!snapshot.exists) return;
         const data = snapshot.data() || {};
-        maybeShowAdminCompensationNotice({
-            uid: currentUser.uid,
-            adminCompensationNotice: data.adminCompensationNotice
-        });
+        if (currentUser?.uid !== recipientUid) return;
+        const shown = maybeShowAdminCompensationNotice({ uid: recipientUid, adminCompensationNotice: data.adminCompensationNotice });
+        if (shown) loadUserProfile().then(() => {
+            if (currentUser?.uid === recipientUid) { updateAuthUI(); renderCratesButton(); updateSpinWheelUI(); }
+        }).catch(error => console.warn("Unable to refresh developer rewards:", error));
     }, error => {
         console.warn("Admin compensation notice listener failed:", error);
     });
@@ -9463,6 +9313,8 @@ function saveUserProfileLocally(profileData, options = {}) {
             profileData.email = currentUser.email;
         }
     }
+    checkAccountProgressAchievements(profileData);
+    window.SharkdleCorners?.check('profile', profileData);
     retireSummerCrates(profileData);
     if (options.preserveLastUpdated) {
         if (!profileData.lastUpdated) profileData.lastUpdated = Date.now();
@@ -9506,6 +9358,8 @@ function saveUserProfileLocally(profileData, options = {}) {
     if (!Array.isArray(profileData.unlockedTitles)) profileData.unlockedTitles = [];
     if (!Array.isArray(profileData.claimedAchievements)) profileData.claimedAchievements = [];
     if (!Array.isArray(profileData.unlockedAchievements)) profileData.unlockedAchievements = [];
+    // Include event unlocks earned since this profile snapshot was read.
+    profileData.unlockedAchievements = getMergedUniqueIds(profileData.unlockedAchievements, JSON.parse(localStorage.getItem("unlockedAchievements") || "[]"));
     if (!Array.isArray(profileData.showcasedAchievements)) profileData.showcasedAchievements = [];
     profileData.showcasedAchievements = getProfileShowcasedAchievementIds(profileData);
     if (!Array.isArray(profileData.sharkPassLevelRewardClaims)) profileData.sharkPassLevelRewardClaims = [];
@@ -10401,6 +10255,7 @@ async function buyPearlShopItem(itemId) {
 
     setPearlCount(profileData, pearls - item.price, { markChanged: true });
     const nextProfile = await persistPearlShopPurchase(profileData, itemId, item);
+    window.SharkdleCorners?.award('explore_pearl_purchase');
     updateHomeV3Sidebar(nextProfile);
     renderPearlShop(nextProfile);
     renderCratesButton();
@@ -12195,6 +12050,10 @@ async function redeemCode(inputId = "redeem-code-input", messageId = "redeem-mes
     }
 
     const redemptionUid = currentUser.uid;
+    if (currentUser.emailVerified === false) {
+        showRedeemMessage("Please verify your email address, then sign in again to redeem codes.", false, messageId);
+        return;
+    }
     const codeInput = document.getElementById(inputId) || document.getElementById("redeem-code-input");
     if (!codeInput) {
         showNotification("Code input is unavailable right now.", "error", 3000);
@@ -12227,6 +12086,7 @@ async function redeemCode(inputId = "redeem-code-input", messageId = "redeem-mes
         return;
     }
     pendingRedeemCodeClaims.add(claimKey);
+    let redemptionSaved = false;
     try {
         const codeReward = redeemCodes[code];
         const statsRef = db.collection("userStats").doc(redemptionUid);
@@ -12318,6 +12178,7 @@ async function redeemCode(inputId = "redeem-code-input", messageId = "redeem-mes
             loadUserProfile();
             return;
         }
+        redemptionSaved = true;
         const { userProfile, xpAward, rewardPearls, rewardSpins, newlyUnlockedCosmetics, grantedCrates } = result;
         const refreshedProfile = mergeProfilesSafely(getCurrentProfileData(), userProfile, { preferRemote: true });
         if (rewardSpins > 0) setDailySpinBonusCount(refreshedProfile, userProfile.dailySpinBonusSpins, redemptionUid);
@@ -12354,7 +12215,13 @@ async function redeemCode(inputId = "redeem-code-input", messageId = "redeem-mes
             loadUserProfile();
         } else {
             console.error("Error redeeming code:", error);
-            showRedeemMessage("The code could not be saved. Check your connection and try again.", false, messageId);
+            const permissionDenied = error.code === "permission-denied" || error.code === "firestore/permission-denied";
+            const message = redemptionSaved
+                ? "Your code was redeemed and saved. Refresh the page to see your rewards."
+                : permissionDenied
+                ? "Reward saving is blocked by database permissions. The site's Firebase rules need to be checked."
+                : "The code could not be saved. Check your connection and try again.";
+            showRedeemMessage(message, redemptionSaved, messageId);
         }
     } finally {
         pendingRedeemCodeClaims.delete(claimKey);
@@ -12619,7 +12486,7 @@ function renderAdminRecentVisitors(visitors, nowMs = Date.now()) {
     if (!visitors.length) {
         const empty = document.createElement("div");
         empty.className = "admin-visitor-empty";
-        empty.textContent = "No signed-in visitors recorded in the last 7 days.";
+        empty.textContent = "No visitors recorded in the last 7 days.";
         list.appendChild(empty);
         return;
     }
@@ -12657,13 +12524,24 @@ async function refreshAdminVisitorInsights() {
     const oneDayCutoffMs = nowMs - 24 * 60 * 60 * 1000;
     const dayKeys = getAdminUtcDayKeys(30);
 
-    const [recentSnapshot, dailySnapshots] = await Promise.all([
+    const [recentSnapshot, dailySnapshots, guestSnapshots] = await Promise.all([
         db.collection("userStats").where("lastActive", ">=", sevenDayCutoffMs).get(),
         Promise.all(dayKeys.map(dayKey => (
             db.collection("visitorDaily").doc(dayKey).collection("users").get()
-        )))
+        ))),
+        Promise.all(dayKeys.map(dayKey => db.collection("visitorDaily").doc(dayKey).collection("guests").get()))
     ]);
 
+    const recentGuests = new Map();
+    guestSnapshots.forEach(snapshot => snapshot.docs.forEach(doc => {
+        const data = doc.data() || {};
+        const lastActiveMs = getAdminTimestampMillis(data.visitedAt);
+        if (lastActiveMs < sevenDayCutoffMs || (recentGuests.get(doc.id)?.lastActiveMs || 0) >= lastActiveMs) return;
+        recentGuests.set(doc.id, {
+            username: `Guest ${doc.id.slice(0, 8)}`, lastActiveMs,
+            lastActivity: { label: data.activity, updatedAt: lastActiveMs }
+        });
+    }));
     const recentVisitors = recentSnapshot.docs
         .map(doc => {
             const data = doc.data() || {};
@@ -12673,10 +12551,11 @@ async function refreshAdminVisitorInsights() {
                 lastActivity: data.lastActivity
             };
         })
+        .concat([...recentGuests.values()])
         .filter(visitor => visitor.lastActiveMs >= sevenDayCutoffMs)
         .sort((a, b) => b.lastActiveMs - a.lastActiveMs);
 
-    const dailyCounts = dailySnapshots.map(snapshot => snapshot.size);
+    const dailyCounts = dailySnapshots.map((snapshot, index) => snapshot.size + guestSnapshots[index].size);
     const lastSevenDailyCounts = dailyCounts.slice(-7);
     const sevenDayAverage = calculateAdminVisitorAverage(lastSevenDailyCounts);
     const thirtyDayAverage = calculateAdminVisitorAverage(dailyCounts);
@@ -12700,7 +12579,7 @@ async function refreshAdminVisitorInsights() {
     if (onlineMetric) {
         onlineMetric.title = onlineVisitors.length
             ? onlineVisitors.map(formatAdminOnlineVisitorLabel).join("\n")
-            : "No signed-in players are currently online.";
+            : "No visitors are currently online.";
     }
 
     renderAdminRecentVisitors(recentVisitors, nowMs);
@@ -12714,7 +12593,7 @@ async function refreshAdminVisitorInsights() {
     } else {
         setAdminAbuseStatus(
             "admin-visitor-status",
-            "Daily averages will begin filling as signed-in players visit after this update."
+            "Daily averages will begin filling as players and guests visit after this update."
         );
     }
 

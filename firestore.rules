@@ -222,18 +222,6 @@ service cloud.firestore {
       return eventId == "summer-megaladon-2026" ? 2 : 1;
     }
 
-    function isShiverMember(shiverId) {
-      return isVerifiedUser()
-        && exists(/databases/$(database)/documents/userShivers/$(request.auth.uid))
-        && get(/databases/$(database)/documents/userShivers/$(request.auth.uid)).data.shiverId == shiverId;
-    }
-
-    function isShiverLeader(shiverId) {
-      return isShiverMember(shiverId)
-        && exists(/databases/$(database)/documents/shivers/$(shiverId)/members/$(request.auth.uid))
-        && get(/databases/$(database)/documents/shivers/$(shiverId)/members/$(request.auth.uid)).data.role == "leader";
-    }
-    
     // Purchases: only server-side code (Cloud Functions using Admin SDK) should create purchase records.
     // Clients are prevented from creating/updating/deleting purchases to avoid spoofing.
     match /purchases/{purchaseId} {
@@ -302,6 +290,16 @@ service cloud.firestore {
         'rngRolls', 'rngGlobalRolls', 'rngBestOneIn', 'rngBestTier', 'rngBestShark',
         'rngLevel', 'rngPrestigeLevel', 'rngCollectionCount', 'rngUpdatedAt'
       ]);
+    }
+
+    // Developer giveaway plans and atomic delivery receipts.
+    match /adminRewardRuns/{runId} {
+      allow read, create, update: if isDeveloper();
+      allow delete: if false;
+      match /recipients/{userId} {
+        allow read, create: if isDeveloper();
+        allow update, delete: if false;
+      }
     }
 
     // User stats for leaderboard and friends system
@@ -389,6 +387,21 @@ service cloud.firestore {
       match /chunks/{chunkId} {
         allow read, write: if isVerifiedUser() && (request.auth.uid == userId || isDeveloper());
       }
+    }
+
+    // Guest tokens are random browser IDs. Telemetry is developer-readable only.
+    match /visitorDaily/{dayId}/guests/{visitorId} {
+      allow read: if isDeveloper();
+      allow create, update: if request.auth == null
+        && visitorId.matches('^[a-f0-9]{32}$')
+        && dayId.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+        && request.resource.data.keys().hasAll(['visitedAt', 'path', 'activity'])
+        && request.resource.data.keys().hasOnly(['visitedAt', 'path', 'activity'])
+        && request.resource.data.visitedAt == request.time
+        && request.resource.data.path is string
+        && request.resource.data.path.size() <= 120
+        && request.resource.data.activity is string
+        && request.resource.data.activity.size() <= 80;
     }
 
     // One signed-in visitor record per player per UTC day.
@@ -594,248 +607,6 @@ service cloud.firestore {
           && request.resource.data.lastContributionMode in ["daily", "infinite"];
 
         allow delete: if isDeveloper();
-      }
-    }
-
-    // Shivers: Sharkdle clans/guilds.
-    match /shivers/{shiverId} {
-      allow read: if true;
-
-      allow create: if isVerifiedUser()
-        && request.resource.data.keys().hasOnly([
-          "id",
-          "name",
-          "nameLower",
-          "tag",
-          "tagUpper",
-          "description",
-          "color",
-          "ownerUid",
-          "ownerName",
-          "status",
-          "visibility",
-          "memberCount",
-          "maxMembers",
-          "totalPoints",
-          "seasonPoints",
-          "battlePoints",
-          "wins",
-          "dailyWins",
-          "infiniteWins",
-          "dailyPoints",
-          "infinitePoints",
-          "seasonId",
-          "createdAt",
-          "updatedAt"
-        ])
-        && request.resource.data.ownerUid == request.auth.uid
-        && request.resource.data.status == "active"
-        && request.resource.data.visibility in ["open", "closed"]
-        && request.resource.data.memberCount == 1
-        && request.resource.data.maxMembers <= 25
-        && request.resource.data.totalPoints == 0
-        && request.resource.data.seasonPoints == 0
-        && request.resource.data.battlePoints == 0
-        && request.resource.data.wins == 0
-        && request.resource.data.dailyWins == 0
-        && request.resource.data.infiniteWins == 0
-        && request.resource.data.dailyPoints == 0
-        && request.resource.data.infinitePoints == 0;
-
-      allow update: if isDeveloper()
-        || (
-          isShiverMember(shiverId)
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-            "memberCount",
-            "totalPoints",
-            "seasonPoints",
-            "battlePoints",
-            "wins",
-            "dailyWins",
-            "infiniteWins",
-            "dailyPoints",
-            "infinitePoints",
-            "seasonId",
-            "updatedAt",
-            "lastContributionAt",
-            "lastContributionMode",
-            "lastContributionUid"
-          ])
-        )
-        || (
-          isShiverLeader(shiverId)
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-            "status",
-            "visibility",
-            "memberCount",
-            "updatedAt"
-          ])
-        );
-
-      allow delete: if isDeveloper();
-
-      match /members/{userId} {
-        allow read: if true;
-
-        allow create: if isVerifiedUser()
-          && request.auth.uid == userId
-          && request.resource.data.keys().hasOnly([
-            "uid",
-            "username",
-            "profilePicture",
-            "role",
-            "shiverId",
-            "shiverName",
-            "shiverTag",
-            "shiverColor",
-            "points",
-            "wins",
-            "dailyWins",
-            "infiniteWins",
-            "joinedAt",
-            "updatedAt"
-          ])
-          && request.resource.data.uid == request.auth.uid
-          && request.resource.data.shiverId == shiverId
-          && request.resource.data.role in ["leader", "member"]
-          && request.resource.data.points == 0
-          && request.resource.data.wins == 0
-          && request.resource.data.dailyWins == 0
-          && request.resource.data.infiniteWins == 0;
-
-        allow update: if isVerifiedUser()
-          && request.auth.uid == userId
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-            "username",
-            "profilePicture",
-            "points",
-            "wins",
-            "dailyWins",
-            "infiniteWins",
-            "updatedAt",
-            "lastContributionMode"
-          ]);
-
-        allow delete: if isVerifiedUser() && request.auth.uid == userId || isDeveloper();
-      }
-    }
-
-    match /userShivers/{userId} {
-      allow read: if true;
-
-      allow create: if isVerifiedUser()
-        && request.auth.uid == userId
-        && request.resource.data.keys().hasOnly([
-          "uid",
-          "username",
-          "profilePicture",
-          "role",
-          "shiverId",
-          "shiverName",
-          "shiverTag",
-          "shiverColor",
-          "points",
-          "wins",
-          "dailyWins",
-          "infiniteWins",
-          "joinedAt",
-          "updatedAt"
-        ])
-        && request.resource.data.uid == request.auth.uid
-        && request.resource.data.role in ["leader", "member"]
-        && request.resource.data.points == 0
-        && request.resource.data.wins == 0
-        && request.resource.data.dailyWins == 0
-        && request.resource.data.infiniteWins == 0;
-
-      allow update: if isVerifiedUser()
-        && request.auth.uid == userId
-        && request.resource.data.shiverId == resource.data.shiverId
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-          "username",
-          "profilePicture",
-          "shiverName",
-          "shiverTag",
-          "shiverColor",
-          "points",
-          "wins",
-          "dailyWins",
-          "infiniteWins",
-          "updatedAt",
-          "lastContributionMode"
-        ]);
-
-      allow delete: if isVerifiedUser() && request.auth.uid == userId || isDeveloper();
-    }
-
-    match /shiverSeasons/{seasonId} {
-      allow read: if true;
-      allow create, update, delete: if isDeveloper();
-
-      match /entries/{shiverId} {
-        allow read: if true;
-
-        allow create: if isShiverMember(shiverId)
-          && request.resource.data.keys().hasOnly([
-            "shiverId",
-            "name",
-            "tag",
-            "color",
-            "memberCount",
-            "points",
-            "wins",
-            "dailyWins",
-            "infiniteWins",
-            "seasonId",
-            "updatedAt",
-            "lastContributionMode",
-            "lastContributionUid"
-          ])
-          && request.resource.data.shiverId == shiverId
-          && request.resource.data.seasonId == seasonId
-          && request.resource.data.lastContributionUid == request.auth.uid;
-
-        allow update: if isShiverMember(shiverId)
-          && request.resource.data.shiverId == resource.data.shiverId
-          && request.resource.data.seasonId == resource.data.seasonId
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-            "name",
-            "tag",
-            "color",
-            "memberCount",
-            "points",
-            "wins",
-            "dailyWins",
-            "infiniteWins",
-            "updatedAt",
-            "lastContributionMode",
-            "lastContributionUid"
-          ])
-          && request.resource.data.lastContributionUid == request.auth.uid;
-
-        allow delete: if isDeveloper();
-
-        match /members/{userId} {
-          allow read: if true;
-
-          allow create, update: if isVerifiedUser()
-            && request.auth.uid == userId
-            && isShiverMember(shiverId)
-            && request.resource.data.keys().hasOnly([
-              "uid",
-              "username",
-              "profilePicture",
-              "points",
-              "wins",
-              "dailyWins",
-              "infiniteWins",
-              "updatedAt",
-              "lastContributionMode"
-            ])
-            && request.resource.data.uid == request.auth.uid;
-
-          allow delete: if isDeveloper();
-        }
       }
     }
 

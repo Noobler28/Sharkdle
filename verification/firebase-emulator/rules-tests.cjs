@@ -42,6 +42,46 @@ function adapter(db) {
     const unverified = environment.authenticatedContext('account-a', { email_verified: false }).firestore();
     const guest = environment.unauthenticatedContext().firestore();
     const developer = environment.authenticatedContext('ETPtQC0VA2NiSnX67rS2P2ma2tC2', { email_verified: true }).firestore();
+    await test('Guest telemetry accepts bounded visits and keeps history private', async () => {
+        const location = 'visitorDaily/2026-11-04/guests/' + 'a'.repeat(32);
+        const visit = () => ({ visitedAt: serverTimestamp(), path: '/', activity: 'Home' });
+        await assertSucceeds(setDoc(doc(guest, location), visit()));
+        await assertSucceeds(setDoc(doc(guest, location), { ...visit(), activity: 'Daily' }));
+        await assertSucceeds(getDoc(doc(developer, location)));
+        for (const db of [guest, a, unverified]) await assertFails(getDoc(doc(db, location)));
+        await assertFails(setDoc(doc(a, location), visit()));
+        await assertFails(setDoc(doc(guest, location), { ...visit(), uid: 'account-a' }));
+        await assertFails(setDoc(doc(guest, location), { ...visit(), activity: 'x'.repeat(81) }));
+        await assertFails(setDoc(doc(guest, location), { ...visit(), visitedAt: 123 }));
+        await assertFails(setDoc(doc(guest, 'visitorDaily/2026-11-04/guests/invalid'), visit()));
+        await assertFails(deleteDoc(doc(guest, location)));
+    });
+    await test('Developer giveaways are private and delivery receipts cannot be rewritten', async () => {
+        const runPath = 'adminRewardRuns/test-giveaway';
+        const payload = { createdAt: Date.now(), createdBy: 'ETPtQC0VA2NiSnX67rS2P2ma2tC2', rewards: { pearls: 100 }, recipients: [{ uid: 'account-a' }], status: 'sending' };
+        for (const actor of [a, b, guest, unverified]) {
+            await assertFails(setDoc(doc(actor, runPath), payload));
+            await assertFails(getDoc(doc(actor, runPath)));
+        }
+        await assertSucceeds(setDoc(doc(developer, runPath), payload));
+        await assertSucceeds(getDoc(doc(developer, runPath)));
+        const receipt = runPath + '/recipients/account-a';
+        for (const actor of [a, b, guest, unverified]) await assertFails(setDoc(doc(actor, receipt), { status: 'delivered' }));
+        await assertSucceeds(runTransaction(developer, async tx => {
+            const playerRef = doc(developer, 'userStats/account-a');
+            await tx.get(playerRef);
+            tx.set(playerRef, { pearls: 100 }, { merge: true });
+            tx.set(doc(developer, receipt), { uid: 'account-a', status: 'delivered' });
+        }));
+        await assertFails(updateDoc(doc(developer, receipt), { status: 'retry' }));
+        await assertFails(deleteDoc(doc(developer, receipt)));
+        await assertFails(getDoc(doc(a, receipt)));
+        await assertSucceeds(updateDoc(doc(developer, runPath), { status: 'complete' }));
+        for (const location of ['shivers/retired', 'userShivers/account-a', 'shiverSeasons/retired']) {
+            await assertFails(getDoc(doc(a, location)));
+            await assertFails(setDoc(doc(a, location), { uid: 'account-a' }));
+        }
+    });
     await test('Only verified owners can save or read private RNG data', async () => {
         await assertSucceeds(setDoc(doc(a, 'rngProfiles/account-a'), { schemaVersion: 1, coins: 10 }));
         for (const db of [b, guest, unverified]) {

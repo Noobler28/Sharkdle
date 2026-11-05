@@ -1,12 +1,36 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    function isVerifiedUser() {
+      return request.auth != null && request.auth.token.email_verified == true;
+    }
+
     function isDeveloper() {
-      return request.auth != null
+      return isVerifiedUser()
         && request.auth.uid in [
           'ETPtQC0VA2NiSnX67rS2P2ma2tC2',
           'gOcPqOuyPJRWisE4dxvFkGTOl5g2'
         ];
+    }
+
+    // Keep these UIDs in sync with leaderboard-blacklist.js.
+    function isLeaderboardBlacklisted(userId) {
+      return userId in [
+        'sIoLtlm9kubExe2BY5cVvIlOqKA3',
+        '1MPm8Ra9VYQusZkCBpRCRDo7nJq2',
+        'AtXSxyWxB0XTLVoB38EP9lXYY143',
+        'FhAoaY0rbGeuHaDdpxeAOUxj7Tz2',
+        'HqV0msSXj4MfRMxrZm5lcHijXSM2',
+        'L5Hq0ozcQobIMUs2PySv2lHt4eQ2',
+        'USfUIeFsBDbInpSqzuf9hF3ERSa2',
+        'Xv8ZMsmMKUZ29AfF8NlDuoc9nXR2',
+        'ef4NrLvi5mRWwNIAf9To9T2fxfH2',
+        'jkF9e0C2IlhuzcPR7kNfymLH9yu2',
+        'jsu9p9Yr2WVZxOlKn8QV1oPOQ972',
+        'pDjQ4iYMC7cwP6fIcCM70HhngR63',
+        'pQQ53hnSQpU45QbYO0uaU5VAlRm1',
+        'vhprPM4Hdghiz1Rpx3t2BX9bmap2'
+      ];
     }
 
     function isRngNextRollMutation(mutation) {
@@ -198,29 +222,17 @@ service cloud.firestore {
       return eventId == "summer-megaladon-2026" ? 2 : 1;
     }
 
-    function isShiverMember(shiverId) {
-      return request.auth != null
-        && exists(/databases/$(database)/documents/userShivers/$(request.auth.uid))
-        && get(/databases/$(database)/documents/userShivers/$(request.auth.uid)).data.shiverId == shiverId;
-    }
-
-    function isShiverLeader(shiverId) {
-      return isShiverMember(shiverId)
-        && exists(/databases/$(database)/documents/shivers/$(shiverId)/members/$(request.auth.uid))
-        && get(/databases/$(database)/documents/shivers/$(shiverId)/members/$(request.auth.uid)).data.role == "leader";
-    }
-    
     // Purchases: only server-side code (Cloud Functions using Admin SDK) should create purchase records.
     // Clients are prevented from creating/updating/deleting purchases to avoid spoofing.
     match /purchases/{purchaseId} {
-      allow read: if request.auth != null && request.auth.uid == resource.data.userId;
+      allow read: if isVerifiedUser() && request.auth.uid == resource.data.userId;
       allow create: if false;
       allow update, delete: if false;
     }
 
     // Entitlements: server-only writes. Clients may read their own entitlements.
     match /entitlements/{userId} {
-      allow read: if request.auth != null && request.auth.uid == userId;
+      allow read: if isVerifiedUser() && request.auth.uid == userId;
       allow create: if false;
       allow update, delete: if false;
     }
@@ -228,43 +240,168 @@ service cloud.firestore {
     // Users collection for friend system
     match /users/{userId} {
       allow read: if true;
-      allow create, update, delete: if request.auth != null && request.auth.uid == userId;
+      allow create, update, delete: if isVerifiedUser() && request.auth.uid == userId;
     }
 
     // Daily game state
     match /userDaily/{userId} {
-      allow read: if request.auth != null && request.auth.uid == userId;
-      allow write: if request.auth != null && request.auth.uid == userId;
+      allow read: if isVerifiedUser() && request.auth.uid == userId;
+      allow write: if isVerifiedUser() && request.auth.uid == userId;
+    }
+
+    // Observations are immutable and owned by the authenticated player. They are
+    // signals only; the browser cannot write detector reports or punishments.
+    match /fairPlayPlayers/{userId}/rounds/{roundId} {
+      allow read: if isVerifiedUser() && (request.auth.uid == userId || isDeveloper());
+      allow create: if isVerifiedUser()
+        && request.auth.uid == userId
+        && request.resource.data.keys().hasAll([
+          'uid', 'mode', 'pool', 'roundId', 'won', 'guesses', 'elapsedMs', 'createdAt'
+        ])
+        && request.resource.data.keys().hasOnly([
+          'uid', 'mode', 'pool', 'roundId', 'won', 'guesses', 'elapsedMs', 'createdAt'
+        ])
+        && request.resource.data.uid == userId
+        && request.resource.data.roundId == roundId
+        && roundId.size() <= 150
+        && request.resource.data.mode in ['daily', 'infinite']
+        && request.resource.data.pool in ['sharks', 'rays', 'mixed']
+        && (request.resource.data.mode != 'daily'
+          || roundId.matches('daily-[0-9]{4}-[0-9]{2}-[0-9]{2}-' + request.resource.data.pool))
+        && request.resource.data.won is bool
+        && request.resource.data.guesses is int
+        && request.resource.data.guesses >= 1
+        && request.resource.data.guesses <= 12
+        && (request.resource.data.elapsedMs == null
+          || (request.resource.data.elapsedMs is int
+            && request.resource.data.elapsedMs >= 0
+            && request.resource.data.elapsedMs <= 86400000))
+        && request.resource.data.createdAt == request.time;
+      allow update, delete: if false;
+    }
+
+    match /fairPlayReports/{userId} {
+      allow read: if isDeveloper();
+      allow write: if false;
+    }
+
+    function hasRngLeaderboardFields(keys) {
+      return keys.hasAny([
+        'rngRolls', 'rngGlobalRolls', 'rngBestOneIn', 'rngBestTier', 'rngBestShark',
+        'rngLevel', 'rngPrestigeLevel', 'rngCollectionCount', 'rngUpdatedAt'
+      ]);
+    }
+
+    // Developer giveaway plans and atomic delivery receipts.
+    match /adminRewardRuns/{runId} {
+      allow read, create, update: if isDeveloper();
+      allow delete: if false;
+      match /recipients/{userId} {
+        allow read, create: if isDeveloper();
+        allow update, delete: if false;
+      }
     }
 
     // User stats for leaderboard and friends system
     match /userStats/{userId} {
       allow read: if true;
-      allow write: if request.auth != null && (request.auth.uid == userId || isDeveloper());
+      allow create: if isVerifiedUser() && (request.auth.uid == userId || isDeveloper())
+        && (isDeveloper() || !isLeaderboardBlacklisted(userId)
+          || !hasRngLeaderboardFields(request.resource.data.keys()));
+      allow update: if isVerifiedUser() && (request.auth.uid == userId || isDeveloper())
+        && (isDeveloper() || !isLeaderboardBlacklisted(userId)
+          || !hasRngLeaderboardFields(request.resource.data.diff(resource.data).affectedKeys()));
+      allow delete: if isVerifiedUser() && (request.auth.uid == userId || isDeveloper());
+
+      // One immutable claim per code, separate from replaceable profile snapshots.
+      match /redeemedCodes/{codeId} {
+        allow read: if isVerifiedUser() && (request.auth.uid == userId || isDeveloper());
+        allow create: if isVerifiedUser() && request.auth.uid == userId
+          && codeId.matches('[A-Z0-9_-]{1,60}')
+          && request.resource.data.keys().hasOnly(['uid', 'code', 'redeemedAt'])
+          && request.resource.data.uid == userId
+          && request.resource.data.code == codeId
+          && request.resource.data.redeemedAt == request.time;
+        allow update, delete: if isDeveloper();
+      }
+
+      // One calendar win receipt per UTC day; clients cannot rewrite past receipts.
+      match /christmasCalendarWins/{dayId} {
+        allow read: if isVerifiedUser() && request.auth.uid == userId;
+        allow create: if isVerifiedUser() && request.auth.uid == userId
+          && request.resource.data.keys().hasOnly(['uid', 'day', 'mode', 'wonAt'])
+          && request.resource.data.uid == userId
+          && request.resource.data.day is int
+          && request.resource.data.day >= 1 && request.resource.data.day <= 25
+          && dayId == string(request.resource.data.day)
+          && request.resource.data.mode in ['daily', 'infinite']
+          && request.resource.data.wonAt == request.time
+          && request.time >= timestamp.date(2026, 12, request.resource.data.day)
+          && request.time < timestamp.date(2026, 12, request.resource.data.day) + duration.value(1, 'd')
+          && get(/databases/$(database)/documents/globalConfig/christmasEvent).data.part == 2;
+      }
+
+      match /christmasCalendarClaims/{dayId} {
+        allow read: if isVerifiedUser() && request.auth.uid == userId;
+        allow create: if isVerifiedUser() && request.auth.uid == userId
+          && request.resource.data.keys().hasOnly(['uid', 'day', 'claimedAt'])
+          && request.resource.data.uid == userId
+          && request.resource.data.day is int
+          && request.resource.data.day >= 1 && request.resource.data.day <= 25
+          && dayId == string(request.resource.data.day)
+          && request.resource.data.claimedAt == request.time
+          && request.time >= timestamp.date(2026, 12, request.resource.data.day)
+          && request.time < timestamp.date(2026, 12, 26)
+          && exists(/databases/$(database)/documents/userStats/$(userId)/christmasCalendarWins/$(dayId))
+          && get(/databases/$(database)/documents/globalConfig/christmasEvent).data.part == 2;
+      }
     }
 
     // Full Sharkdle profile saves. Kept private and chunked separately from public leaderboard stats.
     match /sharkdleProfiles/{userId} {
-      allow read, write: if request.auth != null && (request.auth.uid == userId || isDeveloper());
+      allow read, write: if isVerifiedUser() && (request.auth.uid == userId || isDeveloper());
 
       match /chunks/{chunkId} {
-        allow read, write: if request.auth != null && (request.auth.uid == userId || isDeveloper());
+        allow read, write: if isVerifiedUser() && (request.auth.uid == userId || isDeveloper());
       }
     }
 
     match /leaderboardWinners/{winnerId} {
       allow read: if true;
-      allow create, update: if request.auth != null && isValidLeaderboardWinner();
+      allow create, update: if isVerifiedUser()
+        && !isLeaderboardBlacklisted(request.auth.uid)
+        && !isLeaderboardBlacklisted(request.resource.data.uid)
+        && isValidLeaderboardWinner();
       allow delete: if isDeveloper();
     }
 
     // Full Shark RNG saves. Collection data is chunked under each player doc.
     match /rngProfiles/{userId} {
-      allow read, write: if request.auth != null && (request.auth.uid == userId || isDeveloper());
+      allow read, delete: if isVerifiedUser() && (request.auth.uid == userId || isDeveloper());
+      allow create: if isVerifiedUser() && (request.auth.uid == userId || isDeveloper());
+      // Older clients cannot overwrite a save format they cannot read.
+      allow update: if isVerifiedUser() && (request.auth.uid == userId || isDeveloper())
+        && (resource.data.get('schemaVersion', 1) < 2
+          || request.resource.data.get('schemaVersion', 1) >= 2);
 
       match /chunks/{chunkId} {
-        allow read, write: if request.auth != null && (request.auth.uid == userId || isDeveloper());
+        allow read, write: if isVerifiedUser() && (request.auth.uid == userId || isDeveloper());
       }
+    }
+
+    // Guest tokens are random browser IDs. Telemetry is developer-readable only.
+    match /visitorDaily/{dayId}/guests/{visitorId} {
+      allow read: if isDeveloper();
+      allow create, update: if request.auth == null
+        && visitorId.matches('^[a-f0-9]{32}$')
+        && dayId.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+        && request.resource.data.keys().hasAll(['visitedAt', 'path', 'activity'])
+        && request.resource.data.keys().hasOnly(['visitedAt', 'path', 'activity'])
+        && request.resource.data.visitedAt == request.time
+        && request.resource.data.path is string
+        && request.resource.data.path.size() <= 120
+        && request.resource.data.activity is string
+        && request.resource.data.activity.size() <= 80;
     }
 
     // One signed-in visitor record per player per UTC day.
@@ -275,7 +412,7 @@ service cloud.firestore {
       match /users/{userId} {
         allow read: if isDeveloper();
 
-        allow create: if request.auth != null
+        allow create: if isVerifiedUser()
           && request.auth.uid == userId
           && request.resource.data.keys().hasOnly([
             "uid",
@@ -290,7 +427,7 @@ service cloud.firestore {
           && request.resource.data.path is string
           && request.resource.data.path.size() <= 120;
 
-        allow update: if request.auth != null
+        allow update: if isVerifiedUser()
           && request.auth.uid == userId
           && request.resource.data.keys().hasOnly([
             "uid",
@@ -316,23 +453,28 @@ service cloud.firestore {
 
     // Private per-species mistake tracker and deduplicated completed rounds
     match /userSpeciesStats/{userId} {
-      allow read, create, update, delete: if request.auth != null && request.auth.uid == userId;
+      allow read, create, update, delete: if isVerifiedUser() && request.auth.uid == userId;
 
       match /{document=**} {
-        allow read, create, update, delete: if request.auth != null && request.auth.uid == userId;
+        allow read, create, update, delete: if isVerifiedUser() && request.auth.uid == userId;
       }
     }
 
     // Separate Shark RNG leaderboard
     match /rngLeaderboard/{userId} {
       allow read: if true;
-      allow create, update, delete: if request.auth != null && request.auth.uid == userId;
+      allow create, update: if isVerifiedUser()
+        && request.auth.uid == userId
+        && exists(/databases/$(database)/documents/userStats/$(userId))
+        && request.resource.data.uid == userId
+        && !isLeaderboardBlacklisted(userId);
+      allow delete: if isVerifiedUser() && (request.auth.uid == userId || isDeveloper());
     }
 
     // Temporary global messages for big Shark RNG rolls
     match /rngBroadcasts/{broadcastId} {
       allow read: if true;
-      allow create: if request.auth != null
+      allow create: if isVerifiedUser()
         && request.resource.data.keys().hasOnly([
           "uid",
           "playerName",
@@ -372,9 +514,9 @@ service cloud.firestore {
 
     // Hidden one-time secret code reward
     match /rngSecretCodes/{codeId} {
-      allow read: if request.auth != null;
+      allow read: if isVerifiedUser();
 
-      allow create: if request.auth != null
+      allow create: if isVerifiedUser()
         && codeId == "comp_friend_1234"
         && request.resource.data.claimedBy == request.auth.uid
         && request.resource.data.code == "1234";
@@ -390,6 +532,11 @@ service cloud.firestore {
           (configId == "indexTheme" && isValidIndexThemeConfig())
           || (configId == "globalMessage" && isValidGlobalMessageConfig())
           || (configId == "xpEvent" && isValidXpEventConfig())
+          || (configId == "christmasEvent"
+            && request.resource.data.keys().hasOnly(['part', 'updatedBy', 'updatedAt'])
+            && request.resource.data.part in [1, 2]
+            && request.resource.data.updatedBy == request.auth.uid
+            && request.resource.data.updatedAt == request.time)
           || isValidRngNextRollCommand()
         );
       allow delete: if isDeveloper();
@@ -398,7 +545,7 @@ service cloud.firestore {
     // Community boss events
     match /communityEvents/{eventId} {
       allow read: if true;
-      allow create: if request.auth != null
+      allow create: if isVerifiedUser()
         && isCommunityBossEvent(eventId)
         && request.resource.data.keys().hasOnly([
           "wins",
@@ -410,7 +557,7 @@ service cloud.firestore {
         && request.resource.data.lastContributionUid == request.auth.uid
         && request.resource.data.lastContributionMode in ["daily", "infinite"];
 
-      allow update: if request.auth != null
+      allow update: if isVerifiedUser()
         && isCommunityBossEvent(eventId)
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
           "wins",
@@ -428,7 +575,7 @@ service cloud.firestore {
       match /contributors/{userId} {
         allow read: if true;
 
-        allow create: if request.auth != null
+        allow create: if isVerifiedUser()
           && isCommunityBossEvent(eventId)
           && request.auth.uid == userId
           && request.resource.data.keys().hasOnly([
@@ -444,7 +591,7 @@ service cloud.firestore {
           && request.resource.data.wins == communityBossContributionValue(eventId)
           && request.resource.data.lastContributionMode in ["daily", "infinite"];
 
-        allow update: if request.auth != null
+        allow update: if isVerifiedUser()
           && isCommunityBossEvent(eventId)
           && request.auth.uid == userId
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
@@ -463,299 +610,57 @@ service cloud.firestore {
       }
     }
 
-    // Shivers: Sharkdle clans/guilds.
-    match /shivers/{shiverId} {
-      allow read: if true;
-
-      allow create: if request.auth != null
-        && request.resource.data.keys().hasOnly([
-          "id",
-          "name",
-          "nameLower",
-          "tag",
-          "tagUpper",
-          "description",
-          "color",
-          "ownerUid",
-          "ownerName",
-          "status",
-          "visibility",
-          "memberCount",
-          "maxMembers",
-          "totalPoints",
-          "seasonPoints",
-          "battlePoints",
-          "wins",
-          "dailyWins",
-          "infiniteWins",
-          "dailyPoints",
-          "infinitePoints",
-          "seasonId",
-          "createdAt",
-          "updatedAt"
-        ])
-        && request.resource.data.ownerUid == request.auth.uid
-        && request.resource.data.status == "active"
-        && request.resource.data.visibility in ["open", "closed"]
-        && request.resource.data.memberCount == 1
-        && request.resource.data.maxMembers <= 25
-        && request.resource.data.totalPoints == 0
-        && request.resource.data.seasonPoints == 0
-        && request.resource.data.battlePoints == 0
-        && request.resource.data.wins == 0
-        && request.resource.data.dailyWins == 0
-        && request.resource.data.infiniteWins == 0
-        && request.resource.data.dailyPoints == 0
-        && request.resource.data.infinitePoints == 0;
-
-      allow update: if isDeveloper()
-        || (
-          isShiverMember(shiverId)
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-            "memberCount",
-            "totalPoints",
-            "seasonPoints",
-            "battlePoints",
-            "wins",
-            "dailyWins",
-            "infiniteWins",
-            "dailyPoints",
-            "infinitePoints",
-            "seasonId",
-            "updatedAt",
-            "lastContributionAt",
-            "lastContributionMode",
-            "lastContributionUid"
-          ])
-        )
-        || (
-          isShiverLeader(shiverId)
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-            "status",
-            "visibility",
-            "memberCount",
-            "updatedAt"
-          ])
-        );
-
-      allow delete: if isDeveloper();
-
-      match /members/{userId} {
-        allow read: if true;
-
-        allow create: if request.auth != null
-          && request.auth.uid == userId
-          && request.resource.data.keys().hasOnly([
-            "uid",
-            "username",
-            "profilePicture",
-            "role",
-            "shiverId",
-            "shiverName",
-            "shiverTag",
-            "shiverColor",
-            "points",
-            "wins",
-            "dailyWins",
-            "infiniteWins",
-            "joinedAt",
-            "updatedAt"
-          ])
-          && request.resource.data.uid == request.auth.uid
-          && request.resource.data.shiverId == shiverId
-          && request.resource.data.role in ["leader", "member"]
-          && request.resource.data.points == 0
-          && request.resource.data.wins == 0
-          && request.resource.data.dailyWins == 0
-          && request.resource.data.infiniteWins == 0;
-
-        allow update: if request.auth != null
-          && request.auth.uid == userId
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-            "username",
-            "profilePicture",
-            "points",
-            "wins",
-            "dailyWins",
-            "infiniteWins",
-            "updatedAt",
-            "lastContributionMode"
-          ]);
-
-        allow delete: if request.auth != null && request.auth.uid == userId || isDeveloper();
-      }
-    }
-
-    match /userShivers/{userId} {
-      allow read: if true;
-
-      allow create: if request.auth != null
-        && request.auth.uid == userId
-        && request.resource.data.keys().hasOnly([
-          "uid",
-          "username",
-          "profilePicture",
-          "role",
-          "shiverId",
-          "shiverName",
-          "shiverTag",
-          "shiverColor",
-          "points",
-          "wins",
-          "dailyWins",
-          "infiniteWins",
-          "joinedAt",
-          "updatedAt"
-        ])
-        && request.resource.data.uid == request.auth.uid
-        && request.resource.data.role in ["leader", "member"]
-        && request.resource.data.points == 0
-        && request.resource.data.wins == 0
-        && request.resource.data.dailyWins == 0
-        && request.resource.data.infiniteWins == 0;
-
-      allow update: if request.auth != null
-        && request.auth.uid == userId
-        && request.resource.data.shiverId == resource.data.shiverId
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-          "username",
-          "profilePicture",
-          "shiverName",
-          "shiverTag",
-          "shiverColor",
-          "points",
-          "wins",
-          "dailyWins",
-          "infiniteWins",
-          "updatedAt",
-          "lastContributionMode"
-        ]);
-
-      allow delete: if request.auth != null && request.auth.uid == userId || isDeveloper();
-    }
-
-    match /shiverSeasons/{seasonId} {
-      allow read: if true;
-      allow create, update, delete: if isDeveloper();
-
-      match /entries/{shiverId} {
-        allow read: if true;
-
-        allow create: if isShiverMember(shiverId)
-          && request.resource.data.keys().hasOnly([
-            "shiverId",
-            "name",
-            "tag",
-            "color",
-            "memberCount",
-            "points",
-            "wins",
-            "dailyWins",
-            "infiniteWins",
-            "seasonId",
-            "updatedAt",
-            "lastContributionMode",
-            "lastContributionUid"
-          ])
-          && request.resource.data.shiverId == shiverId
-          && request.resource.data.seasonId == seasonId
-          && request.resource.data.lastContributionUid == request.auth.uid;
-
-        allow update: if isShiverMember(shiverId)
-          && request.resource.data.shiverId == resource.data.shiverId
-          && request.resource.data.seasonId == resource.data.seasonId
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-            "name",
-            "tag",
-            "color",
-            "memberCount",
-            "points",
-            "wins",
-            "dailyWins",
-            "infiniteWins",
-            "updatedAt",
-            "lastContributionMode",
-            "lastContributionUid"
-          ])
-          && request.resource.data.lastContributionUid == request.auth.uid;
-
-        allow delete: if isDeveloper();
-
-        match /members/{userId} {
-          allow read: if true;
-
-          allow create, update: if request.auth != null
-            && request.auth.uid == userId
-            && isShiverMember(shiverId)
-            && request.resource.data.keys().hasOnly([
-              "uid",
-              "username",
-              "profilePicture",
-              "points",
-              "wins",
-              "dailyWins",
-              "infiniteWins",
-              "updatedAt",
-              "lastContributionMode"
-            ])
-            && request.resource.data.uid == request.auth.uid;
-
-          allow delete: if isDeveloper();
-        }
-      }
-    }
-
     // Friend network
     match /friendNetwork/{userId} {
-      allow read: if request.auth != null;
-      allow create, update, delete: if request.auth != null;
+      allow read: if isVerifiedUser();
+      allow create, update, delete: if isVerifiedUser();
     }
 
     // Friend codes
     match /friendCodes/{code} {
-      allow read: if request.auth != null;
-      allow create, update, delete: if request.auth != null && request.resource.data.uid == request.auth.uid;
+      allow read: if isVerifiedUser();
+      allow create, update, delete: if isVerifiedUser() && request.resource.data.uid == request.auth.uid;
     }
 
     // Duels
     match /duels/{duelId} {
-      allow get: if request.auth != null && request.auth.uid in resource.data.players;
-      allow list: if request.auth != null && request.auth.uid in resource.data.players;
+      allow get: if isVerifiedUser() && request.auth.uid in resource.data.players;
+      allow list: if isVerifiedUser() && request.auth.uid in resource.data.players;
 
-      allow create: if request.auth != null
+      allow create: if isVerifiedUser()
         && request.resource.data.players is list
         && request.resource.data.players.size() == 2
         && request.auth.uid in request.resource.data.players
         && request.resource.data.shark is map
         && request.resource.data.guesses is map;
 
-      allow update: if request.auth != null && request.auth.uid in resource.data.players;
+      allow update: if isVerifiedUser() && request.auth.uid in resource.data.players;
     }
 
     // Shark likes
     match /sharkLikes/{sharkId} {
       allow read: if true;
-      allow create, update: if request.auth != null;
+      allow create, update: if isVerifiedUser();
     }
 
     // Per-user shark likes
     match /userSharkLikes/{userId} {
-      allow read: if request.auth != null && request.auth.uid == userId;
-      allow create, update, delete: if request.auth != null && request.auth.uid == userId;
+      allow read: if isVerifiedUser() && request.auth.uid == userId;
+      allow create, update, delete: if isVerifiedUser() && request.auth.uid == userId;
     }
 
     // Battle arena
     match /battleArenaLobbies/{lobbyId} {
-      allow read, create, update: if request.auth != null;
+      allow read, create, update: if isVerifiedUser();
       allow delete: if isDeveloper();
 
       match /players/{playerId} {
-        allow read: if request.auth != null;
-        allow create, update, delete: if request.auth != null && request.auth.uid == playerId;
+        allow read: if isVerifiedUser();
+        allow create, update, delete: if isVerifiedUser() && request.auth.uid == playerId;
       }
 
       match /events/{eventId} {
-        allow read, create: if request.auth != null;
+        allow read, create: if isVerifiedUser();
         allow update, delete: if isDeveloper();
       }
     }

@@ -917,6 +917,7 @@ function makeGuess() {
 
         updateStats(true, guessesTaken);
         recordInfiniteSpeciesHistory(true);
+        window.SharkdleCorners?.win('infinite', speciesMode.key === 'rays', guessesTaken);
 
         if (typeof window.maybeAwardCrateDrop === 'function') {
             window.maybeAwardCrateDrop(`${speciesMode.recentMode.toLowerCase()} win`);
@@ -1191,11 +1192,13 @@ function generateInfiniteShareText(isWin) {
 }
 
 async function shareInfiniteResults() {
+    if (!categoryRevealGameCompleted) return;
     const isWin = document.getElementById('win-lose-screen')?.classList.contains('win');
     const text = generateInfiniteShareText(isWin);
     try {
         if (navigator.share) {
             await navigator.share({ text });
+            window.recordSharkdleAchievement?.('results_shared');
             const msg = document.getElementById('message');
             if (msg) { msg.textContent = 'Shared via system share'; }
             return;
@@ -1206,6 +1209,7 @@ async function shareInfiniteResults() {
 
     try {
         await navigator.clipboard.writeText(text);
+        window.recordSharkdleAchievement?.('results_shared');
         const msg = document.getElementById('message');
         if (msg) {
             msg.textContent = 'Results copied to clipboard';

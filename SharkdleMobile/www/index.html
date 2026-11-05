@@ -39,6 +39,7 @@ content="Play Sharkdle, the daily shark guessing game. Guess shark species from 
 
 
     <link rel="stylesheet" href="mobile.css" media="(max-width: 820px)">
+<script src="achievement-corners.js?v=1"></script>
 </head>
 
 <body class="home-page home-v3-page">
@@ -783,6 +784,7 @@ content="Play Sharkdle, the daily shark guessing game. Guess shark species from 
                 <p class="profile-username-text" id="profile-username">Username</p>
                 <button id="edit-profile-btn" onclick="enableUsernameEdit()" class="profile-edit-btn">Edit</button>
               </div>
+              <span id="profile-title-label" class="profile-title-label hidden"></span>
               <div class="profile-name-cluster">
                 <span id="profile-leaderboard-badge" class="profile-leaderboard-badge hidden"></span>
               </div>
@@ -1184,6 +1186,53 @@ content="Play Sharkdle, the daily shark guessing game. Guess shark species from 
 </div>
 
 <section class="picker-section admin-abuse-section">
+<h3>Your Developer Inventory</h3>
+<p>Changes apply to your account. Own all cosmetics includes retired and seasonal portraits, badges, themes and titles, and completes the current Shark Pass for testing.</p>
+<div class="admin-abuse-row">
+<button type="button" data-dev-tool class="admin-abuse-btn" onclick="adminOwnAllCosmetics()">Own all cosmetics</button>
+<button type="button" data-dev-tool class="admin-abuse-btn" onclick="adminSelfReward('bundle')">Refill test inventory</button>
+<button type="button" data-dev-tool class="admin-abuse-btn" onclick="adminSelfReward('pearls')">+10,000 pearls</button>
+<button type="button" data-dev-tool class="admin-abuse-btn" onclick="adminSelfReward('crates')">+25 cosmetic crates</button>
+<button type="button" data-dev-tool class="admin-abuse-btn" onclick="adminSelfReward('seasonal')">+10 Halloween + Christmas crates</button>
+<button type="button" data-dev-tool class="admin-abuse-btn" onclick="adminSelfReward('spins')">+10 daily spins</button>
+<button type="button" data-dev-tool class="admin-abuse-btn" onclick="adminSelfReward('shields')">Fill streak shields</button>
+<button type="button" data-dev-tool class="admin-abuse-btn" onclick="adminSelfReward('xp')">+10,000 XP</button>
+</div>
+<h4>Developer profile title</h4>
+<div id="title-select-container" class="admin-abuse-row"></div>
+</section>
+<section class="picker-section admin-abuse-section">
+<h3>Online Player Giveaways</h3>
+<p>Signed-in players active in the last 5 minutes. Preview fixes the recipient list; guests cannot receive saved items. A receipt prevents duplicate rewards when resuming.</p>
+<div class="admin-abuse-row">
+<button type="button" data-dev-tool class="admin-abuse-btn admin-abuse-btn-secondary" onclick="adminDropPreset('welcome')">Welcome gift</button>
+<button type="button" data-dev-tool class="admin-abuse-btn admin-abuse-btn-secondary" onclick="adminDropPreset('party')">Party pack</button>
+<button type="button" data-dev-tool class="admin-abuse-btn admin-abuse-btn-secondary" onclick="adminDropPreset('seasonal')">Seasonal surprise</button>
+<button type="button" data-dev-tool class="admin-abuse-btn admin-abuse-btn-secondary" onclick="adminDropPreset('shields')">Shield everyone</button>
+</div>
+<div class="admin-abuse-grid">
+<label class="admin-abuse-card">XP<input id="admin-drop-xp" data-dev-tool type="number" class="admin-abuse-input" min="0" max="1000000" step="1" value="0" oninput="adminInvalidateDrop()"></label>
+<label class="admin-abuse-card">Pearls<input id="admin-drop-pearls" data-dev-tool type="number" class="admin-abuse-input" min="0" max="1000000" step="1" value="0" oninput="adminInvalidateDrop()"></label>
+<label class="admin-abuse-card">Cosmetic crates<input id="admin-drop-crates" data-dev-tool type="number" class="admin-abuse-input" min="0" max="999" step="1" value="0" oninput="adminInvalidateDrop()"></label>
+<label class="admin-abuse-card">Halloween crates<input id="admin-drop-halloween" data-dev-tool type="number" class="admin-abuse-input" min="0" max="999" step="1" value="0" oninput="adminInvalidateDrop()"></label>
+<label class="admin-abuse-card">Christmas crates<input id="admin-drop-christmas" data-dev-tool type="number" class="admin-abuse-input" min="0" max="999" step="1" value="0" oninput="adminInvalidateDrop()"></label>
+<label class="admin-abuse-card">Daily spins<input id="admin-drop-spins" data-dev-tool type="number" class="admin-abuse-input" min="0" max="999" step="1" value="0" oninput="adminInvalidateDrop()"></label>
+<label class="admin-abuse-card">Streak shields<input id="admin-drop-streak_shields" data-dev-tool type="number" class="admin-abuse-input" min="0" max="3" step="1" value="0" oninput="adminInvalidateDrop()"></label>
+</div>
+<label>Recipients <select id="admin-drop-mode" data-dev-tool class="admin-abuse-select" onchange="adminInvalidateDrop()">
+<option value="">All online players</option><option value="daily">Playing Daily</option><option value="infinite">Playing Infinite</option><option value="rng">Playing Shark RNG</option>
+</select></label>
+<div id="admin-drop-preview" class="admin-abuse-status" style="white-space:pre-line;overflow-wrap:anywhere" aria-live="polite">Choose rewards, then preview the online recipients.</div>
+<div class="admin-abuse-row">
+<button type="button" data-dev-tool class="admin-abuse-btn" onclick="adminPreviewDrop()">Preview recipients</button>
+<button type="button" id="admin-drop-send" data-dev-tool class="admin-abuse-btn" onclick="adminSendDrop()" disabled>Send rewards</button>
+<button type="button" data-dev-tool class="admin-abuse-btn admin-abuse-btn-secondary" onclick="adminRefreshDropHistory()">Refresh giveaway history</button>
+</div>
+<div id="admin-tools-status" class="admin-abuse-status" role="status">Developer inventory and giveaways ready.</div>
+<div id="admin-drop-history" aria-live="polite"></div>
+</section>
+
+<section class="picker-section admin-abuse-section">
 <h3>Global 2x XP Event</h3>
 <div class="admin-abuse-row">
 <input id="admin-global-xp-hours" type="number" min="1" max="720" step="1" value="24" class="admin-abuse-input" placeholder="Hours">
@@ -1197,7 +1246,7 @@ content="Play Sharkdle, the daily shark guessing game. Guess shark species from 
 <div class="admin-visitor-heading">
 <div>
 <h3>Visitor Insights</h3>
-<p>Signed-in players across Sharkdle. Daily totals use UTC.</p>
+<p>Players and guests across Sharkdle. Guests count per browser; signing in may count separately. Daily totals use UTC.</p>
 </div>
 <button class="admin-abuse-btn admin-abuse-btn-secondary admin-visitor-refresh-btn" type="button" onclick="adminRefreshVisitorInsights()">Refresh</button>
 </div>
@@ -1224,22 +1273,6 @@ content="Play Sharkdle, the daily shark guessing game. Guess shark species from 
 <p>Automatic checks highlight unusual Daily and Infinite results for you to review. Flags do not change rankings or blacklist players.</p>
 <div id="admin-fair-play-list" aria-live="polite"></div>
 <div id="admin-fair-play-status" class="admin-abuse-status">Publish the detector and rules to begin collecting new game observations.</div>
-</section>
-
-    <section class="picker-section admin-abuse-section">
-        <h3>Global Item Grants</h3>
-<p style="margin:0 0 10px 0;color:#9fd9ea;font-size:12px;">Grants only apply to players active in the last 5 minutes.</p>
-<div class="admin-abuse-grid">
-
-</div>
-<div class="admin-abuse-card">
-<div class="admin-abuse-card-title">Streak Shields</div>
-<div class="admin-abuse-row">
-<input id="admin-grant-shields-count" type="number" min="1" max="99" step="1" value="1" class="admin-abuse-input" placeholder="Amount">
-<button class="admin-abuse-btn" onclick="adminGrantGlobalStreakShields()">Grant</button>
-</div>
-</div>
-<div id="admin-grant-status" class="admin-abuse-status">Item grants ready.</div>
 </section>
 
 <section class="picker-section admin-abuse-section">
@@ -1580,7 +1613,8 @@ content="Play Sharkdle, the daily shark guessing game. Guess shark species from 
 
 <link rel="stylesheet" href="fair-play.css?v=20261019">
 <script src="fair-play.js?v=20261019"></script>
-<script src="script.js?v=20261102-creator-twitch"></script>
+<script src="script.js?v=20261105-dev-tools"></script>
+<script src="developer-tools.js?v=1"></script>
 <script src="christmas-event.js?v=20261102-present-doors"></script>
 <script src="global-broadcast.js"></script>
 <script>

@@ -6,6 +6,9 @@ let activeAchievementFilter = "all";
 
 const achievementCategoryMeta = [
     { key: "worldmap", label: "World Map", icon: "fa-map-location-dot" },
+    { key: "account", label: "Account", icon: "fa-user" },
+    { key: "rng", label: "Shark RNG", icon: "fa-dice" },
+    { key: "rescue", label: "Rescue Command", icon: "fa-life-ring" },
     { key: "special", label: "Special", icon: "fa-star" },
     { key: "duels", label: "Duels", icon: "fa-handshake" },
     { key: "wins", label: "Wins", icon: "fa-trophy" },
@@ -44,6 +47,21 @@ function getAllAchievementDefinitions() {
 
 function getAchievementProgressValue(achievement = {}, profileData = {}) {
     const metric = achievement.metric || "";
+    if (metric.startsWith("corner:")) return window.SharkdleCorners?.progress(achievement, profileData) || 0;
+    if (metric === "accountLevel") return typeof getLevelFromXP === "function" ? getLevelFromXP(Number(profileData.totalXP) || 0) : 1;
+    if (metric === "loginStreak") return Number(profileData.loginStreak) || 0;
+    if (metric === "socialRewards") return Array.isArray(profileData.socialRewardsClaimed) ? profileData.socialRewardsClaimed.length : 0;
+    if (metric === "redeemedCodes") return Array.isArray(profileData.redeemedCodes) ? profileData.redeemedCodes.length : 0;
+    if (metric.startsWith("rng")) {
+        const uid = typeof currentUser !== "undefined" ? currentUser?.uid : window.currentUser?.uid;
+        let rng = {};
+        try { rng = JSON.parse(localStorage.getItem(uid ? 'sharkRngProfile_' + uid : "sharkRngProfile") || "{}"); } catch (_) {}
+        if (metric === "rngBestOneIn") return Math.max(Number(rng.bestOneIn) || 0, Number(profileData.rngBestOneIn) || 0);
+        if (metric === "rngPrestige") return Math.max(Number(rng.prestigeLevel) || 0, Number(profileData.rngPrestigeLevel) || 0);
+        if (metric === "rngRolls") return Math.max(Number(rng.rolls) || 0, Number(profileData.rngRolls) || 0);
+    }
+    if (metric === "rescueMissions") return Number(getSecretCommandState().missionsCompleted) || 0;
+    if (metric === "rescuePrestige") return Number(getSecretCommandState().prestigeCount) || 0;
     if (metric === "wins" || achievement.id?.includes("wins_")) return Number(profileData.wins) || 0;
     if (metric === "gamesPlayed" || achievement.id?.includes("games_")) return Number(profileData.gamesPlayed ?? profileData.games) || 0;
     if (metric === "currentStreak" || achievement.id?.includes("streak_")) return Number(profileData.currentStreak) || 0;
@@ -86,8 +104,282 @@ function cacheAchievementCatalog() {
 
 // Achievement Definitions
 const achievementDefinitions = {
+    account: [
+    {
+        "id": "account_level_10",
+        "name": "Growing Fin",
+        "description": "Reach account level 10",
+        "icon": "⭐",
+        "points": 75,
+        "metric": "accountLevel",
+        "milestone": 10
+    },
+    {
+        "id": "account_level_20",
+        "name": "Reef Regular",
+        "description": "Reach account level 20",
+        "icon": "⭐",
+        "points": 125,
+        "metric": "accountLevel",
+        "milestone": 20
+    },
+    {
+        "id": "account_level_30",
+        "name": "Ocean Explorer",
+        "description": "Reach account level 30",
+        "icon": "⭐",
+        "points": 200,
+        "metric": "accountLevel",
+        "milestone": 30
+    },
+    {
+        "id": "account_level_40",
+        "name": "Deep Sea Veteran",
+        "description": "Reach account level 40",
+        "icon": "⭐",
+        "points": 300,
+        "metric": "accountLevel",
+        "milestone": 40
+    },
+    {
+        "id": "account_level_50",
+        "name": "Apex Account",
+        "description": "Reach account level 50",
+        "icon": "⭐",
+        "points": 500,
+        "metric": "accountLevel",
+        "milestone": 50
+    },
+    {
+        "id": "login_days_7",
+        "name": "Week on the Reef",
+        "description": "Reach a 7 day login streak",
+        "icon": "📅",
+        "points": 75,
+        "metric": "loginStreak",
+        "milestone": 7
+    },
+    {
+        "id": "login_days_14",
+        "name": "Fortnight Fin",
+        "description": "Reach a 14 day login streak",
+        "icon": "📅",
+        "points": 150,
+        "metric": "loginStreak",
+        "milestone": 14
+    },
+    {
+        "id": "login_days_30",
+        "name": "Monthly Migration",
+        "description": "Reach a 30 day login streak",
+        "icon": "📅",
+        "points": 300,
+        "metric": "loginStreak",
+        "milestone": 30
+    },
+    {
+        "id": "daily_spin_used",
+        "name": "Victory Spin",
+        "description": "Use the daily spin wheel after winning a game",
+        "icon": "🎡",
+        "points": 50
+    },
+    {
+        "id": "global_contest_joined",
+        "name": "Rising Tide",
+        "description": "Contribute a win to a global win contest",
+        "icon": "🌍",
+        "points": 75
+    },
+    {
+        "id": "friend_shared",
+        "name": "Spread the Splash",
+        "description": "Share Sharkdle with a friend",
+        "icon": "📣",
+        "points": 50
+    },
+    {
+        "id": "results_shared",
+        "name": "Show Your Fins",
+        "description": "Share your results after completing a game",
+        "icon": "📤",
+        "points": 50
+    },
+    {
+        "id": "social_reward_claimed",
+        "name": "Social Treasure",
+        "description": "Claim a social reward",
+        "icon": "🎁",
+        "points": 50,
+        "metric": "socialRewards",
+        "milestone": 1
+    },
+    {
+        "id": "code_redeemed",
+        "name": "Secret Password",
+        "description": "Redeem a game code",
+        "icon": "🔑",
+        "points": 50,
+        "metric": "redeemedCodes",
+        "milestone": 1
+    }
+],
+    rng: [
+    {
+        "id": "rng_odds_1000000",
+        "name": "Million Fin",
+        "description": "Roll a shark rarer than 1 in 1,000,000",
+        "icon": "🦈",
+        "points": 75,
+        "metric": "rngBestOneIn",
+        "milestone": 1000001
+    },
+    {
+        "id": "rng_odds_50000000",
+        "name": "Against the Current",
+        "description": "Roll a shark rarer than 1 in 50,000,000",
+        "icon": "🦈",
+        "points": 125,
+        "metric": "rngBestOneIn",
+        "milestone": 50000001
+    },
+    {
+        "id": "rng_odds_100000000",
+        "name": "Hundred Million Hunter",
+        "description": "Roll a shark rarer than 1 in 100,000,000",
+        "icon": "🦈",
+        "points": 200,
+        "metric": "rngBestOneIn",
+        "milestone": 100000001
+    },
+    {
+        "id": "rng_odds_1000000000",
+        "name": "Billion Fin",
+        "description": "Roll a shark rarer than 1 in 1,000,000,000",
+        "icon": "🦈",
+        "points": 300,
+        "metric": "rngBestOneIn",
+        "milestone": 1000000001
+    },
+    {
+        "id": "rng_odds_50000000000",
+        "name": "Cosmic Catch",
+        "description": "Roll a shark rarer than 1 in 50,000,000,000",
+        "icon": "🦈",
+        "points": 450,
+        "metric": "rngBestOneIn",
+        "milestone": 50000000001
+    },
+    {
+        "id": "rng_odds_100000000000",
+        "name": "Abyssal Miracle",
+        "description": "Roll a shark rarer than 1 in 100,000,000,000",
+        "icon": "🦈",
+        "points": 600,
+        "metric": "rngBestOneIn",
+        "milestone": 100000000001
+    },
+    {
+        "id": "rng_prestige_1",
+        "name": "Fresh Waters",
+        "description": "Prestige 1 time in Shark RNG",
+        "icon": "👑",
+        "points": 100,
+        "metric": "rngPrestige",
+        "milestone": 1
+    },
+    {
+        "id": "rng_prestige_5",
+        "name": "Reborn Hunter",
+        "description": "Prestige 5 times in Shark RNG",
+        "icon": "👑",
+        "points": 250,
+        "metric": "rngPrestige",
+        "milestone": 5
+    },
+    {
+        "id": "rng_prestige_10",
+        "name": "Eternal Roller",
+        "description": "Prestige 10 times in Shark RNG",
+        "icon": "👑",
+        "points": 500,
+        "metric": "rngPrestige",
+        "milestone": 10
+    },
+    {
+        "id": "rng_rolls_100",
+        "name": "Getting Rolling",
+        "description": "Roll 100 times in Shark RNG",
+        "icon": "🎲",
+        "points": 50,
+        "metric": "rngRolls",
+        "milestone": 100
+    },
+    {
+        "id": "rng_rolls_1000",
+        "name": "Thousand Casts",
+        "description": "Roll 1,000 times in Shark RNG",
+        "icon": "🎲",
+        "points": 125,
+        "metric": "rngRolls",
+        "milestone": 1000
+    },
+    {
+        "id": "rng_rolls_10000",
+        "name": "Relentless Roller",
+        "description": "Roll 10,000 times in Shark RNG",
+        "icon": "🎲",
+        "points": 250,
+        "metric": "rngRolls",
+        "milestone": 10000
+    }
+],
+    // Shark Rescue Command achievements
+    rescue: [
+        {
+            id: 'secret_command_found',
+            name: 'Depths Discovered',
+            description: 'Discover the hidden Shark Rescue Command page',
+            icon: '🦈',
+            points: 180,
+            type: 'rescue',
+            rarity: 'epic',
+            themeRewardId: 'pearl-reef',
+            themeRewardName: 'Pearl Reef'
+        },
+        {
+            id: 'secret_prestige_1',
+            name: 'First Renown',
+            description: 'Prestige once in Shark Rescue Command',
+            icon: '👑',
+            points: 100,
+            type: 'rescue',
+            hiddenUntilSecret: true
+        },
+        {"id":"secret_prestige_5","name":"Command Reborn","description":"Prestige 5 times in Shark Rescue","icon":"👑","points":300,"metric":"rescuePrestige","milestone":5,"hiddenUntilSecret":true},
+        {
+            id: 'secret_missions_25',
+            name: 'Command Veteran',
+            description: 'Complete 25 missions in Shark Rescue Command',
+            icon: '📡',
+            points: 140,
+            type: 'rescue',
+            hiddenUntilSecret: true
+        },
+        {"id":"secret_missions_100","name":"Rescue Legend","description":"Complete 100 Shark Rescue missions","icon":"📡","points":300,"metric":"rescueMissions","milestone":100,"hiddenUntilSecret":true},
+        {
+            id: 'secret_apex_cells_10',
+            name: 'Cell Splitter',
+            description: 'Earn 10 Apex Cells in Shark Rescue Command',
+            icon: '🧬',
+            points: 180,
+            type: 'rescue',
+            hiddenUntilSecret: true
+        }
+    ],
     // Special Achievements
     special: [
+{"id":"crate_collector_100","name":"Treasure Fleet","description":"Open 100 cosmetic crates","icon":"📦","points":300,"metric":"cratesOpened","milestone":100},
         {
             id: 'speed_win',
             name: 'Lightning Fast',
@@ -103,17 +395,6 @@ const achievementDefinitions = {
             icon: '👑',
             points: 75,
             type: 'special'
-        },
-        {
-            id: 'secret_command_found',
-            name: 'Depths Discovered',
-            description: 'Discover the hidden Shark Rescue Command page',
-            icon: '🦈',
-            points: 180,
-            type: 'special',
-            rarity: 'epic',
-            themeRewardId: 'pearl-reef',
-            themeRewardName: 'Pearl Reef'
         },
         {
             id: 'crate_opened',
@@ -146,33 +427,6 @@ const achievementDefinitions = {
             icon: '🎁',
             points: 40,
             type: 'special'
-        },
-        {
-            id: 'secret_prestige_1',
-            name: 'First Renown',
-            description: 'Prestige once in Shark Rescue Command',
-            icon: '👑',
-            points: 100,
-            type: 'special',
-            hiddenUntilSecret: true
-        },
-        {
-            id: 'secret_missions_25',
-            name: 'Command Veteran',
-            description: 'Complete 25 missions in Shark Rescue Command',
-            icon: '📡',
-            points: 140,
-            type: 'special',
-            hiddenUntilSecret: true
-        },
-        {
-            id: 'secret_apex_cells_10',
-            name: 'Cell Splitter',
-            description: 'Earn 10 Apex Cells in Shark Rescue Command',
-            icon: '🧬',
-            points: 180,
-            type: 'special',
-            hiddenUntilSecret: true
         },
         {
             id: 'streak_shield_used',
@@ -345,6 +599,13 @@ const achievementDefinitions = {
     ]
 };
 
+// Merge feature milestones into the same catalog, rewards and category filters.
+if (window.SharkdleCorners) {
+    achievementCategoryMeta.push(...window.SharkdleCorners.categories);
+    window.SharkdleCorners.definitions.forEach(achievement => {
+        (achievementDefinitions[achievement.category] ||= []).push(achievement);
+    });
+}
 cacheAchievementCatalog();
 
 // Initialize achievements on page load
@@ -482,7 +743,10 @@ function getCategoryAchievements(categoryKey) {
         'japan_master'
     ];
 
-    return achievements.sort((a, b) => worldMapOrder.indexOf(a.id) - worldMapOrder.indexOf(b.id));
+    return achievements.sort((a, b) => {
+        const rank = id => worldMapOrder.includes(id) ? worldMapOrder.indexOf(id) : worldMapOrder.length;
+        return rank(a.id) - rank(b.id);
+    });
 }
 
 async function getAchievementFriendCount() {
@@ -552,7 +816,7 @@ async function retroactivelyUnlockAchievements(profileData, unlockedAchievements
         ? Number(profileData.friendsCount)
         : await getAchievementFriendCount();
     achievementDefinitions.milestones.forEach(achievement => {
-        if (friendsCount >= achievement.milestone && !unlockedAchievements.includes(achievement.id)) {
+        if ((achievement.metric ? getAchievementProgressValue(achievement, profileData) : friendsCount) >= achievement.milestone && !unlockedAchievements.includes(achievement.id)) {
             unlockedAchievements.push(achievement.id);
         }
     });
@@ -597,6 +861,10 @@ async function retroactivelyUnlockAchievements(profileData, unlockedAchievements
             unlockedAchievements.push(achievement.id);
         }
     });
+
+    if (profileData.referralRewards?.claimedShareRewards?.length && !unlockedAchievements.includes('friend_shared')) unlockedAchievements.push('friend_shared');
+    if (profileData.lastSpinWheelDate && profileData.lastSpinWheelDate === profileData.dailySpinWinDate && !unlockedAchievements.includes('daily_spin_used')) unlockedAchievements.push('daily_spin_used');
+    if (typeof getCommunityBossPersonalWins === 'function' && getCommunityBossPersonalWins() > 0 && !unlockedAchievements.includes('global_contest_joined')) unlockedAchievements.push('global_contest_joined');
 
     // Check story/world map progress
     try {
@@ -1223,6 +1491,9 @@ function checkAchievements(isWin, guessesTaken, wasGameWon) {
         ? window.getCurrentProfileData()
         : JSON.parse(localStorage.getItem("userProfile") || "{}");
     
+    getAllAchievementDefinitions().filter(a => a.metric && a.milestone).forEach(a => {
+        if (getAchievementProgressValue(a, profileData) >= a.milestone) unlockAchievement(a.id);
+    });
     // Check special achievements
     if (isWin && guessesTaken === 2) {
         unlockAchievement('speed_win');

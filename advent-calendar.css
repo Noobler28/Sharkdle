@@ -1,0 +1,103 @@
+.advent-launcher {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin: 16px 18px;
+    padding: 12px 18px;
+    border: 1px solid #eaca8755;
+    border-radius: 16px;
+    background: linear-gradient(120deg, #112c37, #183b40);
+    color: #fff7e8;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+.advent-launcher[hidden] { display: none; }
+.advent-launcher img { width: 52px; height: 52px; object-fit: cover; border-radius: 9px; }
+.advent-launcher strong, .advent-launcher small { display: block; }
+.advent-launcher strong { color: #f1cd80; font-size: 18px; }
+.advent-launcher small { margin-top: 4px; color: #b5c7cf; font-size: 12px; }
+.advent-launcher-action { margin-left: auto; font-size: 12px; color: #f1cd80; }
+.advent-launcher:focus-visible, .advent-close:focus-visible { outline: 3px solid #f1cd80; outline-offset: 3px; }
+.advent-modal {
+    position: fixed;
+    inset: 0;
+    box-sizing: border-box;
+    width: min(900px, calc(100% - 28px));
+    max-width: 900px;
+    height: auto;
+    max-height: calc(100dvh - 40px);
+    margin: auto;
+    padding: 0;
+    border: 1px solid #eaca8755;
+    border-radius: 24px;
+    background: #0b1b28;
+    color: #fff7e8;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-color: #b5a16e #0b1b28;
+    box-shadow: 0 24px 100px #0009;
+}
+.advent-modal::backdrop { background: #030914cc; backdrop-filter: blur(6px); }
+.advent-modal .advent-calendar { margin: 0; border: 0; border-radius: 0; padding-top: 18px; box-shadow: none; }
+.advent-close { position: sticky; top: 10px; z-index: 2; display: block; margin: 10px 12px 0 auto; width: 36px; height: 36px; border: 1px solid #eaca8755; border-radius: 50%; background: #142c3c; color: #fff7e8; font-size: 26px; line-height: 1; cursor: pointer; }
+@media (max-width: 540px) {
+    .advent-launcher { margin: 12px 0; padding: 12px; gap: 10px; }
+    .advent-launcher-action { font-size: 0; }
+    .advent-launcher-action::after { content: '→'; font-size: 20px; }
+    .advent-modal { max-height: calc(100dvh - 24px); border-radius: 18px; }
+}
+.advent-calendar {
+    /* The homepage is a flex column; keep the gift grid at its full height. */
+    flex: 0 0 auto;
+    height: auto;
+    min-height: min-content;
+    margin: 20px 0;
+    padding: clamp(18px, 3vw, 32px);
+    overflow: hidden;
+    border: 1px solid rgba(239, 204, 132, .3);
+    border-radius: 24px;
+    color: #f8f4e8;
+    background: radial-gradient(ellipse at 95% 0, #204b50 0, transparent 55%), linear-gradient(145deg, #112c37, #0b1b28 75%);
+    box-shadow: 0 14px 40px rgba(0, 0, 0, .2);
+    font-family: 'Barlow', sans-serif;
+}
+.advent-calendar[hidden] { display: none; }
+.advent-header { display: flex; align-items: center; justify-content: space-between; gap: 14px; }
+.advent-eyebrow { color: #c9ba94; font-size: 10px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; }
+.advent-calendar h2 { margin: 12px 0 10px; color: #fff7e8; font-family: 'Barlow Condensed', sans-serif; font-size: clamp(32px, 4vw, 48px); line-height: 1; font-weight: 800; }
+.advent-calendar h2 em { display: block; color: #f1cd80; font-style: normal; }
+.advent-header p { margin: 0; color: #b5c7cf; font-size: 14px; line-height: 1.5; max-width: 300px; }
+.advent-header-gift { width: 126px; max-width: 28%; border-radius: 18px; transform: rotate(5deg); box-shadow: 0 10px 30px #0005; }
+.advent-summary { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-top: 26px; font-size: 13px; }
+.advent-summary > span { font-weight: 700; }
+.advent-count { color: #eaca87; font-size: 12px; font-weight: 500; }
+.advent-progress { height: 4px; overflow: hidden; margin-top: 10px; border-radius: 4px; background: #ffffff12; }
+.advent-progress span { display: block; height: 100%; background: linear-gradient(90deg, #8cd6c8, #f1cd80); transition: width .3s; }
+.advent-status { margin: 14px 0 18px; color: #b8cbd2; font-size: 13px; line-height: 1.5; min-height: 20px; }
+.advent-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(105px, 1fr)); gap: 12px; }
+.advent-present { position: relative; min-width: 0; display: flex; flex-direction: column; align-items: center; padding: 0 0 10px; overflow: hidden; border: 1px solid #ffffff14; border-radius: 14px; background: #ffffff04; color: #fff2d4; cursor: pointer; font: inherit; transition: transform .2s, border-color .2s, background .2s; }
+.advent-gift-art { display: block; width: 100%; aspect-ratio: 1; overflow: hidden; border-radius: 13px 13px 0 0; }
+.advent-present img { display: block; width: 100%; height: 100%; object-fit: cover; transition: transform .25s; }
+.advent-gift-number { position: absolute; top: 6px; left: 6px; padding: 3px 7px; background: #081925cf; border: 1px solid #fff3; border-radius: 6px; color: #fff7e8; font-size: 11px; font-weight: 700; }
+.advent-gift-label { margin-top: 9px; font-size: 10px; font-weight: 600; letter-spacing: .4px; }
+.advent-present:hover:not(:disabled) { transform: translateY(-4px); border-color: #efcc84; background: #efcc8414; }
+.advent-present:hover:not(:disabled) img { transform: scale(1.06); }
+.advent-present:focus-visible { outline: 3px solid #efcc84; outline-offset: 3px; }
+.advent-present:disabled { cursor: default; }
+.advent-present.opened img { filter: grayscale(.85); opacity: .35; }
+.advent-present.opened { border-color: #8cd6c833; }
+.advent-present.opened .advent-gift-label { color: #8cd6c8; }
+.advent-footer { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; border-top: 1px solid #ffffff12; margin-top: 20px; padding-top: 15px; color: #8fa8b4; font-size: 10px; line-height: 1.5; }
+.advent-preview-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 12px; border-radius: 10px; background: #ffffff08; color: #b8cbd2; font-size: 11px; }
+.advent-preview-controls select, .advent-preview-controls button { border: 1px solid #ffffff30; border-radius: 6px; background: #142c3c; color: #fff2d4; padding: 5px 8px; font: inherit; }
+@media (max-width: 540px) {
+    .advent-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+    .advent-eyebrow { font-size: 8px; letter-spacing: 1px; }
+    .advent-header p { font-size: 12px; }
+    .advent-calendar { border-radius: 18px; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .advent-present, .advent-present img, .advent-progress span { transition: none; }
+}

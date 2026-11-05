@@ -205,10 +205,12 @@ function generateDailyShareText() {
 }
 
 async function shareDailyResults() {
+    if (!gameCompleted) return;
     const text = generateDailyShareText();
     try {
         if (navigator.share) {
             await navigator.share({ text });
+            window.recordSharkdleAchievement?.('results_shared');
             if (messageDiv) messageDiv.textContent = 'Shared via system share';
             return;
         }
@@ -219,6 +221,7 @@ async function shareDailyResults() {
     // Fallback to clipboard
     try {
         await navigator.clipboard.writeText(text);
+        window.recordSharkdleAchievement?.('results_shared');
         if (messageDiv) {
             messageDiv.textContent = 'Results copied to clipboard';
             setTimeout(() => { if (messageDiv) messageDiv.textContent = ''; }, 3000);
@@ -1520,6 +1523,7 @@ function createBubbles(container) {
 }
 
 function showWin(xpGained, guessesTaken, alreadyCompleted = false, pearlsGained = 0){
+    window.SharkdleCorners?.win('daily', speciesMode.key === 'rays', guessesTaken);
 
 // Check achievements for win conditions (only on first completion)
 if (!alreadyCompleted && window.checkAchievements) {

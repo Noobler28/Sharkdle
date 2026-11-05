@@ -1,0 +1,4 @@
+{
+  "functions": [{"source": "functions", "codebase": "fair-play"}],
+  "firestore": {"rules": "firestore.rules"}
+}

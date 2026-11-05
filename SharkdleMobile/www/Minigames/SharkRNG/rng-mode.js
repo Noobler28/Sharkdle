@@ -6163,6 +6163,8 @@ function rollForShark(actionContext = createRollActionContext(1)) {
             try {
                 await accessRngDeviceStore("readwrite", snapshot, storageKey);
                 if (owner !== rngProfileOwnerUid || session !== rngAccountSession) return true;
+                if (typeof window.checkRngProgressAchievements === "function") window.checkRngProgressAchievements(JSON.parse(snapshot));
+                window.SharkdleCorners?.check('rng', JSON.parse(snapshot));
                 if (savedAt >= localSavedAtMs) {
                     localSavedAtMs = savedAt;
                     localSaveDirty = revision !== (Number(player.rngStateUpdatedAtMs) || 0);
@@ -6263,6 +6265,8 @@ function rollForShark(actionContext = createRollActionContext(1)) {
             }
             player.rngDeviceSavedAtMs = Math.max(Date.now(), (Number(player.rngDeviceSavedAtMs) || 0) + 1);
             localStorage.setItem(getRngStorageKey(), JSON.stringify(player));
+            if (typeof window.checkRngProgressAchievements === "function") window.checkRngProgressAchievements(player);
+            window.SharkdleCorners?.check('rng', player);
             localSaveDirty = false;
             localSaveError = false;
             localSavedAtMs = player.rngDeviceSavedAtMs;

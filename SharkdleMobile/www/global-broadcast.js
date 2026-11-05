@@ -25,7 +25,7 @@
     const VISITOR_TRACKING_STARTED_KEY = "__sharkdleVisitorTrackingStarted";
     const VISITOR_DAILY_COLLECTION = "visitorDaily";
     const VISITOR_HEARTBEAT_MS = 45 * 1000;
-    const RNG_BROADCAST_MIN_ONE_IN = 1_000_000;
+    const RNG_BROADCAST_MIN_ONE_IN = 1_000_000_000;
     const RNG_BROADCAST_MAX_AGE_MS = 5 * 60 * 1000;
     const RNG_BROADCAST_DISPLAY_MS = 6500;
     const RNG_BROADCAST_QUERY_LIMIT = 8;
@@ -720,7 +720,6 @@
         if (path.includes("/leaderboard/") || path.includes("/leaderboards.html")) return "Leaderboards";
         if (path.includes("/updates/") || path.includes("/updates.html")) return "Updates";
         if (path.includes("/shark-rescue/") || path.includes("/secret.html")) return "Shark Rescue";
-        if (path.includes("/minigames/sharkslots/") || path.includes("/slots.html")) return "Shark Slots";
         if (document.body?.classList.contains("home-page")) return "Home";
         return "Sharkdle";
     }
@@ -782,17 +781,48 @@
         await Promise.all(writes);
     }
 
+    let guestVisitorId;
+    function getGuestVisitorId() {
+        if (guestVisitorId) return guestVisitorId;
+        try { guestVisitorId = localStorage.getItem("sharkdle-guest-visitor-id"); } catch (_) {}
+        if (!/^[a-f0-9]{32}$/.test(guestVisitorId || "")) {
+            guestVisitorId = Array.from(crypto.getRandomValues(new Uint8Array(16)),
+                byte => byte.toString(16).padStart(2, "0")).join("");
+            try { localStorage.setItem("sharkdle-guest-visitor-id", guestVisitorId); } catch (_) {}
+        }
+        return guestVisitorId;
+    }
+
+    async function recordGuestVisitor(db) {
+        const activity = getCurrentActivityPayload();
+        await db.collection(VISITOR_DAILY_COLLECTION).doc(getUtcVisitorDayKey())
+            .collection("guests").doc(getGuestVisitorId()).set({
+                visitedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                path: String(window.location.pathname || "/").slice(0, 120),
+                activity: String(activity.label || "Sharkdle").slice(0, 80)
+            });
+    }
+
     function startVisitorTracking(db) {
         if (window[VISITOR_TRACKING_STARTED_KEY]) return;
         if (typeof firebase === "undefined" || typeof firebase.auth !== "function") return;
         window[VISITOR_TRACKING_STARTED_KEY] = true;
 
         let signedInUser = null;
+        let pending = false;
+        let lastWriteMs = 0;
+        let lastIdentity;
         const recordCurrentVisitor = () => {
-            if (!signedInUser || document.visibilityState === "hidden") return;
-            recordSignedInVisitor(db, signedInUser).catch(error => {
+            if (document.visibilityState === "hidden" || pending) return;
+            const identity = signedInUser?.uid || "guest";
+            if (identity === lastIdentity && Date.now() - lastWriteMs < VISITOR_HEARTBEAT_MS) return;
+            pending = true;
+            lastIdentity = identity;
+            lastWriteMs = Date.now();
+            const write = signedInUser ? recordSignedInVisitor(db, signedInUser) : recordGuestVisitor(db);
+            write.catch(error => {
                 console.warn("Visitor tracking update failed:", error);
-            });
+            }).finally(() => { pending = false; });
         };
 
         firebase.auth().onAuthStateChanged(user => {

@@ -1272,6 +1272,7 @@ h1 {
 }
 </style>
     <link rel="stylesheet" href="../mobile.css">
+<script src="achievement-corners.js?v=1"></script>
 </head>
 <body>
 <div class="shell">
@@ -1765,6 +1766,7 @@ function loadGame() {
 function saveGame() {
     state.lastSave = Date.now();
     localStorage.setItem(SAVE_KEY, JSON.stringify(state));
+    window.SharkdleCorners?.check('rescue', state);
 }
 
 function resetGame() {

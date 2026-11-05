@@ -1690,6 +1690,7 @@
     </style>
 
     <link rel="stylesheet" href="../mobile.css" media="(max-width: 820px)">
+<script src="achievement-corners.js?v=1"></script>
 </head>
 <body class="library-page shell-page">
     <header class="navbar">
@@ -1999,6 +2000,7 @@
 
         function saveHeartedSharks() {
             localStorage.setItem('heartedSharks', JSON.stringify([...heartedSharks]));
+            window.SharkdleCorners?.check('library');
         }
 
         function loadRecentlyViewedSharks() {
@@ -2016,6 +2018,7 @@
 
         function saveRecentlyViewedSharks() {
             localStorage.setItem('sharchiveRecentlyViewed', JSON.stringify(recentlyViewedSharks.slice(0, 24)));
+            window.SharkdleCorners?.check('library');
         }
 
         function recordRecentlyViewedSpecies(sharkName) {

@@ -876,6 +876,7 @@ function applyLegacyUnlocks(state) {
 
 function saveStoryState() {
     localStorage.setItem(STORY_STORAGE_KEY, JSON.stringify(storyState));
+    window.SharkdleCorners?.check('story', storyState);
     syncLegacyProgress();
 }
 
