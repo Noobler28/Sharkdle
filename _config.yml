@@ -1,0 +1,7 @@
+# Keep the duplicate mobile app project out of the GitHub Pages website.
+# Public downloads remain available in "Mobile Release".
+exclude:
+  - SharkdleMobile
+  - verification
+  - tools
+  - functions
