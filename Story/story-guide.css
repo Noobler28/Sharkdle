@@ -1,6 +1,7 @@
 /* Dr. Finn's portrait belongs to the story interface, not the mission logic. */
-body.story-map-page .story-guide-contact{display:grid;grid-template-columns:100px minmax(0,1fr);gap:14px;align-items:center;margin-bottom:22px;padding:17px;border:1px solid rgba(126,240,255,.2);border-radius:12px;background:linear-gradient(145deg,#103c4b,#081d2a);overflow:hidden}
+body.story-map-page .story-guide-contact{display:grid;grid-template-columns:100px minmax(0,1fr);gap:14px;align-items:center;flex:0 0 auto;min-width:0;margin-bottom:22px;padding:17px;border:1px solid rgba(126,240,255,.2);border-radius:12px;background:linear-gradient(145deg,#103c4b,#081d2a);overflow:hidden}
 body.story-map-page .story-guide-contact>img{width:100%;height:150px;object-fit:contain;object-position:bottom;align-self:end;filter:drop-shadow(0 7px 8px #0005)}
+body.story-map-page .story-guide-contact>div{min-width:0;overflow-wrap:anywhere}
 body.story-map-page .story-guide-eyebrow{display:block;font-size:10px;font-weight:700;letter-spacing:1.1px;text-transform:uppercase;color:#a2d7cf}
 body.story-map-page .story-guide-contact h2{margin:6px 0;font-family:'Barlow Condensed',sans-serif;font-size:32px;color:#efffff;line-height:1}
 body.story-map-page .story-guide-contact p{font-size:12px;line-height:1.6;color:#c4dce0;margin:9px 0}
