@@ -1,3 +1,16 @@
+/* Native dropdown menus need an opaque background as well as a text colour. */
+select {
+    color-scheme: dark;
+}
+select option,
+select optgroup {
+    background-color: #08212d;
+    color: #e8f9ff;
+}
+select option:disabled {
+    color: #91aab5;
+}
+
 /* Shared shell styles to bring secondary pages closer to the index theme */
 :root {
     --shell-bg-0: #04111d;

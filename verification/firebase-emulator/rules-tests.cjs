@@ -2,7 +2,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const assert = require('node:assert/strict');
 const { initializeTestEnvironment, assertSucceeds, assertFails } = require('@firebase/rules-unit-testing');
-const { doc, getDoc, setDoc, updateDoc, deleteDoc, runTransaction, serverTimestamp, setLogLevel } = require('firebase/firestore');
+const { doc, getDoc, getDocs, collection, query, where, setDoc, updateDoc, deleteDoc, runTransaction, serverTimestamp, setLogLevel } = require('firebase/firestore');
 const { harness } = require('../rng-account-sync-regression.cjs');
 const results = [];
 let environment;
@@ -42,6 +42,18 @@ function adapter(db) {
     const unverified = environment.authenticatedContext('account-a', { email_verified: false }).firestore();
     const guest = environment.unauthenticatedContext().firestore();
     const developer = environment.authenticatedContext('ETPtQC0VA2NiSnX67rS2P2ma2tC2', { email_verified: true }).firestore();
+    await test('Daily participation is readable by its owner and developers only', async () => {
+        const location = 'userDaily/account-a';
+        await assertSucceeds(setDoc(doc(a, location), {date: '2026-11-08', guesses: [{shark: {name: 'Test'}}]}));
+        await assertSucceeds(getDoc(doc(a, location)));
+        await assertSucceeds(getDoc(doc(developer, location)));
+        await assertSucceeds(getDocs(query(collection(developer, 'userDaily'), where('date', '==', '2026-11-08'))));
+        for (const db of [b, guest, unverified]) {
+            await assertFails(getDoc(doc(db, location)));
+            await assertFails(getDocs(query(collection(db, 'userDaily'), where('date', '==', '2026-11-08'))));
+        }
+        await assertFails(setDoc(doc(developer, location), {date: '2026-11-08'}));
+    });
     await test('Guest telemetry accepts bounded visits and keeps history private', async () => {
         const location = 'visitorDaily/2026-11-04/guests/' + 'a'.repeat(32);
         const visit = () => ({ visitedAt: serverTimestamp(), path: '/', activity: 'Home' });

@@ -243,9 +243,9 @@ service cloud.firestore {
       allow create, update, delete: if isVerifiedUser() && request.auth.uid == userId;
     }
 
-    // Daily game state
+    // Daily game state; developers may read participation for admin insights.
     match /userDaily/{userId} {
-      allow read: if isVerifiedUser() && request.auth.uid == userId;
+      allow read: if isVerifiedUser() && (request.auth.uid == userId || isDeveloper());
       allow write: if isVerifiedUser() && request.auth.uid == userId;
     }
 

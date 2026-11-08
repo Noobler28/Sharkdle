@@ -12532,6 +12532,22 @@ function renderAdminRecentVisitors(visitors, nowMs = Date.now()) {
     });
 }
 
+async function getAdminDailyPlayerCount(dayKey = getUtcDateKey()) {
+    // Each document belongs to one account; count it once across Daily variants.
+    const snapshots = await Promise.all(["date", "modes.rays.date", "modes.mixed.date"].map(field =>
+        db.collection("userDaily").where(field, "==", dayKey).get()
+    ));
+    const players = new Set();
+    snapshots.forEach(snapshot => snapshot.docs.forEach(doc => {
+        const data = doc.data() || {};
+        const states = [data, data.modes?.rays, data.modes?.mixed];
+        if (states.some(state => state?.date === dayKey && Array.isArray(state.guesses) && state.guesses.length > 0)) {
+            players.add(doc.id);
+        }
+    }));
+    return players.size;
+}
+
 async function refreshAdminVisitorInsights() {
     if (!isDeveloperSessionActive() || !db) return false;
 
@@ -12541,12 +12557,16 @@ async function refreshAdminVisitorInsights() {
     const oneDayCutoffMs = nowMs - 24 * 60 * 60 * 1000;
     const dayKeys = getAdminUtcDayKeys(30);
 
-    const [recentSnapshot, dailySnapshots, guestSnapshots] = await Promise.all([
+    const [recentSnapshot, dailySnapshots, guestSnapshots, dailyPlayerCount] = await Promise.all([
         db.collection("userStats").where("lastActive", ">=", sevenDayCutoffMs).get(),
         Promise.all(dayKeys.map(dayKey => (
             db.collection("visitorDaily").doc(dayKey).collection("users").get()
         ))),
-        Promise.all(dayKeys.map(dayKey => db.collection("visitorDaily").doc(dayKey).collection("guests").get()))
+        Promise.all(dayKeys.map(dayKey => db.collection("visitorDaily").doc(dayKey).collection("guests").get())),
+        getAdminDailyPlayerCount(dayKeys.at(-1)).catch(error => {
+            console.warn("Daily participation count unavailable:", error);
+            return null;
+        })
     ]);
 
     const recentGuests = new Map();
@@ -12583,6 +12603,7 @@ async function refreshAdminVisitorInsights() {
     setAdminVisitorMetric("admin-visitors-24h", lastDayVisitors.length);
     setAdminVisitorMetric("admin-visitors-7d", recentVisitors.length);
     setAdminVisitorMetric("admin-visitors-today", dailyCounts.at(-1) || 0);
+    setAdminVisitorMetric("admin-daily-players-today", dailyPlayerCount ?? "Unavailable");
     setAdminVisitorMetric(
         "admin-visitors-average-7d",
         sevenDayAverage.average === null ? "\u2014" : sevenDayAverage.average.toFixed(1)
@@ -12622,6 +12643,7 @@ async function adminRefreshVisitorInsights() {
         return await refreshAdminVisitorInsights();
     } catch (error) {
         console.warn("Unable to refresh visitor insights:", error);
+        setAdminVisitorMetric("admin-daily-players-today", "Unavailable");
         setAdminAbuseStatus(
             "admin-visitor-status",
             `Visitor insights failed to load: ${error.message || error}`,
