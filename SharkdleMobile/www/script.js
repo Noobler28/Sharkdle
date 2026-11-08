@@ -1813,6 +1813,7 @@ const sharkPassCardThemes = [
 ];
 
 const CRATE_DROP_CHANCE = 0.5;
+const EVENT_CRATE_DROP_CHANCE = 0.15;
 const GLOBAL_XP_EVENT_CONFIG_PATH = {
     collection: "globalConfig",
     doc: "xpEvent"
@@ -2980,6 +2981,16 @@ function mergeCrateInventory(localProfileOrInventory, remoteProfileOrInventory, 
         christmas: Math.max(local.christmas, remote.christmas),
         halloween: Math.max(local.halloween, remote.halloween)
     };
+}
+
+// A stats sync can finish after a win drop or crate opening changed local inventory.
+function preserveNewerLocalCrateInventory(profileData) {
+    const latestProfile = getBestLocalProfile();
+    if (latestProfile.uid && profileData.uid && latestProfile.uid !== profileData.uid) return false;
+    if (getCrateInventoryUpdatedAt(latestProfile) <= getCrateInventoryUpdatedAt(profileData)) return false;
+    profileData.crateInventory = getCrateInventory(latestProfile);
+    profileData.crateInventoryUpdatedAt = getCrateInventoryUpdatedAt(latestProfile);
+    return true;
 }
 
 function retireSummerCrates(profileData) {
@@ -7349,23 +7360,23 @@ async function openCrate(crateId = "reef") {
 
 function maybeAwardCrateDrop(source = "win") {
     if (!currentUser) return false;
-    let awarded = false;
+    if (Math.random() >= CRATE_DROP_CHANCE) return false;
 
-    if (Math.random() <= CRATE_DROP_CHANCE) {
-        const profileData = getCurrentProfileData();
-        const inventory = getCrateInventory(profileData);
-        // Only award reef crates (normal crates) regardless of theme
-        inventory.reef += 1;
-        showNotification(`Cosmetic Crate dropped from your ${source}!`, "success", 3800);
-        profileData.crateInventory = normalizeCrateInventory(inventory);
-        markCrateInventoryChanged(profileData);
-        persistCrateProfileUpdate(profileData).catch(error => console.warn("Crate sync failed:", error));
-        renderCratesButton();
-        renderCratesModal();
-        awarded = true;
-    }
-
-    return awarded;
+    const profileData = getCurrentProfileData();
+    const inventory = getCrateInventory(profileData);
+    const eventCrateId = getActiveSeasonalCrateId();
+    const crateId = eventCrateId && Math.random() < EVENT_CRATE_DROP_CHANCE ? eventCrateId : "reef";
+    inventory[crateId] += 1;
+    profileData.crateInventory = normalizeCrateInventory(inventory);
+    markCrateInventoryChanged(profileData);
+    persistCrateProfileUpdate(profileData).catch(error => {
+        console.warn("Crate sync failed:", error);
+        scheduleRemoteProfileSync();
+    });
+    showNotification(`${getCrateDefinition(crateId).name} dropped from your ${source}!`, "success", 3800);
+    renderCratesButton();
+    renderCratesModal();
+    return true;
 }
 
 window.openCratesModal = openCratesModal;
@@ -11428,10 +11439,10 @@ async function syncStatsToFirebase() {
 
     isSyncing = true;
     try {
-        const profileData = getBestLocalProfile();
-
         const statsRef = db.collection("userStats").doc(authUser.uid);
         const { snapshot: remoteSnap, fromServer } = await getUserStatsSnapshot(statsRef);
+        // Include rewards earned while the server read was pending.
+        const profileData = getBestLocalProfile();
         const remoteData = remoteSnap.exists ? (remoteSnap.data() || {}) : {};
         const remoteHasData = remoteSnap.exists && Object.keys(remoteData).length > 0;
 
@@ -11639,12 +11650,18 @@ async function syncStatsToFirebase() {
         stats.dailySpinWinDate = normalizeStoredDateValue(mergedProfile.dailySpinWinDate);
         stats.dailySpinBonusSpins = normalizeDailySpinBonusCount(mergedProfile.dailySpinBonusSpins);
 
-        // Save stats to userStats collection
+        // Retain inventory changed while this sync was in progress.
+        preserveNewerLocalCrateInventory(mergedProfile);
+        stats.crateInventory = getCrateInventory(mergedProfile);
+        stats.crateInventoryUpdatedAt = getCrateInventoryUpdatedAt(mergedProfile);
         await statsRef.set(stats, { merge: true });
 
         Object.assign(mergedProfile, stats);
+        let cratesChangedDuringSync = preserveNewerLocalCrateInventory(mergedProfile);
         await syncFullUserProfileToFirebase(mergedProfile);
+        cratesChangedDuringSync = preserveNewerLocalCrateInventory(mergedProfile) || cratesChangedDuringSync;
         saveUserProfileLocally(mergedProfile, { skipRemoteSync: true });
+        if (cratesChangedDuringSync) scheduleRemoteProfileSync();
         localStorage.setItem("claimedAchievements", JSON.stringify(mergedClaimedAchievements));
         localStorage.setItem("unlockedAchievements", JSON.stringify(mergedUnlockedAchievements));
         localStorage.setItem("showcasedAchievements", JSON.stringify(mergedShowcasedAchievements));
