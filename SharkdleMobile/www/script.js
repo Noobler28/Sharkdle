@@ -4262,13 +4262,13 @@ function getCommunityBossRewardsMarkup(wins = getCommunityBossWins(), profileDat
     const heading = isCommunityBossMilestoneEvent() ? "Community Milestones" : "Rewards";
 
     if (COMMUNITY_BOSS_EVENT.requiresContribution) {
-        return `<div class="winter-rewards-head"><h3>Community rewards</h3><span>25 crates in total</span></div>
+        return `<div class="winter-rewards-head"><h3>Community rewards</h3><span>${getCommunityBossTotalRewardCrates()} crates in total</span></div>
             <div class="winter-rewards">${rewardRows.map(reward => {
                 const claimed = claimedRewardIds.has(reward.id), unlocked = wins >= reward.goal;
                 const status = claimed ? "Claimed" : unlocked ? "Unlocked" : "Locked";
                 return `<article class="winter-reward ${claimed ? "claimed" : unlocked ? "unlocked" : "locked"}">
                     <div class="winter-goal"><b>${reward.goal}</b><span>wins</span></div>
-                    <div class="winter-reward-copy"><h4>${reward.crateCount} Christmas Crates</h4><p>${reward.xp.toLocaleString()} XP${reward.badge !== false ? " · Frost Anvil badge" : ""}</p></div>
+                    <div class="winter-reward-copy"><h4>${reward.label}</h4><p>${reward.crateCount} Christmas Crates · ${reward.xp.toLocaleString()} XP${reward.badge !== false ? " · Frost Anvil badge" : ""}</p></div>
                     <span class="winter-reward-status">${claimed ? "✓ " : ""}${status}</span>
                 </article>`;
             }).join("")}</div>
