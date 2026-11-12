@@ -8216,6 +8216,7 @@ const levelRewards = [
 // ----- REDEEM CODE SYSTEM -----
 const redeemCodes = {
     'THANKYOU100': { xp: 10000, pearls: 1000, spins: 3, crates: { reef: 5 }, description: '10k XP + 1,000 Pearls + 3 bonus spins (no win needed) + 5 Cosmetic Crates' },
+    'INTERVIEW2026': { spins: 3, description: '3 bonus daily spins' },
     'SHARKDLE': { xp: 2500, cosmetics: [{ imagePath: 'images/codePfp/Shark17.png', name: 'Wobbegong Shark' }], description: '2.5k XP + Wobbegong Shark Profile Icon' },
     'UPDATE1': { xp: 1000, cosmetics: [{ imagePath: 'images/codePfp/Shark18.png', name: 'Greenland Shark' }], description: '1k XP + Greenland Shark Profile Icon' },
     'UPDATE2': { xp: 1500, cosmetics: [{ imagePath: 'images/codePfp/Shark19.png', name: 'Goblin Shark' }], description: '1.5k XP + Goblin Shark Profile Icon' },
