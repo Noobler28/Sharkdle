@@ -222,6 +222,10 @@ service cloud.firestore {
       return eventId == "summer-megaladon-2026" ? 2 : 1;
     }
 
+    function communityBossTargetWins(eventId) {
+      return eventId == "christmas-stethacanthus-2026" ? 500 : 150;
+    }
+
     // Purchases: only server-side code (Cloud Functions using Admin SDK) should create purchase records.
     // Clients are prevented from creating/updating/deleting purchases to avoid spoofing.
     match /purchases/{purchaseId} {
@@ -565,7 +569,7 @@ service cloud.firestore {
           "lastContributionMode",
           "lastContributionUid"
         ])
-        && resource.data.wins < 150
+        && resource.data.wins < communityBossTargetWins(eventId)
         && request.resource.data.wins == resource.data.wins + communityBossContributionValue(eventId)
         && request.resource.data.lastContributionUid == request.auth.uid
         && request.resource.data.lastContributionMode in ["daily", "infinite"];
@@ -601,7 +605,7 @@ service cloud.firestore {
             "updatedAt",
             "lastContributionMode"
           ])
-          && resource.data.wins < 150
+          && resource.data.wins < communityBossTargetWins(eventId)
           && request.resource.data.uid == request.auth.uid
           && request.resource.data.wins == resource.data.wins + communityBossContributionValue(eventId)
           && request.resource.data.lastContributionMode in ["daily", "infinite"];

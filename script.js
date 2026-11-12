@@ -1880,7 +1880,7 @@ const COMMUNITY_BOSS_EVENTS = [
         seasonLabel: "Christmas Part 1 · Global Win Event",
         bossName: "Stethacanthus",
         title: "Protect Stethacanthus",
-        targetWins: 150,
+        targetWins: 500,
         startMs: new Date("2026-11-02T00:00:00Z").getTime(),
         endMs: new Date("2026-12-26T00:00:00Z").getTime(),
         crateId: "christmas",
@@ -1892,7 +1892,11 @@ const COMMUNITY_BOSS_EVENTS = [
         rewards: [
             { id: "tier-50", label: "First snowfall", goal: 50, xp: 10000, crateId: "christmas", crateCount: 5, badge: false },
             { id: "tier-100", label: "Winter surge", goal: 100, xp: 15000, crateId: "christmas", crateCount: 8, badge: false },
-            { id: "tier-150", label: "Stethacanthus protected", goal: 150, xp: 25000, crateId: "christmas", crateCount: 12 }
+            { id: "tier-150", label: "Steven was saved!", goal: 150, xp: 25000, crateId: "christmas", crateCount: 12, badge: false },
+            { id: "tier-200", label: "The tide turns", goal: 200, xp: 15000, crateId: "christmas", crateCount: 5, badge: false },
+            { id: "tier-300", label: "Stethacanthus stands strong", goal: 300, xp: 20000, crateId: "christmas", crateCount: 7, badge: false },
+            { id: "tier-400", label: "The ocean holds", goal: 400, xp: 25000, crateId: "christmas", crateCount: 8, badge: false },
+            { id: "tier-500", label: "Stethacanthus protected", goal: 500, xp: 35000, crateId: "christmas", crateCount: 10 }
         ]
     }
 ];
@@ -4095,7 +4099,8 @@ function isCommunityBossParticipant() {
 }
 
 function getCommunityBossChampionReward() {
-    return { id: "champion-bonus", label: "#1 contributor bonus", goal: 150, xp: COMMUNITY_BOSS_EVENT.championBonusXp, crateCount: 0, badge: false };
+    const id = COMMUNITY_BOSS_EVENT.id === "christmas-stethacanthus-2026" ? "champion-bonus-500" : "champion-bonus";
+    return { id, label: "#1 contributor bonus", goal: COMMUNITY_BOSS_EVENT.targetWins, xp: COMMUNITY_BOSS_EVENT.championBonusXp, crateCount: 0, badge: false };
 }
 
 async function refreshCommunityBossParticipation() {
@@ -4227,6 +4232,10 @@ function getCommunityBossRewardDescription(reward) {
     return [reward.crateCount > 0 ? formatCommunityBossCrateReward(reward) : null, `${reward.xp.toLocaleString()} XP`, reward.badge !== false ? `${COMMUNITY_BOSS_EVENT.rewardBadgeName} profile badge` : null].filter(Boolean).join(", ");
 }
 
+function getCommunityBossTotalRewardCrates() {
+    return getCommunityBossRewardTiers().reduce((total, reward) => total + Math.max(0, Number(reward.crateCount) || 0), 0);
+}
+
 function getCommunityBossDescription() {
     const multiplier = getCommunityBossContributionMultiplier();
     const multiplierCopy = multiplier > 1 ? ` Each win counts as ${multiplier}.` : "";
@@ -4234,7 +4243,7 @@ function getCommunityBossDescription() {
         const goals = getCommunityBossRewardTiers()
             .map(reward => (Number(reward.goal) || 0).toLocaleString())
             .join(", ");
-        return `Daily and Infinite wins count together. Unlock rewards at ${goals} global wins.${COMMUNITY_BOSS_EVENT.requiresContribution ? " Contribute just one win to claim every milestone the community reaches. Earn up to 25 Christmas Crates in total." : multiplierCopy}`;
+        return `Daily and Infinite wins count together. Steven is saved at 150 wins, and the event continues with new rewards at ${goals} global wins.${COMMUNITY_BOSS_EVENT.requiresContribution ? ` Contribute just one win to claim every milestone the community reaches. Earn up to ${getCommunityBossTotalRewardCrates()} Christmas Crates in total.` : multiplierCopy}`;
     }
     return `Daily and Infinite wins from every logged-in player count together.${multiplierCopy} Reach ${COMMUNITY_BOSS_EVENT.targetWins.toLocaleString()} community wins by the event deadline to bring down the ${COMMUNITY_BOSS_EVENT.bossName}.`;
 }
@@ -4263,7 +4272,7 @@ function getCommunityBossRewardsMarkup(wins = getCommunityBossWins(), profileDat
                     <span class="winter-reward-status">${claimed ? "✓ " : ""}${status}</span>
                 </article>`;
             }).join("")}</div>
-            <div class="winter-bonus"><i class="fa-solid fa-trophy" aria-hidden="true"></i><p><strong>#1 contributor bonus</strong><span>+${COMMUNITY_BOSS_EVENT.championBonusXp.toLocaleString()} XP at 150 wins${claimedRewardIds.has("champion-bonus") ? " · Claimed" : ""}</span></p></div>`;
+            <div class="winter-bonus"><i class="fa-solid fa-trophy" aria-hidden="true"></i><p><strong>#1 contributor bonus</strong><span>+${COMMUNITY_BOSS_EVENT.championBonusXp.toLocaleString()} XP at ${COMMUNITY_BOSS_EVENT.targetWins} wins${claimedRewardIds.has(getCommunityBossChampionReward().id) ? " · Claimed" : ""}</span></p></div>`;
     }
 
     return `
@@ -4984,7 +4993,9 @@ function renderCommunityBossPanel() {
         const wins = Math.min(getCommunityBossWins(), COMMUNITY_BOSS_EVENT.targetWins);
         homeCopy.textContent = isCommunityBossComplete(wins)
             ? "Stethacanthus is protected! Your community rewards are ready."
-            : "Win together to protect Stethacanthus and earn up to 25 Christmas Crates.";
+            : wins >= 150
+                ? `Steven was saved! Keep winning to unlock more content and earn up to ${getCommunityBossTotalRewardCrates()} Christmas Crates.`
+                : `Win together to save Steven and earn up to ${getCommunityBossTotalRewardCrates()} Christmas Crates.`;
         const progress = document.getElementById("home-community-boss-progress");
         if (progress) {
             progress.max = COMMUNITY_BOSS_EVENT.targetWins;
@@ -5125,7 +5136,7 @@ async function claimParticipatingCommunityBossRewards() {
     communityBossClaimInProgress = true;
     renderCommunityBossPanel();
     try {
-        // Once 150 wins is reached, contributions close and the final ranking is fixed.
+        // Once the event target is reached, contributions close and the final ranking is fixed.
         // Firestore breaks equal win totals by document ID, keeping the winner consistent.
         const finalEvent = await eventRef.get({ source: "server" });
         const finalRanking = isCommunityBossComplete(Number(finalEvent.data()?.wins) || 0);
@@ -5144,14 +5155,17 @@ async function claimParticipatingCommunityBossRewards() {
             const rewards = getUnlockedCommunityBossRewards(wins);
             if (isCommunityBossComplete(wins) && championUid === uid) rewards.push(getCommunityBossChampionReward());
             const pending = rewards.filter(reward => !claimed.has(reward.id));
-            if (!pending.length) return { reason: "No new rewards yet. Milestones unlock at 50, 100 and 150 global wins." };
+            if (!pending.length) return { reason: `No new rewards yet. Milestones unlock at ${COMMUNITY_BOSS_EVENT.rewards.map(reward => reward.goal).join(", ")} global wins.` };
             const now = Date.now();
             const inventory = getCrateInventory(profileSnap.exists ? profileSnap.data() : profile);
             const claims = { ...(existing.claims || {}) };
             const crates = { ...(existing.crates || {}) };
             // Credit any rewards already paid under the earlier rank-based event too.
             const previousCrates = Number(crates.christmas ?? (existing.crateId === "christmas" ? existing.crateCount : 0)) || 0;
-            const xp = Math.max(0, rewards.reduce((sum, reward) => sum + reward.xp, 0) - (Number(existing.xp) || 0));
+            const legacyChampionXp = pending.some(reward => reward.id === "champion-bonus-500") && claimed.has("champion-bonus")
+                ? Number(existing.claims?.["champion-bonus"]?.xp) || COMMUNITY_BOSS_EVENT.championBonusXp
+                : 0;
+            const xp = Math.max(0, rewards.reduce((sum, reward) => sum + reward.xp, 0) - (Number(existing.xp) || 0)) + legacyChampionXp;
             const crateCount = Math.max(0, rewards.reduce((sum, reward) => sum + reward.crateCount, 0) - previousCrates);
             for (const reward of pending) {
                 claimed.add(reward.id);

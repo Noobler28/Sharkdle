@@ -70,7 +70,8 @@ function harness(file) {
         vm.runInContext(events + selector + '\nfunction eventAt(date) { return getCurrentCommunityBossEvent(Date.parse(date)); }', eventContext);
         const event = eventContext.eventAt('2026-11-02T12:00:00Z');
         assert.equal(event.id, 'christmas-stethacanthus-2026');
-        assert.equal(event.targetWins, 150); assert.equal(event.crateId, 'christmas');
+        assert.equal(event.targetWins, 500); assert.equal(event.crateId, 'christmas');
+        assert.deepEqual(Array.from(event.rewards, reward => reward.goal), [50, 100, 150, 200, 300, 400, 500]);
         assert(event.endMs > Date.parse('2026-11-02T12:00:00Z'));
         assert.equal(eventContext.eventAt('2026-10-31').season, 'halloween');
         console.log(`${file}: crate lifecycle and Christmas Part 1 checks passed`);
