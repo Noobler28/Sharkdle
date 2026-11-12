@@ -1890,13 +1890,13 @@ const COMMUNITY_BOSS_EVENTS = [
         requiresContribution: true,
         championBonusXp: 10000,
         rewards: [
-            { id: "tier-50", label: "First snowfall", goal: 50, xp: 10000, crateId: "christmas", crateCount: 5, badge: false },
-            { id: "tier-100", label: "Winter surge", goal: 100, xp: 15000, crateId: "christmas", crateCount: 8, badge: false },
+            { id: "tier-50", label: "50 wins", goal: 50, xp: 10000, crateId: "christmas", crateCount: 5, badge: false },
+            { id: "tier-100", label: "100 wins", goal: 100, xp: 15000, crateId: "christmas", crateCount: 8, badge: false },
             { id: "tier-150", label: "Steven was saved!", goal: 150, xp: 25000, crateId: "christmas", crateCount: 12, badge: false },
-            { id: "tier-200", label: "The tide turns", goal: 200, xp: 15000, crateId: "christmas", crateCount: 5, badge: false },
-            { id: "tier-300", label: "Stethacanthus stands strong", goal: 300, xp: 20000, crateId: "christmas", crateCount: 7, badge: false },
-            { id: "tier-400", label: "The ocean holds", goal: 400, xp: 25000, crateId: "christmas", crateCount: 8, badge: false },
-            { id: "tier-500", label: "Stethacanthus protected", goal: 500, xp: 35000, crateId: "christmas", crateCount: 10 }
+            { id: "tier-200", label: "200 wins", goal: 200, xp: 15000, crateId: "christmas", crateCount: 5, badge: false },
+            { id: "tier-300", label: "300 wins", goal: 300, xp: 20000, crateId: "christmas", crateCount: 7, badge: false },
+            { id: "tier-400", label: "400 wins", goal: 400, xp: 25000, crateId: "christmas", crateCount: 8, badge: false },
+            { id: "tier-500", label: "500 wins", goal: 500, xp: 35000, crateId: "christmas", crateCount: 10 }
         ]
     }
 ];
