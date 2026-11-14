@@ -1753,6 +1753,9 @@
             <button id="needs-practice-filter" class="filter-btn" title="Show tracked species that have not reached five wins">Needs Practice</button>
             <select id="library-sort" class="sort-select" aria-label="Sort species">
                 <option value="taxonomy">Sort: Taxonomy</option>
+                <option value="genus">Sort: Genus</option>
+                <option value="family">Sort: Family</option>
+                <option value="order">Sort: Order</option>
                 <option value="az">A-Z</option>
                 <option value="za">Z-A</option>
                 <option value="newest">Newest Discovery</option>
@@ -2500,6 +2503,9 @@
                 }
                 if (currentLibrarySort === 'az') return a.name.localeCompare(b.name);
                 if (currentLibrarySort === 'za') return b.name.localeCompare(a.name);
+                if (currentLibrarySort === 'genus') return a.genus.localeCompare(b.genus) || a.name.localeCompare(b.name);
+                if (currentLibrarySort === 'family') return a.family.localeCompare(b.family) || a.genus.localeCompare(b.genus) || a.name.localeCompare(b.name);
+                if (currentLibrarySort === 'order') return a.order.localeCompare(b.order) || a.family.localeCompare(b.family) || a.genus.localeCompare(b.genus) || a.name.localeCompare(b.name);
                 if (currentLibrarySort === 'newest') return (Number(b.yod) || 0) - (Number(a.yod) || 0) || a.name.localeCompare(b.name);
                 if (currentLibrarySort === 'oldest') return (Number(a.yod) || 0) - (Number(b.yod) || 0) || a.name.localeCompare(b.name);
                 if (currentLibrarySort === 'smallest') return getSizeSortValue(a.size) - getSizeSortValue(b.size) || a.name.localeCompare(b.name);
