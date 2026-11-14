@@ -515,7 +515,8 @@ function formatDuelStatus(status) {
     }
 }
 
-const SEASONAL_CRATE_IDS = ["christmas", "halloween"];
+const SEASONAL_CRATE_IDS = ["christmas", "halloween", "thanksgiving"];
+const EVENT_CRATE_IDS = ["summer", "christmas", "halloween"];
 const SEASONAL_CRATE_CRAFT_COST = 2;
 const SUMMER_CRATE_RETIREMENT_VERSION = 2;
 let activeSeasonalCrateThemeId = "default";
@@ -566,6 +567,16 @@ function getSeasonalCrateMeta(crateId = "event") {
             icon: "fa-ghost",
             spinColor: "#b86cff",
             spinIcon: "\u{1F383}"
+        },
+        thanksgiving: {
+            id: "thanksgiving",
+            shortName: "Thanksgiving",
+            blurb: "Thanksgiving Reef rewards.",
+            visualClass: "thanksgiving",
+            countClass: "thanksgiving",
+            icon: "fa-drumstick-bite",
+            spinColor: "#d99546",
+            spinIcon: "\u{1F983}"
         }
     };
     return meta[crateId] || meta.event;
@@ -597,15 +608,30 @@ function shouldShowSeasonalCratePanel(crateId, profileData = getCurrentProfileDa
 }
 
 function updateSeasonalCratePanels(profileData = getCurrentProfileData()) {
-    const christmasPanel = document.getElementById("christmas-crate-panel");
-    if (christmasPanel) {
-        christmasPanel.style.display = shouldShowSeasonalCratePanel("christmas", profileData) ? "" : "none";
+    const inventory = getCrateInventory(profileData);
+    const summerPanel = document.getElementById("summer-crate-panel");
+    if (summerPanel) {
+        summerPanel.style.display = shouldShowSeasonalCratePanel("summer", profileData) ? "" : "none";
     }
+    const legacyPanel = document.getElementById("legacy-crate-panel");
+    if (legacyPanel) {
+        legacyPanel.style.display = shouldShowSeasonalCratePanel("legacy", profileData) ? "" : "none";
+    }
+    ["summer", "legacy"].forEach(crateId => {
+        const button = document.getElementById(`open-${crateId}-crate-btn`);
+        if (!button) return;
+        const available = Boolean(currentUser) && inventory[crateId] > 0 && !crateOpeningInProgress;
+        button.disabled = !available;
+        button.style.opacity = available ? "1" : "0.5";
+        button.textContent = currentUser
+            ? `Open ${getCrateDefinition(crateId).name}`
+            : "Login Required";
+    });
 
-    const halloweenPanel = document.getElementById("halloween-crate-panel");
-    if (halloweenPanel) {
-        halloweenPanel.style.display = shouldShowSeasonalCratePanel("halloween", profileData) ? "" : "none";
-    }
+    SEASONAL_CRATE_IDS.forEach(crateId => {
+        const panel = document.getElementById(`${crateId}-crate-panel`);
+        if (panel) panel.style.display = shouldShowSeasonalCratePanel(crateId, profileData) ? "" : "none";
+    });
 
     const cratesLayout = document.querySelector("#cratesModal .crates-layout");
     if (cratesLayout) {
@@ -674,6 +700,11 @@ function updateSeasonalCrateCraftingUI(profileData = getCurrentProfileData()) {
             : "Event Theme Inactive";
     }
 
+    const standardRecipe = document.querySelector(".crafting-overhaul-grid");
+    const standardActions = document.querySelector(".crafting-overhaul-actions");
+    if (standardRecipe) standardRecipe.style.display = activeCrateId ? "grid" : "none";
+    if (standardActions) standardActions.style.display = activeCrateId ? "grid" : "none";
+
     const dropsBtn = document.getElementById("craft-seasonal-drops-btn");
     if (dropsBtn) {
         dropsBtn.disabled = !activeCrateId;
@@ -681,13 +712,22 @@ function updateSeasonalCrateCraftingUI(profileData = getCurrentProfileData()) {
         dropsBtn.textContent = activeCrateId ? `View ${outputMeta.shortName} Drops` : "No Event Drops";
     }
 
+    EVENT_CRATE_IDS.forEach(crateId => {
+        const convertButton = document.getElementById(`convert-${crateId}-crates-btn`);
+        if (!convertButton) return;
+        const available = (inventory[crateId] || 0) >= 2 && !seasonalCrateCraftingInProgress && !crateOpeningInProgress;
+        convertButton.disabled = !available;
+        convertButton.style.opacity = available ? "1" : "0.5";
+        convertButton.textContent = `Convert 2 ${getCrateDefinition(crateId).name}s → 1 Cosmetic Crate (${inventory[crateId] || 0} owned)`;
+    });
+
     const openReefBtn = document.getElementById("open-crate-btn");
     if (openReefBtn) {
         openReefBtn.disabled = !canOpenReef;
         openReefBtn.style.opacity = canOpenReef ? "1" : "0.5";
     }
 
-    SEASONAL_CRATE_IDS.forEach(crateId => {
+    ["summer", "legacy", ...SEASONAL_CRATE_IDS].forEach(crateId => {
         const openBtn = document.getElementById(`open-${crateId}-crate-btn`);
         const canOpenSeasonal = (inventory[crateId] || 0) > 0 && !crateOpeningInProgress;
         if (openBtn) {
@@ -760,6 +800,62 @@ window.craftSeasonalCrate = async function() {
         window.SharkdleCorners?.award('explore_crafted_crate');
         saveUserProfileLocally(craftedProfile, { skipRemoteSync: true });
         showNotification(`Crafted 1 ${activeCrateName} from ${SEASONAL_CRATE_CRAFT_COST} Cosmetic Crates!`, "success", 2500);
+    }
+    renderCratesButton();
+    renderCratesModal();
+    updateSeasonalCrateCraftingUI(getCurrentProfileData());
+};
+
+window.convertEventCratesToCosmetic = async function(crateId) {
+    if (!EVENT_CRATE_IDS.includes(crateId)) return;
+    if (!currentUser) {
+        openLoginModal();
+        return;
+    }
+    if (seasonalCrateCraftingInProgress || crateOpeningInProgress) return;
+
+    const crateName = getCrateDefinition(crateId).name;
+    const profileData = getCurrentProfileData();
+    const inventory = getCrateInventory(profileData);
+    if ((inventory[crateId] || 0) < 2) {
+        showNotification(`You need 2 ${crateName}s to trade for 1 Cosmetic Crate.`, "error", 3000);
+        return;
+    }
+
+    seasonalCrateCraftingInProgress = true;
+    updateSeasonalCrateCraftingUI(profileData);
+    const uid = currentUser.uid;
+    let convertedProfile;
+    try {
+        if (!db) throw new Error("Cloud save unavailable");
+        const userRef = db.collection("userStats").doc(uid);
+        convertedProfile = await db.runTransaction(async transaction => {
+            const snapshot = await transaction.get(userRef);
+            const next = mergeProfilesSafely(profileData, snapshot.data() || {}, { preferRemote: true });
+            const nextInventory = getCrateInventory(snapshot.exists ? snapshot.data() : next);
+            if ((nextInventory[crateId] || 0) < 2) throw new Error(`Not enough ${crateName}s`);
+            nextInventory[crateId] -= 2;
+            nextInventory.reef = (nextInventory.reef || 0) + 1;
+            next.crateInventory = normalizeCrateInventory(nextInventory);
+            markCrateInventoryChanged(next);
+            next.lastUpdated = Date.now();
+            transaction.set(userRef, {
+                crateInventory: next.crateInventory,
+                crateInventoryUpdatedAt: getCrateInventoryUpdatedAt(next),
+                lastUpdated: next.lastUpdated
+            }, { merge: true });
+            return next;
+        });
+    } catch (error) {
+        console.warn("Event crate conversion failed:", error);
+        if (currentUser?.uid === uid) showNotification("The conversion could not be saved. No crates were changed.", "error", 3500);
+    } finally {
+        seasonalCrateCraftingInProgress = false;
+    }
+    if (currentUser?.uid !== uid) return;
+    if (convertedProfile) {
+        saveUserProfileLocally(convertedProfile, { skipRemoteSync: true });
+        showNotification(`Converted 2 ${crateName}s into 1 Cosmetic Crate.`, "success", 2800);
     }
     renderCratesButton();
     renderCratesModal();
@@ -1809,7 +1905,9 @@ const sharkPassCardThemes = [
     { id: "north-pole", name: "North Pole", preview: "linear-gradient(180deg, rgba(255, 255, 255, 0.42), rgba(120, 188, 220, 0.18)), url(images/profileThemes/Northpole.png) center center / cover no-repeat" },
     { id: "pumpkin-patch", name: "Goo", preview: "radial-gradient(circle at 12% 16%, rgba(196, 255, 111, 0.24), transparent 23%), radial-gradient(circle at 84% 8%, rgba(255, 130, 35, 0.24), transparent 20%), linear-gradient(155deg, rgba(12, 26, 12, 0.2), rgba(23, 6, 34, 0.72)), url(images/profileThemes/Goo.png) center top / cover no-repeat" },
     { id: "haunted-abyss", name: "Witchlight", preview: "radial-gradient(circle at 76% 12%, rgba(213, 160, 255, 0.26), transparent 22%), radial-gradient(circle at 16% 82%, rgba(159, 255, 103, 0.16), transparent 28%), linear-gradient(160deg, rgba(13, 0, 24, 0.08), rgba(6, 0, 18, 0.64)), url(images/profileThemes/Witchlight.png) center center / cover no-repeat" },
-    { id: "nightmare-reef", name: "Phantom Fog", preview: "radial-gradient(circle at 82% 18%, rgba(245, 238, 218, 0.2), transparent 19%), radial-gradient(circle at 12% 72%, rgba(130, 255, 174, 0.12), transparent 30%), linear-gradient(180deg, rgba(6, 12, 18, 0.08), rgba(2, 4, 10, 0.66)), url(images/profileThemes/PhantomFog.png) center center / cover no-repeat" }
+    { id: "nightmare-reef", name: "Phantom Fog", preview: "radial-gradient(circle at 82% 18%, rgba(245, 238, 218, 0.2), transparent 19%), radial-gradient(circle at 12% 72%, rgba(130, 255, 174, 0.12), transparent 30%), linear-gradient(180deg, rgba(6, 12, 18, 0.08), rgba(2, 4, 10, 0.66)), url(images/profileThemes/PhantomFog.png) center center / cover no-repeat" },
+    { id: "thanksgiving", name: "Thanksgiving", preview: "linear-gradient(180deg, rgba(255, 205, 130, 0.08), rgba(35, 18, 8, 0.36)), url(images/profileThemes/Thanksgiving/Thanksgiving.jpg) center center / cover no-repeat" },
+    { id: "fall", name: "Fall", preview: "linear-gradient(180deg, rgba(255, 195, 108, 0.08), rgba(35, 15, 6, 0.38)), url(images/profileThemes/Thanksgiving/Fall.jpg) center center / cover no-repeat" }
 ];
 
 const CRATE_DROP_CHANCE = 0.5;
@@ -1926,6 +2024,11 @@ const crateDefinitions = {
         name: "Cosmetic Crate",
         icon: "fa-box-open"
     },
+    legacy: {
+        id: "legacy",
+        name: "Cosmetic Crate 1",
+        icon: "fa-box-archive"
+    },
     summer: {
         id: "summer",
         name: "Summer Crate",
@@ -1940,6 +2043,11 @@ const crateDefinitions = {
         id: "halloween",
         name: "Halloween Crate",
         icon: "fa-ghost"
+    },
+    thanksgiving: {
+        id: "thanksgiving",
+        name: "Thanksgiving Crate",
+        icon: "fa-drumstick-bite"
     }
 };
 
@@ -1947,7 +2055,8 @@ const crateAchievementIds = {
     reef: "crate_opened",
     summer: "summer_crate_opened",
     christmas: "christmas_crate_opened",
-    halloween: "halloween_crate_opened"
+    halloween: "halloween_crate_opened",
+    thanksgiving: "thanksgiving_crate_opened"
 };
 
 const crateRarityWeights = {
@@ -2086,6 +2195,18 @@ const halloweenCrateRewardPool = [
     { id: "crate-pfp-cookie", type: "pfp", name: "Cookie Cutter Shark", imagePath: "images/cratePfp/HalloweenPfp/Shark4.png", rarity: "legendary", blurb: "Unlock the Cookie Cutter Shark profile picture." },
     { id: "crate-badge-vampire", type: "badge", badgeId: "Vampire", name: "Vampire", rarity: "legendary", blurb: "Unlock the Vampire badge from the halloween crate." },
     { id: "crate-theme-nightmare-reef", type: "theme", themeId: "nightmare-reef", name: "Phantom Fog", rarity: "legendary", blurb: "Unlock the Phantom Fog profile theme." }
+];
+
+const thanksgivingCrateRewardPool = [
+    { id: "crate-pfp-thanksgiving-bonnethead", type: "pfp", name: "Bonnethead Shark", imagePath: "images/cratePfp/ThanksgivingPfp/BonnetheadShark.png", rarity: "common", blurb: "Unlock the Bonnethead Shark profile picture." },
+    { id: "crate-badge-thanksgiving", type: "badge", badgeId: "thanksgiving", name: "Thanksgiving", emoji: "\u{1F983}", rarity: "common", blurb: "Unlock the Thanksgiving badge." },
+    { id: "crate-pfp-thanksgiving-dusky", type: "pfp", name: "Dusky Shark", imagePath: "images/cratePfp/ThanksgivingPfp/DuskyShark.png", rarity: "rare", blurb: "Unlock the Dusky Shark profile picture." },
+    { id: "crate-theme-thanksgiving", type: "theme", themeId: "thanksgiving", name: "Thanksgiving", rarity: "rare", blurb: "Unlock the Thanksgiving profile theme." },
+    { id: "crate-pfp-thanksgiving-bowmouth", type: "pfp", name: "Bowmouth Guitarfish", imagePath: "images/cratePfp/ThanksgivingPfp/BowmouthGuitarfish.png", rarity: "epic", blurb: "Unlock the Bowmouth Guitarfish profile picture." },
+    { id: "crate-badge-harvest", type: "badge", badgeId: "harvest", name: "Harvest", emoji: "\u{1F342}", rarity: "epic", blurb: "Unlock the Harvest badge." },
+    { id: "crate-theme-fall", type: "theme", themeId: "fall", name: "Fall", rarity: "epic", blurb: "Unlock the Fall profile theme." },
+    { id: "crate-pfp-thanksgiving-thornback", type: "pfp", name: "Thornback Ray", imagePath: "images/cratePfp/ThanksgivingPfp/ThornbackRay.png", rarity: "legendary", blurb: "Unlock the Thornback Ray profile picture." },
+    { id: "crate-badge-feasting", type: "badge", badgeId: "feasting", name: "Feasting", emoji: "\u{1F967}", rarity: "legendary", blurb: "Unlock the Feasting badge." }
 ];
 
 let crateOpeningInProgress = false;
@@ -2934,9 +3055,11 @@ window.unlockProfileBadge = unlockProfileBadge;
 function normalizeCrateInventory(rawInventory) {
     return {
         reef: Math.max(0, Number(rawInventory?.reef) || 0),
+        legacy: Math.max(0, Number(rawInventory?.legacy) || 0),
         summer: Math.max(0, Number(rawInventory?.summer) || 0),
         christmas: Math.max(0, Number(rawInventory?.christmas) || 0),
-        halloween: Math.max(0, Number(rawInventory?.halloween) || 0)
+        halloween: Math.max(0, Number(rawInventory?.halloween) || 0),
+        thanksgiving: Math.max(0, Number(rawInventory?.thanksgiving) || 0)
     };
 }
 
@@ -2962,9 +3085,7 @@ function getCrateInventoryFromProfileOrInventory(source) {
 }
 
 function applyRetiredCrateRules(inventory, summerCratesRetired = false) {
-    const normalized = normalizeCrateInventory(inventory);
-    if (summerCratesRetired) normalized.summer = 0;
-    return normalized;
+    return normalizeCrateInventory(inventory);
 }
 
 function mergeCrateInventory(localProfileOrInventory, remoteProfileOrInventory, summerCratesRetired = false, options = {}) {
@@ -2981,9 +3102,11 @@ function mergeCrateInventory(localProfileOrInventory, remoteProfileOrInventory, 
 
     return {
         reef: Math.max(local.reef, remote.reef),
-        summer: summerCratesRetired ? 0 : Math.max(local.summer, remote.summer),
+        legacy: Math.max(local.legacy, remote.legacy),
+        summer: Math.max(local.summer, remote.summer),
         christmas: Math.max(local.christmas, remote.christmas),
-        halloween: Math.max(local.halloween, remote.halloween)
+        halloween: Math.max(local.halloween, remote.halloween),
+        thanksgiving: Math.max(local.thanksgiving, remote.thanksgiving)
     };
 }
 
@@ -3261,7 +3384,13 @@ function applyStreakShieldOnLoss(profileData, options = {}) {
     return true;
 }
 
+const CRATE_INSTANT_OPEN_SETTING_KEY = "sharkdle_crate_instant_open_v1";
+
 function getCrateInstantOpenEnabled(profileData = getCurrentProfileData()) {
+    try {
+        const savedPreference = localStorage.getItem(CRATE_INSTANT_OPEN_SETTING_KEY);
+        if (savedPreference === "true" || savedPreference === "false") return savedPreference === "true";
+    } catch (error) {}
     return Boolean(profileData?.instantCrateOpen);
 }
 
@@ -3327,12 +3456,16 @@ function getCrateRewardsByRarity(rarity, crateId = "reef") {
 
 function getCratePoolById(crateId) {
     switch (crateId) {
+        case "legacy":
+            return legacyCrate1RewardPool;
         case "summer":
             return summerCrateRewardPool;
         case "christmas":
             return christmasCrateRewardPool;
         case "halloween":
             return halloweenCrateRewardPool;
+        case "thanksgiving":
+            return thanksgivingCrateRewardPool;
         default:
             return crateRewardPool;
     }
@@ -3898,7 +4031,7 @@ window.closeSpinWheelModal = closeSpinWheelModal;
 window.spinDailyWheel = spinDailyWheel;
 
 function getAllCrateRewardPools() {
-    return [crateRewardPool, summerCrateRewardPool, christmasCrateRewardPool, halloweenCrateRewardPool];
+    return [crateRewardPool, summerCrateRewardPool, christmasCrateRewardPool, halloweenCrateRewardPool, thanksgivingCrateRewardPool];
 }
 
 function getAllDisplayCrateRewardPools() {
@@ -5603,7 +5736,7 @@ function getAmbientVolumePercent(settings = readSharkdleSettings()) {
 }
 
 function getAmbientVolumeGain(settings = readSharkdleSettings()) {
-    return (getAmbientVolumePercent(settings) / 100) * 0.05;
+    return (getAmbientVolumePercent(settings) / 100) * 0.18;
 }
 
 function updateAmbientAudioVolume(settings = readSharkdleSettings()) {
@@ -5803,10 +5936,11 @@ function applySharkdleSettings() {
     if (volumeValue) volumeValue.textContent = `${volumePercent}%`;
 
     if (settings.ambientAudio) {
-        startAmbientAudio();
-        updateAmbientAudioVolume(settings);
+        stopAmbientAudio();
+        window.SharkdleBackgroundMusic?.syncPreference();
     } else {
         stopAmbientAudio();
+        window.SharkdleBackgroundMusic?.syncPreference();
     }
 
     if (!settings.funMode) {
@@ -5820,6 +5954,7 @@ function setSharkdleSetting(key, value) {
     const settings = readSharkdleSettings();
     settings[key] = Boolean(value);
     writeSharkdleSettings(settings);
+    window.dispatchEvent(new Event("sharkdle:music-settings-changed"));
     applySharkdleSettings();
     playSfx("toggle");
 }
@@ -5828,7 +5963,10 @@ function setSharkdleAmbientVolume(value) {
     const settings = readSharkdleSettings();
     settings.ambientVolume = getAmbientVolumePercent({ ambientVolume: value });
     writeSharkdleSettings(settings);
-    applySharkdleSettings();
+    window.dispatchEvent(new Event("sharkdle:music-settings-changed"));
+    const volumeValue = document.getElementById("bg-volume-value");
+    if (volumeValue) volumeValue.textContent = `${settings.ambientVolume}%`;
+    window.SharkdleBackgroundMusic?.setVolume(settings.ambientVolume);
 }
 
 function resetSharkdleSettings() {
@@ -6781,7 +6919,7 @@ function renderCratesButton() {
     if (!cratesBtn || !countEl) return;
 
     const inventory = getCrateInventory();
-    const crateCount = inventory.reef + inventory.summer + inventory.christmas + inventory.halloween;
+    const crateCount = Object.values(inventory).reduce((sum, count) => sum + (Number(count) || 0), 0);
     countEl.textContent = crateCount;
     cratesBtn.classList.remove("hidden");
 }
@@ -6804,7 +6942,7 @@ function renderHomeCratesModal() {
         reefBtn.textContent = currentUser ? "Open Crate" : "Login Required";
     }
 
-    SEASONAL_CRATE_IDS.forEach(crateId => {
+    ["summer", "legacy", ...SEASONAL_CRATE_IDS].forEach(crateId => {
         const count = inventory[crateId] || 0;
         const card = document.getElementById(`home-crate-${crateId}-card`);
         const countEl = document.getElementById(`home-crate-${crateId}-count`);
@@ -6821,8 +6959,8 @@ function renderHomeCratesModal() {
     if (craftingBtn) {
         const activeCrateId = getActiveSeasonalCrateId();
         const activeCrateName = activeCrateId ? getCrateDefinition(activeCrateId).name : "Event Crate";
-        craftingBtn.textContent = activeCrateId ? `Craft ${activeCrateName}` : "Crafting";
-        craftingBtn.title = activeCrateId ? "" : "Seasonal crate crafting unlocks while an event theme is active.";
+        craftingBtn.textContent = "Crate Crafting";
+        craftingBtn.title = activeCrateId ? `Craft ${activeCrateName} or trade inactive event crates` : "Open crate crafting options";
     }
 
     if (status) {
@@ -6874,16 +7012,18 @@ function renderCratesModal() {
     const profileData = getCurrentProfileData();
     const inventory = getCrateInventory(profileData);
     const crateCount = inventory.reef;
-    const christmasCrateCount = inventory.christmas || 0;
-    const halloweenCrateCount = inventory.halloween || 0;
+    const summerCountEl = document.getElementById("summer-crate-count-value");
+    if (summerCountEl) summerCountEl.textContent = inventory.summer || 0;
+    const legacyCountEl = document.getElementById("legacy-crate-count-value");
+    if (legacyCountEl) legacyCountEl.textContent = inventory.legacy || 0;
 
     const countValue = document.getElementById("crate-count-value");
     if (countValue) countValue.textContent = crateCount;
 
-    const christmasCountEl = document.getElementById("christmas-crate-count-value");
-    if (christmasCountEl) christmasCountEl.textContent = christmasCrateCount;
-    const halloweenCountEl = document.getElementById("halloween-crate-count-value");
-    if (halloweenCountEl) halloweenCountEl.textContent = halloweenCrateCount;
+    SEASONAL_CRATE_IDS.forEach(crateId => {
+        const countEl = document.getElementById(`${crateId}-crate-count-value`);
+        if (countEl) countEl.textContent = inventory[crateId] || 0;
+    });
 
     renderCratesButton();
     updateSeasonalCratePanels(profileData);
@@ -6906,10 +7046,10 @@ function renderCratesModal() {
         streakShieldCopy.textContent = `\u{1F6E1}\uFE0F Streak Shields: ${streakShieldCount} / 3 (max)`;
     }
 
-    const totalCrateCount = crateCount + christmasCrateCount + halloweenCrateCount;
+    const totalCrateCount = Object.values(inventory).reduce((sum, count) => sum + (Number(count) || 0), 0);
     if (!currentUser) {
         statusCopy.textContent = "Login to open crates, save rewards, and keep cosmetic unlocks synced.";
-        ["open-crate-btn", "open-christmas-crate-btn", "open-halloween-crate-btn", "craft-summer-crate-btn"].forEach(id => {
+        ["open-crate-btn", "open-summer-crate-btn", "open-legacy-crate-btn", ...SEASONAL_CRATE_IDS.map(id => `open-${id}-crate-btn`), "craft-summer-crate-btn"].forEach(id => {
             const btn = document.getElementById(id);
             if (btn) {
                 btn.disabled = true;
@@ -6919,8 +7059,11 @@ function renderCratesModal() {
     } else {
         const labelMap = {
             "open-crate-btn": "Open Cosmetic Crate",
+            "open-summer-crate-btn": "Open Summer Crate",
+            "open-legacy-crate-btn": "Open Cosmetic Crate 1",
             "open-christmas-crate-btn": "Open Christmas Crate",
-            "open-halloween-crate-btn": "Open Halloween Crate"
+            "open-halloween-crate-btn": "Open Halloween Crate",
+            "open-thanksgiving-crate-btn": "Open Thanksgiving Crate"
         };
         Object.entries(labelMap).forEach(([id, label]) => {
             const btn = document.getElementById(id);
@@ -7099,7 +7242,7 @@ async function persistCrateProfileUpdate(profileData) {
     }, { merge: true });
 }
 
-const CRATE_UNBOX_THEME_IDS = ["reef", "summer", "christmas", "halloween"];
+const CRATE_UNBOX_THEME_IDS = ["reef", "summer", "christmas", "halloween", "thanksgiving", "legacy"];
 let activeCrateUnboxId = "reef";
 
 function getCrateDefinition(crateId = "reef") {
@@ -7281,8 +7424,12 @@ function finalizeCrateRewardPresentation(reward, duplicateReward, duplicateXpAwa
 }
 
 function toggleCrateInstantOpen(enabled) {
-    const profileData = getCurrentProfileData();
-    profileData.instantCrateOpen = Boolean(enabled);
+    const profileData = getBestLocalProfile();
+    const preference = Boolean(enabled);
+    try {
+        localStorage.setItem(CRATE_INSTANT_OPEN_SETTING_KEY, String(preference));
+    } catch (error) {}
+    profileData.instantCrateOpen = preference;
     saveUserProfileLocally(profileData);
     syncCrateInstantOpenControls(profileData);
     renderCratesModal();
@@ -7722,7 +7869,10 @@ allBadges.push(
     { id: "Pumpkin", name: "Pumpkin", emoji: "\u{1F383}", description: "A halloween crate badge." },
     { id: "Bat", name: "Bat", emoji: "\u{1F987}", description: "A halloween crate badge." },
     { id: "Ghost", name: "Ghost", emoji: "\u{1F47B}", description: "A halloween crate badge." },
-    { id: "Vampire", name: "Vampire", emoji: "\u{1F9DB}", description: "A halloween crate badge." }
+    { id: "Vampire", name: "Vampire", emoji: "\u{1F9DB}", description: "A halloween crate badge." },
+    { id: "thanksgiving", name: "Thanksgiving", emoji: "\u{1F983}", description: "A Thanksgiving crate badge." },
+    { id: "harvest", name: "Harvest", emoji: "\u{1F342}", description: "A Thanksgiving crate badge." },
+    { id: "feasting", name: "Feasting", emoji: "\u{1F967}", description: "A Thanksgiving crate badge." }
 );
 
 function getUnlockedBadges(uid, profileData = getCurrentProfileData()) {
@@ -9325,6 +9475,7 @@ function scheduleRemoteProfileSync(delayMs = 150) {
 
 function saveUserProfileLocally(profileData, options = {}) {
     if (!profileData || typeof profileData !== "object") return;
+    profileData.instantCrateOpen = getCrateInstantOpenEnabled(profileData);
     const parseStoredProfile = raw => {
         try {
             const parsed = JSON.parse(raw || "{}");
@@ -10965,6 +11116,7 @@ function openAdminAbuseModal() {
     if (!modal) return;
     modal.classList.remove("hidden");
     window.SharkdleFairPlay?.startAdminReview();
+    window.SharkdleAdminAccounts?.start();
     if (typeof refreshAdminAbusePanel === "function") {
         refreshAdminAbusePanel().catch(error => {
             console.warn("Unable to load admin abuse panel state:", error);
@@ -10974,6 +11126,7 @@ function openAdminAbuseModal() {
 
 function closeAdminAbuseModal() {
     window.SharkdleFairPlay?.stopAdminReview();
+    window.SharkdleAdminAccounts?.stop();
     const modal = document.getElementById("adminAbuseModal");
     if (modal) {
         modal.classList.add("hidden");
@@ -11050,6 +11203,17 @@ function inferPfpRarityFromPath(imagePath = "") {
     if (/levelPfp\/Shark16\.png$/i.test(imagePath)) return "legendary";
     if (/levelPfp\/Shark1[2-5]\.png$/i.test(imagePath)) return "epic";
     if (/levelPfp/i.test(imagePath)) return "common";
+    const thanksgivingPfpRarity = {
+        "BonnetheadShark.png": "common",
+        "DuskyShark.png": "rare",
+        "BowmouthGuitarfish.png": "epic",
+        "ThornbackRay.png": "legendary"
+    };
+    const thanksgivingPfpName = imagePath.match(/cratePfp\/ThanksgivingPfp\/([^/]+)$/i)?.[1];
+    if (thanksgivingPfpName) {
+        const matchingName = Object.keys(thanksgivingPfpRarity).find(name => name.toLowerCase() === thanksgivingPfpName.toLowerCase());
+        if (matchingName) return thanksgivingPfpRarity[matchingName];
+    }
     const seasonalMatch = imagePath.match(/cratePfp\/(?:SummerPfp|ChristmasPfp|HalloweenPfp)\/Shark([1-4])\.png$/i);
     if (seasonalMatch) {
         return ({ 1: "common", 2: "rare", 3: "epic", 4: "legendary" })[Number(seasonalMatch[1])] || "common";
@@ -11112,6 +11276,7 @@ function getCrateSourceLabelFromPath(imagePath = "") {
     if (/cratePfp\/SummerPfp/i.test(path)) return "Summer Crate";
     if (/cratePfp\/ChristmasPfp/i.test(path)) return "Christmas Crate";
     if (/cratePfp\/HalloweenPfp/i.test(path)) return "Halloween Crate";
+    if (/cratePfp\/ThanksgivingPfp/i.test(path)) return "Thanksgiving Crate";
     if (/cratePfp\/cosmeticCrate2/i.test(path)) return "Cosmetic Crate 2";
     if (/cratePfp/i.test(path)) return "Cosmetic Crate 1";
     return "Cosmetic Crate";
@@ -11122,11 +11287,13 @@ function getCrateRewardSourceLabel(reward = {}) {
     if (/summer/i.test(id)) return "Summer Crate";
     if (/christmas/i.test(id)) return "Christmas Crate";
     if (/halloween/i.test(id)) return "Halloween Crate";
+    if (/thanksgiving/i.test(id)) return "Thanksgiving Crate";
     if (reward?.imagePath) return getCrateSourceLabelFromPath(reward.imagePath);
     if (legacyCrate1RewardPool.some(crateReward => crateReward.id === id)) return "Cosmetic Crate 1";
     if (summerCrateRewardPool.some(crateReward => crateReward.id === id)) return "Summer Crate";
     if (christmasCrateRewardPool.some(crateReward => crateReward.id === id)) return "Christmas Crate";
     if (halloweenCrateRewardPool.some(crateReward => crateReward.id === id)) return "Halloween Crate";
+    if (thanksgivingCrateRewardPool.some(crateReward => crateReward.id === id)) return "Thanksgiving Crate";
     if (crateRewardPool.some(crateReward => crateReward.id === id)) return "Cosmetic Crate 2";
     return "Cosmetic Crate";
 }
@@ -13599,7 +13766,7 @@ async function forceRedeemCode(code) {
     }
 }
 
-async function addCrates(amount = 1) {
+async function addCrates(amount = 1, crateId = "reef") {
     if (!firebase.auth().currentUser || !isDeveloperUid(firebase.auth().currentUser.uid)) {
         console.log("? Access denied. This command is for developers only.");
         return;
@@ -13610,15 +13777,16 @@ async function addCrates(amount = 1) {
     }
 
     const count = Math.floor(Number(amount));
-    if (!Number.isFinite(count) || count <= 0) {
-        console.log("? Usage: addCrates(3)");
+    const normalizedCrateId = String(crateId || "reef").trim().toLowerCase();
+    if (!Number.isFinite(count) || count <= 0 || !crateDefinitions[normalizedCrateId]) {
+        console.log("? Usage: addCrates(3) or addCrates(3, 'thanksgiving')");
         return;
     }
 
     try {
         const profileData = getCurrentProfileData();
         const inventory = getCrateInventory(profileData);
-        inventory.reef += count;
+        inventory[normalizedCrateId] = (inventory[normalizedCrateId] || 0) + count;
         profileData.crateInventory = normalizeCrateInventory(inventory);
         markCrateInventoryChanged(profileData);
         saveUserProfileLocally(profileData);
@@ -13628,11 +13796,17 @@ async function addCrates(amount = 1) {
         }, { merge: true });
         renderCratesButton();
         renderCratesModal();
-        console.log(`? Added ${count} Cosmetic Crate${count === 1 ? "" : "s"}. Total: ${profileData.crateInventory.reef}`);
+        const crateName = getCrateDefinition(normalizedCrateId).name;
+        console.log(`? Added ${count} ${crateName}${count === 1 ? "" : "s"}. Total: ${profileData.crateInventory[normalizedCrateId]}`);
     } catch (error) {
         console.error("? Error adding crates:", error);
     }
 }
+
+async function addThanksgivingCrates(amount = 1) {
+    return addCrates(amount, "thanksgiving");
+}
+window.addThanksgivingCrates = addThanksgivingCrates;
 
 async function addStreakShields(amount = 1) {
     if (!firebase.auth().currentUser || !isDeveloperUid(firebase.auth().currentUser.uid)) {
@@ -13708,6 +13882,7 @@ function showCommands() {
     console.log("simulateNextLoginDay() - Simulate logging in the day after your last login");
     console.log("skipLoginDay(1) - Simulate missing 1 day and re-run daily login logic");
     console.log("addCrates(3) - Add Cosmetic Crates for testing");
+    console.log("addCrates(3, 'thanksgiving') or addThanksgivingCrates(3) - Add Thanksgiving Crates for testing");
     console.log("addStreakShields(3) - Add Streak Shields for testing");
     console.log("giveDailySpin(5) / giveSpin(5) - Grant daily wheel spins for testing");
     console.log("resetDailySpin() - Reset today's daily spin wheel");
@@ -14202,7 +14377,8 @@ function renderProfileInventoryUI(profileData = getCurrentProfileData()) {
             { id: "reef", label: "Cosmetic Crate", icon: "fa-box-open", category: "crate", rarity: "item", source: "Cosmetic Crate" },
             { id: "summer", label: "Summer Crate", icon: "fa-umbrella-beach", category: "crate", rarity: "item", source: "Summer Crate" },
             { id: "christmas", label: "Christmas Crate", icon: "fa-snowflake", category: "crate", rarity: "item", source: "Christmas Crate" },
-            { id: "halloween", label: "Halloween Crate", icon: "fa-ghost", category: "crate", rarity: "item", source: "Halloween Crate" }
+            { id: "halloween", label: "Halloween Crate", icon: "fa-ghost", category: "crate", rarity: "item", source: "Halloween Crate" },
+            { id: "thanksgiving", label: "Thanksgiving Crate", icon: "fa-drumstick-bite", category: "crate", rarity: "item", source: "Thanksgiving Crate" }
         ];
         const items = [...crates, { id: "shield", label: "Streak Shields", icon: "fa-shield-halved", category: "item", rarity: "epic", source: "Utility", count: shieldCount }];
         crateGrid.innerHTML = sortCosmeticsForLocker(items

@@ -26,7 +26,7 @@ content="Play Sharkdle, the daily shark guessing game. Guess shark species from 
 <meta name="twitter:description" content="Play Sharkdle, the daily shark guessing game.">
 <meta name="twitter:image" content="https://sharkdle.online/images/favicon.png">
 
-<link rel="stylesheet" href="style.css?v=20261108-dropdowns">
+<link rel="stylesheet" href="style.css?v=20261114-thanksgiving-crate">
 <link rel="stylesheet" href="christmas-event.css?v=20261102-present-doors">
 
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800;900&family=Barlow:wght@400;500;600;700&family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
@@ -36,6 +36,7 @@ content="Play Sharkdle, the daily shark guessing game. Guess shark species from 
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-functions-compat.js"></script>
 
 <script src="sharks.js"></script>
 
@@ -1279,6 +1280,23 @@ content="Play Sharkdle, the daily shark guessing game. Guess shark species from 
 </section>
 
 <section class="picker-section admin-abuse-section">
+<h3>All Accounts</h3>
+<p>Every registered account, including unverified accounts and players with no saved stats. Blacklisting hides scores from all leaderboards; players can still play and save.</p>
+<div class="admin-abuse-row">
+<input id="admin-accounts-search" class="admin-abuse-input" type="search" placeholder="Search username or UID" aria-label="Search accounts" oninput="SharkdleAdminAccounts.search()">
+<select id="admin-accounts-filter" class="admin-abuse-select" aria-label="Filter accounts" onchange="SharkdleAdminAccounts.search()"><option value="all">All accounts</option><option value="blacklisted">Blacklisted accounts</option></select>
+<button type="button" class="admin-abuse-btn" onclick="SharkdleAdminAccounts.start()">Refresh accounts</button>
+</div>
+<div id="admin-accounts-status" class="admin-abuse-status" role="status">Open the panel to load all registered accounts.</div>
+<div id="admin-accounts-list"></div>
+<div class="admin-abuse-row">
+<button id="admin-accounts-prev" type="button" class="admin-abuse-btn" onclick="SharkdleAdminAccounts.move(-1)" disabled>Previous</button>
+<span id="admin-accounts-page"></span>
+<button id="admin-accounts-next" type="button" class="admin-abuse-btn" onclick="SharkdleAdminAccounts.move(1)" disabled>Next</button>
+</div>
+</section>
+
+<section class="picker-section admin-abuse-section">
 <h3>Player Compensation</h3>
 <div class="admin-abuse-row">
 <input id="admin-player-comp-target" type="text" class="admin-abuse-input admin-player-target-input" placeholder="UID or exact username">
@@ -1389,6 +1407,52 @@ content="Play Sharkdle, the daily shark guessing game. Guess shark species from 
 </div>
 </article>
 
+<article id="home-crate-summer-card" class="home-crate-card summer" style="display:none;">
+<div class="home-crate-topline">
+<div>
+<h3>Summer Crate <span>Archive</span></h3>
+<p>Summer Reef rewards.</p>
+</div>
+<div class="home-crate-count summer"><span id="home-crate-summer-count">0</span> ready</div>
+</div>
+<div class="home-crate-showcase">
+<div class="home-crate-visual summer"><i class="fa-solid fa-umbrella-beach"></i></div>
+<div class="home-crate-odds">
+<div><span>Common</span><strong>58%</strong></div>
+<div><span>Rare</span><strong>28%</strong></div>
+<div><span>Epic</span><strong>10%</strong></div>
+<div><span>Legendary</span><strong>4%</strong></div>
+</div>
+</div>
+<div class="home-crate-actions">
+<button id="home-open-summer-crate-btn" type="button" onclick="openHomeCrate('summer')">Open Crate</button>
+<button type="button" onclick="openCrateDropsModal('summer')">View Drops</button>
+</div>
+</article>
+
+<article id="home-crate-legacy-card" class="home-crate-card legacy" style="display:none;">
+<div class="home-crate-topline">
+<div>
+<h3>Cosmetic Crate 1 <span>Classic</span></h3>
+<p>Original cosmetic drops.</p>
+</div>
+<div class="home-crate-count legacy"><span id="home-crate-legacy-count">0</span> ready</div>
+</div>
+<div class="home-crate-showcase">
+<div class="home-crate-visual legacy"><i class="fa-solid fa-box-archive"></i></div>
+<div class="home-crate-odds">
+<div><span>Common</span><strong>58%</strong></div>
+<div><span>Rare</span><strong>28%</strong></div>
+<div><span>Epic</span><strong>10%</strong></div>
+<div><span>Legendary</span><strong>4%</strong></div>
+</div>
+</div>
+<div class="home-crate-actions">
+<button id="home-open-legacy-crate-btn" type="button" onclick="openHomeCrate('legacy')">Open Crate</button>
+<button type="button" onclick="openCrateDropsModal('legacy')">View Drops</button>
+</div>
+</article>
+
 <article id="home-crate-christmas-card" class="home-crate-card christmas" style="display:none;">
 <div class="home-crate-topline">
 <div>
@@ -1434,10 +1498,16 @@ content="Play Sharkdle, the daily shark guessing game. Guess shark species from 
 <button type="button" onclick="openCrateDropsModal('halloween')">View Drops</button>
 </div>
 </article>
+
+<article id="home-crate-thanksgiving-card" class="home-crate-card thanksgiving" style="display:none;">
+<div class="home-crate-topline"><div><h3>Thanksgiving Crate <span>Limited</span></h3><p>Thanksgiving Reef rewards.</p></div><div class="home-crate-count thanksgiving"><span id="home-crate-thanksgiving-count">0</span> ready</div></div>
+<div class="home-crate-showcase"><div class="home-crate-visual thanksgiving"><i class="fa-solid fa-drumstick-bite"></i></div><div class="home-crate-odds"><div><span>Common</span><strong>58%</strong></div><div><span>Rare</span><strong>28%</strong></div><div><span>Epic</span><strong>10%</strong></div><div><span>Legendary</span><strong>4%</strong></div></div></div>
+<div class="home-crate-actions"><button id="home-open-thanksgiving-crate-btn" type="button" onclick="openHomeCrate('thanksgiving')">Open Crate</button><button type="button" onclick="openCrateDropsModal('thanksgiving')">View Drops</button></div>
+</article>
 </div>
 
 <div class="home-crates-actions">
-<button id="home-crates-crafting-btn" type="button" onclick="openCraftingModalFromHome()">Crafting</button>
+<button id="home-crates-crafting-btn" type="button" onclick="openCraftingModalFromHome()">Crate Crafting</button>
 <button type="button" onclick="closeHomeCratesModal()">Close</button>
 </div>
 <p id="home-crates-status" class="home-crates-status">Win games for a chance to earn crates.</p>
@@ -1451,10 +1521,10 @@ content="Play Sharkdle, the daily shark guessing game. Guess shark species from 
     <div class="crafting-overhaul-hero">
       <div>
         <div class="new-modal-kicker">Workshop</div>
-        <h2>Crafting</h2>
-        <p>Convert spare Cosmetic Crates into limited crates in a dedicated modern workshop.</p>
+        <h2>Crate Crafting</h2>
+        <p>2 Cosmetic Crates make 1 active Event Crate.</p>
       </div>
-      <div class="crafting-v2-badge"><i class="fa-solid fa-wand-magic-sparkles"></i> 2 → 1</div>
+      <div class="crafting-v2-badge"><i class="fa-solid fa-wand-magic-sparkles"></i> 2:1 Craft · 2:1 Trade Back</div>
     </div>
     <div class="crafting-overhaul-grid">
       <article class="crafting-overhaul-card input"><div class="crate-crafting-icon cosmetic"><i class="fa-solid fa-box-open"></i></div><span>Input</span><h3>2 Cosmetic Crates</h3><p><strong id="craft-reef-owned">0</strong> currently owned</p></article>
@@ -1466,6 +1536,14 @@ content="Play Sharkdle, the daily shark guessing game. Guess shark species from 
       <button id="craft-seasonal-drops-btn" type="button" class="secondary-btn" onclick="openActiveSeasonalCrateDropsModal()">View Event Drops</button>
       <button type="button" class="secondary-btn" onclick="closeCraftingModal()">Close</button>
     </div>
+    <section class="crafting-overhaul-reverse" aria-labelledby="reverse-event-crates-title">
+      <div><h3 id="reverse-event-crates-title">Trade Event Crates Back</h3><p>Convert any 2 event crates into 1 Cosmetic Crate.</p></div>
+      <div class="crafting-overhaul-reverse-actions">
+        <button id="convert-summer-crates-btn" type="button" class="secondary-btn" onclick="convertEventCratesToCosmetic('summer')">Convert 2 Summer Crates</button>
+        <button id="convert-christmas-crates-btn" type="button" class="secondary-btn" onclick="convertEventCratesToCosmetic('christmas')">Convert 2 Christmas Crates</button>
+        <button id="convert-halloween-crates-btn" type="button" class="secondary-btn" onclick="convertEventCratesToCosmetic('halloween')">Convert 2 Halloween Crates</button>
+      </div>
+    </section>
   </div>
 </div>
 
@@ -1506,6 +1584,16 @@ content="Play Sharkdle, the daily shark guessing game. Guess shark species from 
      <div class="crate-action-row">
        <button id="open-crate-btn" class="primary-btn crate-open-btn" onclick="openCrate('reef')">Open Cosmetic Crate</button>
      </div>
+   </section>
+   <section id="summer-crate-panel" class="picker-section crate-inventory-panel">
+     <div class="crate-panel-topline"><div><h3>Summer Crate</h3></div><button class="crate-inspect-btn" onclick="openCrateDropsModal('summer')" aria-label="View possible drops"><i class="fa-solid fa-umbrella-beach"></i></button><div class="crate-count-badge"><span id="summer-crate-count-value">0</span> ready</div></div>
+     <div class="crate-showcase"><div class="crate-visual"><i class="fa-solid fa-umbrella-beach"></i></div><div class="crate-odds"><div class="crate-odds-row"><span>Common</span><strong>58%</strong></div><div class="crate-odds-row"><span>Rare</span><strong>28%</strong></div><div class="crate-odds-row"><span>Epic</span><strong>10%</strong></div><div class="crate-odds-row"><span>Legendary</span><strong>4%</strong></div></div></div>
+     <div class="crate-action-row"><button id="open-summer-crate-btn" class="primary-btn crate-open-btn" onclick="openCrate('summer')">Open Summer Crate</button></div>
+   </section>
+   <section id="legacy-crate-panel" class="picker-section crate-inventory-panel">
+     <div class="crate-panel-topline"><div><h3>Cosmetic Crate 1 <span style="font-size:14px;color:#f2cf88;">(Classic)</span></h3></div><button class="crate-inspect-btn" onclick="openCrateDropsModal('legacy')" aria-label="View possible drops"><i class="fa-solid fa-box-archive"></i></button><div class="crate-count-badge"><span id="legacy-crate-count-value">0</span> ready</div></div>
+     <div class="crate-showcase"><div class="crate-visual"><i class="fa-solid fa-box-archive"></i></div><div class="crate-odds"><div class="crate-odds-row"><span>Common</span><strong>58%</strong></div><div class="crate-odds-row"><span>Rare</span><strong>28%</strong></div><div class="crate-odds-row"><span>Epic</span><strong>10%</strong></div><div class="crate-odds-row"><span>Legendary</span><strong>4%</strong></div></div></div>
+     <div class="crate-action-row"><button id="open-legacy-crate-btn" class="primary-btn crate-open-btn" onclick="openCrate('legacy')">Open Cosmetic Crate 1</button></div>
    </section>
     <!-- Christmas Crate Panel: Only show if christmas theme is active -->
     <section id="christmas-crate-panel" class="picker-section crate-inventory-panel" style="display:none;">
@@ -1558,6 +1646,11 @@ content="Play Sharkdle, the daily shark guessing game. Guess shark species from 
       <div class="crate-action-row">
         <button id="open-halloween-crate-btn" class="primary-btn crate-open-btn" onclick="openCrate('halloween')">Open Halloween Crate</button>
       </div>
+     </section>
+    <section id="thanksgiving-crate-panel" class="picker-section crate-inventory-panel thanksgiving" style="display:none;">
+      <div class="crate-panel-topline"><div><h3>Thanksgiving Crate <span style="font-size:14px;color:#f2cf88;">(Limited!)</span></h3></div><button class="crate-inspect-btn" onclick="openCrateDropsModal('thanksgiving')" aria-label="View possible drops"><i class="fa-solid fa-drumstick-bite"></i></button><div class="crate-count-badge thanksgiving"><span id="thanksgiving-crate-count-value">0</span> ready</div></div>
+      <div class="crate-showcase"><div class="crate-visual thanksgiving"><i class="fa-solid fa-drumstick-bite"></i></div><div class="crate-odds"><div class="crate-odds-row"><span>Common</span><strong>58%</strong></div><div class="crate-odds-row"><span>Rare</span><strong>28%</strong></div><div class="crate-odds-row"><span>Epic</span><strong>10%</strong></div><div class="crate-odds-row"><span>Legendary</span><strong>4%</strong></div></div></div>
+      <div class="crate-action-row"><button id="open-thanksgiving-crate-btn" class="primary-btn crate-open-btn" onclick="openCrate('thanksgiving')">Open Thanksgiving Crate</button></div>
      </section>
    </div>
   <div class="crate-settings-row">
@@ -1616,7 +1709,9 @@ content="Play Sharkdle, the daily shark guessing game. Guess shark species from 
 
 <link rel="stylesheet" href="fair-play.css?v=20261019">
 <script src="fair-play.js?v=20261019"></script>
-<script src="script.js?v=20261108-daily-players"></script>
+<script src="leaderboard-blacklist.js?v=20261106-admin-accounts"></script>
+<script src="script.js?v=20261114-thanksgiving-crate"></script>
+<script src="admin-accounts.js?v=20261106"></script>
 <script src="developer-tools.js?v=1"></script>
 <script src="christmas-event.js?v=20261102-present-doors"></script>
 <script src="global-broadcast.js"></script>

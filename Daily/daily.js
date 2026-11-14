@@ -460,8 +460,8 @@ function getMysteryProfileFilterState() {
         state.yearEarliest = targetShark.yod || "";
         state.yearLatest = targetShark.yod || "";
     } else {
-        state.yearEarliest = yearRange.lower ?? "";
-        state.yearLatest = yearRange.upper ?? "";
+        state.yearEarliest = yearRange.lower === null ? "" : yearRange.lower + 1;
+        state.yearLatest = yearRange.upper === null ? "" : yearRange.upper - 1;
     }
 
     return state;
@@ -1553,8 +1553,10 @@ win.innerHTML = `
 <button onclick="document.getElementById('win-screen').style.display='none'; document.getElementById('show-results-btn').style.display='block';" style="position: absolute; top: 8px; right: 8px; width: 32px; height: 32px; background: rgba(0,0,0,0.3); border: none; border-radius: 50%; color: inherit; font-size: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.2s; font-weight: bold;">×</button>
 <h2 style="margin-top: 0; font-size: 32px; margin-bottom: 20px;">${headerText}</h2>
 <p style="font-size: 18px; margin: 10px 0; color: inherit;">The ${speciesMode.animal} was <b>${targetShark.name}</b></p>
+<p style="margin: 8px 0 14px;"><a href="${getSharkdleWikipediaUrl(targetShark.name)}" target="_blank" rel="noopener noreferrer" style="color: inherit; font-weight: 700; text-decoration: underline;">Learn more about the ${speciesMode.animal} on Wikipedia ↗</a></p>
 <p style="font-size: 16px; margin: 10px 0; opacity: 0.9;">Discovered in ${targetShark.yod}</p>
 <p style="font-size: 16px; margin: 10px 0; opacity: 0.9;">You took ${guessesTaken} guess${guessesTaken !== 1 ? 'es' : ''}.</p>
+${!firebase.auth().currentUser ? `<aside style="margin: 18px 0; padding: 14px 16px; border-radius: 10px; background: rgba(0,151,167,0.18); border: 1px solid rgba(0,188,212,0.4);"><strong>Sharkdle is better with an account 🦈</strong><p style="margin: 6px 0 10px; font-size: 14px;">Create an account to save your progress and unlock more features.</p><a href="index.html" style="color: inherit; font-weight: 700;">Create a free account →</a></aside>` : ''}
 ${!alreadyCompleted ? `<div style="margin: 20px 0; padding: 15px; background: rgba(255,255,255,0.2); border-radius: 8px;"><p style="font-size: 28px; font-weight: bold; margin: 0; color: inherit;">+${xpGained} XP</p>${pearlsGained ? `<p style="font-size: 20px; font-weight: bold; margin: 8px 0 0; color: #8ff5ef;">+${pearlsGained} Pearls</p>` : ''}</div>` : ''}
 <div style="margin: 20px 0; padding: 12px; background: rgba(255,0,0,0.1); border-radius: 6px; font-size: 14px; text-align: center; color: #ff4444; font-weight: 600;">Next puzzle: <span id="win-countdown">--:--:--</span></div>
 ${getDailyVariantSwitcherHtml()}

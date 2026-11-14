@@ -1801,6 +1801,13 @@
             <span class="year-filter-sep">to</span>
             <input type="number" id="year-latest" class="year-filter-input" placeholder="e.g. 2011" min="0">
         </div></div>
+        <div style="width:100%"><div class="filter-group">
+            <label for="taxonomy-filter">Taxonomy:</label>
+            <select id="taxonomy-filter" class="sort-select" aria-label="Filter taxonomy">
+                <option value="">All taxonomy</option><option value="genus">Genus</option><option value="family">Family</option><option value="order">Order</option>
+            </select>
+            <select id="taxonomy-value-filter" class="sort-select" aria-label="Choose taxonomy value" disabled><option value="">Choose a group</option></select>
+        </div></div>
     </div>
     
     <div class="results-toolbar">
@@ -1810,6 +1817,7 @@
             <div id="recently-viewed-count" class="library-mini-count">Recently Viewed: 0</div>
         </div>
         <div class="results-note">Tap a card to flip it and inspect the species details.</div>
+        <button id="flip-all-cards" class="filter-btn" type="button" aria-pressed="false">Flip All</button>
     </div>
     <div id="orders-container"></div>
     <div id="no-results" class="no-results" style="display:none;">No species found matching your search.</div>
@@ -1817,6 +1825,7 @@
     <!-- Shark list -->
     <script src="sharks.js"></script>
     <script src="rays.js"></script>
+    <script src="wiki-species-titles.js?v=1"></script>
     <script src="Library/library.js"></script>
     <script src="species-tracker.js"></script>
     <script>
@@ -1858,7 +1867,9 @@
         let activeFilters = {
             size: null,
             depth: null,
-            speciesType: null
+            speciesType: null,
+            taxonomy: null,
+            taxonomyValue: null
         };
         window.activeFilters = activeFilters;
 
@@ -2264,6 +2275,7 @@
             if (activeFilters.speciesType) count += 1;
             if (activeFilters.size) count += 1;
             if (activeFilters.depth) count += 1;
+            if (activeFilters.taxonomyValue) count += 1;
             if (document.getElementById('year-earliest')?.value) count += 1;
             if (document.getElementById('year-latest')?.value) count += 1;
             if (document.getElementById('shark-search')?.value.trim()) count += 1;
@@ -2297,6 +2309,8 @@
             activeFilters.size = null;
             activeFilters.depth = null;
             activeFilters.speciesType = null;
+            activeFilters.taxonomy = null;
+            activeFilters.taxonomyValue = null;
 
             const searchInput = document.getElementById('shark-search');
             const yearEarliest = document.getElementById('year-earliest');
@@ -2305,6 +2319,8 @@
             const recentlyViewedBtn = document.getElementById('recently-viewed-filter');
             const needsPracticeBtn = document.getElementById('needs-practice-filter');
             const sortSelect = document.getElementById('library-sort');
+            const taxonomyFilter = document.getElementById('taxonomy-filter');
+            const taxonomyValueFilter = document.getElementById('taxonomy-value-filter');
 
             if (searchInput) searchInput.value = '';
             if (yearEarliest) yearEarliest.value = '';
@@ -2316,6 +2332,10 @@
             if (needsPracticeBtn) needsPracticeBtn.classList.remove('active');
             if (recentlyViewedBtn) recentlyViewedBtn.classList.remove('active');
             if (sortSelect) sortSelect.value = currentLibrarySort;
+            if (taxonomyFilter) taxonomyFilter.value = '';
+            if (taxonomyValueFilter) { taxonomyValueFilter.innerHTML = '<option value="">Choose a group</option>'; taxonomyValueFilter.disabled = true; }
+            const flipAllButton = document.getElementById('flip-all-cards');
+            if (flipAllButton) { flipAllButton.textContent = 'Flip All'; flipAllButton.setAttribute('aria-pressed', 'false'); }
 
             document.querySelectorAll('.filter-option').forEach(btn => btn.classList.remove('active'));
             filteredSharks = [...allSharks];
@@ -2433,6 +2453,10 @@
             }
             if (activeFilters.speciesType) {
                 baseSharks = baseSharks.filter(shark => shark.archiveType === activeFilters.speciesType);
+            }
+            if (activeFilters.taxonomy && activeFilters.taxonomyValue) {
+                const field = activeFilters.taxonomy;
+                baseSharks = baseSharks.filter(shark => String(shark[field] || '') === activeFilters.taxonomyValue);
             }
             // Apply size filter
             if (activeFilters.size) {
@@ -2611,6 +2635,7 @@
                                 <div class="stat"><strong>Size:</strong> ${getSizeThreshold(shark.size)}</div>
                                 <div class="stat"><strong>Depth:</strong> ${getDepthDisplay(shark.depth)}</div>
                                 <div class="stat"><strong>Year of Discovery:</strong> ${shark.yod}</div>
+                                <div class="stat"><a href="${getSharkdleWikipediaUrl(shark.name)}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()" style="color: inherit; font-weight: 700; text-decoration: underline;">Read more on Wikipedia ↗</a></div>
                                 ${getSpeciesHistoryDetailsHtml(shark.name)}
                             </div>
                         </div>
@@ -2640,6 +2665,7 @@
                     });
                     card.addEventListener('keypress', (e) => {
                         if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
                             card.classList.toggle('flipped');
                             if (card.classList.contains('flipped')) recordRecentlyViewedSpecies(shark.name);
                         }
@@ -2736,6 +2762,34 @@
             if (clearFiltersBtn) {
                 clearFiltersBtn.addEventListener('click', resetAllFilters);
             }
+
+            const taxonomyFilter = document.getElementById('taxonomy-filter');
+            const taxonomyValueFilter = document.getElementById('taxonomy-value-filter');
+            taxonomyFilter?.addEventListener('change', () => {
+                const field = taxonomyFilter.value;
+                activeFilters.taxonomy = field || null;
+                const values = field ? [...new Set(allSharks.map(shark => String(shark[field] || '').trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b)) : [];
+                taxonomyValueFilter.innerHTML = '<option value="">Choose a group</option>' + values.map(value => `<option>${value}</option>`).join('');
+                taxonomyValueFilter.disabled = !field;
+                taxonomyValueFilter.value = '';
+                activeFilters.taxonomyValue = null;
+                filterSharks(document.getElementById('shark-search')?.value || '');
+                updateSpeciesCount();
+            });
+            taxonomyValueFilter?.addEventListener('change', () => {
+                activeFilters.taxonomyValue = taxonomyValueFilter.value || null;
+                filterSharks(document.getElementById('shark-search')?.value || '');
+                updateSpeciesCount();
+            });
+
+            const flipAllButton = document.getElementById('flip-all-cards');
+            flipAllButton?.addEventListener('click', () => {
+                const cards = [...document.querySelectorAll('#orders-container .shark-card')];
+                const shouldFlip = cards.some(card => !card.classList.contains('flipped'));
+                cards.forEach(card => card.classList.toggle('flipped', shouldFlip));
+                flipAllButton.textContent = shouldFlip ? 'Unflip All' : 'Flip All';
+                flipAllButton.setAttribute('aria-pressed', String(shouldFlip));
+            });
             
             // Setup size and depth filter listeners
             const filterOptions = document.querySelectorAll('.filter-option');

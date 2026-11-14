@@ -429,6 +429,14 @@ const achievementDefinitions = {
             type: 'special'
         },
         {
+            id: 'thanksgiving_crate_opened',
+            name: 'First Thanksgiving Unboxing',
+            description: 'Open a Thanksgiving Crate',
+            icon: '🦃',
+            points: 40,
+            type: 'special'
+        },
+        {
             id: 'streak_shield_used',
             name: 'Saviour',
             description: 'Lose a game but have a streak shield protect your win streak',
@@ -843,6 +851,9 @@ async function retroactivelyUnlockAchievements(profileData, unlockedAchievements
     }
     if (typeof window.getOpenedCrateCount === 'function' && window.getOpenedCrateCount(profileData, 'christmas') >= 1 && !unlockedAchievements.includes('christmas_crate_opened')) {
         unlockedAchievements.push('christmas_crate_opened');
+    }
+    if (typeof window.getOpenedCrateCount === 'function' && window.getOpenedCrateCount(profileData, 'thanksgiving') >= 1 && !unlockedAchievements.includes('thanksgiving_crate_opened')) {
+        unlockedAchievements.push('thanksgiving_crate_opened');
     }
     const secretState = getSecretCommandState();
     if ((secretState.prestigeCount || 0) >= 1 && !unlockedAchievements.includes('secret_prestige_1')) {

@@ -43,6 +43,21 @@
     const MUSIC_INDEX_KEY = "sharkdleBackgroundMusicIndex";
     const MUSIC_STARTED_KEY = "__sharkdleBackgroundMusicStarted";
     const MUSIC_VOLUME = 0.18;
+    const MUSIC_SETTINGS_KEY = "sharkdle_qol_settings_v2";
+    let backgroundMusicAudio = null;
+
+    function readBackgroundMusicSettings() {
+        try {
+            const settings = JSON.parse(window.localStorage.getItem(MUSIC_SETTINGS_KEY) || "{}");
+            return settings && typeof settings === "object" ? settings : {};
+        } catch (error) {
+            return {};
+        }
+    }
+
+    function isBackgroundMusicEnabled() {
+        return readBackgroundMusicSettings().ambientAudio === true;
+    }
 
     function loadScript(src) {
         return new Promise((resolve, reject) => {
@@ -462,16 +477,22 @@
     }
 
     function startBackgroundMusic() {
-        if (window[MUSIC_STARTED_KEY] || !BACKGROUND_MUSIC_TRACKS.length) return;
+        if (window[MUSIC_STARTED_KEY] || !BACKGROUND_MUSIC_TRACKS.length || !isBackgroundMusicEnabled()) return;
         window[MUSIC_STARTED_KEY] = true;
 
         let trackIndex = getStoredMusicIndex() % BACKGROUND_MUSIC_TRACKS.length;
         const audio = new Audio();
         audio.preload = "auto";
-        audio.volume = MUSIC_VOLUME;
+        const storedVolume = Number(readBackgroundMusicSettings().ambientVolume);
+        audio.volume = Number.isFinite(storedVolume) ? Math.min(1, Math.max(0, storedVolume / 100)) : MUSIC_VOLUME;
         audio.loop = false;
+        backgroundMusicAudio = audio;
 
         function bindMusicUnlock() {
+            if (!isBackgroundMusicEnabled()) {
+                window[MUSIC_STARTED_KEY] = false;
+                return;
+            }
             const unlock = () => {
                 document.removeEventListener("pointerdown", unlock);
                 document.removeEventListener("keydown", unlock);
@@ -482,6 +503,11 @@
         }
 
         function playTrack() {
+            if (!isBackgroundMusicEnabled()) {
+                audio.pause();
+                window[MUSIC_STARTED_KEY] = false;
+                return;
+            }
             audio.src = BACKGROUND_MUSIC_TRACKS[trackIndex];
             storeNextMusicIndex(trackIndex + 1);
             trackIndex = (trackIndex + 1) % BACKGROUND_MUSIC_TRACKS.length;
@@ -495,6 +521,32 @@
         audio.addEventListener("error", playTrack);
         playTrack();
     }
+
+    function syncBackgroundMusicPreference() {
+        const enabled = isBackgroundMusicEnabled();
+        if (!enabled) {
+            if (backgroundMusicAudio) {
+                backgroundMusicAudio.pause();
+                backgroundMusicAudio.currentTime = 0;
+            }
+            window[MUSIC_STARTED_KEY] = false;
+            return;
+        }
+        if (!window[MUSIC_STARTED_KEY]) startBackgroundMusic();
+    }
+
+    window.SharkdleBackgroundMusic = {
+        syncPreference: syncBackgroundMusicPreference,
+        setVolume(percent) {
+            const numericPercent = Number(percent);
+            if (backgroundMusicAudio && Number.isFinite(numericPercent)) backgroundMusicAudio.volume = Math.min(1, Math.max(0, numericPercent / 100));
+        }
+    };
+
+    window.addEventListener("storage", event => {
+        if (event.key === MUSIC_SETTINGS_KEY) syncBackgroundMusicPreference();
+    });
+    window.addEventListener("sharkdle:music-settings-changed", syncBackgroundMusicPreference);
 
     function ensureBannerElement() {
         let banner = document.getElementById(BANNER_ID);
@@ -946,7 +998,7 @@
 
     function boot() {
         injectStyles();
-        startBackgroundMusic();
+        syncBackgroundMusicPreference();
         applyGlobalTheme(readCachedThemeId());
         currentGlobalMessagePayload = readCachedMessagePayload();
         renderBanner(currentGlobalMessagePayload);
