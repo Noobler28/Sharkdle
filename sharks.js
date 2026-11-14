@@ -51,8 +51,9 @@ const sharks = [
             { "name": "American Pocket Shark", "family": "Dalatiidae", "order": "Squaliformes", "genus": "Mollisquama", "size": "Tiny","depth": "Mesopelagic", "yod": 2019, "OneIn": 1300},
             { "name": "Small-eye Pygmy Shark", "family": "Dalatiidae", "order": "Squaliformes", "genus": "Squaliolus", "size": "Tiny","depth": "Mesopelagic", "yod": 1959, "OneIn": 140000},
             { "name": "Spined Pygmy Shark", "family": "Dalatiidae", "order": "Squaliformes", "genus": "Squaliolus", "size": "Tiny","depth": "Mesopelagic", "yod": 1912, "OneIn": 13},
-            // Echinorhinidae | Squaliformes | Echinorhinus | 2 species
+            // Echinorhinidae | Squaliformes | Echinorhinus | 3 species
             { "name": "Bramble Shark", "family": "Echinorhinidae", "order": "Squaliformes", "genus": "Echinorhinus", "size": "Large","depth": "Mesopelagic", "yod": 1788, "OneIn": 30},
+            { "name": "Indian Bramble Shark", "scientificName": "Echinorhinus roinee", "family": "Echinorhinidae", "order": "Squaliformes", "genus": "Echinorhinus", "size": "Large","depth": "Mesopelagic", "yod": 2026, "OneIn": 600000060},
             { "name": "Prickly Shark", "family": "Echinorhinidae", "order": "Squaliformes", "genus": "Echinorhinus", "size": "Large","depth": "Mesopelagic", "yod": 1928, "OneIn": 14},
             // Etmopteridae | Squaliformes | Aculeola | 1 species
             { "name": "Hook-tooth Dogfish", "family": "Etmopteridae", "order": "Squaliformes", "genus": "Aculeola", "size": "Small","depth": "Mesopelagic", "yod": 1959, "OneIn": 52000000},
