@@ -3657,6 +3657,223 @@ body.home-v3-page > .home-shell {
     animation: homeV3Swim 9s ease-in-out infinite;
 }
 
+.home-v3-hero .thanksgiving-hero-icon {
+    display: block;
+    width: clamp(72px, 9vw, 126px);
+    aspect-ratio: 1;
+    object-fit: contain;
+    filter: drop-shadow(0 6px 16px rgba(0, 14, 24, .48));
+}
+
+.home-v3-hero .thanksgiving-hero-icon-button {
+    position: absolute;
+    z-index: 100;
+    right: 24px;
+    bottom: 22px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    cursor: pointer;
+    pointer-events: none;
+}
+
+.home-v3-hero .thanksgiving-hero-icon-button { pointer-events: auto; }
+
+.thanksgiving-event-modal-content {
+    text-align: center !important;
+    max-height: min(90vh, 900px);
+    overflow-y: auto;
+}
+
+.thanksgiving-event-modal-image {
+    display: block;
+    width: min(58vw, 280px);
+    max-height: 44vh;
+    object-fit: contain;
+    margin: 0 auto;
+    filter: drop-shadow(0 12px 30px rgba(0, 0, 0, .35));
+}
+
+.thanksgiving-event-preview {
+    margin-top: 12px;
+    text-align: left;
+}
+
+.thanksgiving-event-preview-heading {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 12px;
+    color: #f4e6ce;
+}
+
+.thanksgiving-event-preview-heading h3,
+.thanksgiving-event-quests-title {
+    margin: 0;
+    color: #fff4df;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 22px;
+    font-weight: 800;
+}
+
+.thanksgiving-event-preview-heading span {
+    color: #ffd48c;
+    font-size: 13px;
+    font-weight: 800;
+    white-space: nowrap;
+}
+
+.thanksgiving-event-progress {
+    height: 14px;
+    margin-top: 10px;
+    overflow: hidden;
+    border: 1px solid rgba(255, 219, 160, .35);
+    border-radius: 999px;
+    background: rgba(12, 23, 30, .8);
+}
+
+.thanksgiving-event-progress span {
+    display: block;
+    width: 0;
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, #f1a94f, #f7d686);
+    transition: width .45s ease;
+}
+
+.thanksgiving-event-milestones {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 8px;
+    margin-top: 7px;
+    color: rgba(255, 239, 212, .78);
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.thanksgiving-event-milestones > span {
+    display: grid;
+    justify-items: center;
+    gap: 3px;
+    min-width: 0;
+    padding: 8px 5px;
+    border: 1px solid rgba(255, 222, 167, .12);
+    border-radius: 12px;
+    background: rgba(255, 255, 255, .045);
+    text-align: center;
+}
+
+.thanksgiving-event-milestones > span > b { font-size: 18px; }
+.thanksgiving-event-milestones > span > small { color: rgba(255, 239, 212, .68); font-size: 10px; line-height: 1.15; }
+.thanksgiving-event-milestones > span > strong { color: #ffd48c; font-size: 11px; }
+.thanksgiving-event-milestones button {
+    min-width: 68px;
+    padding: 6px 10px;
+    border: 1px solid rgba(255, 222, 167, .2);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, .06);
+    color: rgba(255, 239, 212, .58);
+    font-size: 10px;
+    font-weight: 800;
+    cursor: pointer;
+}
+.thanksgiving-event-milestones button.ready { border-color: rgba(255, 212, 140, .65); background: #ffd48c; color: #38210d; }
+.thanksgiving-event-milestones button:disabled { cursor: default; opacity: .65; }
+
+.thanksgiving-event-milestones > .thanksgiving-final-reward {
+    display: grid !important;
+    justify-items: center;
+}
+
+.thanksgiving-final-reward img {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 1px solid rgba(255, 212, 140, .55);
+}
+
+.thanksgiving-event-quests-title { margin-top: 20px; }
+
+.thanksgiving-event-quests-dropdown {
+    margin-top: 14px;
+    border: 1px solid rgba(255, 222, 167, .16);
+    border-radius: 14px;
+    background: rgba(255, 255, 255, .04);
+}
+
+.thanksgiving-event-quests-dropdown summary {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    padding: 13px 15px;
+    color: #fff4df;
+    cursor: pointer;
+    font-weight: 800;
+    list-style: none;
+}
+
+.thanksgiving-event-quests-dropdown summary::-webkit-details-marker { display: none; }
+.thanksgiving-event-quests-dropdown summary::after { content: "+"; color: #ffd48c; font-size: 20px; }
+.thanksgiving-event-quests-dropdown[open] summary::after { content: "−"; }
+.thanksgiving-event-quests-dropdown summary span + span { color: rgba(255, 239, 212, .6); font-size: 12px; font-weight: 600; }
+.thanksgiving-event-quests-dropdown .thanksgiving-event-quest-list { padding: 0 10px 10px; }
+
+.thanksgiving-event-quest-list {
+    display: grid;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.thanksgiving-event-quest-list article {
+    display: grid;
+    grid-template-columns: 36px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border: 1px solid rgba(255, 222, 167, .12);
+    border-radius: 14px;
+    background: rgba(255, 255, 255, .045);
+}
+
+.thanksgiving-event-quest-list article.completed {
+    border-color: rgba(115, 235, 151, .5);
+    background: linear-gradient(100deg, rgba(35, 133, 75, .28), rgba(33, 115, 71, .12));
+    box-shadow: inset 3px 0 0 #6de396;
+}
+
+.thanksgiving-event-quest-list article.completed .thanksgiving-quest-icon {
+    background: rgba(86, 220, 132, .2);
+}
+
+.thanksgiving-event-quest-list article.completed strong,
+.thanksgiving-event-quest-list article.completed b {
+    color: #9af0b4;
+}
+
+.thanksgiving-quest-icon {
+    display: grid;
+    width: 34px;
+    height: 34px;
+    place-items: center;
+    border-radius: 11px;
+    background: rgba(224, 156, 73, .15);
+    font-size: 18px;
+}
+
+.thanksgiving-event-quest-list article div { display: grid; gap: 2px; }
+.thanksgiving-event-quest-list article strong { color: #fff8ec; font-size: 14px; }
+.thanksgiving-event-quest-list article small { color: rgba(226, 235, 238, .66); font-size: 12px; }
+.thanksgiving-event-quest-list article b { color: #ffd48c; font-size: 13px; white-space: nowrap; }
+
+.thanksgiving-event-preview-note {
+    margin: 12px 0 0 !important;
+    color: rgba(220, 233, 238, .58) !important;
+    font-size: 11px !important;
+    text-align: center;
+}
+
 @keyframes homeV3BgDrift {
     0%, 100% { transform: translateY(-55%) translateX(0); }
     50% { transform: translateY(-58%) translateX(-30px); }

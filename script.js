@@ -3174,6 +3174,7 @@ const PEARL_SHOP_ITEMS = {
     "pearl-boost": { price: 500, label: "2x Pearls Boost" },
     "cosmetic-crate": { price: 500, label: "Cosmetic Crate" },
     "event-crate": { price: 750, label: "Event Crate" },
+    "thanksgiving-crate": { price: 250, label: "Thanksgiving Crate" },
     "season-xp": { price: 3000, label: "Season 2x XP" }
 };
 const SOCIAL_REWARD_TASKS = [
@@ -10335,8 +10336,8 @@ function grantPearlShopItem(profileData, itemId) {
         return { success: true, message: "2x Pearls Boost activated for 1 hour." };
     }
 
-    if (itemId === "cosmetic-crate" || itemId === "event-crate") {
-        const crateId = itemId === "event-crate" ? getPearlShopEventCrateId() : "reef";
+    if (itemId === "cosmetic-crate" || itemId === "event-crate" || itemId === "thanksgiving-crate") {
+        const crateId = itemId === "event-crate" ? getPearlShopEventCrateId() : itemId === "thanksgiving-crate" ? "thanksgiving" : "reef";
         if (!crateId) return { success: false, message: "Event crates are only available while an event theme is active." };
         const inventory = getCrateInventory(profileData);
         inventory[crateId] = (inventory[crateId] || 0) + 1;

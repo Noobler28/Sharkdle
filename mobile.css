@@ -196,6 +196,25 @@ textarea {
         gap: 12px;
     }
 
+    body.home-v3-page .home-v3-hero .thanksgiving-hero-icon {
+        right: 14px;
+        bottom: 14px;
+        width: clamp(64px, 18vw, 92px);
+    }
+
+    body.home-v3-page .home-v3-hero .thanksgiving-hero-icon-button {
+        right: 14px;
+        bottom: 14px;
+    }
+
+    .thanksgiving-event-modal-image {
+        width: min(64vw, 240px);
+    }
+
+    .thanksgiving-event-milestones {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
     body.home-v3-page .home-v3-eyebrow {
         width: fit-content;
         font-size: 10px;

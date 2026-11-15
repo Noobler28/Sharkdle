@@ -927,6 +927,10 @@ function getAreaIndex(areaId) {
 
 function completeArea(areaId) {
     const areaState = getAreaState(areaId);
+    if (!areaState.completed) {
+        window.recordThanksgivingEventActivity?.("storyChapter", 1);
+        window.recordThanksgivingEventActivity?.("storyExplorer", 1);
+    }
     areaState.completed = true;
     areaState.bossCompleted = true;
     awardStoryAchievement(areaAchievementMap[areaId]);

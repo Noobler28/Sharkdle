@@ -946,6 +946,12 @@ async function saveGameState() {
 async function initializeGame() {
     await loadGameState()
 
+    // Recover today's saved win if event progress was unavailable when the win first occurred.
+    if (gameCompleted && gameWon) {
+        window.recordThanksgivingEventActivity?.("dailyWin", 1);
+        if (guesses.length <= 5) window.recordThanksgivingEventActivity?.("dailyFast", 1);
+    }
+
     if (!gameCompleted && attempts === 0) {
         gameCompleted = true;
         gameWon = guesses.some(guess => guess.shark.name === targetShark.name);
@@ -1334,6 +1340,8 @@ if(shark.name === targetShark.name){
 
     gameCompleted = true
     gameWon = true
+    window.recordThanksgivingEventActivity?.("dailyWin", 1);
+    if (guessesTaken <= 5) window.recordThanksgivingEventActivity?.("dailyFast", 1);
     saveGameState()
     recordDailySpeciesHistory(true)
     updateCategoryRevealPanel()

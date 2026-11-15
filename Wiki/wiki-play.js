@@ -991,6 +991,12 @@
       "Only while an eligible event is enabled."
     ],
     [
+      "Thanksgiving Crate",
+      "250",
+      "One unopened Thanksgiving crate",
+      "Only while the Thanksgiving event is enabled."
+    ],
+    [
       "Message in a Bottle Pack",
       "300",
       "5 Barnacle + 3 Red Sea + 1 Seafoam + 1 Celestial Bottle",
@@ -1966,7 +1972,7 @@
   add('pearl-shop', 'Progression', 'Pearl Shop: complete item guide',
     'Every item in the Pearl Shop, its price, what it does and the limits that matter before buying it.', [
       table('Shop inventory', 'Prices are in pearls. Seasonal availability and ownership caps still apply even when you can afford an item.', ['Item', 'Price', 'What you receive', 'Limit / condition'], reference.shop),
-      section('Standard and event crates', 'A standard Cosmetic Crate costs 500 pearls and opens the current standard reward pool. An Event Crate costs 750 pearls and becomes the eligible active seasonal crate. If no event crate is active, that purchase is unavailable rather than silently giving a standard crate.', 'Check the crate reward list before spending. Buying a crate supplies an unopened crate, not a chosen cosmetic. Duplicate cosmetic outcomes follow the ordinary XP conversion rules, and the shared Legendary guarantee controls rarity rather than guaranteeing a new item.'),
+      section('Standard and event crates', 'A standard Cosmetic Crate costs 500 pearls and opens the current standard reward pool. An Event Crate costs 750 pearls and becomes the eligible active seasonal crate. The Thanksgiving Crate is a separate 250-pearl purchase while the Thanksgiving event is enabled. If the matching event is inactive, that purchase is unavailable.', 'Check the crate reward list before spending. Buying a crate supplies an unopened crate, not a chosen cosmetic. Duplicate cosmetic outcomes follow the ordinary XP conversion rules, and the shared Legendary guarantee controls rarity rather than guaranteeing a new item.'),
       section('Timed boosts', 'The 2x Pearls Boost lasts one hour. Buying another while it is active extends the timer by another hour rather than making the multiplier four times. The timer is real elapsed time, so buy it when you intend to play eligible winning rounds.', 'Season 2x XP is attached to the current season and can only be owned once for that season. It is different from a one-hour pearl boost. Applicable XP rewards use it together with any active event multiplier; it is not a permanent promise of boosted XP in every future season.'),
       section('Fixed utility and collection purchases', 'A Streak Shield costs 250 pearls, and you can hold at most three. It activates automatically when a Daily or Infinite loss would break an existing win streak. Buying a shield at the cap is not another cosmetic unlock.', 'The 300-pearl bottle pack contains five Barnacle, three Red Sea, one Seafoam and one Celestial Bottle. Opening those bottles is a separate step in Lost Treasures. The pack supplies opportunities to draw collection cards, rather than choosing ten missing cards for you.'),
       section('Before pressing Buy', 'Check your balance, the item’s remaining timer or ownership state, and the relevant event availability. A shop label such as Maxed, Owned or Inactive explains why a button may be unavailable even when the price is affordable.', 'The shop requires sign-in so purchases can be associated with the account. Let a purchase finish, then inspect the relevant inventory or timer. The crate guide, Lost Treasures guide and shield page explain how to use what you have bought.')
@@ -2078,7 +2084,7 @@
     achievements: [['Catalogue size', '60 achievements'], ['Groups', '8'], ['Claimed points', 'Achievement score; not a spendable currency'], ['Claim reward', 'Listed XP and any named cosmetic'], ['State flow', 'Locked → unlocked → claimed']],
     'achievement-catalogue': [['Achievement definitions', '60'], ['Categories', '8'], ['Rarity scale', 'Common, Rare, Epic, Legendary, Mythic'], ['Cosmetic rewards', 'Only where explicitly named'], ['Claim required', 'Yes']],
     pearls: [['Currency', 'Normal profile pearls'], ['Base eligible win award', '50'], ['Boosted eligible win award', '100 while 2x Pearls is active'], ['Primary uses', 'Pearl Shop and category reveals'], ['Interchangeable with RNG coins', 'No']],
-    'pearl-shop': [['Currency', 'Pearls'], ['Listed items', '6'], ['Sign-in', 'Required'], ['Shield cap', '3 held'], ['Event Crate', 'Requires an active eligible seasonal event']],
+    'pearl-shop': [['Currency', 'Pearls'], ['Listed items', '7'], ['Sign-in', 'Required'], ['Shield cap', '3 held'], ['Thanksgiving Crate', '250 pearls while Thanksgiving is enabled']],
     'daily-login': [['Cycle', '7 days, repeating'], ['Clock', 'Local calendar day'], ['Consecutive days', 'Advance the login cycle'], ['Missed day', 'Resets the sequence to day 1'], ['Current day 7 portrait', 'Barndoor Skate — Rare']],
     'streak-shields': [['Type', 'Consumable utility item'], ['Pearl Shop price', '250 pearls'], ['Holding cap', '3'], ['Activation', 'Automatic on a supported loss with an existing win streak'], ['Effect', 'Preserves the streak; the result is still a loss']],
     codes: [['Active listed codes', '6'], ['Inactive codes', 'UPDATE1 · UPDATE2 · SORRY'], ['Claim limit', 'Once per active code per account'], ['Sign-in', 'Required'], ['Letter case', 'Not significant'], ['Historical cosmetic codes', 'TESTER and ANNIVERSARY2026 are not currently redeemable']],

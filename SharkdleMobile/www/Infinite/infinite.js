@@ -923,6 +923,8 @@ function makeGuess() {
         }
 
         updateStats(true, guessesTaken);
+        window.recordThanksgivingEventActivity?.("infinitePlay", 1);
+        window.recordThanksgivingEventActivity?.("infiniteWin", 1);
         recordInfiniteSpeciesHistory(true);
         window.SharkdleCorners?.win('infinite', speciesMode.key === 'rays', guessesTaken);
 
@@ -970,6 +972,7 @@ function makeGuess() {
         createBubbles();
 
     } else if (attempts === 0) {
+        window.recordThanksgivingEventActivity?.("infinitePlay", 1);
         updateStats(false);
         recordInfiniteSpeciesHistory(false);
 

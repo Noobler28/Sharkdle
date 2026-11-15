@@ -3728,6 +3728,7 @@ let rollPool = [];
         setRngLeaderboardStatus("Loading RNG leaderboard...");
 
         try {
+            await window.SharkdleLeaderboardBlacklist?.connect(rngLeaderboardDb);
             if (syncFirst) {
                 await syncRngLeaderboardEntry();
             }

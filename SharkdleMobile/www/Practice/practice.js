@@ -241,6 +241,7 @@ function makeGuess() {
         document.getElementById("guessBtn").disabled = true;
 
         window.SharkdleCorners?.win('practice', speciesMode.key === 'rays', guessesMade);
+        window.recordThanksgivingEventActivity?.("practiceSolve", 1);
         // Display win screen - no XP or stats
         winLoseScreen.innerHTML = `
             <button onclick="document.getElementById('win-lose-screen').style.display='none'; document.getElementById('show-results-btn').style.display='block';" style="position: absolute; top: 8px; right: 8px; width: 32px; height: 32px; background: rgba(0,0,0,0.3); border: none; border-radius: 50%; color: inherit; font-size: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.2s; font-weight: bold;">×</button>
