@@ -103,7 +103,7 @@ async function refreshThanksgivingEventState() {
 async function recordThanksgivingEventActivity(activity, amount = 1, source = "") {
     const authUser = await waitForThanksgivingAuthUser();
     const uid = authUser?.uid;
-    const value = Math.max(1, Math.min(1000, Math.floor(Number(amount) || 1)));
+    const value = Math.max(1, Math.min(100000, Math.floor(Number(amount) || 1)));
     const firestore = getThanksgivingDb();
     if (!uid || !firestore || typeof firebase === "undefined" || !firebase.firestore) {
         if (typeof showNotification === "function") showNotification("Log in to save Thanksgiving quest progress.", "info", 4000);
@@ -123,9 +123,14 @@ async function recordThanksgivingEventActivity(activity, amount = 1, source = ""
             const state = profile.thanksgivingEvent && typeof profile.thanksgivingEvent === "object"
                 ? JSON.parse(JSON.stringify(profile.thanksgivingEvent)) : { points: 0, progress: {}, claimedQuests: [], claimedRewards: [], games: [] };
             state.progress ||= {}; state.claimedQuests ||= []; state.claimedRewards ||= []; state.games ||= [];
-            const quest = THANKSGIVING_EVENT_QUESTS.find(item => item.activity === activity);
-            if (!quest) return;
-            state.progress[quest.id] = Math.min(quest.goal, (Number(state.progress[quest.id]) || 0) + value);
+            const activities = activity === "rngRoll" || activity === "rngRare" || activity === "rngIndex" ? ["rngRoll", "rngRare", "rngIndex"] : [activity];
+            const changedQuests = activities.map(name => THANKSGIVING_EVENT_QUESTS.find(item => item.activity === name)).filter(Boolean);
+            if (!changedQuests.length) return;
+            changedQuests.forEach(item => {
+                const increment = item.activity === activity ? value : 0;
+                state.progress[item.id] = Math.min(item.goal, (Number(state.progress[item.id]) || 0) + increment);
+            });
+            const quest = changedQuests.find(item => item.activity === activity);
             const awardQuest = item => {
                 if (state.progress[item.id] < item.goal || state.claimedQuests.includes(item.id)) return;
                 state.claimedQuests.push(item.id); state.points = (Number(state.points) || 0) + item.points;
@@ -133,7 +138,7 @@ async function recordThanksgivingEventActivity(activity, amount = 1, source = ""
                 const game = item.game;
                 if (game && game !== "cross" && !state.games.includes(game)) state.games.push(game);
             };
-            awardQuest(quest);
+            changedQuests.forEach(awardQuest);
             if (activity === "storyComplete") {
                 const completedStoryQuests = ["story-chapter", "story-explorer"].filter(id => !state.claimedQuests.includes(id));
                 for (const id of completedStoryQuests) {
@@ -143,7 +148,7 @@ async function recordThanksgivingEventActivity(activity, amount = 1, source = ""
                 }
                 state.games = Array.from(new Set([...state.games, "story"]));
             }
-            if (quest.id !== "cross-game") {
+            if (changedQuests.some(item => item.id !== "cross-game")) {
                 state.progress["cross-game"] = state.games.length;
                 awardQuest(THANKSGIVING_EVENT_QUESTS.find(item => item.id === "cross-game"));
             }

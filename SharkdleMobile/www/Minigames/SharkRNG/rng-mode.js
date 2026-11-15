@@ -4070,6 +4070,13 @@ let rollPool = [];
 
     function updateRngDailyQuestsForRolls(rolls = []) {
         const list = Array.isArray(rolls) ? rolls : [rolls];
+        if (list.length && window.recordThanksgivingEventActivity) {
+            window.recordThanksgivingEventActivity("rngRoll", list.length);
+            const rareRolls = list.filter(rolled => (Number(rolled?.oneIn) || 0) >= 1_000_000).length;
+            const newFinds = list.filter(rolled => rolled?.isNewFind).length;
+            if (rareRolls) window.recordThanksgivingEventActivity("rngRare", rareRolls);
+            if (newFinds) window.recordThanksgivingEventActivity("rngIndex", newFinds);
+        }
         return list.reduce((changed, rolled) => updateRngDailyQuestsForRoll(rolled) || changed, false);
     }
 
