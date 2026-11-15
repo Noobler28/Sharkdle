@@ -52,6 +52,7 @@ const THANKSGIVING_EVENT_QUESTS = [
     { id: "story-complete", activity: "storyComplete", goal: 1, points: 0, game: "story", hidden: true },
     { id: "cross-game", activity: "anyQuest", goal: 3, points: 15, game: "cross" }
 ];
+const thanksgivingActivityQueues = new Map();
 const THANKSGIVING_EVENT_MILESTONES = [
     { points: 25, crates: 1 }, { points: 50, crates: 2 }, { points: 75, crates: 3 },
     { points: 100, crates: 4 }, { points: 125, crates: 5 }, { points: 150, crates: 6 },
@@ -106,9 +107,34 @@ async function recordThanksgivingEventActivity(activity, amount = 1, source = ""
     const value = Math.max(1, Math.min(100000, Math.floor(Number(amount) || 1)));
     const firestore = getThanksgivingDb();
     if (!uid || !firestore || typeof firebase === "undefined" || !firebase.firestore) {
-        if (typeof showNotification === "function") showNotification("Log in to save Thanksgiving quest progress.", "info", 4000);
+        const message = !authUser?.uid ? "Log in to save Thanksgiving quest progress." : "Verify your email to save Thanksgiving quest progress.";
+        if (typeof showNotification === "function") showNotification(message, "info", 4500);
         return { success: false, reason: "login-required" };
     }
+    const existingQueue = thanksgivingActivityQueues.get(uid);
+    if (activity === "rngRoll" && existingQueue) {
+        const queued = (existingQueue.rngRoll || 0) + value;
+        if (queued <= 100000) {
+            existingQueue.rngRoll = queued;
+            return existingQueue.promise;
+        }
+    }
+    const previous = existingQueue?.promise || Promise.resolve();
+    const entry = { promise: null, rngRoll: activity === "rngRoll" ? value : 0 };
+    const operation = previous.catch(() => {}).then(() => {
+        const pendingRolls = entry.rngRoll;
+        entry.rngRoll = 0;
+        return saveThanksgivingEventActivity({ activity, value: activity === "rngRoll" ? pendingRolls : value, uid, firestore });
+    });
+    entry.promise = operation;
+    thanksgivingActivityQueues.set(uid, entry);
+    try {
+        return await operation;
+    } finally {
+        if (thanksgivingActivityQueues.get(uid) === entry) thanksgivingActivityQueues.delete(uid);
+    }
+}
+async function saveThanksgivingEventActivity({ activity, value, uid, firestore }) {
     const ref = firestore.collection("userStats").doc(uid);
     try {
         let completed = [];
@@ -168,9 +194,24 @@ async function recordThanksgivingEventActivity(activity, amount = 1, source = ""
         return { success: true, completed, points: gainedPoints };
     } catch (error) {
         console.warn("Thanksgiving quest progress could not save:", error);
-        if (currentUser?.uid === uid) showNotification("Thanksgiving quest progress could not save. Please try again.", "error", 3500);
-        return { success: false, reason: "save-failed" };
+        const message = getThanksgivingSaveErrorMessage(error);
+        if (getThanksgivingAuthUser()?.uid === uid) showNotification(message, "error", 5500);
+        return { success: false, reason: error?.code || "save-failed" };
     }
+}
+function getThanksgivingSaveErrorMessage(error) {
+    const code = String(error?.code || "").toLowerCase();
+    if (!getThanksgivingAuthUser()?.emailVerified) return "Verify your email to save Thanksgiving quest progress.";
+    if (code.includes("permission-denied") || code.includes("unauthenticated")) {
+        return "Thanksgiving progress was denied by Firestore. Please log out and back in, then try again.";
+    }
+    if (code.includes("unavailable") || code.includes("deadline-exceeded") || code.includes("network")) {
+        return "Connection interrupted while saving Thanksgiving progress. Your next activity will retry.";
+    }
+    if (code.includes("aborted") || code.includes("failed-precondition")) {
+        return "Thanksgiving progress changed at the same time elsewhere. Please try again.";
+    }
+    return "Thanksgiving quest progress could not save. Please try again.";
 }
 window.recordThanksgivingEventActivity = recordThanksgivingEventActivity;
 
