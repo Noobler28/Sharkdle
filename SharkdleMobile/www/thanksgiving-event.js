@@ -44,7 +44,7 @@ const THANKSGIVING_EVENT_QUESTS = [
     { id: "infinite-play", activity: "infinitePlay", goal: 3, points: 20, game: "infinite" },
     { id: "infinite-wins", activity: "infiniteWin", goal: 3, points: 30, game: "infinite" },
     { id: "practice-solve", activity: "practiceSolve", goal: 5, points: 15, game: "practice" },
-    { id: "rng-rolls", activity: "rngRoll", goal: 1000, points: 25, game: "rng" },
+    { id: "rng-rolls", activity: "rngRoll", goal: 100, points: 25, game: "rng" },
     { id: "rng-rare", activity: "rngRare", goal: 1, points: 40, game: "rng" },
     { id: "rng-index", activity: "rngIndex", goal: 3, points: 15, game: "rng" },
     { id: "story-chapter", activity: "storyChapter", goal: 1, points: 15, game: "story" },
