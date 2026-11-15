@@ -1714,5 +1714,47 @@ if (window.location.search.includes('openModal=true')) {
     </div>
 </div>
 
+<div id="thanksgivingEventModal" class="modal hidden thanksgiving-event-modal" role="dialog" aria-modal="true" aria-labelledby="thanksgiving-event-modal-title" onclick="if(event.target===this) closeThanksgivingEventModal()">
+    <div class="modal-content thanksgiving-event-modal-content new-site-modal">
+        <button type="button" class="modal-x-btn" onclick="closeThanksgivingEventModal()" aria-label="Close Thanksgiving event">×</button>
+        <div class="new-modal-heading centered">
+            <span class="new-modal-kicker">Thanksgiving Reef</span>
+            <h2 id="thanksgiving-event-modal-title">Thanksgiving Event</h2>
+            <p>Complete quests, earn Thanksgiving Points, and fill your personal reward track.</p>
+        </div>
+        <img src="images/ThanksGivingEvent/Icon.png" alt="Thanksgiving event artwork" class="thanksgiving-event-modal-image">
+        <section class="thanksgiving-event-preview" aria-label="Thanksgiving event preview">
+            <div class="thanksgiving-event-preview-heading"><h3>Your Reward Track</h3><span>0 / 250 points</span></div>
+            <div class="thanksgiving-event-progress" role="progressbar" aria-label="Your Thanksgiving reward progress" aria-valuemin="0" aria-valuemax="250" aria-valuenow="0"><span></span></div>
+            <div class="thanksgiving-event-milestones">
+                <span><b>🧰 × 1</b><small>1 Thanksgiving Crate</small><strong>25 pts</strong><button data-thanksgiving-reward="25" onclick="claimThanksgivingEventReward(25)">Locked</button></span>
+                <span><b>🧰 × 2</b><small>2 Thanksgiving Crates</small><strong>50 pts</strong><button data-thanksgiving-reward="50" onclick="claimThanksgivingEventReward(50)">Locked</button></span>
+                <span><b>🧰 × 3</b><small>3 Thanksgiving Crates</small><strong>75 pts</strong><button data-thanksgiving-reward="75" onclick="claimThanksgivingEventReward(75)">Locked</button></span>
+                <span><b>🧰 × 4</b><small>4 Thanksgiving Crates</small><strong>100 pts</strong><button data-thanksgiving-reward="100" onclick="claimThanksgivingEventReward(100)">Locked</button></span>
+                <span><b>🧰 × 5</b><small>5 Thanksgiving Crates</small><strong>125 pts</strong><button data-thanksgiving-reward="125" onclick="claimThanksgivingEventReward(125)">Locked</button></span>
+                <span><b>🧰 × 6</b><small>6 Thanksgiving Crates</small><strong>150 pts</strong><button data-thanksgiving-reward="150" onclick="claimThanksgivingEventReward(150)">Locked</button></span>
+                <span><b>🧰 × 7</b><small>7 Thanksgiving Crates</small><strong>175 pts</strong><button data-thanksgiving-reward="175" onclick="claimThanksgivingEventReward(175)">Locked</button></span>
+                <span class="thanksgiving-final-reward"><img src="images/ThanksGivingEvent/BrambleShark.png" alt=""><small>Bramble Shark Icon + 10 Crates</small><strong>250 pts</strong><button data-thanksgiving-reward="250" onclick="claimThanksgivingEventReward(250)">Locked</button></span>
+            </div>
+            <details class="thanksgiving-event-quests-dropdown">
+                <summary>Thanksgiving Quests</summary>
+                <div class="thanksgiving-event-quest-list">
+                <article><span class="thanksgiving-quest-icon">🗓️</span><div><strong>Daily Challenger</strong><small>Win a Daily game</small></div><b>+25 pts</b></article>
+                <article><span class="thanksgiving-quest-icon">🎯</span><div><strong>Sharp Fin</strong><small>Win Daily in 5 guesses or fewer</small></div><b>+25 pts</b></article>
+                <article><span class="thanksgiving-quest-icon">🌊</span><div><strong>Reef Explorer</strong><small>Play 3 Infinite rounds</small></div><b>+20 pts</b></article>
+                <article><span class="thanksgiving-quest-icon">🐟</span><div><strong>Endless Hunter</strong><small>Win 3 Infinite rounds</small></div><b>+30 pts</b></article>
+                <article><span class="thanksgiving-quest-icon">🧠</span><div><strong>Practice Makes Perfect</strong><small>Identify 5 sharks in Practice</small></div><b>+15 pts</b></article>
+                <article><span class="thanksgiving-quest-icon">🎰</span><div><strong>Lucky Current</strong><small>Roll 100 times in Shark RNG</small></div><b>+25 pts</b></article>
+                <article><span class="thanksgiving-quest-icon">✨</span><div><strong>Million-to-One Find</strong><small>Roll a shark with odds of 1-in-1,000,000 or rarer in Shark RNG</small></div><b>+40 pts</b></article>
+                <article><span class="thanksgiving-quest-icon">📖</span><div><strong>Reef Researcher</strong><small>Discover 3 new entries in the Shark RNG index</small></div><b>+15 pts</b></article>
+                <article><span class="thanksgiving-quest-icon">🗺️</span><div><strong>Story Seeker</strong><small>Complete a Story chapter</small></div><b>+15 pts</b></article>
+                <article><span class="thanksgiving-quest-icon">🧭</span><div><strong>Story Explorer</strong><small>Complete 3 Story chapters</small></div><b>+25 pts</b></article>
+                <article><span class="thanksgiving-quest-icon">🏅</span><div><strong>Across the Reef</strong><small>Complete quests in 3 different games</small></div><b>+15 pts</b></article>
+                </div>
+            </details>
+        </section>
+    </div>
+</div>
+
 </body>
 </html>
