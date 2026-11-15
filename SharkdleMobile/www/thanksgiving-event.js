@@ -49,6 +49,7 @@ const THANKSGIVING_EVENT_QUESTS = [
     { id: "rng-index", activity: "rngIndex", goal: 3, points: 15, game: "rng" },
     { id: "story-chapter", activity: "storyChapter", goal: 1, points: 15, game: "story" },
     { id: "story-explorer", activity: "storyExplorer", goal: 3, points: 25, game: "story" },
+    { id: "story-complete", activity: "storyComplete", goal: 1, points: 0, game: "story", hidden: true },
     { id: "cross-game", activity: "anyQuest", goal: 3, points: 15, game: "cross" }
 ];
 const THANKSGIVING_EVENT_MILESTONES = [
@@ -68,7 +69,7 @@ function renderThanksgivingEventState(eventState = {}) {
         if (fill) fill.style.width = `${Math.min(100, points / 2.5)}%`;
     }
     const rows = document.querySelectorAll("#thanksgivingEventModal .thanksgiving-event-quest-list article");
-    THANKSGIVING_EVENT_QUESTS.forEach((quest, index) => {
+    THANKSGIVING_EVENT_QUESTS.filter(quest => !quest.hidden).forEach((quest, index) => {
         const row = rows[index];
         if (!row) return;
         const progress = Math.min(quest.goal, Math.max(0, Number(eventState.progress?.[quest.id]) || 0));
@@ -133,6 +134,15 @@ async function recordThanksgivingEventActivity(activity, amount = 1, source = ""
                 if (game && game !== "cross" && !state.games.includes(game)) state.games.push(game);
             };
             awardQuest(quest);
+            if (activity === "storyComplete") {
+                const completedStoryQuests = ["story-chapter", "story-explorer"].filter(id => !state.claimedQuests.includes(id));
+                for (const id of completedStoryQuests) {
+                    const storyQuest = THANKSGIVING_EVENT_QUESTS.find(item => item.id === id);
+                    state.progress[id] = storyQuest.goal;
+                    awardQuest(storyQuest);
+                }
+                state.games = Array.from(new Set([...state.games, "story"]));
+            }
             if (quest.id !== "cross-game") {
                 state.progress["cross-game"] = state.games.length;
                 awardQuest(THANKSGIVING_EVENT_QUESTS.find(item => item.id === "cross-game"));

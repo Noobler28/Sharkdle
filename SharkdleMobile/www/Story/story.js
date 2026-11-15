@@ -1975,5 +1975,6 @@ document.addEventListener("DOMContentLoaded", () => {
     loadStoryState();
     setupStoryFinale();
     renderMap();
+    if (isStoryCampaignComplete()) window.recordThanksgivingEventActivity?.("storyComplete", 1);
     if (isStoryCampaignComplete() && !storyState.finale.seen) openStoryFinale();
 });
