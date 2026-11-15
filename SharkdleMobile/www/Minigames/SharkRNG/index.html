@@ -10,7 +10,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="page-shell.css">
-    <link rel="stylesheet" href="Minigames/SharkRNG/rng.css?v=20261019-leaderboard-blacklist">
+    <link rel="stylesheet" href="Minigames/SharkRNG/rng.css?v=20261117-loading-screen">
     <link rel="stylesheet" href="mobile.css">
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
@@ -20,6 +20,11 @@
 <script src="achievement-corners.js?v=1"></script>
 </head>
 <body class="rng-page shell-page">
+<div id="rng-loading-screen" class="rng-loading-screen" role="status" aria-live="polite">
+    <span class="rng-loading-spinner" aria-hidden="true"></span>
+    <strong>Please wait while we load your data</strong>
+    <span>Your Shark RNG progress and index are getting ready.</span>
+</div>
 
 <div id="rng-ambient" class="rng-ambient" aria-hidden="true"></div>
 
@@ -147,6 +152,12 @@
 
 <div id="rng-collection-modal" class="rng-modal rng-collection-modal hidden">
     <div class="rng-modal-content">
+        <div id="rng-index-loading" class="rng-index-loading" role="status" aria-live="polite">
+            <span class="rng-loading-spinner" aria-hidden="true"></span>
+            <strong>Please wait while we load your data</strong>
+            <span>Building your Shark Index…</span>
+        </div>
+
         <div class="rng-modal-header">
             <h2>Shark Index</h2>
             <button id="rng-collection-close-btn" class="rng-btn rng-btn-ghost" type="button">
@@ -391,8 +402,8 @@
 
 <script src="leaderboard-blacklist.js?v=20261021-13-account-blocks"></script>
 <script src="script.js?v=20261105-dev-tools"></script>
-<script src="thanksgiving-event.js?v=20261116-100-rolls"></script>
-<script src="Minigames/SharkRNG/rng-mode.js?v=20261115-thanksgiving-quests"></script>
+<script src="thanksgiving-event.js?v=20261117-completion-reconcile"></script>
+<script src="Minigames/SharkRNG/rng-mode.js?v=20261117-loading-screen"></script>
 <script src="global-broadcast.js"></script>
 <script>
     document.addEventListener("DOMContentLoaded", () => {

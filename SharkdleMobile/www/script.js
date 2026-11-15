@@ -8699,6 +8699,7 @@ async function updateAuthUI() {
             }
         }
     }
+    window.dispatchEvent(new Event("sharkdle-home-data-ready"));
 }
 
 function isDefaultEmailUsername(username) {

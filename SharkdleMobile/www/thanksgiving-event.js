@@ -74,7 +74,7 @@ function renderThanksgivingEventState(eventState = {}) {
         const row = rows[index];
         if (!row) return;
         const progress = Math.min(quest.goal, Math.max(0, Number(eventState.progress?.[quest.id]) || 0));
-        const done = Boolean(eventState.claimedQuests?.includes(quest.id));
+        const done = Boolean(eventState.claimedQuests?.includes(quest.id)) || progress >= quest.goal;
         const detail = row.querySelector("small");
         if (detail) {
             detail.dataset.description ||= detail.textContent;
@@ -96,8 +96,41 @@ async function refreshThanksgivingEventState() {
     const firestore = getThanksgivingDb();
     if (!uid || !firestore) return renderThanksgivingEventState({});
     try {
-        const snapshot = await firestore.collection("userStats").doc(uid).get();
-        if (getThanksgivingAuthUser()?.uid === uid) renderThanksgivingEventState(snapshot.data()?.thanksgivingEvent || {});
+        const ref = firestore.collection("userStats").doc(uid);
+        let reconciledState;
+        await firestore.runTransaction(async tx => {
+            const snapshot = await tx.get(ref);
+            const profile = snapshot.data() || {};
+            const state = profile.thanksgivingEvent && typeof profile.thanksgivingEvent === "object"
+                ? JSON.parse(JSON.stringify(profile.thanksgivingEvent))
+                : { points: 0, progress: {}, claimedQuests: [], claimedRewards: [], games: [] };
+            state.progress ||= {}; state.claimedQuests ||= []; state.games ||= [];
+            let changed = false;
+            for (const quest of THANKSGIVING_EVENT_QUESTS) {
+                if ((Number(state.progress[quest.id]) || 0) < quest.goal || state.claimedQuests.includes(quest.id)) continue;
+                state.claimedQuests.push(quest.id);
+                state.points = (Number(state.points) || 0) + quest.points;
+                if (quest.game && quest.game !== "cross" && !state.games.includes(quest.game)) state.games.push(quest.game);
+                changed = true;
+            }
+            if (state.games.length >= 3 && !state.claimedQuests.includes("cross-game")) {
+                const crossGame = THANKSGIVING_EVENT_QUESTS.find(quest => quest.id === "cross-game");
+                state.progress[crossGame.id] = crossGame.goal;
+                state.claimedQuests.push(crossGame.id);
+                state.points = (Number(state.points) || 0) + crossGame.points;
+                changed = true;
+            }
+            if (changed) tx.set(ref, { thanksgivingEvent: state }, { merge: true });
+            reconciledState = state;
+        });
+        if (getThanksgivingAuthUser()?.uid === uid) {
+            renderThanksgivingEventState(reconciledState || {});
+            if (reconciledState) {
+                const local = getCurrentProfileData();
+                local.thanksgivingEvent = reconciledState;
+                saveUserProfileLocally(local, { skipRemoteSync: true });
+            }
+        }
     } catch (error) { console.warn("Thanksgiving event progress could not load:", error); }
 }
 

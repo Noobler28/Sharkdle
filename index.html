@@ -26,7 +26,7 @@ content="Play Sharkdle, the daily shark guessing game. Guess shark species from 
 <meta name="twitter:description" content="Play Sharkdle, the daily shark guessing game.">
 <meta name="twitter:image" content="https://sharkdle.online/images/favicon.png">
 
-<link rel="stylesheet" href="style.css?v=20261115-thanksgiving-track">
+<link rel="stylesheet" href="style.css?v=20261117-loading-screen">
 <link rel="stylesheet" href="christmas-event.css?v=20261102-present-doors">
 
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800;900&family=Barlow:wght@400;500;600;700&family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
@@ -41,7 +41,7 @@ content="Play Sharkdle, the daily shark guessing game. Guess shark species from 
 <script src="sharks.js"></script>
 
 
-    <link rel="stylesheet" href="mobile.css?v=20261115-thanksgiving-track" media="(max-width: 820px)">
+    <link rel="stylesheet" href="mobile.css?v=20261117-loading-screen" media="(max-width: 820px)">
 <script src="achievement-corners.js?v=1"></script>
 </head>
 
@@ -118,6 +118,11 @@ content="Play Sharkdle, the daily shark guessing game. Guess shark species from 
     </div>
 </div>
 
+<div id="home-loading-screen" class="home-loading-screen" role="status" aria-live="polite">
+    <span class="home-loading-spinner" aria-hidden="true"></span>
+    <strong>Please wait while we load your data</strong>
+    <span>Your Sharkdle profile is getting ready.</span>
+</div>
 <main class="home-v3-shell">
     <aside class="home-v3-left">
         <a class="home-v3-logo" href="index.html" aria-label="Sharkdle home">
@@ -1722,7 +1727,12 @@ content="Play Sharkdle, the daily shark guessing game. Guess shark species from 
 <script src="fair-play.js?v=20261019"></script>
 <script src="leaderboard-blacklist.js?v=20261106-admin-accounts"></script>
 <script src="script.js?v=20261114-thanksgiving-crate"></script>
-<script src="thanksgiving-event.js?v=20261116-100-rolls"></script>
+<script>
+window.addEventListener("sharkdle-home-data-ready", () => {
+    window.setTimeout(() => document.getElementById("home-loading-screen")?.classList.add("hidden"), 450);
+}, { once: true });
+</script>
+<script src="thanksgiving-event.js?v=20261117-completion-reconcile"></script>
 <script src="admin-accounts.js?v=20261106"></script>
 <script src="developer-tools.js?v=1"></script>
 <script src="christmas-event.js?v=20261102-present-doors"></script>

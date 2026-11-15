@@ -2833,6 +2833,7 @@ let rollPool = [];
 
     async function switchRngAccount(user) {
         const uid = user?.uid || null;
+        document.getElementById("rng-loading-screen")?.classList.remove("hidden");
         // Save the outgoing account under its own key, even after Auth has changed.
         if (localSaveDirty) saveLocalProfile();
         const session = ++rngAccountSession;
@@ -2872,6 +2873,7 @@ let rollPool = [];
                 updateSaveStatusUi();
                 updateRollButtonState();
                 if (rngCloudSaveDirty) scheduleRngCloudProfileSync(1000);
+                document.getElementById("rng-loading-screen")?.classList.add("hidden");
             }
         }
     }
@@ -8134,6 +8136,10 @@ function updateAllUi(options = {}) {
         let rendered = 0;
         let clearedLoading = false;
 
+        const indexLoading = document.getElementById("rng-index-loading");
+        const collectionModal = document.getElementById("rng-collection-modal");
+        if (indexLoading) indexLoading.hidden = false;
+        collectionModal?.classList.add("loading-index");
         grid.replaceChildren(createIndexNote(autoEnabled ? "Building index while Auto Roll stays active..." : "Building index..."));
         collectionGridDirty = false;
 
@@ -8152,6 +8158,8 @@ function updateAllUi(options = {}) {
                 grid.replaceChildren(createIndexNote("No matching index entries."));
             }
             collectionGridDirty = false;
+            if (indexLoading) indexLoading.hidden = true;
+            collectionModal?.classList.remove("loading-index");
         }
 
         function ensureSectionState() {
@@ -8984,6 +8992,8 @@ async function performRoll() {
 
     function closeCollectionModal() {
         document.getElementById("rng-collection-modal")?.classList.add("hidden");
+        document.getElementById("rng-index-loading")?.setAttribute("hidden", "");
+        document.getElementById("rng-collection-modal")?.classList.remove("loading-index");
         cancelCollectionGridRender();
         collectionGridDirty = false;
     }

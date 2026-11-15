@@ -21860,3 +21860,10 @@ body.home-v3-page .home-v3-hero-actions .home-v3-ghost-btn:focus-visible {
 .admin-account-heading code, .admin-account-heading small { display: block; overflow-wrap: anywhere; }
 .admin-account-stats { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 6px 12px; }
 .admin-account-stats dd { margin: 0; overflow-wrap: anywhere; }
+
+.home-loading-screen { position: fixed; inset: 0; z-index: 100000; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 24px; background: rgba(3, 16, 29, .96); color: #eaf9ff; text-align: center; backdrop-filter: blur(12px); }
+.home-loading-screen[hidden], .home-loading-screen.hidden { display: none !important; }
+.home-loading-screen strong { font-size: 18px; }
+.home-loading-screen > span:last-child { color: #a7c4d0; font-size: 14px; }
+.home-loading-spinner { width: 42px; height: 42px; border: 3px solid rgba(111, 218, 245, .2); border-top-color: #6fdaf5; border-radius: 50%; animation: home-loading-spin .8s linear infinite; }
+@keyframes home-loading-spin { to { transform: rotate(360deg); } }
