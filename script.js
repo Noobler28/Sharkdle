@@ -13962,6 +13962,26 @@ async function addThanksgivingCrates(amount = 1) {
 }
 window.addThanksgivingCrates = addThanksgivingCrates;
 
+async function addEasterCrates(amount = 1) {
+    return addCrates(amount, "easter");
+}
+window.addEasterCrates = addEasterCrates;
+
+async function addNewYearsCrates(amount = 1) {
+    return addCrates(amount, "newyears");
+}
+window.addNewYearsCrates = addNewYearsCrates;
+
+async function addStPatricksCrates(amount = 1) {
+    return addCrates(amount, "stpatricks");
+}
+window.addStPatricksCrates = addStPatricksCrates;
+
+async function addValentinesCrates(amount = 1) {
+    return addCrates(amount, "valentines");
+}
+window.addValentinesCrates = addValentinesCrates;
+
 async function addStreakShields(amount = 1) {
     if (!firebase.auth().currentUser || !isDeveloperUid(firebase.auth().currentUser.uid)) {
         console.log("? Access denied. This command is for developers only.");
@@ -14037,6 +14057,10 @@ function showCommands() {
     console.log("skipLoginDay(1) - Simulate missing 1 day and re-run daily login logic");
     console.log("addCrates(3) - Add Cosmetic Crates for testing");
     console.log("addCrates(3, 'thanksgiving') or addThanksgivingCrates(3) - Add Thanksgiving Crates for testing");
+    console.log("addEasterCrates(3) - Add Easter Crates for testing");
+    console.log("addNewYearsCrates(3) - Add New Years Crates for testing");
+    console.log("addStPatricksCrates(3) - Add St Patricks Crates for testing");
+    console.log("addValentinesCrates(3) - Add Valentines Crates for testing");
     console.log("addStreakShields(3) - Add Streak Shields for testing");
     console.log("giveDailySpin(5) / giveSpin(5) - Grant daily wheel spins for testing");
     console.log("resetDailySpin() - Reset today's daily spin wheel");

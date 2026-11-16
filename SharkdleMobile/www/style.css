@@ -21733,3 +21733,40 @@ body.home-v3-page .home-v3-hero-actions .home-v3-ghost-btn:focus-visible {
     background: rgba(224, 156, 73, .15);
     font-size: 18px;
 }
+# Compact crate inventory: keep the collection visible together when several events are owned.
+#cratesModal .crates-modal-content {
+    width: 96vw !important;
+    max-width: 1240px !important;
+    max-height: calc(100vh - 24px) !important;
+    padding: 18px !important;
+    gap: 10px;
+}
+#cratesModal .picker-modal-heading { margin-bottom: 4px; }
+#cratesModal .crates-layout { grid-template-columns: repeat(auto-fit, minmax(205px, 1fr)); gap: 10px; }
+#cratesModal .crates-layout.single-crate-layout { grid-template-columns: minmax(205px, 380px); }
+#cratesModal .crate-inventory-panel { display:grid; grid-template-columns:52px minmax(0,1fr); grid-template-rows:auto 1fr; align-items:center; gap:8px 10px; padding:11px; border-radius:14px; }
+#cratesModal .crate-panel-topline { grid-column:1 / -1; display:grid; grid-template-columns:minmax(0,1fr) auto auto; align-items:center; gap:6px; margin:0; }
+#cratesModal .crate-panel-topline h3 { margin:0 !important; overflow:hidden; font-size:13px; line-height:1.2; text-overflow:ellipsis; white-space:nowrap; }
+#cratesModal .crate-inspect-btn { width:30px; height:30px; border-radius:9px; }
+#cratesModal .crate-count-badge { margin:0; padding:5px 7px; gap:4px; font-size:9px; letter-spacing:.04em; }
+#cratesModal .crate-showcase { display:block; grid-column:1; grid-row:2; }
+#cratesModal .crate-visual { min-height:50px; height:50px; border-radius:13px; font-size:22px; }
+#cratesModal .crate-showcase .crate-odds { display:none; }
+#cratesModal .crate-action-row { grid-column:2; grid-row:2; margin:0; }
+#cratesModal .crate-open-btn { width:100%; min-height:42px; padding:8px 6px; font-size:12px; white-space:nowrap; }
+@media (max-width:640px) {
+    #cratesModal .crates-layout, #cratesModal .crates-layout.single-crate-layout { grid-template-columns:repeat(2,minmax(0,1fr)); }
+    #cratesModal .crates-layout.single-crate-layout { grid-template-columns:minmax(0,380px); justify-content:center; }
+    #cratesModal .crate-inventory-panel { grid-template-columns:42px minmax(0,1fr); gap:7px; padding:9px; }
+    #cratesModal .crate-panel-topline { grid-template-columns:minmax(0,1fr) auto; }
+    #cratesModal .crate-panel-topline > div:first-child { grid-column:1; }
+    #cratesModal .crate-inspect-btn { grid-column:2; grid-row:1; }
+    #cratesModal .crate-count-badge { grid-column:1 / -1; justify-self:start; }
+    #cratesModal .crate-showcase { grid-column:1; }
+    #cratesModal .crate-visual { height:42px; min-height:42px; font-size:18px; }
+    #cratesModal .crate-action-row { grid-column:2; }
+    #cratesModal .crate-open-btn { min-height:38px; font-size:11px; }
+}
+@media (max-width:360px) {
+    #cratesModal .crates-layout, #cratesModal .crates-layout.single-crate-layout { grid-template-columns:1fr; }
+}

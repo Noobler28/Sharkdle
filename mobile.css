@@ -336,7 +336,6 @@ textarea {
     body.home-v3-page #loginModal .modal-content,
     body.home-v3-page #profileModal .modal-content,
     body.home-v3-page #dailyLoginModal .modal-content,
-    body.home-v3-page #cratesModal .modal-content,
     body.home-v3-page #homeCratesModal .modal-content,
     body.home-v3-page #crateDropsModal .modal-content,
     body.home-v3-page #pearlShopModal .modal-content,
@@ -346,6 +345,15 @@ textarea {
         overflow-y: auto !important;
         border-radius: 20px !important;
         padding: 18px !important;
+    }
+}
+
+@media (max-width: 820px) {
+    body.home-v3-page #cratesModal .crates-modal-content {
+        width: 96vw !important;
+        max-width: 1240px !important;
+        max-height: calc(100svh - 24px) !important;
+        padding: 14px !important;
     }
 }
 
