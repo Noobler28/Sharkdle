@@ -1907,7 +1907,8 @@ const sharkPassCardThemes = [
     { id: "haunted-abyss", name: "Witchlight", preview: "radial-gradient(circle at 76% 12%, rgba(213, 160, 255, 0.26), transparent 22%), radial-gradient(circle at 16% 82%, rgba(159, 255, 103, 0.16), transparent 28%), linear-gradient(160deg, rgba(13, 0, 24, 0.08), rgba(6, 0, 18, 0.64)), url(images/profileThemes/Witchlight.png) center center / cover no-repeat" },
     { id: "nightmare-reef", name: "Phantom Fog", preview: "radial-gradient(circle at 82% 18%, rgba(245, 238, 218, 0.2), transparent 19%), radial-gradient(circle at 12% 72%, rgba(130, 255, 174, 0.12), transparent 30%), linear-gradient(180deg, rgba(6, 12, 18, 0.08), rgba(2, 4, 10, 0.66)), url(images/profileThemes/PhantomFog.png) center center / cover no-repeat" },
     { id: "thanksgiving", name: "Thanksgiving", preview: "linear-gradient(180deg, rgba(255, 205, 130, 0.08), rgba(35, 18, 8, 0.36)), url(images/profileThemes/Thanksgiving/Thanksgiving.jpg) center center / cover no-repeat" },
-    { id: "fall", name: "Fall", preview: "linear-gradient(180deg, rgba(255, 195, 108, 0.08), rgba(35, 15, 6, 0.38)), url(images/profileThemes/Thanksgiving/Fall.jpg) center center / cover no-repeat" }
+    { id: "fall", name: "Fall", preview: "linear-gradient(180deg, rgba(255, 195, 108, 0.08), rgba(35, 15, 6, 0.38)), url(images/profileThemes/Thanksgiving/Fall.jpg) center center / cover no-repeat" },
+    { id: "caramel", name: "Caramel", preview: "linear-gradient(180deg, rgba(255, 205, 130, 0.08), rgba(35, 18, 8, 0.36)), url(images/profileThemes/Thanksgiving/caramel.png) center center / cover no-repeat" }
 ];
 
 const CRATE_DROP_CHANCE = 0.5;
@@ -2206,6 +2207,7 @@ const thanksgivingCrateRewardPool = [
     { id: "crate-badge-harvest", type: "badge", badgeId: "harvest", name: "Harvest", emoji: "\u{1F342}", rarity: "epic", blurb: "Unlock the Harvest badge." },
     { id: "crate-theme-fall", type: "theme", themeId: "fall", name: "Fall", rarity: "epic", blurb: "Unlock the Fall profile theme." },
     { id: "crate-pfp-thanksgiving-thornback", type: "pfp", name: "Thornback Ray", imagePath: "images/cratePfp/ThanksgivingPfp/ThornbackRay.png", rarity: "legendary", blurb: "Unlock the Thornback Ray profile picture." },
+    { id: "crate-theme-caramel", type: "theme", themeId: "caramel", name: "Caramel", rarity: "legendary", blurb: "Unlock the Caramel profile theme." },
     { id: "crate-badge-feasting", type: "badge", badgeId: "feasting", name: "Feasting", emoji: "\u{1F967}", rarity: "legendary", blurb: "Unlock the Feasting badge." }
 ];
 
@@ -10182,6 +10184,7 @@ function updateHomeV3Sidebar(profileData = getCurrentProfileData()) {
     if (fill) fill.style.width = isLoggedIn ? `${xpPercent}%` : "0%";
 
     setText("home-v3-games", isLoggedIn ? gamesPlayed : 0);
+    setText("home-v3-wins", isLoggedIn ? wins : 0);
     setText("home-v3-winrate", isLoggedIn ? `${winRate}%` : "0%");
     setText("home-v3-best-streak", isLoggedIn ? (data.highestStreak || 0) : 0);
     setText("home-v3-total-xp", isLoggedIn ? totalXP : 0);
@@ -10497,7 +10500,8 @@ function updateIndexStats() {
                 if (lossesEl) lossesEl.textContent = profileData.losses || 0;
                 if (guessesEl) guessesEl.textContent = profileData.totalGuesses || 0;
                 if (totalXpEl) totalXpEl.textContent = profileData.totalXP || 0;
-                if (avgGuessesEl) avgGuessesEl.textContent = (profileData.averageGuesses || 0).toFixed(2);
+                const averageGuesses = Number(profileData.averageGuesses) || 0;
+                if (avgGuessesEl) avgGuessesEl.textContent = averageGuesses.toFixed(2);
                 if (bestGameEl) bestGameEl.textContent = profileData.bestGame || 0;
                 if (currentStreakEl) currentStreakEl.textContent = profileData.currentStreak || 0;
                 if (highestStreakEl) highestStreakEl.textContent = profileData.highestStreak || 0;

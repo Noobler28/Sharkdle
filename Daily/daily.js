@@ -1296,7 +1296,8 @@ if(shark.name === targetShark.name){
         profileData.bestGame = guessesTaken;
     }
 
-    // Calculate and save average guesses
+    // Keep total guesses consistent across wins and losses for the all-game average.
+    profileData.totalGuesses = (Number(profileData.totalGuesses) || 0) + guessesTaken;
     if (profileData.gamesPlayed > 0) {
         profileData.averageGuesses = (profileData.totalGuesses / profileData.gamesPlayed).toFixed(2);
     }
@@ -1399,6 +1400,7 @@ if(attempts===0 && !gameWon){
         }
 
         // Calculate and save average guesses
+        profileData.totalGuesses = (Number(profileData.totalGuesses) || 0) + guessesTaken;
         if (profileData.gamesPlayed > 0) {
             profileData.averageGuesses = (profileData.totalGuesses / profileData.gamesPlayed).toFixed(2);
         }

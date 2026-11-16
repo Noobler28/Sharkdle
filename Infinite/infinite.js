@@ -765,6 +765,10 @@ function updateStats(isWin, guessesTaken = 0) {
         }
     }
 
+    if (!isWin) {
+        profileData.totalGuesses = (Number(profileData.totalGuesses) || 0) + guessesTaken;
+    }
+
     // Calculate and save average guesses
     if (profileData.gamesPlayed > 0) {
         profileData.averageGuesses = (profileData.totalGuesses / profileData.gamesPlayed).toFixed(2);

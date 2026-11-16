@@ -333,8 +333,8 @@ function getMysteryProfileFilterState() {
         state.yearEarliest = targetShark.yod || "";
         state.yearLatest = targetShark.yod || "";
     } else {
-        state.yearEarliest = yearRange.lower ?? "";
-        state.yearLatest = yearRange.upper ?? "";
+        state.yearEarliest = yearRange.lower === null ? "" : yearRange.lower + 1;
+        state.yearLatest = yearRange.upper === null ? "" : yearRange.upper - 1;
     }
 
     return state;
@@ -765,6 +765,10 @@ function updateStats(isWin, guessesTaken = 0) {
         }
     }
 
+    if (!isWin) {
+        profileData.totalGuesses = (Number(profileData.totalGuesses) || 0) + guessesTaken;
+    }
+
     // Calculate and save average guesses
     if (profileData.gamesPlayed > 0) {
         profileData.averageGuesses = (profileData.totalGuesses / profileData.gamesPlayed).toFixed(2);
@@ -953,8 +957,10 @@ function makeGuess() {
             <button onclick="document.getElementById('win-lose-screen').style.display='none'; document.getElementById('show-results-btn').style.display='block';" style="position: absolute; top: 8px; right: 8px; width: 32px; height: 32px; background: rgba(0,0,0,0.3); border: none; border-radius: 50%; color: inherit; font-size: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.2s; font-weight: bold;">×</button>
             <h2 style="margin-top: 0; font-size: 32px; margin-bottom: 20px;">🎉 You Found It!</h2>
             <p style="font-size: 18px; margin: 10px 0; color: inherit;">The ${speciesMode.animal} was <b>${targetShark.name}</b></p>
+            <p style="margin: 8px 0 14px;"><a href="${getSharkdleWikipediaUrl(targetShark.name)}" target="_blank" rel="noopener noreferrer" style="color: inherit; font-weight: 700; text-decoration: underline;">Learn more about the ${speciesMode.animal} on Wikipedia ↗</a></p>
             <p style="font-size: 16px; margin: 10px 0; opacity: 0.9;">Discovered in ${targetShark.yod}</p>
             <p style="font-size: 16px; margin: 10px 0; opacity: 0.9;">You took ${guessesTaken} guess${guessesTaken !== 1 ? 'es' : ''}.</p>
+            ${!firebase.auth().currentUser ? `<aside style="margin: 18px 0; padding: 14px 16px; border-radius: 10px; background: rgba(0,151,167,0.18); border: 1px solid rgba(0,188,212,0.4);"><strong>Sharkdle is better with an account 🦈</strong><p style="margin: 6px 0 10px; font-size: 14px;">Create an account to save your progress and unlock more features.</p><a href="index.html" style="color: inherit; font-weight: 700;">Create a free account →</a></aside>` : ''}
             <div style="margin: 20px 0; padding: 15px; background: rgba(255,255,255,0.2); border-radius: 8px;">
                 <p style="font-size: 28px; font-weight: bold; margin: 0; color: inherit;">+${xpGain} XP</p>
                 ${pearlsEarned ? `<p style="font-size: 20px; font-weight: bold; margin: 8px 0 0; color: #8ff5ef;">+${pearlsEarned} Pearls</p>` : ''}
