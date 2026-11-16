@@ -59,7 +59,35 @@
         { id: "Pumpkin", name: "Pumpkin", emoji: "🎃" },
         { id: "Bat", name: "Bat", emoji: "🦇" },
         { id: "Ghost", name: "Ghost", emoji: "👻" },
-        { id: "Vampire", name: "Vampire", emoji: "🧛" }
+        { id: "Vampire", name: "Vampire", emoji: "🧛" },
+        { id: "bullhead-bloom", name: "Bullhead Bloom", emoji: "🌿" },
+        { id: "ray-drift", name: "Ray Drift", emoji: "🌀" },
+        { id: "guitarfish-glide", name: "Guitarfish Glide", emoji: "🎸" },
+        { id: "carpet-shadow", name: "Carpet Shadow", emoji: "🌑" },
+        { id: "coffin-depths", name: "Coffin Depths", emoji: "🕸️" },
+        { id: "copper-current", name: "Copper Current", emoji: "⚡" },
+        { id: "bull-ray-banner", name: "Bull Ray Banner", emoji: "🚩" },
+        { id: "galapagos-guard", name: "Galapagos Guard", emoji: "🗿" },
+        { id: "sixgill-sovereign", name: "Sixgill Sovereign", emoji: "👑" },
+        { id: "thanksgiving", name: "Thanksgiving", emoji: "🦃" },
+        { id: "harvest", name: "Harvest", emoji: "🍂" },
+        { id: "feasting", name: "Feasting", emoji: "🥧" },
+        { id: "easter", name: "Easter", emoji: "🐣" },
+        { id: "bunny", name: "Bunny", emoji: "🐰" },
+        { id: "eggy", name: "Eggy", emoji: "🥚" },
+        { id: "chick", name: "Chick", emoji: "🐥" },
+        { id: "new-years", name: "New Years", emoji: "🎆" },
+        { id: "firework", name: "Firework", emoji: "🎇" },
+        { id: "confetti", name: "Confetti", emoji: "🎊" },
+        { id: "celebration", name: "Celebration", emoji: "🥂" },
+        { id: "st-patricks", name: "St Patricks", emoji: "☘️" },
+        { id: "rainbow", name: "Rainbow", emoji: "🌈" },
+        { id: "shamrock", name: "Shamrock", emoji: "🍀" },
+        { id: "leprechaun", name: "Leprechaun", emoji: "🧝" },
+        { id: "valentines", name: "Valentines", emoji: "💖" },
+        { id: "love-letter", name: "LoveLetter", emoji: "💌" },
+        { id: "cupid", name: "Cupid", emoji: "💘" },
+        { id: "rose", name: "Rose", emoji: "🌹" }
     ];
 
     const BADGE_BY_ID = Object.fromEntries(LEADERBOARD_BADGES.map(badge => [badge.id, badge]));
@@ -162,7 +190,22 @@
         "north-pole",
         "pumpkin-patch",
         "haunted-abyss",
-        "nightmare-reef"
+        "nightmare-reef",
+        "reef-rush",
+        "abyssal-current",
+        "reef-signal",
+        "copper-surge",
+        "raylight-drift",
+        "sixgill-night",
+        "lucky-current",
+        "abyss-bloom",
+        "neon-reef",
+        "lunar-current",
+        "thanksgiving",
+        "fall",
+        "caramel",
+        "easter",
+        "easter-bunny"
     ]);
 
     const PFP_OBTAINMENT_MAP = {
@@ -193,6 +236,22 @@
         "images/cratePfp/HalloweenPfp/Shark2.png": "Halloween Crate Reward",
         "images/cratePfp/HalloweenPfp/Shark3.png": "Halloween Crate Reward",
         "images/cratePfp/HalloweenPfp/Shark4.png": "Halloween Crate Reward",
+        "images/cratePfp/EasterPfp/SpottedRatfish.png": "Easter Crate Reward",
+        "images/cratePfp/EasterPfp/EpauletteShark.png": "Easter Crate Reward",
+        "images/cratePfp/EasterPfp/OrnateWobbegongShark.png": "Easter Crate Reward",
+        "images/cratePfp/EasterPfp/ThornySkate.png": "Easter Crate Reward",
+        "images/cratePfp/NewYearsPfp/CommonEagleRay.png": "New Years Crate Reward",
+        "images/cratePfp/NewYearsPfp/PyjamaShark.png": "New Years Crate Reward",
+        "images/cratePfp/NewYearsPfp/StarrySmoothHound.png": "New Years Crate Reward",
+        "images/cratePfp/NewYearsPfp/BullRay.png": "New Years Crate Reward",
+        "images/cratePfp/ValentinesPfp/ElephantFish.png": "Valentines Crate Reward",
+        "images/cratePfp/ValentinesPfp/CoachWhipray.png": "Valentines Crate Reward",
+        "images/cratePfp/ValentinesPfp/PinkMantaRay.png": "Valentines Crate Reward",
+        "images/cratePfp/ValentinesPfp/VelvetBellyLanternShark.png": "Valentines Crate Reward",
+        "images/cratePfp/StPatricksPfp/SalmonShark.png": "St Patricks Crate Reward",
+        "images/cratePfp/StPatricksPfp/TigerStingray.png": "St Patricks Crate Reward",
+        "images/cratePfp/StPatricksPfp/BlackfinGulperShark.png": "St Patricks Crate Reward",
+        "images/cratePfp/StPatricksPfp/ShovelNoseGuitarFish.png": "St Patricks Crate Reward",
         "images/levelPfp/Shark6.png": "Shark Pass Level 2",
         "images/levelPfp/Shark7.png": "Shark Pass Level 3",
         "images/levelPfp/Shark8.png": "Shark Pass Level 4",
@@ -224,7 +283,10 @@
         return profilePicPath
             .replace(/cratePfp\/summerPfp\//i, "cratePfp/SummerPfp/")
             .replace(/cratePfp\/christmasPfp\//i, "cratePfp/ChristmasPfp/")
-            .replace(/cratePfp\/halloweenPfp\//i, "cratePfp/HalloweenPfp/");
+            .replace(/cratePfp\/halloweenPfp\//i, "cratePfp/HalloweenPfp/")
+            .replace(/cratePfp\/easterPfp\//i, "cratePfp/EasterPfp/")
+            .replace(/cratePfp\/newyearsPfp\//i, "cratePfp/NewYearsPfp/")
+            .replace(/cratePfp\/valentinesPfp\//i, "cratePfp/ValentinesPfp/");
     }
 
     function getProfilePicBorderColor(profilePicPath, isCurrentUser) {

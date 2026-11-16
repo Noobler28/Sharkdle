@@ -21867,3 +21867,24 @@ body.home-v3-page .home-v3-hero-actions .home-v3-ghost-btn:focus-visible {
 .home-loading-screen > span:last-child { color: #a7c4d0; font-size: 14px; }
 .home-loading-spinner { width: 42px; height: 42px; border: 3px solid rgba(111, 218, 245, .2); border-top-color: #6fdaf5; border-radius: 50%; animation: home-loading-spin .8s linear infinite; }
 @keyframes home-loading-spin { to { transform: rotate(360deg); } }
+
+.home-crate-card.easter,.crate-inventory-panel.easter { border-color: rgba(234,178,235,.34); background: linear-gradient(150deg,rgba(80,46,93,.94),rgba(32,22,47,.98)); }
+.home-crate-card.newyears,.crate-inventory-panel.newyears { border-color: rgba(244,202,82,.34); background: linear-gradient(150deg,rgba(73,57,33,.94),rgba(28,27,45,.98)); }
+.home-crate-card.stpatricks,.crate-inventory-panel.stpatricks { border-color: rgba(87,206,131,.34); background: linear-gradient(150deg,rgba(30,79,54,.94),rgba(17,39,38,.98)); }
+.home-crate-card.valentines,.crate-inventory-panel.valentines { border-color: rgba(241,120,155,.34); background: linear-gradient(150deg,rgba(93,37,64,.94),rgba(39,19,40,.98)); }
+.home-crate-visual.easter,.crate-visual.easter { color:#ffe9ff; background:linear-gradient(150deg,rgba(227,160,229,.36),rgba(114,78,168,.44)); }
+.home-crate-visual.newyears,.crate-visual.newyears { color:#fff2bf; background:linear-gradient(150deg,rgba(244,202,82,.38),rgba(75,87,152,.44)); }
+.home-crate-visual.stpatricks,.crate-visual.stpatricks { color:#d7ffe2; background:linear-gradient(150deg,rgba(87,206,131,.38),rgba(25,104,67,.46)); }
+.home-crate-visual.valentines,.crate-visual.valentines { color:#ffe1ec; background:linear-gradient(150deg,rgba(241,120,155,.38),rgba(151,52,93,.46)); }
+.home-crate-count.easter,.crate-count-badge.easter { color:#ffe9ff;border-color:rgba(234,178,235,.34);background:rgba(180,113,185,.18); }
+.home-crate-count.newyears,.crate-count-badge.newyears { color:#fff2bf;border-color:rgba(244,202,82,.34);background:rgba(191,151,55,.18); }
+.home-crate-count.stpatricks,.crate-count-badge.stpatricks { color:#d7ffe2;border-color:rgba(87,206,131,.34);background:rgba(53,154,94,.18); }
+.home-crate-count.valentines,.crate-count-badge.valentines { color:#ffe1ec;border-color:rgba(241,120,155,.34);background:rgba(182,66,108,.18); }
+.crate-unbox-overlay.crate-theme-easter .crate-unbox-backdrop,.crate-unbox-overlay.crate-theme-easter .crate-unbox-stage { background:radial-gradient(circle at 50% 18%,rgba(226,160,234,.22),transparent 36%),linear-gradient(180deg,rgba(70,43,88,.97),rgba(35,23,56,.98)); }
+.crate-unbox-overlay.crate-theme-newyears .crate-unbox-backdrop,.crate-unbox-overlay.crate-theme-newyears .crate-unbox-stage { background:radial-gradient(circle at 50% 18%,rgba(255,219,112,.22),transparent 36%),linear-gradient(180deg,rgba(70,57,44,.97),rgba(31,28,52,.98)); }
+.crate-unbox-overlay.crate-theme-stpatricks .crate-unbox-backdrop,.crate-unbox-overlay.crate-theme-stpatricks .crate-unbox-stage { background:radial-gradient(circle at 50% 18%,rgba(101,223,143,.22),transparent 36%),linear-gradient(180deg,rgba(33,86,57,.97),rgba(18,43,42,.98)); }
+.crate-unbox-overlay.crate-theme-valentines .crate-unbox-backdrop,.crate-unbox-overlay.crate-theme-valentines .crate-unbox-stage { background:radial-gradient(circle at 50% 18%,rgba(255,143,180,.22),transparent 36%),linear-gradient(180deg,rgba(94,39,67,.97),rgba(41,20,43,.98)); }
+.crate-overlay-reveal.crate-reveal-easter { border-color:rgba(234,178,235,.3);background:linear-gradient(180deg,rgba(72,46,91,.98),rgba(31,22,47,.98)); }
+.crate-overlay-reveal.crate-reveal-newyears { border-color:rgba(244,202,82,.3);background:linear-gradient(180deg,rgba(73,59,39,.98),rgba(29,27,47,.98)); }
+.crate-overlay-reveal.crate-reveal-stpatricks { border-color:rgba(87,206,131,.3);background:linear-gradient(180deg,rgba(31,79,54,.98),rgba(17,39,38,.98)); }
+.crate-overlay-reveal.crate-reveal-valentines { border-color:rgba(241,120,155,.3);background:linear-gradient(180deg,rgba(91,38,64,.98),rgba(39,19,40,.98)); }

@@ -16,7 +16,7 @@
     <!-- Firebase Auth -->
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
     <script src="Leaderboard/cosmetics-display.js"></script>
-    <script src="leaderboard-blacklist.js?v=20261021-13-account-blocks"></script>
+    <script src="leaderboard-blacklist.js?v=20261106-admin-accounts"></script>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="page-shell.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -494,6 +494,62 @@ radial-gradient(circle at 82% 22%, rgba(145,224,255,0.12), transparent 26%),
 radial-gradient(circle at 48% 80%, rgba(128,191,255,0.08), transparent 30%),
 linear-gradient(150deg, rgba(45,118,126,0.2), rgba(22,49,66,0.98) 52%, rgba(10,20,35,1));
 }
+
+.leaderboard-table tr.lb-theme-reef-rush,
+.leaderboard-table tr.lb-theme-abyssal-current,
+.leaderboard-table tr.lb-theme-copper-surge {
+background: radial-gradient(circle at 82% 12%, rgba(255,196,87,0.18), transparent 24%), linear-gradient(140deg, rgba(127,75,54,0.3), rgba(18,43,69,0.97) 54%, rgba(5,16,32,1));
+}
+.leaderboard-table tr.lb-theme-reef-signal,
+.leaderboard-table tr.lb-theme-abyss-bloom,
+.leaderboard-table tr.lb-theme-lucky-current {
+background: radial-gradient(circle at 18% 20%, rgba(110,255,199,0.2), transparent 25%), radial-gradient(circle at 82% 78%, rgba(255,215,91,0.13), transparent 28%), linear-gradient(140deg, rgba(23,111,110,0.34), rgba(9,31,58,0.97) 62%, rgba(4,14,29,1));
+}
+.leaderboard-table tr.lb-theme-raylight-drift,
+.leaderboard-table tr.lb-theme-neon-reef {
+background: radial-gradient(circle at 18% 18%, rgba(126,233,255,0.2), transparent 25%), radial-gradient(circle at 82% 76%, rgba(115,255,196,0.13), transparent 28%), linear-gradient(140deg, rgba(35,118,143,0.34), rgba(10,38,71,0.97) 62%, rgba(4,14,29,1));
+}
+.leaderboard-table tr.lb-theme-sixgill-night,
+.leaderboard-table tr.lb-theme-lunar-current {
+background: radial-gradient(circle at 78% 14%, rgba(248,239,164,0.18), transparent 22%), linear-gradient(145deg, rgba(54,47,92,0.42), rgba(14,25,57,0.98) 56%, rgba(3,8,22,1));
+}
+.leaderboard-table tr.lb-theme-thanksgiving,
+.leaderboard-table tr.lb-theme-fall,
+.leaderboard-table tr.lb-theme-caramel,
+.leaderboard-table tr.lb-theme-easter,
+.leaderboard-table tr.lb-theme-easter-bunny { background-position: center center; background-size: cover; background-repeat: no-repeat; }
+.leaderboard-table tr.lb-theme-thanksgiving { background-image: linear-gradient(90deg, rgba(35,18,8,0.58), rgba(35,18,8,0.24) 50%, rgba(35,18,8,0.58)), url("images/profileThemes/Thanksgiving/Thanksgiving.jpg"); }
+.leaderboard-table tr.lb-theme-fall { background-image: linear-gradient(90deg, rgba(35,15,6,0.58), rgba(35,15,6,0.24) 50%, rgba(35,15,6,0.58)), url("images/profileThemes/Thanksgiving/Fall.jpg"); }
+.leaderboard-table tr.lb-theme-caramel { background-image: linear-gradient(90deg, rgba(35,18,8,0.58), rgba(35,18,8,0.24) 50%, rgba(35,18,8,0.58)), url("images/profileThemes/Thanksgiving/caramel.png"); }
+.leaderboard-table tr.lb-theme-easter { background-image: linear-gradient(90deg, rgba(42,24,52,0.56), rgba(42,24,52,0.2) 50%, rgba(42,24,52,0.56)), url("images/profileThemes/Easter/Easter.jpg"); }
+.leaderboard-table tr.lb-theme-easter-bunny { background-image: linear-gradient(90deg, rgba(42,24,52,0.56), rgba(42,24,52,0.2) 50%, rgba(42,24,52,0.56)), url("images/profileThemes/Easter/Bunny.jpg"); }
+
+.leaderboard-table tr.lb-theme-reef-rush,
+.leaderboard-table tr.lb-theme-abyssal-current,
+.leaderboard-table tr.lb-theme-copper-surge {
+background: radial-gradient(circle at 82% 12%, rgba(255,196,87,0.18), transparent 24%), linear-gradient(140deg, rgba(127,75,54,0.3), rgba(18,43,69,0.97) 54%, rgba(5,16,32,1));
+}
+.leaderboard-table tr.lb-theme-reef-signal,
+.leaderboard-table tr.lb-theme-abyss-bloom,
+.leaderboard-table tr.lb-theme-lucky-current {
+background: radial-gradient(circle at 18% 20%, rgba(110,255,199,0.2), transparent 25%), radial-gradient(circle at 82% 78%, rgba(255,215,91,0.13), transparent 28%), linear-gradient(140deg, rgba(23,111,110,0.34), rgba(9,31,58,0.97) 62%, rgba(4,14,29,1));
+}
+.leaderboard-table tr.lb-theme-raylight-drift,
+.leaderboard-table tr.lb-theme-neon-reef {
+background: radial-gradient(circle at 18% 18%, rgba(126,233,255,0.2), transparent 25%), radial-gradient(circle at 82% 76%, rgba(115,255,196,0.13), transparent 28%), linear-gradient(140deg, rgba(35,118,143,0.34), rgba(10,38,71,0.97) 62%, rgba(4,14,29,1));
+}
+.leaderboard-table tr.lb-theme-sixgill-night,
+.leaderboard-table tr.lb-theme-lunar-current {
+background: radial-gradient(circle at 78% 14%, rgba(248,239,164,0.18), transparent 22%), linear-gradient(145deg, rgba(54,47,92,0.42), rgba(14,25,57,0.98) 56%, rgba(3,8,22,1));
+}
+.leaderboard-table tr.lb-theme-thanksgiving,
+.leaderboard-table tr.lb-theme-fall,
+.leaderboard-table tr.lb-theme-caramel,
+.leaderboard-table tr.lb-theme-easter,
+.leaderboard-table tr.lb-theme-easter-bunny { background-position: center center; background-size: cover; background-repeat: no-repeat; }
+.leaderboard-table tr.lb-theme-thanksgiving { background-image: linear-gradient(90deg, rgba(35,18,8,0.58), rgba(35,18,8,0.24) 50%, rgba(35,18,8,0.58)), url("images/profileThemes/Thanksgiving/Thanksgiving.jpg"); }
+.leaderboard-table tr.lb-theme-fall { background-image: linear-gradient(90deg, rgba(35,15,6,0.58), rgba(35,15,6,0.24) 50%, rgba(35,15,6,0.58)), url("images/profileThemes/Thanksgiving/Fall.jpg"); }
+.leaderboard-table tr.lb-theme-caramel { background-image: linear-gradient(90deg, rgba(35,18,8,0.58), rgba(35,18,8,0.24) 50%, rgba(35,18,8,0.58)), url("images/profileThemes/Thanksgiving/caramel.png"); }
 
 .leaderboard-table tr.current-user-row{
 outline:2px solid rgba(255,215,0,0.92);
@@ -1446,6 +1502,16 @@ body.leaderboards-page .leaderboard-table tr.lb-theme-nightmare-reef .leaderboar
     background: url("images/profileThemes/PhantomFog.png") center center / cover no-repeat;
 }
 
+body.leaderboards-page .leaderboard-table tr.lb-theme-thanksgiving .leaderboard-row-card { background: url("images/profileThemes/Thanksgiving/Thanksgiving.jpg") center center / cover no-repeat; }
+body.leaderboards-page .leaderboard-table tr.lb-theme-fall .leaderboard-row-card { background: url("images/profileThemes/Thanksgiving/Fall.jpg") center center / cover no-repeat; }
+body.leaderboards-page .leaderboard-table tr.lb-theme-caramel .leaderboard-row-card { background: url("images/profileThemes/Thanksgiving/caramel.png") center center / cover no-repeat; }
+body.leaderboards-page .leaderboard-table tr.lb-theme-easter .leaderboard-row-card { background: url("images/profileThemes/Easter/Easter.jpg") center center / cover no-repeat; }
+body.leaderboards-page .leaderboard-table tr.lb-theme-easter-bunny .leaderboard-row-card { background: url("images/profileThemes/Easter/Bunny.jpg") center center / cover no-repeat; }
+
+body.leaderboards-page .leaderboard-table tr.lb-theme-thanksgiving .leaderboard-row-card { background: url("images/profileThemes/Thanksgiving/Thanksgiving.jpg") center center / cover no-repeat; }
+body.leaderboards-page .leaderboard-table tr.lb-theme-fall .leaderboard-row-card { background: url("images/profileThemes/Thanksgiving/Fall.jpg") center center / cover no-repeat; }
+body.leaderboards-page .leaderboard-table tr.lb-theme-caramel .leaderboard-row-card { background: url("images/profileThemes/Thanksgiving/caramel.png") center center / cover no-repeat; }
+
 body.leaderboards-page .leaderboard-table tr.lb-theme-volcanic-ember .leaderboard-row-card::before,
 body.leaderboards-page .leaderboard-table tr.lb-theme-kelp-canopy .leaderboard-row-card::before,
 body.leaderboards-page .leaderboard-table tr.lb-theme-elf .leaderboard-row-card::before,
@@ -2235,6 +2301,7 @@ body.leaderboards-page #friendProfileModal .profile-modal-content .stat-value {
         async function loadPreviousLeaderboardWinners() {
             let winners = getLocalLeaderboardWinnerHistory();
             try {
+                await window.SharkdleLeaderboardBlacklist.connect(db);
                 const snapshot = await db.collection(LEADERBOARD_WINNERS_COLLECTION)
                     .orderBy("endedAtMs", "desc")
                     .limit(20)
@@ -2579,6 +2646,10 @@ body.leaderboards-page #friendProfileModal .profile-modal-content .stat-value {
 
         setupLeaderboardRangeToggle();
         updateLeaderboardRangeUI();
+        window.addEventListener('sharkdle-blacklist-changed', () => {
+            loadLeaderboard(selectedLeaderboardRange);
+            loadPreviousLeaderboardWinners();
+        });
 
         // Wait for auth state before loading leaderboard
         auth.onAuthStateChanged(async user => {
@@ -2681,6 +2752,8 @@ body.leaderboards-page #friendProfileModal .profile-modal-content .stat-value {
             table.style.display = 'none';
             tbody.innerHTML = '';
             try {
+                await window.SharkdleLeaderboardBlacklist.connect(db);
+                renderLeaderboardBlacklistNotice();
                 const candidateRows = await getLeaderboardCandidateRows(rangeConfig, LEADERBOARD_SCAN_LIMIT);
                 renderPersonalLeaderboardPosition(rangeConfig, candidateRows);
                 if (!candidateRows.length) {

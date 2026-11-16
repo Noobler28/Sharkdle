@@ -515,8 +515,8 @@ function formatDuelStatus(status) {
     }
 }
 
-const SEASONAL_CRATE_IDS = ["christmas", "halloween", "thanksgiving"];
-const EVENT_CRATE_IDS = ["summer", "christmas", "halloween"];
+const SEASONAL_CRATE_IDS = ["christmas", "halloween", "thanksgiving", "easter", "newyears", "stpatricks", "valentines"];
+const EVENT_CRATE_IDS = ["summer", "christmas", "halloween", "thanksgiving", "easter", "newyears", "stpatricks", "valentines"];
 const SEASONAL_CRATE_CRAFT_COST = 2;
 const SUMMER_CRATE_RETIREMENT_VERSION = 2;
 let activeSeasonalCrateThemeId = "default";
@@ -577,6 +577,11 @@ function getSeasonalCrateMeta(crateId = "event") {
             icon: "fa-drumstick-bite",
             spinColor: "#d99546",
             spinIcon: "\u{1F983}"
+        },
+        easter: { id: "easter", shortName: "Easter", blurb: "Easter Reef rewards.", visualClass: "easter", countClass: "easter", icon: "fa-egg", spinColor: "#d69bdc", spinIcon: "\u{1F423}" },
+        newyears: { id: "newyears", shortName: "New Years", blurb: "New Years Reef rewards.", visualClass: "newyears", countClass: "newyears", icon: "fa-champagne-glasses", spinColor: "#f4ca52", spinIcon: "\u{1F386}" },
+        stpatricks: { id: "stpatricks", shortName: "St Patricks", blurb: "St Patricks Reef rewards.", visualClass: "stpatricks", countClass: "stpatricks", icon: "fa-leaf", spinColor: "#57ce83", spinIcon: "\u{2618}\uFE0F" },
+        valentines: { id: "valentines", shortName: "Valentines", blurb: "Valentines Reef rewards.", visualClass: "valentines", countClass: "valentines", icon: "fa-heart", spinColor: "#f1789b", spinIcon: "\u{1F496}"
         }
     };
     return meta[crateId] || meta.event;
@@ -607,7 +612,33 @@ function shouldShowSeasonalCratePanel(crateId, profileData = getCurrentProfileDa
     return isSeasonalCrateThemeActive(crateId) || (getCrateInventory(profileData)[crateId] || 0) > 0;
 }
 
+function ensureSeasonalCrateCards() {
+    const homeGrid = document.querySelector("#homeCratesModal .home-crates-grid");
+    const cratesLayout = document.querySelector("#cratesModal .crates-layout");
+    for (const crateId of ["easter", "newyears", "stpatricks", "valentines"]) {
+        const definition = getCrateDefinition(crateId);
+        const meta = getSeasonalCrateMeta(crateId);
+        if (homeGrid && !document.getElementById(`home-crate-${crateId}-card`)) {
+            const card = document.createElement("article");
+            card.id = `home-crate-${crateId}-card`;
+            card.className = `home-crate-card ${crateId}`;
+            card.style.display = "none";
+            card.innerHTML = `<div class="home-crate-topline"><div><h3>${definition.name} <span>Limited</span></h3><p>${meta.blurb}</p></div><div class="home-crate-count ${crateId}"><span id="home-crate-${crateId}-count">0</span> ready</div></div><div class="home-crate-showcase"><div class="home-crate-visual ${crateId}"><i class="fa-solid ${definition.icon}"></i></div><div class="home-crate-odds"><div><span>Common</span><strong>58%</strong></div><div><span>Rare</span><strong>28%</strong></div><div><span>Epic</span><strong>10%</strong></div><div><span>Legendary</span><strong>4%</strong></div></div></div><div class="home-crate-actions"><button id="home-open-${crateId}-crate-btn" type="button" onclick="openHomeCrate('${crateId}')">Open Crate</button><button type="button" onclick="openCrateDropsModal('${crateId}')">View Drops</button></div>`;
+            homeGrid.appendChild(card);
+        }
+        if (cratesLayout && !document.getElementById(`${crateId}-crate-panel`)) {
+            const panel = document.createElement("section");
+            panel.id = `${crateId}-crate-panel`;
+            panel.className = `picker-section crate-inventory-panel ${crateId}`;
+            panel.style.display = "none";
+            panel.innerHTML = `<div class="crate-panel-topline"><div><h3>${definition.name} <span style="font-size:14px;color:#f2cf88;">(Limited!)</span></h3></div><button class="crate-inspect-btn" onclick="openCrateDropsModal('${crateId}')" aria-label="View possible drops"><i class="fa-solid ${definition.icon}"></i></button><div class="crate-count-badge ${crateId}"><span id="${crateId}-crate-count-value">0</span> ready</div></div><div class="crate-showcase"><div class="crate-visual ${crateId}"><i class="fa-solid ${definition.icon}"></i></div><div class="crate-odds"><div class="crate-odds-row"><span>Common</span><strong>58%</strong></div><div class="crate-odds-row"><span>Rare</span><strong>28%</strong></div><div class="crate-odds-row"><span>Epic</span><strong>10%</strong></div><div class="crate-odds-row"><span>Legendary</span><strong>4%</strong></div></div></div><div class="crate-action-row"><button id="open-${crateId}-crate-btn" class="primary-btn crate-open-btn" onclick="openCrate('${crateId}')">Open ${definition.name}</button></div>`;
+            cratesLayout.appendChild(panel);
+        }
+    }
+}
+
 function updateSeasonalCratePanels(profileData = getCurrentProfileData()) {
+    ensureSeasonalCrateCards();
     const inventory = getCrateInventory(profileData);
     const summerPanel = document.getElementById("summer-crate-panel");
     if (summerPanel) {
@@ -1908,7 +1939,9 @@ const sharkPassCardThemes = [
     { id: "nightmare-reef", name: "Phantom Fog", preview: "radial-gradient(circle at 82% 18%, rgba(245, 238, 218, 0.2), transparent 19%), radial-gradient(circle at 12% 72%, rgba(130, 255, 174, 0.12), transparent 30%), linear-gradient(180deg, rgba(6, 12, 18, 0.08), rgba(2, 4, 10, 0.66)), url(images/profileThemes/PhantomFog.png) center center / cover no-repeat" },
     { id: "thanksgiving", name: "Thanksgiving", preview: "linear-gradient(180deg, rgba(255, 205, 130, 0.08), rgba(35, 18, 8, 0.36)), url(images/profileThemes/Thanksgiving/Thanksgiving.jpg) center center / cover no-repeat" },
     { id: "fall", name: "Fall", preview: "linear-gradient(180deg, rgba(255, 195, 108, 0.08), rgba(35, 15, 6, 0.38)), url(images/profileThemes/Thanksgiving/Fall.jpg) center center / cover no-repeat" },
-    { id: "caramel", name: "Caramel", preview: "linear-gradient(180deg, rgba(255, 205, 130, 0.08), rgba(35, 18, 8, 0.36)), url(images/profileThemes/Thanksgiving/caramel.png) center center / cover no-repeat" }
+    { id: "caramel", name: "Caramel", preview: "linear-gradient(180deg, rgba(255, 205, 130, 0.08), rgba(35, 18, 8, 0.36)), url(images/profileThemes/Thanksgiving/caramel.png) center center / cover no-repeat" },
+    { id: "easter", name: "Easter", preview: "linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(47, 24, 64, 0.34)), url(images/profileThemes/Easter/Easter.jpg) center center / cover no-repeat" },
+    { id: "easter-bunny", name: "Bunny", preview: "linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(47, 24, 64, 0.34)), url(images/profileThemes/Easter/Bunny.jpg) center center / cover no-repeat" }
 ];
 
 const CRATE_DROP_CHANCE = 0.5;
@@ -2010,7 +2043,11 @@ const INDEX_THEME_OPTIONS = [
     { id: "birthday", name: "Birthday Bash" },
     { id: "christmas", name: "Christmas Reef" },
     { id: "halloween", name: "Halloween Depths" },
-    { id: "northpole", name: "North Pole" }
+    { id: "northpole", name: "North Pole" },
+    { id: "easter", name: "Easter Reef" },
+    { id: "newyears", name: "New Years Reef" },
+    { id: "stpatricks", name: "St Patricks Reef" },
+    { id: "valentines", name: "Valentines Reef" }
 ];
 const limitedTimeXpEvent = {
     id: "june-2026-double-xp",
@@ -2049,7 +2086,11 @@ const crateDefinitions = {
         id: "thanksgiving",
         name: "Thanksgiving Crate",
         icon: "fa-drumstick-bite"
-    }
+    },
+    easter: { id: "easter", name: "Easter Crate", icon: "fa-egg" },
+    newyears: { id: "newyears", name: "New Years Crate", icon: "fa-champagne-glasses" },
+    stpatricks: { id: "stpatricks", name: "St Patricks Crate", icon: "fa-leaf" },
+    valentines: { id: "valentines", name: "Valentines Crate", icon: "fa-heart" }
 };
 
 const crateAchievementIds = {
@@ -2209,6 +2250,52 @@ const thanksgivingCrateRewardPool = [
     { id: "crate-pfp-thanksgiving-thornback", type: "pfp", name: "Thornback Ray", imagePath: "images/cratePfp/ThanksgivingPfp/ThornbackRay.png", rarity: "legendary", blurb: "Unlock the Thornback Ray profile picture." },
     { id: "crate-theme-caramel", type: "theme", themeId: "caramel", name: "Caramel", rarity: "legendary", blurb: "Unlock the Caramel profile theme." },
     { id: "crate-badge-feasting", type: "badge", badgeId: "feasting", name: "Feasting", emoji: "\u{1F967}", rarity: "legendary", blurb: "Unlock the Feasting badge." }
+];
+
+const easterCrateRewardPool = [
+    { id: "crate-pfp-easter-spotted-ratfish", type: "pfp", name: "Spotted Ratfish", imagePath: "images/cratePfp/EasterPfp/SpottedRatfish.png", rarity: "common", blurb: "Unlock the Spotted Ratfish profile picture." },
+    { id: "crate-badge-easter", type: "badge", badgeId: "easter", name: "Easter", rarity: "common", blurb: "Unlock the Easter badge." },
+    { id: "crate-pfp-easter-epaulette", type: "pfp", name: "Epaulette Shark", imagePath: "images/cratePfp/EasterPfp/EpauletteShark.png", rarity: "rare", blurb: "Unlock the Epaulette Shark profile picture." },
+    { id: "crate-badge-bunny", type: "badge", badgeId: "bunny", name: "Bunny", rarity: "rare", blurb: "Unlock the Bunny badge." },
+    { id: "crate-theme-easter", type: "theme", themeId: "easter", name: "Easter", rarity: "rare", blurb: "Unlock the Easter profile theme." },
+    { id: "crate-pfp-easter-ornate-wobbegong", type: "pfp", name: "Ornate Wobbegong Shark", imagePath: "images/cratePfp/EasterPfp/OrnateWobbegongShark.png", rarity: "epic", blurb: "Unlock the Ornate Wobbegong Shark profile picture." },
+    { id: "crate-badge-eggy", type: "badge", badgeId: "eggy", name: "Eggy", rarity: "epic", blurb: "Unlock the Eggy badge." },
+    { id: "crate-theme-easter-bunny", type: "theme", themeId: "easter-bunny", name: "Bunny", rarity: "epic", blurb: "Unlock the Bunny profile theme." },
+    { id: "crate-badge-chick", type: "badge", badgeId: "chick", name: "Chick", rarity: "legendary", blurb: "Unlock the Chick badge." },
+    { id: "crate-pfp-easter-thorny-skate", type: "pfp", name: "Thorny Skate", imagePath: "images/cratePfp/EasterPfp/ThornySkate.png", rarity: "legendary", blurb: "Unlock the Thorny Skate profile picture." }
+];
+
+const newyearsCrateRewardPool = [
+    { id: "crate-pfp-newyears-common-eagle-ray", type: "pfp", name: "Common Eagle Ray", imagePath: "images/cratePfp/NewYearsPfp/CommonEagleRay.png", rarity: "common", blurb: "Unlock the Common Eagle Ray profile picture." },
+    { id: "crate-badge-new-years", type: "badge", badgeId: "new-years", name: "New Years", rarity: "common", blurb: "Unlock the New Years badge." },
+    { id: "crate-pfp-newyears-pyjama-shark", type: "pfp", name: "Pyjama Shark", imagePath: "images/cratePfp/NewYearsPfp/PyjamaShark.png", rarity: "rare", blurb: "Unlock the Pyjama Shark profile picture." },
+    { id: "crate-badge-firework", type: "badge", badgeId: "firework", name: "Firework", rarity: "rare", blurb: "Unlock the Firework badge." },
+    { id: "crate-pfp-newyears-starry-smooth-hound", type: "pfp", name: "Starry Smooth Hound", imagePath: "images/cratePfp/NewYearsPfp/StarrySmoothHound.png", rarity: "epic", blurb: "Unlock the Starry Smooth Hound profile picture." },
+    { id: "crate-badge-confetti", type: "badge", badgeId: "confetti", name: "Confetti", rarity: "epic", blurb: "Unlock the Confetti badge." },
+    { id: "crate-pfp-newyears-bull-ray", type: "pfp", name: "Bull Ray", imagePath: "images/cratePfp/NewYearsPfp/BullRay.png", rarity: "legendary", blurb: "Unlock the Bull Ray profile picture." },
+    { id: "crate-badge-celebration", type: "badge", badgeId: "celebration", name: "Celebration", rarity: "legendary", blurb: "Unlock the Celebration badge." }
+];
+
+const stpatricksCrateRewardPool = [
+    { id: "crate-pfp-stpatricks-salmon-shark", type: "pfp", name: "Salmon Shark", imagePath: "images/cratePfp/StPatricksPfp/SalmonShark.png", rarity: "common", blurb: "Unlock the Salmon Shark profile picture." },
+    { id: "crate-badge-st-patricks", type: "badge", badgeId: "st-patricks", name: "St Patricks", rarity: "common", blurb: "Unlock the St Patricks badge." },
+    { id: "crate-pfp-stpatricks-tiger-stingray", type: "pfp", name: "Tiger Stingray", imagePath: "images/cratePfp/StPatricksPfp/TigerStingray.png", rarity: "rare", blurb: "Unlock the Tiger Stingray profile picture." },
+    { id: "crate-badge-rainbow", type: "badge", badgeId: "rainbow", name: "Rainbow", rarity: "rare", blurb: "Unlock the Rainbow badge." },
+    { id: "crate-pfp-stpatricks-blackfin-gulper-shark", type: "pfp", name: "Blackfin Gulper Shark", imagePath: "images/cratePfp/StPatricksPfp/BlackfinGulperShark.png", rarity: "epic", blurb: "Unlock the Blackfin Gulper Shark profile picture." },
+    { id: "crate-badge-shamrock", type: "badge", badgeId: "shamrock", name: "Shamrock", rarity: "epic", blurb: "Unlock the Shamrock badge." },
+    { id: "crate-pfp-stpatricks-shovel-nose-guitarfish", type: "pfp", name: "Shovelnose Guitarfish", imagePath: "images/cratePfp/StPatricksPfp/ShovelNoseGuitarFish.png", rarity: "legendary", blurb: "Unlock the Shovelnose Guitarfish profile picture." },
+    { id: "crate-badge-leprechaun", type: "badge", badgeId: "leprechaun", name: "Leprechaun", rarity: "legendary", blurb: "Unlock the Leprechaun badge." }
+];
+
+const valentinesCrateRewardPool = [
+    { id: "crate-pfp-valentines-elephant-fish", type: "pfp", name: "Elephant Fish", imagePath: "images/cratePfp/ValentinesPfp/ElephantFish.png", rarity: "common", blurb: "Unlock the Elephant Fish profile picture." },
+    { id: "crate-badge-valentines", type: "badge", badgeId: "valentines", name: "Valentines", rarity: "common", blurb: "Unlock the Valentines badge." },
+    { id: "crate-badge-love-letter", type: "badge", badgeId: "love-letter", name: "LoveLetter", rarity: "rare", blurb: "Unlock the LoveLetter badge." },
+    { id: "crate-badge-cupid", type: "badge", badgeId: "cupid", name: "Cupid", rarity: "epic", blurb: "Unlock the Cupid badge." },
+    { id: "crate-badge-rose", type: "badge", badgeId: "rose", name: "Rose", rarity: "legendary", blurb: "Unlock the Rose badge." },
+    { id: "crate-pfp-valentines-coach-whipray", type: "pfp", name: "Coach Whipray", imagePath: "images/cratePfp/ValentinesPfp/CoachWhipray.png", rarity: "rare", blurb: "Unlock the Coach Whipray profile picture." },
+    { id: "crate-pfp-valentines-pink-manta-ray", type: "pfp", name: "Pink Manta Ray", imagePath: "images/cratePfp/ValentinesPfp/PinkMantaRay.png", rarity: "epic", blurb: "Unlock the Pink Manta Ray profile picture." },
+    { id: "crate-pfp-valentines-velvet-belly-lantern-shark", type: "pfp", name: "Velvet Belly Lantern Shark", imagePath: "images/cratePfp/ValentinesPfp/VelvetBellyLanternShark.png", rarity: "legendary", blurb: "Unlock the Velvet Belly Lantern Shark profile picture." }
 ];
 
 let crateOpeningInProgress = false;
@@ -3061,7 +3148,11 @@ function normalizeCrateInventory(rawInventory) {
         summer: Math.max(0, Number(rawInventory?.summer) || 0),
         christmas: Math.max(0, Number(rawInventory?.christmas) || 0),
         halloween: Math.max(0, Number(rawInventory?.halloween) || 0),
-        thanksgiving: Math.max(0, Number(rawInventory?.thanksgiving) || 0)
+        thanksgiving: Math.max(0, Number(rawInventory?.thanksgiving) || 0),
+        easter: Math.max(0, Number(rawInventory?.easter) || 0),
+        newyears: Math.max(0, Number(rawInventory?.newyears) || 0),
+        stpatricks: Math.max(0, Number(rawInventory?.stpatricks) || 0),
+        valentines: Math.max(0, Number(rawInventory?.valentines) || 0)
     };
 }
 
@@ -3108,7 +3199,11 @@ function mergeCrateInventory(localProfileOrInventory, remoteProfileOrInventory, 
         summer: Math.max(local.summer, remote.summer),
         christmas: Math.max(local.christmas, remote.christmas),
         halloween: Math.max(local.halloween, remote.halloween),
-        thanksgiving: Math.max(local.thanksgiving, remote.thanksgiving)
+        thanksgiving: Math.max(local.thanksgiving, remote.thanksgiving),
+        easter: Math.max(local.easter, remote.easter),
+        newyears: Math.max(local.newyears, remote.newyears),
+        stpatricks: Math.max(local.stpatricks, remote.stpatricks),
+        valentines: Math.max(local.valentines, remote.valentines)
     };
 }
 
@@ -3469,6 +3564,14 @@ function getCratePoolById(crateId) {
             return halloweenCrateRewardPool;
         case "thanksgiving":
             return thanksgivingCrateRewardPool;
+        case "easter":
+            return easterCrateRewardPool;
+        case "newyears":
+            return newyearsCrateRewardPool;
+        case "stpatricks":
+            return stpatricksCrateRewardPool;
+        case "valentines":
+            return valentinesCrateRewardPool;
         default:
             return crateRewardPool;
     }
@@ -4034,7 +4137,7 @@ window.closeSpinWheelModal = closeSpinWheelModal;
 window.spinDailyWheel = spinDailyWheel;
 
 function getAllCrateRewardPools() {
-    return [crateRewardPool, summerCrateRewardPool, christmasCrateRewardPool, halloweenCrateRewardPool, thanksgivingCrateRewardPool];
+    return [crateRewardPool, summerCrateRewardPool, christmasCrateRewardPool, halloweenCrateRewardPool, thanksgivingCrateRewardPool, easterCrateRewardPool, newyearsCrateRewardPool, stpatricksCrateRewardPool, valentinesCrateRewardPool];
 }
 
 function getAllDisplayCrateRewardPools() {
@@ -6928,6 +7031,7 @@ function renderCratesButton() {
 }
 
 function renderHomeCratesModal() {
+    ensureSeasonalCrateCards();
     const profileData = getCurrentProfileData();
     const inventory = getCrateInventory(profileData);
     const reefCount = inventory.reef || 0;
@@ -7012,6 +7116,7 @@ function closeCraftingModal() {
 }
 
 function renderCratesModal() {
+    ensureSeasonalCrateCards();
     const profileData = getCurrentProfileData();
     const inventory = getCrateInventory(profileData);
     const crateCount = inventory.reef;
@@ -7066,7 +7171,11 @@ function renderCratesModal() {
             "open-legacy-crate-btn": "Open Cosmetic Crate 1",
             "open-christmas-crate-btn": "Open Christmas Crate",
             "open-halloween-crate-btn": "Open Halloween Crate",
-            "open-thanksgiving-crate-btn": "Open Thanksgiving Crate"
+            "open-thanksgiving-crate-btn": "Open Thanksgiving Crate",
+            "open-easter-crate-btn": "Open Easter Crate",
+            "open-newyears-crate-btn": "Open New Years Crate",
+            "open-stpatricks-crate-btn": "Open St Patricks Crate",
+            "open-valentines-crate-btn": "Open Valentines Crate"
         };
         Object.entries(labelMap).forEach(([id, label]) => {
             const btn = document.getElementById(id);
@@ -7245,7 +7354,7 @@ async function persistCrateProfileUpdate(profileData) {
     }, { merge: true });
 }
 
-const CRATE_UNBOX_THEME_IDS = ["reef", "summer", "christmas", "halloween", "thanksgiving", "legacy"];
+const CRATE_UNBOX_THEME_IDS = ["reef", "summer", "christmas", "halloween", "thanksgiving", "easter", "newyears", "stpatricks", "valentines", "legacy"];
 let activeCrateUnboxId = "reef";
 
 function getCrateDefinition(crateId = "reef") {
@@ -7875,7 +7984,23 @@ allBadges.push(
     { id: "Vampire", name: "Vampire", emoji: "\u{1F9DB}", description: "A halloween crate badge." },
     { id: "thanksgiving", name: "Thanksgiving", emoji: "\u{1F983}", description: "A Thanksgiving crate badge." },
     { id: "harvest", name: "Harvest", emoji: "\u{1F342}", description: "A Thanksgiving crate badge." },
-    { id: "feasting", name: "Feasting", emoji: "\u{1F967}", description: "A Thanksgiving crate badge." }
+    { id: "feasting", name: "Feasting", emoji: "\u{1F967}", description: "A Thanksgiving crate badge." },
+    { id: "easter", name: "Easter", emoji: "\u{1F423}", description: "An Easter crate badge." },
+    { id: "bunny", name: "Bunny", emoji: "\u{1F430}", description: "An Easter crate badge." },
+    { id: "eggy", name: "Eggy", emoji: "\u{1F95A}", description: "An Easter crate badge." },
+    { id: "chick", name: "Chick", emoji: "\u{1F425}", description: "An Easter crate badge." },
+    { id: "new-years", name: "New Years", emoji: "\u{1F386}", description: "A New Years crate badge." },
+    { id: "firework", name: "Firework", emoji: "\u{1F387}", description: "A New Years crate badge." },
+    { id: "confetti", name: "Confetti", emoji: "\u{1F38A}", description: "A New Years crate badge." },
+    { id: "celebration", name: "Celebration", emoji: "\u{1F942}", description: "A New Years crate badge." },
+    { id: "st-patricks", name: "St Patricks", emoji: "\u{2618}\uFE0F", description: "A St Patricks crate badge." },
+    { id: "rainbow", name: "Rainbow", emoji: "\u{1F308}", description: "A St Patricks crate badge." },
+    { id: "shamrock", name: "Shamrock", emoji: "\u{1F340}", description: "A St Patricks crate badge." },
+    { id: "leprechaun", name: "Leprechaun", emoji: "\u{1F9DD}", description: "A St Patricks crate badge." },
+    { id: "valentines", name: "Valentines", emoji: "\u{1F496}", description: "A Valentines crate badge." },
+    { id: "love-letter", name: "LoveLetter", emoji: "\u{1F48C}", description: "A Valentines crate badge." },
+    { id: "cupid", name: "Cupid", emoji: "\u{1F498}", description: "A Valentines crate badge." },
+    { id: "rose", name: "Rose", emoji: "\u{1F339}", description: "A Valentines crate badge." }
 );
 
 function getUnlockedBadges(uid, profileData = getCurrentProfileData()) {
@@ -11220,6 +11345,17 @@ function inferPfpRarityFromPath(imagePath = "") {
         const matchingName = Object.keys(thanksgivingPfpRarity).find(name => name.toLowerCase() === thanksgivingPfpName.toLowerCase());
         if (matchingName) return thanksgivingPfpRarity[matchingName];
     }
+    const newSeasonalPfpMatch = imagePath.match(/cratePfp\/(EasterPfp|NewYearsPfp|ValentinesPfp)\/([^/]+)$/i);
+    if (newSeasonalPfpMatch) {
+        const rarityByFile = {
+            SpottedRatfish: "common", CommonEagleRay: "common", ElephantFish: "common",
+            EpauletteShark: "rare", PyjamaShark: "rare",
+            OrnateWobbegongShark: "epic", StarrySmoothHound: "epic", BullRay: "legendary",
+            ThornySkate: "legendary", CoachWhipray: "rare", PinkMantaRay: "epic", VelvetBellyLanternShark: "legendary",
+            SalmonShark: "common", TigerStingray: "rare", BlackfinGulperShark: "epic"
+        };
+        return rarityByFile[newSeasonalPfpMatch[2].replace(/\.png$/i, "")] || "common";
+    }
     const seasonalMatch = imagePath.match(/cratePfp\/(?:SummerPfp|ChristmasPfp|HalloweenPfp)\/Shark([1-4])\.png$/i);
     if (seasonalMatch) {
         return ({ 1: "common", 2: "rare", 3: "epic", 4: "legendary" })[Number(seasonalMatch[1])] || "common";
@@ -11283,6 +11419,10 @@ function getCrateSourceLabelFromPath(imagePath = "") {
     if (/cratePfp\/ChristmasPfp/i.test(path)) return "Christmas Crate";
     if (/cratePfp\/HalloweenPfp/i.test(path)) return "Halloween Crate";
     if (/cratePfp\/ThanksgivingPfp/i.test(path)) return "Thanksgiving Crate";
+    if (/cratePfp\/StPatricksPfp/i.test(path)) return "St Patricks Crate";
+    if (/cratePfp\/EasterPfp/i.test(path)) return "Easter Crate";
+    if (/cratePfp\/NewYearsPfp/i.test(path)) return "New Years Crate";
+    if (/cratePfp\/ValentinesPfp/i.test(path)) return "Valentines Crate";
     if (/cratePfp\/cosmeticCrate2/i.test(path)) return "Cosmetic Crate 2";
     if (/cratePfp/i.test(path)) return "Cosmetic Crate 1";
     return "Cosmetic Crate";
@@ -11294,12 +11434,20 @@ function getCrateRewardSourceLabel(reward = {}) {
     if (/christmas/i.test(id)) return "Christmas Crate";
     if (/halloween/i.test(id)) return "Halloween Crate";
     if (/thanksgiving/i.test(id)) return "Thanksgiving Crate";
+    if (/easter/i.test(id)) return "Easter Crate";
+    if (/newyears|new-years/i.test(id)) return "New Years Crate";
+    if (/stpatricks|st-patricks/i.test(id)) return "St Patricks Crate";
+    if (/valentines/i.test(id)) return "Valentines Crate";
     if (reward?.imagePath) return getCrateSourceLabelFromPath(reward.imagePath);
     if (legacyCrate1RewardPool.some(crateReward => crateReward.id === id)) return "Cosmetic Crate 1";
     if (summerCrateRewardPool.some(crateReward => crateReward.id === id)) return "Summer Crate";
     if (christmasCrateRewardPool.some(crateReward => crateReward.id === id)) return "Christmas Crate";
     if (halloweenCrateRewardPool.some(crateReward => crateReward.id === id)) return "Halloween Crate";
     if (thanksgivingCrateRewardPool.some(crateReward => crateReward.id === id)) return "Thanksgiving Crate";
+    if (easterCrateRewardPool.some(crateReward => crateReward.id === id)) return "Easter Crate";
+    if (newyearsCrateRewardPool.some(crateReward => crateReward.id === id)) return "New Years Crate";
+    if (stpatricksCrateRewardPool.some(crateReward => crateReward.id === id)) return "St Patricks Crate";
+    if (valentinesCrateRewardPool.some(crateReward => crateReward.id === id)) return "Valentines Crate";
     if (crateRewardPool.some(crateReward => crateReward.id === id)) return "Cosmetic Crate 2";
     return "Cosmetic Crate";
 }
