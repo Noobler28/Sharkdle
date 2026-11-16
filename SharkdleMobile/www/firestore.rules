@@ -15,7 +15,9 @@ service cloud.firestore {
 
     // Keep these UIDs in sync with leaderboard-blacklist.js.
     function isLeaderboardBlacklisted(userId) {
-      return userId in [
+      return exists(/databases/$(database)/documents/leaderboardRestrictions/$(userId))
+        ? get(/databases/$(database)/documents/leaderboardRestrictions/$(userId)).data.active == true
+        : userId in [
         'sIoLtlm9kubExe2BY5cVvIlOqKA3',
         '1MPm8Ra9VYQusZkCBpRCRDo7nJq2',
         'AtXSxyWxB0XTLVoB38EP9lXYY143',
@@ -247,9 +249,9 @@ service cloud.firestore {
       allow create, update, delete: if isVerifiedUser() && request.auth.uid == userId;
     }
 
-    // Daily game state
+    // Daily game state; developers may read participation for admin insights.
     match /userDaily/{userId} {
-      allow read: if isVerifiedUser() && request.auth.uid == userId;
+      allow read: if isVerifiedUser() && (request.auth.uid == userId || isDeveloper());
       allow write: if isVerifiedUser() && request.auth.uid == userId;
     }
 
@@ -306,6 +308,20 @@ service cloud.firestore {
       }
     }
 
+    // Public reasons are used to filter rankings; only developers can moderate.
+    match /leaderboardRestrictions/{userId} {
+      allow read: if true;
+      allow create, update: if isDeveloper()
+        && request.resource.data.keys().hasOnly(['active', 'reason', 'updatedAt', 'updatedBy'])
+        && request.resource.data.active is bool
+        && request.resource.data.reason is string
+        && request.resource.data.reason.size() > 0
+        && request.resource.data.reason.size() <= 300
+        && request.resource.data.updatedBy == request.auth.uid
+        && request.resource.data.updatedAt == request.time;
+      allow delete: if isDeveloper();
+    }
+
     // User stats for leaderboard and friends system
     match /userStats/{userId} {
       allow read: if true;
@@ -313,8 +329,8 @@ service cloud.firestore {
         && (isDeveloper() || !isLeaderboardBlacklisted(userId)
           || !hasRngLeaderboardFields(request.resource.data.keys()));
       allow update: if isVerifiedUser() && (request.auth.uid == userId || isDeveloper())
-        && (isDeveloper() || !isLeaderboardBlacklisted(userId)
-          || !hasRngLeaderboardFields(request.resource.data.diff(resource.data).affectedKeys()));
+        && (isDeveloper() || !hasRngLeaderboardFields(request.resource.data.diff(resource.data).affectedKeys())
+          || !isLeaderboardBlacklisted(userId));
       allow delete: if isVerifiedUser() && (request.auth.uid == userId || isDeveloper());
 
       // One immutable claim per code, separate from replaceable profile snapshots.

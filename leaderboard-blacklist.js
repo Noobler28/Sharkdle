@@ -20,7 +20,25 @@
         "vhprPM4Hdghiz1Rpx3t2BX9bmap2": Object.freeze({ reason: "Offensive username" })
     });
 
+    let dynamicEntries = new Map();
+    let ready = null;
+    function connect(db) {
+        if (ready) return ready;
+        ready = new Promise((resolve, reject) => {
+            db.collection('leaderboardRestrictions').onSnapshot(snapshot => {
+                dynamicEntries = new Map(snapshot.docs.map(doc => [doc.id, doc.data()]));
+                resolve();
+                root.dispatchEvent(new Event('sharkdle-blacklist-changed'));
+            }, error => { ready = null; reject(error); });
+        });
+        return ready;
+    }
+
     function getReason(uid) {
+        if (dynamicEntries.has(uid)) {
+            const entry = dynamicEntries.get(uid);
+            return entry.active ? entry.reason : null;
+        }
         return Object.prototype.hasOwnProperty.call(entries, uid) ? entries[uid].reason : null;
     }
 
@@ -46,6 +64,6 @@
     }
 
     root.SharkdleLeaderboardBlacklist = Object.freeze({
-        getReason, getNotice, isBlacklisted, isRecordBlacklisted, renderNotice
+        connect, getReason, getNotice, isBlacklisted, isRecordBlacklisted, renderNotice
     });
 })(window);

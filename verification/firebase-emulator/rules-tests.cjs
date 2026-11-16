@@ -165,6 +165,30 @@ function adapter(db) {
             await assertSucceeds(setDoc(doc(db, 'rngProfiles/' + uid), { schemaVersion: 2, coins: 10 }));
         }
     });
+    await test('Live blacklist is developer-only, blocks rankings and preserves private saves', async () => {
+        const path = 'leaderboardRestrictions/live-player';
+        const actor = environment.authenticatedContext('live-player', { email_verified: true }).firestore();
+        const restriction = active => ({active, reason: 'Review stats', updatedBy: 'ETPtQC0VA2NiSnX67rS2P2ma2tC2', updatedAt: serverTimestamp()});
+        for (const client of [a, guest, unverified]) await assertFails(setDoc(doc(client, path), restriction(true)));
+        await assertSucceeds(setDoc(doc(actor, 'userStats/live-player'), {wins: 10}));
+        await assertSucceeds(setDoc(doc(developer, path), restriction(true)));
+        await assertSucceeds(getDoc(doc(guest, path)));
+        await assertFails(setDoc(doc(actor, 'rngLeaderboard/live-player'), {uid: 'live-player', bestOneIn: 100}));
+        await assertFails(updateDoc(doc(actor, 'userStats/live-player'), {rngRolls: 100}));
+        await assertFails(updateDoc(doc(actor, 'userStats/live-player'), {wins: 12, rngRolls: 100}));
+        await assertSucceeds(updateDoc(doc(actor, 'userStats/live-player'), {wins: 11}));
+        await assertSucceeds(setDoc(doc(actor, 'rngProfiles/live-player'), {schemaVersion: 2, coins: 10}));
+        await assertFails(setDoc(doc(developer, path), {...restriction(true), extra: 'not allowed'}));
+        await assertFails(setDoc(doc(developer, path), {...restriction(true), reason: ''}));
+        await assertSucceeds(setDoc(doc(developer, path), restriction(false)));
+        await assertSucceeds(setDoc(doc(actor, 'rngLeaderboard/live-player'), {uid: 'live-player', bestOneIn: 100}));
+        const legacy = 'sIoLtlm9kubExe2BY5cVvIlOqKA3';
+        const legacyActor = environment.authenticatedContext(legacy, {email_verified: true}).firestore();
+        await assertSucceeds(setDoc(doc(developer, 'leaderboardRestrictions/' + legacy), restriction(false)));
+        await assertSucceeds(setDoc(doc(legacyActor, 'rngLeaderboard/' + legacy), {uid: legacy, bestOneIn: 100}));
+        await assertSucceeds(deleteDoc(doc(developer, 'leaderboardRestrictions/' + legacy)));
+        await assertFails(updateDoc(doc(legacyActor, 'rngLeaderboard/' + legacy), {bestOneIn: 200}));
+    });
     await test('Leaderboard requires a canonical account and matching owner', async () => {
         await assertFails(setDoc(doc(b, 'rngLeaderboard/account-b'), { uid: 'account-b' }));
         await setDoc(doc(b, 'userStats/account-b'), { xp: 0 });

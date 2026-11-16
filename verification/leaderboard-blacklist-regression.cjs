@@ -28,7 +28,7 @@ function element() {
 }
 function context(policySource = moduleSource) {
     const nodes = {}, storage = new Map();
-    const c = {window: {}, console,
+    const c = {window: {addEventListener() {}, dispatchEvent() {}}, Event: class {}, console,
         localStorage: {getItem: key => storage.get(key) || null, setItem: (key, value) => storage.set(key, value)},
         document: {getElementById: id => nodes[id] ||= element(), querySelectorAll: () => [], createElement: element},
         setTimeout: () => 1, clearTimeout() {}, setInterval: () => 1, clearInterval() {}};
@@ -64,6 +64,7 @@ function doc(id, data) {return {id, exists: true, data: () => data};}
         function collection() {
             let limit = Infinity, after = null, where = null, order = 'wins';
             return {
+                onSnapshot(callback) { callback({docs: []}); return () => {}; },
                 orderBy(field) {order = field; return this;}, limit(value) {limit = value; return this;},
                 startAfter(value) {after = value; return this;}, where(field, op, value) {where = [field, value]; return this;},
                 async get() {
