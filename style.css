@@ -21969,3 +21969,93 @@ body.home-v3-page .home-v3-hero-actions .home-v3-ghost-btn:focus-visible {
     #cratesModal .crates-layout,
     #cratesModal .crates-layout.single-crate-layout { grid-template-columns: 1fr; }
 }
+
+/* The home-page inventory is the modal players open from the crate button. */
+#homeCratesModal .home-crates-modal-content {
+    width: 96vw !important;
+    max-width: 1240px !important;
+    max-height: calc(100vh - 24px) !important;
+    padding: 16px !important;
+    gap: 10px !important;
+}
+#homeCratesModal .home-crates-grid {
+    display: flex !important;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 10px !important;
+}
+#homeCratesModal .home-crate-card { flex: 0 1 calc(25% - 8px); min-width: 230px; max-width: 320px; }
+#homeCratesModal .home-crates-grid.crate-count-1 .home-crate-card { flex-basis: min(380px, 100%); max-width: 380px; }
+#homeCratesModal .home-crates-grid.crate-count-2 .home-crate-card { flex-basis: min(380px, calc(50% - 5px)); max-width: 380px; }
+#homeCratesModal .home-crates-grid.crate-count-3 .home-crate-card { flex-basis: min(380px, calc(33.333% - 7px)); max-width: 380px; }
+#homeCratesModal .home-crate-card {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto auto auto;
+    align-items: center;
+    gap: 7px 9px;
+    min-height: 142px !important;
+    padding: 10px !important;
+    border-radius: 14px;
+}
+#homeCratesModal .home-crate-topline {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 5px;
+    margin: 0;
+}
+#homeCratesModal .home-crate-topline h3 {
+    overflow: hidden;
+    font-size: 18px;
+    line-height: 1.1;
+    letter-spacing: .5px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+#homeCratesModal .home-crate-topline p { display: none; }
+#homeCratesModal .home-crate-topline h3 span { margin-left: 3px; padding: 2px 5px; font-size: 8px; }
+#homeCratesModal .home-crate-count { padding: 4px 7px; font-size: 9px; white-space: nowrap; }
+#homeCratesModal .home-crate-count span { font-size: 13px; }
+#homeCratesModal .home-crate-showcase {
+    display: grid;
+    grid-column: 1 / -1;
+    grid-row: 2;
+    grid-template-columns: 54px minmax(0, 1fr);
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+}
+#homeCratesModal .home-crate-odds { display: grid; gap: 4px; min-width: 0; }
+#homeCratesModal .home-crate-odds div { gap: 6px; padding: 4px 7px; border-radius: 8px; font-size: 10px; line-height: 1.1; }
+#homeCratesModal .home-crate-visual { min-height: 66px; height: 66px; border-radius: 14px; font-size: 24px; }
+#homeCratesModal .home-crate-actions {
+    grid-column: 1 / -1;
+    grid-row: 3;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+    margin: 0;
+}
+#homeCratesModal .home-crate-card button { min-height: 42px; padding: 5px; font-size: 12px; letter-spacing: .4px; white-space: nowrap; }
+@media (max-width: 640px) {
+    #homeCratesModal .home-crates-modal-content { width: 96vw !important; padding: 12px !important; }
+    #homeCratesModal .home-crate-card { flex-basis: calc(50% - 5px); min-width: 0; max-width: 380px; }
+    #homeCratesModal .home-crates-grid.crate-count-1 .home-crate-card { flex-basis: min(380px, 100%); }
+    #homeCratesModal .home-crates-grid.crate-count-2 .home-crate-card { flex-basis: calc(50% - 5px); }
+    #homeCratesModal .home-crates-grid.crate-count-3 .home-crate-card,
+    #homeCratesModal .home-crates-grid.crate-count-4plus .home-crate-card { flex-basis: calc(50% - 5px); min-width: 0; max-width: 380px; }
+    #homeCratesModal .home-crate-card { grid-template-columns: minmax(0, 1fr); gap: 6px; padding: 8px !important; }
+    #homeCratesModal .home-crate-topline { grid-template-columns: minmax(0, 1fr) auto; }
+    #homeCratesModal .home-crate-topline h3 { font-size: 13px; }
+    #homeCratesModal .home-crate-count { padding: 3px 5px; font-size: 8px; }
+    #homeCratesModal .home-crate-count span { font-size: 11px; }
+    #homeCratesModal .home-crate-showcase { grid-template-columns: 42px minmax(0, 1fr); gap: 6px; }
+    #homeCratesModal .home-crate-odds { gap: 3px; }
+    #homeCratesModal .home-crate-odds div { padding: 4px 5px; font-size: 9px; }
+    #homeCratesModal .home-crate-visual { min-height: 58px; height: 58px; font-size: 19px; }
+    #homeCratesModal .home-crate-card button { min-height: 38px; font-size: 11px; }
+}
+@media (max-width: 360px) {
+    #homeCratesModal .home-crate-card { flex-basis: 100% !important; }
+}

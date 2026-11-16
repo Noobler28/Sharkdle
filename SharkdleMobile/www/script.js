@@ -7062,6 +7062,15 @@ function renderHomeCratesModal() {
         }
     });
 
+    const homeCratesGrid = document.querySelector("#homeCratesModal .home-crates-grid");
+    if (homeCratesGrid) {
+        homeCratesGrid.classList.remove("crate-count-1", "crate-count-2", "crate-count-3", "crate-count-4plus");
+        const visibleCardCount = [...homeCratesGrid.querySelectorAll(".home-crate-card")]
+            .filter(card => getComputedStyle(card).display !== "none").length;
+        const countClass = visibleCardCount >= 4 ? "crate-count-4plus" : `crate-count-${visibleCardCount}`;
+        homeCratesGrid.classList.add(countClass);
+    }
+
     if (craftingBtn) {
         const activeCrateId = getActiveSeasonalCrateId();
         const activeCrateName = activeCrateId ? getCrateDefinition(activeCrateId).name : "Event Crate";
