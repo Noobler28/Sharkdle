@@ -21865,8 +21865,7 @@ body.home-v3-page .home-v3-hero-actions .home-v3-ghost-btn:focus-visible {
 .home-loading-screen[hidden], .home-loading-screen.hidden { display: none !important; }
 .home-loading-screen strong { font-size: 18px; }
 .home-loading-screen > span:last-child { color: #a7c4d0; font-size: 14px; }
-.home-loading-spinner { width: 42px; height: 42px; border: 3px solid rgba(111, 218, 245, .2); border-top-color: #6fdaf5; border-radius: 50%; animation: home-loading-spin .8s linear infinite; }
-@keyframes home-loading-spin { to { transform: rotate(360deg); } }
+.home-loading-spinner { display:block; width:76px; height:76px; object-fit:contain; }
 
 .home-crate-card.easter,.crate-inventory-panel.easter { border-color: rgba(234,178,235,.34); background: linear-gradient(150deg,rgba(80,46,93,.94),rgba(32,22,47,.98)); }
 .home-crate-card.newyears,.crate-inventory-panel.newyears { border-color: rgba(244,202,82,.34); background: linear-gradient(150deg,rgba(73,57,33,.94),rgba(28,27,45,.98)); }

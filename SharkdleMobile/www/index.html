@@ -26,7 +26,7 @@ content="Play Sharkdle, the daily shark guessing game. Guess shark species from 
 <meta name="twitter:description" content="Play Sharkdle, the daily shark guessing game.">
 <meta name="twitter:image" content="https://sharkdle.online/images/favicon.png">
 
-<link rel="stylesheet" href="style.css?v=20261117-home-crate-grid">
+<link rel="stylesheet" href="style.css?v=20261116-shark-loader">
 <link rel="stylesheet" href="christmas-event.css?v=20261102-present-doors">
 
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800;900&family=Barlow:wght@400;500;600;700&family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
@@ -184,7 +184,7 @@ content="Play Sharkdle, the daily shark guessing game. Guess shark species from 
 </div>
 
 <div id="home-loading-screen" class="home-loading-screen" role="status" aria-live="polite">
-    <span class="home-loading-spinner" aria-hidden="true"></span>
+    <img class="home-loading-spinner" src="Loading.gif?v=20261116-shark-loader" alt="" aria-hidden="true">
     <strong>Please wait while we load your data</strong>
     <span>Your Sharkdle profile is getting ready.</span>
 </div>
@@ -193,8 +193,7 @@ content="Play Sharkdle, the daily shark guessing game. Guess shark species from 
     .home-loading-screen.hidden { display: none !important; }
     .home-loading-screen strong { font-size: 18px; }
     .home-loading-screen > span:last-child { color: #a7c4d0; font-size: 14px; }
-    .home-loading-spinner { width: 42px; height: 42px; border: 3px solid rgba(111, 218, 245, .2); border-top-color: #6fdaf5; border-radius: 50%; animation: home-loading-spin .8s linear infinite; }
-    @keyframes home-loading-spin { to { transform: rotate(360deg); } }
+    .home-loading-spinner { display: block; width: 76px; height: 76px; object-fit: contain; }
 </style>
 <main class="home-v3-shell">
     <aside class="home-v3-left">
