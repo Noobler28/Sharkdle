@@ -21807,3 +21807,15 @@ body.home-v3-page .home-v3-hero-actions .home-v3-ghost-btn:focus-visible {
     #homeCratesModal .home-crate-card button { min-height:38px; font-size:11px; }
 }
 @media(max-width:360px) { #homeCratesModal .home-crate-card { flex-basis:100%!important; } }
+
+.spin-wheel-reward-modal { z-index:5010; background:rgba(1,9,17,.82); backdrop-filter:blur(10px); }
+.spin-wheel-reward-content { position:relative; width:min(440px,92vw); padding:34px 30px 28px; overflow:hidden; border:1px solid rgba(255,212,127,.32); border-radius:26px; background:radial-gradient(circle at 50% 0,rgba(255,212,127,.16),transparent 42%),linear-gradient(155deg,#0b2b40,#071725 78%); box-shadow:0 30px 90px rgba(0,0,0,.62),0 0 44px rgba(255,212,127,.13); color:#f4fdff; text-align:center; animation:spinRewardPop .38s cubic-bezier(.2,1.2,.35,1) both; }
+.spin-wheel-reward-content .modal-x-btn { position:absolute; top:10px; right:12px; }
+.spin-wheel-reward-kicker { color:#ffd47f; font-size:11px; font-weight:900; letter-spacing:.16em; text-transform:uppercase; }
+.spin-wheel-reward-icon { display:grid; place-items:center; width:96px; height:96px; margin:20px auto 16px; border:1px solid color-mix(in srgb,var(--reward-accent,#ffd47f) 60%,transparent); border-radius:24px; background:color-mix(in srgb,var(--reward-accent,#ffd47f) 17%,#071725); box-shadow:0 0 34px color-mix(in srgb,var(--reward-accent,#ffd47f) 24%,transparent),inset 0 1px 0 rgba(255,255,255,.14); font-size:48px; }
+.spin-wheel-reward-icon img { width:100%; height:100%; border-radius:inherit; object-fit:cover; }
+.spin-wheel-reward-content h2 { margin:0; color:#fff8df; font-size:clamp(24px,6vw,34px); line-height:1.1; }
+.spin-wheel-reward-content p { margin:10px 0 24px; color:rgba(225,244,249,.82); font-size:16px; font-weight:700; line-height:1.45; }
+.spin-wheel-reward-close { min-width:180px; min-height:46px; border-radius:13px; }
+@keyframes spinRewardPop { from { opacity:0; transform:translateY(12px) scale(.94); } to { opacity:1; transform:translateY(0) scale(1); } }
+@media(max-width:560px) { .spin-wheel-reward-content { width:min(420px,92vw); padding:32px 22px 24px; } .spin-wheel-reward-icon { width:82px; height:82px; margin:16px auto 14px; font-size:40px; } .spin-wheel-reward-content p { font-size:14px; } }

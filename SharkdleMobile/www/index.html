@@ -26,7 +26,7 @@ content="Play Sharkdle, the daily shark guessing game. Guess shark species from 
 <meta name="twitter:description" content="Play Sharkdle, the daily shark guessing game.">
 <meta name="twitter:image" content="https://sharkdle.online/images/favicon.png">
 
-<link rel="stylesheet" href="style.css?v=20261116-shark-loader">
+<link rel="stylesheet" href="style.css?v=20261117-spin-reward-popup">
 <link rel="stylesheet" href="christmas-event.css?v=20261102-present-doors">
 
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800;900&family=Barlow:wght@400;500;600;700&family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
@@ -501,13 +501,23 @@ content="Play Sharkdle, the daily shark guessing game. Guess shark species from 
                     <div id="spin-wheel-disk" class="spin-wheel-disk"></div>
                     <div class="spin-wheel-center" aria-hidden="true"><i class="fa-solid fa-rotate"></i></div>
                 </div>
-                <div id="spin-wheel-result" class="spin-wheel-result hidden"></div>
                 <div class="spin-wheel-actions">
                     <button id="spin-wheel-action-btn" class="primary-btn" type="button" onclick="spinDailyWheel()">Win Today to Unlock</button>
                     <button class="secondary-btn" type="button" onclick="closeSpinWheelModal()">Close</button>
                 </div>
             </div>
         </div>
+    </div>
+</div>
+
+<div id="spinWheelRewardModal" class="modal hidden spin-wheel-reward-modal" role="dialog" aria-modal="true" aria-labelledby="spin-wheel-reward-title" onclick="if(event.target===this) closeSpinWheelRewardModal()">
+    <div class="spin-wheel-reward-content">
+        <button type="button" class="modal-x-btn" onclick="closeSpinWheelRewardModal()" aria-label="Close spin reward">&times;</button>
+        <div class="spin-wheel-reward-kicker">Daily Win Wheel</div>
+        <div id="spin-wheel-reward-icon" class="spin-wheel-reward-icon" aria-hidden="true"></div>
+        <h2 id="spin-wheel-reward-title">You won!</h2>
+        <p id="spin-wheel-reward-copy"></p>
+        <button type="button" class="primary-btn spin-wheel-reward-close" onclick="closeSpinWheelRewardModal()">Awesome!</button>
     </div>
 </div>
 
@@ -1694,7 +1704,7 @@ content="Play Sharkdle, the daily shark guessing game. Guess shark species from 
 
 <link rel="stylesheet" href="fair-play.css?v=20261019">
 <script src="fair-play.js?v=20261019"></script>
-<script src="script.js?v=20261108-daily-players"></script>
+<script src="script.js?v=20261117-spin-reward-popup"></script>
 <script>
 window.addEventListener("sharkdle-home-data-ready", () => {
     window.setTimeout(() => document.getElementById("home-loading-screen")?.classList.add("hidden"), 450);

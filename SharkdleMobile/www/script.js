@@ -3894,16 +3894,11 @@ function openSpinWheelModal() {
     }
     const modal = document.getElementById("spinWheelModal");
     const disk = document.getElementById("spin-wheel-disk");
-    const result = document.getElementById("spin-wheel-result");
     if (!modal || !disk) return;
 
     disk.style.background = buildSpinWheelGradient();
     renderSpinWheelSliceLabels();
     disk.style.transform = `rotate(${spinWheelRotation}deg)`;
-    if (result) {
-        result.classList.add("hidden");
-        result.textContent = "";
-    }
     renderSpinWheelLegend();
     updateSpinWheelUI();
     modal.classList.remove("hidden");
@@ -3912,6 +3907,27 @@ function openSpinWheelModal() {
 function closeSpinWheelModal() {
     const modal = document.getElementById("spinWheelModal");
     if (modal) modal.classList.add("hidden");
+}
+
+function closeSpinWheelRewardModal() {
+    document.getElementById("spinWheelRewardModal")?.classList.add("hidden");
+}
+
+function showSpinWheelRewardModal(reward, grantResult) {
+    const modal = document.getElementById("spinWheelRewardModal");
+    const icon = document.getElementById("spin-wheel-reward-icon");
+    const title = document.getElementById("spin-wheel-reward-title");
+    const copy = document.getElementById("spin-wheel-reward-copy");
+    if (!modal || !icon || !title || !copy) return;
+
+    icon.style.setProperty("--reward-accent", reward.color || "#ffd47f");
+    icon.innerHTML = reward.type === "pfp" && reward.imagePath
+        ? `<img src="${escapeHtml(reward.imagePath)}" alt="">`
+        : escapeHtml(reward.icon || "🎉");
+    title.textContent = grantResult.duplicate && reward.type !== "item" ? "Duplicate reward!" : reward.label;
+    copy.textContent = grantResult.message;
+    modal.classList.remove("hidden");
+    modal.querySelector(".spin-wheel-reward-close")?.focus();
 }
 
 async function spinDailyWheel() {
@@ -3924,7 +3940,6 @@ async function spinDailyWheel() {
     }
 
     const disk = document.getElementById("spin-wheel-disk");
-    const result = document.getElementById("spin-wheel-result");
     const actionBtn = document.getElementById("spin-wheel-action-btn");
     if (!disk) return;
 
@@ -3978,25 +3993,7 @@ async function spinDailyWheel() {
         }
     }
 
-    if (result) {
-        result.classList.remove("hidden");
-        result.innerHTML = `\u{1F389} You won <strong>${grantResult.message}</strong>!`;
-    }
-
-    if (reward.type === "pfp" && !grantResult.duplicate && typeof showCosmeticUnlockToast === "function") {
-        showCosmeticUnlockToast({
-            name: reward.name,
-            imagePath: reward.imagePath
-        }, {
-            title: "Jackpot Spin Reward!",
-            subtitle: reward.name,
-            accent: "#ffd47f",
-            background: "linear-gradient(135deg, rgba(255, 212, 127, 0.96), rgba(91, 58, 9, 0.96))",
-            icon: "\u{1F3A1}"
-        });
-    } else {
-        showNotification(`Spin reward: ${grantResult.message}`, "success", 4200);
-    }
+    showSpinWheelRewardModal(reward, grantResult);
 
     renderCratesButton();
     renderCratesModal();
@@ -4133,6 +4130,7 @@ window.giveSpin = window.giveDailySpin;
 window.markDailySpinWinUnlocked = markDailySpinWinUnlocked;
 window.openSpinWheelModal = openSpinWheelModal;
 window.closeSpinWheelModal = closeSpinWheelModal;
+window.closeSpinWheelRewardModal = closeSpinWheelRewardModal;
 window.spinDailyWheel = spinDailyWheel;
 
 function getAllCrateRewardPools() {
