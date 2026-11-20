@@ -21526,6 +21526,22 @@ body.home-v3-page .home-v3-hero-actions .home-v3-ghost-btn:focus-visible {
 
 .home-v3-hero .thanksgiving-hero-icon-button { pointer-events: auto; }
 
+.home-v3-hero .thanksgiving-hero-label {
+    position: absolute;
+    right: 0;
+    bottom: calc(100% - 4px);
+    padding: 6px 10px;
+    border: 1px solid rgba(255, 221, 165, .5);
+    border-radius: 999px;
+    background: rgba(35, 22, 14, .88);
+    color: #fff0d5;
+    font: 700 11px/1.2 'Barlow', sans-serif;
+    letter-spacing: .02em;
+    white-space: nowrap;
+    box-shadow: 0 4px 14px rgba(0,0,0,.3);
+    pointer-events: none;
+}
+
 .thanksgiving-event-modal-content {
     text-align: center !important;
     max-height: min(90vh, 900px);
