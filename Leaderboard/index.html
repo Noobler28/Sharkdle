@@ -2669,6 +2669,7 @@ body.leaderboards-page #friendProfileModal .profile-modal-content .stat-value {
 
         async function getLeaderboardCandidateRows(rangeConfig, maxCandidates = LEADERBOARD_LIMIT) {
             const candidates = [];
+            const seenUsers = new Set();
             const baseCollection = db.collection("userStats");
             const queryLimit = rangeConfig.id === "all_time"
                 ? Math.min(maxCandidates, LEADERBOARD_SCAN_LIMIT)
@@ -2714,6 +2715,13 @@ body.leaderboards-page #friendProfileModal .profile-modal-content .stat-value {
                     if (totalWins <= 0) continue;
 
                     const metricValue = getLeaderboardMetricValue(data, rangeConfig.id);
+                    // Collapse duplicate stats records for the same player.
+                    const identity = data.uid ? `uid:${String(data.uid).trim().toLowerCase()}`
+                        : data.email ? `email:${String(data.email).trim().toLowerCase()}`
+                        : data.username ? `username:${String(data.username).trim().toLowerCase()}`
+                        : `doc:${doc.id}`;
+                    if (seenUsers.has(identity)) continue;
+                    seenUsers.add(identity);
                     if (rangeConfig.id !== "all_time" && metricValue <= 0) continue;
 
                     candidates.push({
