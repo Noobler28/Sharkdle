@@ -352,7 +352,7 @@ service cloud.firestore {
           && request.resource.data.keys().hasOnly(['uid', 'day', 'mode', 'wonAt'])
           && request.resource.data.uid == userId
           && request.resource.data.day is int
-          && request.resource.data.day >= 1 && request.resource.data.day <= 25
+          && request.resource.data.day >= 1 && request.resource.data.day <= 31
           && dayId == string(request.resource.data.day)
           && request.resource.data.mode in ['daily', 'infinite']
           && request.resource.data.wonAt == request.time
@@ -367,11 +367,11 @@ service cloud.firestore {
           && request.resource.data.keys().hasOnly(['uid', 'day', 'claimedAt'])
           && request.resource.data.uid == userId
           && request.resource.data.day is int
-          && request.resource.data.day >= 1 && request.resource.data.day <= 25
+          && request.resource.data.day >= 1 && request.resource.data.day <= 31
           && dayId == string(request.resource.data.day)
           && request.resource.data.claimedAt == request.time
           && request.time >= timestamp.date(2026, 12, request.resource.data.day)
-          && request.time < timestamp.date(2026, 12, 26)
+          && request.time < timestamp.date(2027, 1, 1)
           && exists(/databases/$(database)/documents/userStats/$(userId)/christmasCalendarWins/$(dayId))
           && get(/databases/$(database)/documents/globalConfig/christmasEvent).data.part == 2;
       }

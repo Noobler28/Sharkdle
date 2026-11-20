@@ -7661,8 +7661,8 @@ window.SHARKDLE_WIKI.entries.push(...[
                 "text": "Stethacanthus",
                 "article": "community-boss-christmas-stethacanthus-2026"
               },
-              "2026-12-12 00:00 UTC",
-              "2026-12-26 00:00 UTC",
+              "2026-11-02 00:00 UTC",
+              "2026-11-30 00:00 UTC",
               "150",
               "Frost Anvil",
               "Unavailable: community boss display disabled"
@@ -11887,11 +11887,11 @@ window.SHARKDLE_WIKI.entries.push(...[
       ],
       [
         "Configured start",
-        "2026-12-12 00:00 UTC"
+        "2026-11-02 00:00 UTC"
       ],
       [
         "Configured end",
-        "2026-12-26 00:00 UTC"
+        "2026-11-30 00:00 UTC"
       ],
       [
         "Target",
@@ -11925,7 +11925,7 @@ window.SHARKDLE_WIKI.entries.push(...[
       {
         "title": "Schedule and availability",
         "text": [
-          "The configured window runs from 2026-12-12 00:00 UTC to 2026-12-26 00:00 UTC. A schedule is not proof that the boss was defeated, every account contributed or a claim is still available.",
+          "The configured window runs from 2026-11-02 00:00 UTC to 2026-11-30 00:00 UTC. A schedule is not proof that the boss was defeated, every account contributed or a claim is still available.",
           "The community panel is currently disabled. Being inside an old or configured calendar window is not enough to turn it on. This archive preserves the entry's identity while its availability stays explicit."
         ]
       },

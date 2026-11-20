@@ -27,7 +27,7 @@ content="Play Sharkdle, the daily shark guessing game. Guess shark species from 
 <meta name="twitter:image" content="https://sharkdle.online/images/favicon.png">
 
 <link rel="stylesheet" href="style.css?v=20261117-spin-reward-popup">
-<link rel="stylesheet" href="christmas-event.css?v=20261102-present-doors">
+<link rel="stylesheet" href="christmas-event.css?v=20261120-advent-final">
 
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800;900&family=Barlow:wght@400;500;600;700&family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -1406,12 +1406,12 @@ content="Play Sharkdle, the daily shark guessing game. Guess shark species from 
 <option value="1">Part 1 · Protect Steven</option>
 <option value="2">Part 2 · Santa Jaws Calendar</option>
 </select>
-<input id="admin-christmas-day" type="number" min="1" max="25" value="1" class="admin-abuse-input" aria-label="Calendar preview day" title="Preview December day (1–25)">
+<input id="admin-christmas-day" type="number" min="1" max="31" value="1" class="admin-abuse-input" aria-label="Calendar preview day" title="Preview December day (1–31)">
 <button type="button" class="admin-abuse-btn" onclick="SharkdleChristmas.preview(document.getElementById('admin-christmas-part').value)">Preview Locally</button>
 <button type="button" class="admin-abuse-btn" onclick="SharkdleChristmas.publish()">Apply For Everyone</button>
 <button type="button" class="admin-abuse-btn admin-abuse-btn-secondary" onclick="SharkdleChristmas.preview('live')">Exit Preview</button>
 </div>
-<div id="admin-christmas-status" class="admin-abuse-status">Preview is private. Calendar gifts open December 1–25 after a win that day (UTC).</div>
+<div id="admin-christmas-status" class="admin-abuse-status">Preview is private. Calendar gifts open December 1–31 after a win that day (UTC).</div>
 </section>
 
 <section class="picker-section admin-abuse-section">
@@ -1704,14 +1704,14 @@ content="Play Sharkdle, the daily shark guessing game. Guess shark species from 
 
 <link rel="stylesheet" href="fair-play.css?v=20261019">
 <script src="fair-play.js?v=20261019"></script>
-<script src="script.js?v=20261117-spin-reward-popup"></script>
+<script src="script.js?v=20261120-seasonal-crate-sources"></script>
 <script>
 window.addEventListener("sharkdle-home-data-ready", () => {
     window.setTimeout(() => document.getElementById("home-loading-screen")?.classList.add("hidden"), 450);
 }, { once: true });
 </script>
 <script src="developer-tools.js?v=1"></script>
-<script src="christmas-event.js?v=20261102-present-doors"></script>
+<script src="christmas-event.js?v=20261120-advent-final"></script>
 <script src="global-broadcast.js"></script>
 <script>
 function openDevModal() {

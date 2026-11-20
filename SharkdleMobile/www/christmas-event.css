@@ -1,40 +1,90 @@
-#community-boss-event-modal .winter-dialog:has(.christmas-calendar-event) { width: min(700px, 100%); }
-.christmas-calendar-hero { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding-right: 10px; }
-.christmas-calendar-hero h2 { margin: 10px 0 8px; color: #f2f8f6; font: 700 clamp(22px,4vw,30px)/1.15 'Barlow',sans-serif; letter-spacing: -.6px; }
-.christmas-calendar-hero p { margin: 0 0 12px; color: #a4b7c3; font-size: 13px; }
-#christmas-countdown { color: #e8c98d; font-size: 14px; font-weight: 600; }
-.santa-jaws-portrait { flex: 0 0 150px; width: 150px; height: 110px; overflow: hidden; }
-.santa-jaws-portrait img { width: 150px; height: 110px; object-fit: cover; object-position: center; }
-.christmas-calendar-status { margin: 18px 0; padding: 12px 14px; border-left: 2px solid #a9deca; background: #182f38; border-radius: 0 8px 8px 0; color: #d8e9e8; font-size: 12px; line-height: 1.5; }
-.christmas-calendar-heading { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 14px; }
-.christmas-calendar-heading h3 { margin: 0; font-size: 15px; }
-.christmas-calendar-heading > span { color: #afc3cb; text-align: right; font-size: 11px; line-height: 1.5; }
-.christmas-calendar-grid { display: grid; grid-template-columns: repeat(5,minmax(0,1fr)); gap: 8px; }
-.christmas-calendar-day { min-width: 0; min-height: 116px; display: grid; justify-items: center; align-content: center; gap: 4px; padding: 9px 4px; border: 1px solid #344c59; border-radius: 10px; background: #142934; color: #acbfca; font-family: 'Barlow',sans-serif; }
-.christmas-calendar-day b { font-size: 15px; font-weight: 600; }
-.christmas-calendar-gift-icon { display: block; width: 48px; aspect-ratio: 1217 / 1724; background: url('images/christmasEvent/PresentOpenAnim.png') 0% 0% / 400% 300% no-repeat; }
-.christmas-calendar-day.opened .christmas-calendar-gift-icon { background-position: 100% 100%; }
-.christmas-calendar-day small { font-size: 10px; }
-.christmas-calendar-day.ready { background: #21483f; color: #effff7; border-color: #9ed6bc; box-shadow: 0 0 14px #8fd5b511; cursor: pointer; }
-.christmas-calendar-day.ready:hover { background: #2a5a4e; transform: translateY(-2px); }
-.christmas-calendar-day.ready:focus-visible { outline: 2px solid #f4dfa8; outline-offset: 2px; }
-.christmas-calendar-day.opened { background: #132a2b; border-color: #345c51; color: #acd9c4; }
-.christmas-calendar-day.missed,.christmas-calendar-day.ended { background: #11212b; color: #8ca2b0; }
-.christmas-calendar-day.win-needed { border-color: #c4ab71; color: #f0d69d; }
-.christmas-calendar-fine-print { margin: 13px 0 18px; color: #a4b7c3; font-size: 11px; line-height: 1.5; }
-.christmas-present-reveal { margin-top: 16px; padding: 14px; border: 1px solid #486b61; border-radius: 12px; background: radial-gradient(ellipse at center,#2b5045,#12252d); text-align: center; }
-.christmas-present-reveal[hidden] { display: none; }
-.christmas-present-reveal p { color: #e6f7ed; font-size: 13px; line-height: 1.5; }
-.christmas-present-sprite { width: 150px; aspect-ratio: 1217 / 1724; margin: 0 auto; background-image: url('images/christmasEvent/PresentOpenAnim.png'); background-size: 400% 300%; background-repeat: no-repeat; }
-.christmas-test-win { margin-top: 12px; width: 100%; padding: 10px; border: 1px dashed #9b8959; border-radius: 8px; background: transparent; color: #dfcf9f; font: 500 12px 'Barlow',sans-serif; cursor: pointer; }
-#home-community-boss-event.santa-calendar-card .home-boss-heading img { object-fit: cover; object-position: center; }
-@media (max-width: 480px) {
-    .santa-jaws-portrait { flex-basis: 95px; width: 95px; height: 100px; }
-    .santa-jaws-portrait img { width: 95px; height: 100px; }
-    .christmas-calendar-hero h2 { font-size: 23px; }
-    .christmas-calendar-grid { gap: 5px; }
-    .christmas-calendar-day { min-height: 100px; }
-    .christmas-calendar-gift-icon { width: 38px; }
-    .christmas-calendar-day small { font-size: 9px; }
+#community-boss-event-modal .winter-dialog:has(.christmas-calendar-event) {
+    width: min(760px, 100%);
+    max-height: min(92vh, 900px);
+    overflow-y: auto;
+    border: 1px solid rgba(178, 228, 220, .18);
+    background: linear-gradient(155deg, #102b37 0%, #0b202b 55%, #102832 100%);
+    box-shadow: 0 28px 90px rgba(0, 8, 14, .62), inset 0 1px rgba(255,255,255,.06);
 }
-@media (prefers-reduced-motion: reduce) { .christmas-calendar-day.ready:hover { transform: none; } }
+.christmas-calendar-event { --cal-ice: #bde9df; --cal-gold: #f4d99c; --cal-muted: #a6bdc7; }
+.christmas-calendar-hero {
+    position: relative; isolation: isolate; display: flex; align-items: center; justify-content: space-between;
+    min-height: 190px; overflow: hidden; gap: 18px; padding: 26px 28px;
+    border: 1px solid rgba(192, 231, 221, .16); border-radius: 20px;
+    background: radial-gradient(ellipse at 78% 8%, rgba(162, 222, 206, .21), transparent 34%),
+        radial-gradient(ellipse at 12% 110%, rgba(28, 95, 91, .48), transparent 55%),
+        linear-gradient(120deg, #173e49, #122d3a 58%, #173b43);
+}
+.christmas-calendar-hero::after { content: ""; position: absolute; z-index: -1; width: 250px; height: 250px; right: 64px; top: -150px; border: 1px solid rgba(230,255,246,.1); border-radius: 50%; box-shadow: 0 0 0 24px rgba(230,255,246,.025),0 0 0 48px rgba(230,255,246,.02); }
+.christmas-calendar-intro { position: relative; z-index: 1; }
+.christmas-calendar-hero .winter-kicker { color: var(--cal-ice); letter-spacing: .18em; font-size: 10px; font-weight: 800; }
+.christmas-calendar-hero h2 { margin: 11px 0 7px; color: #f5fcfa; font: 800 clamp(27px,4.5vw,38px)/1.04 'Barlow Condensed',sans-serif; letter-spacing: -.025em; }
+.christmas-calendar-hero p { margin: 0 0 16px; color: #c0d2d5; font-size: 13px; }
+#christmas-countdown { display: inline-flex; align-items: center; gap: 7px; padding: 7px 11px; border: 1px solid rgba(244,217,156,.32); border-radius: 999px; background: rgba(244,217,156,.09); color: var(--cal-gold); font-size: 12px; font-weight: 700; }
+#christmas-countdown::before { content: "✦"; font-size: 11px; }
+.santa-jaws-portrait { position: relative; z-index: 1; flex: 0 0 190px; width: 190px; height: 146px; overflow: hidden; border: 1px solid rgba(222,244,235,.22); border-radius: 18px; background: linear-gradient(145deg,rgba(255,255,255,.12),rgba(255,255,255,.02)); box-shadow: 0 16px 34px rgba(0,0,0,.24); transform: rotate(2deg); }
+.santa-jaws-portrait img { width: 100%; height: 100%; object-fit: cover; object-position: center; }
+.christmas-hero-snow { position: absolute; color: rgba(235,255,249,.64); pointer-events: none; }
+.christmas-hero-snow-one { top: 22px; right: 44%; font-size: 17px; }
+.christmas-hero-snow-two { bottom: 24px; right: 37%; font-size: 22px; }
+.christmas-calendar-status { position: relative; margin: 18px 0 22px; padding: 13px 16px 13px 42px; border: 1px solid rgba(174,224,211,.13); border-radius: 13px; background: linear-gradient(100deg,rgba(172,226,209,.09),rgba(172,226,209,.035)); color: #d9e9e6; font-size: 12px; line-height: 1.55; }
+.christmas-calendar-status::before { content: "✧"; position: absolute; left: 16px; top: 12px; color: var(--cal-ice); font-size: 17px; }
+.christmas-calendar-heading { display: flex; justify-content: space-between; align-items: end; gap: 12px; margin-bottom: 13px; }
+.christmas-calendar-heading h3 { margin: 4px 0 0; color: #eff8f5; font: 700 21px/1 'Barlow Condensed',sans-serif; }
+.christmas-section-kicker { color: #9db9bc; font-size: 9px; font-weight: 800; letter-spacing: .16em; }
+.christmas-calendar-heading > span { padding: 8px 11px; border: 1px solid rgba(233,210,157,.16); border-radius: 10px; background: rgba(233,210,157,.055); color: #c8c6ad; text-align: right; font-size: 10px; line-height: 1.5; }
+.christmas-calendar-grid { display: grid; grid-template-columns: repeat(5,minmax(0,1fr)); gap: 10px; }
+.christmas-calendar-day { position: relative; min-width: 0; min-height: 120px; display: grid; justify-items: center; align-content: center; gap: 2px; overflow: hidden; padding: 10px 5px 8px; border: 1px solid rgba(153,187,190,.15); border-radius: 15px; background: linear-gradient(145deg,rgba(38,69,78,.76),rgba(20,43,53,.94)); color: #a9bec4; font-family: 'Barlow',sans-serif; transition: transform .2s ease,border-color .2s ease,background .2s ease,box-shadow .2s ease; }
+.christmas-calendar-day::before { content: ""; position: absolute; inset: 0 0 auto; height: 2px; background: linear-gradient(90deg,transparent,rgba(192,229,218,.24),transparent); }
+.christmas-calendar-day b { position: absolute; left: 10px; top: 8px; color: #afc5c8; font: 700 12px 'Barlow Condensed',sans-serif; }
+.christmas-calendar-gift-icon { display: block; width: 43px; aspect-ratio: 1217 / 1724; opacity: .66; filter: saturate(.66); background: url('images/christmasEvent/PresentOpenAnim.png') 0% 0% / 400% 300% no-repeat; transition: transform .2s ease,filter .2s ease,opacity .2s ease; }
+.christmas-calendar-day small { max-width: 100%; color: inherit; font-size: 9px; font-weight: 700; line-height: 1.15; letter-spacing: .015em; overflow-wrap: anywhere; }
+.christmas-calendar-day em { color: inherit; font-size: 8px; font-style: normal; opacity: .74; }
+.christmas-calendar-day.ready { border-color: rgba(169,230,208,.5); background: radial-gradient(circle at 50% 0%,rgba(146,221,192,.19),transparent 62%),linear-gradient(145deg,#285c50,#183d3b); color: #edfff6; box-shadow: inset 0 1px rgba(255,255,255,.08),0 6px 18px rgba(0,0,0,.12); cursor: pointer; }
+.christmas-calendar-day.ready b { color: #c9f1dc; }
+.christmas-calendar-day.ready .christmas-calendar-gift-icon { opacity: 1; filter: drop-shadow(0 5px 8px rgba(0,0,0,.22)); }
+.christmas-calendar-day.ready:hover { transform: translateY(-3px); border-color: #d4f4df; background-color: #316d5e; box-shadow: 0 12px 25px rgba(1,12,15,.3),0 0 22px rgba(133,222,187,.12); }
+.christmas-calendar-day.ready:hover .christmas-calendar-gift-icon { transform: scale(1.08) rotate(-3deg); }
+.christmas-calendar-day.ready:focus-visible { outline: 2px solid #f4dfa8; outline-offset: 3px; }
+.christmas-calendar-day.opened { border-color: rgba(132,206,172,.24); background: linear-gradient(145deg,rgba(30,65,56,.82),rgba(17,43,43,.94)); color: #add9c4; }
+.christmas-calendar-day.opened b { color: #9bcbb4; }
+.christmas-calendar-day.opened .christmas-calendar-gift-icon { background-position: 100% 100%; opacity: .78; filter: saturate(.82); }
+.christmas-calendar-day.missed,.christmas-calendar-day.ended { background: rgba(15,32,41,.8); color: #7e969e; }
+.christmas-calendar-day.missed .christmas-calendar-gift-icon,.christmas-calendar-day.ended .christmas-calendar-gift-icon { opacity: .38; }
+.christmas-calendar-day.win-needed { border-color: rgba(228,196,127,.32); background: linear-gradient(145deg,rgba(83,72,47,.31),rgba(24,41,47,.93)); color: #e3cb91; }
+.christmas-calendar-day:disabled { cursor: default; }
+.christmas-calendar-fine-print { margin: 13px 0 18px; color: var(--cal-muted); font-size: 10px; line-height: 1.55; }
+.christmas-present-reveal { position: fixed; z-index: 100000; inset: 0; display: grid; place-items: center; padding: 20px; background: rgba(2,10,15,.78); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); }
+.christmas-present-reveal[hidden] { display: none; }
+.christmas-present-modal { width: min(400px,100%); padding: 28px 24px 24px; border: 1px solid rgba(177,230,209,.32); border-radius: 22px; background: radial-gradient(ellipse at 50% 0%,rgba(81,145,113,.34),transparent 55%),linear-gradient(155deg,#173c43,#102831 70%,#122b34); text-align: center; box-shadow: 0 30px 100px rgba(0,0,0,.58),inset 0 1px rgba(255,255,255,.09); animation: christmas-present-arrive .28s cubic-bezier(.2,.8,.2,1) both; }
+.christmas-present-modal h3 { margin: 0 0 4px; color: #f2fbf6; font: 700 24px 'Barlow Condensed',sans-serif; }
+.christmas-present-modal p { color: #d7ebdf; font-size: 13px; line-height: 1.5; }
+.christmas-present-reward-emoji { min-height: 48px; margin: 0 auto 7px; color: #fff3cf; font-size: 38px; line-height: 1.2; filter: drop-shadow(0 4px 10px rgba(0,0,0,.3)); }
+.christmas-present-sprite { width: 150px; aspect-ratio: 1217 / 1724; margin: 0 auto 4px; background-image: url('images/christmasEvent/PresentOpenAnim.png'); background-size: 400% 300%; background-repeat: no-repeat; }
+.christmas-present-close { margin-top: 7px; padding: 10px 25px; border: 1px solid rgba(198,235,214,.35); border-radius: 999px; background: linear-gradient(135deg,#b6e4c5,#7ec8a1); color: #12342f; font: 700 12px 'Barlow',sans-serif; cursor: pointer; }
+.christmas-present-close:disabled { opacity: .55; cursor: wait; }
+.christmas-present-close:focus-visible { outline: 2px solid #f4dfa8; outline-offset: 3px; }
+@keyframes christmas-present-arrive { from { opacity: 0; transform: translateY(10px) scale(.97); } to { opacity: 1; transform: translateY(0) scale(1); } }
+.christmas-test-win { margin-top: 12px; width: 100%; padding: 10px; border: 1px dashed #9b8959; border-radius: 10px; background: rgba(244,217,156,.04); color: #dfcf9f; font: 600 12px 'Barlow',sans-serif; cursor: pointer; }
+#home-community-boss-event.santa-calendar-card .home-boss-heading img { object-fit: cover; object-position: center; }
+@media (max-width: 600px) {
+    #community-boss-event-modal .winter-dialog:has(.christmas-calendar-event) { padding: 14px; }
+    .christmas-calendar-hero { min-height: 155px; padding: 19px 16px; border-radius: 16px; }
+    .santa-jaws-portrait { flex-basis: 118px; width: 118px; height: 106px; border-radius: 14px; }
+    .christmas-calendar-hero h2 { font-size: 27px; }
+    .christmas-calendar-hero p { max-width: 210px; font-size: 11px; }
+    .christmas-calendar-grid { gap: 6px; }
+    .christmas-calendar-day { min-height: 94px; border-radius: 11px; }
+    .christmas-calendar-day b { left: 7px; top: 6px; font-size: 11px; }
+    .christmas-calendar-gift-icon { width: 34px; }
+    .christmas-calendar-day small { font-size: 7px; }
+    .christmas-calendar-day em { font-size: 7px; }
+}
+@media (max-width: 390px) {
+    .christmas-calendar-heading { align-items: start; }
+    .christmas-calendar-heading > span { max-width: 53%; font-size: 9px; }
+    .santa-jaws-portrait { flex-basis: 92px; width: 92px; height: 88px; }
+    .christmas-calendar-day { min-height: 84px; }
+    .christmas-calendar-gift-icon { width: 29px; }
+}
+@media (prefers-reduced-motion: reduce) { .christmas-calendar-day { transition: none; } .christmas-calendar-day.ready:hover { transform: none; } .christmas-present-modal { animation: none; } }

@@ -1932,6 +1932,7 @@ const sharkPassCardThemes = [
     { id: "lunar-current", name: "Lunar Current", unlockAchievement: "wins_1000", preview: "radial-gradient(circle at 76% 16%, rgba(248, 250, 255, 0.24), transparent 18%), radial-gradient(circle at 18% 78%, rgba(139, 189, 255, 0.18), transparent 30%), linear-gradient(145deg, rgba(64, 74, 145, 0.38), rgba(17, 35, 82, 0.98) 55%, rgba(5, 11, 27, 1))" },
     { id: "candycane", name: "Candy Cane", preview: "repeating-linear-gradient(135deg, #fff5f5 0 11px, #ff6b6b 11px 22px)" },
     { id: "elf", name: "Elf", preview: "linear-gradient(180deg, rgba(245, 255, 224, 0.18), rgba(31, 94, 48, 0.26)), url(images/profileThemes/Elf.png) center center / cover no-repeat" },
+    { id: "advent-2026", name: "Presents", preview: "linear-gradient(180deg, rgba(8,20,30,.12), rgba(8,20,30,.34)), url(images/christmasEvent/AdventRewards/Presents.jpg) center center / cover no-repeat" },
     { id: "north-pole", name: "North Pole", preview: "linear-gradient(180deg, rgba(255, 255, 255, 0.42), rgba(120, 188, 220, 0.18)), url(images/profileThemes/Northpole.png) center center / cover no-repeat" },
     { id: "pumpkin-patch", name: "Goo", preview: "radial-gradient(circle at 12% 16%, rgba(196, 255, 111, 0.24), transparent 23%), radial-gradient(circle at 84% 8%, rgba(255, 130, 35, 0.24), transparent 20%), linear-gradient(155deg, rgba(12, 26, 12, 0.2), rgba(23, 6, 34, 0.72)), url(images/profileThemes/Goo.png) center top / cover no-repeat" },
     { id: "haunted-abyss", name: "Witchlight", preview: "radial-gradient(circle at 76% 12%, rgba(213, 160, 255, 0.26), transparent 22%), radial-gradient(circle at 16% 82%, rgba(159, 255, 103, 0.16), transparent 28%), linear-gradient(160deg, rgba(13, 0, 24, 0.08), rgba(6, 0, 18, 0.64)), url(images/profileThemes/Witchlight.png) center center / cover no-repeat" },
@@ -2013,7 +2014,7 @@ const COMMUNITY_BOSS_EVENTS = [
         title: "Protect Stethacanthus",
         targetWins: 500,
         startMs: new Date("2026-11-02T00:00:00Z").getTime(),
-        endMs: new Date("2026-12-26T00:00:00Z").getTime(),
+        endMs: new Date("2026-11-30T00:00:00Z").getTime(),
         crateId: "christmas",
         rewardBadgeId: "frost-anvil",
         rewardBadgeName: "Frost Anvil",
@@ -4037,6 +4038,7 @@ function collectAllUnlockablePfps() {
     addEntry("Whitetip Reef Shark", "images/leaderPfp/Monthly/Shark1.png", { leaderReward: true });
     addEntry("Hammerhead Shark", "images/codePfp/Shark26.png", { codeReward: true });
     addEntry("Bull Shark", "images/loginPfp/Shark20.png", { loginReward: true });
+    addEntry("Zebra Shark", "images/christmasEvent/AdventRewards/ZebraShark.png", { calendarReward: true, source: "Advent 2026", rarity: "exclusive" });
     RETIRED_TREASURE_PFPS.forEach(pfp => addEntry(pfp.name, pfp.imagePath, pfp));
 
     return entries;
@@ -7977,6 +7979,7 @@ allBadges.push(
     { id: "Horizon", name: "Horizon", emoji: "\u{1F305}", description: "A summer crate badge." },
     { id: "Paradise", name: "Paradise", emoji: "\u{1F334}", description: "A summer crate badge." },
     { id: "Christmas", name: "Christmas", emoji: "\u{1F384}", description: "A christmas crate badge." },
+    { id: "advent-2026", name: "Advent 2026", emoji: "\u{1F381}", description: "Exclusive completion badge for opening all 31 Advent Calendar 2026 gifts.", rarity: "exclusive" },
     { id: "Present", name: "Present", emoji: "\u{1F381}", description: "A christmas crate badge." },
     { id: "Snowflake", name: "Snowflake", emoji: "\u{2744}\uFE0F", description: "A christmas crate badge." },
     { id: "Santa", name: "Santa", emoji: "\u{1F385}", description: "A christmas crate badge." },
@@ -11456,6 +11459,7 @@ function getCrateRewardSourceLabel(reward = {}) {
 
 function getCosmeticSourceLabel(cosmetic = {}) {
     if (cosmetic.source) return cosmetic.source;
+    if (cosmetic.calendarReward || /AdventRewards\/ZebraShark/i.test(cosmetic.imagePath || "")) return "Advent 2026";
     if (isLeaderRewardPfp(cosmetic) || cosmetic.name === "Port Jackson Shark") return "All-time leaderboard top 3";
     if (/leaderPfp\/Daily/i.test(cosmetic.imagePath || "")) return "Daily leaderboard #1";
     if (/leaderPfp\/Monthly/i.test(cosmetic.imagePath || "")) return "Monthly leaderboard #1";
@@ -14350,6 +14354,11 @@ function getShortCosmeticSourceLabel(source = "Reward") {
     if (lower.includes("summer")) return "Summer";
     if (lower.includes("christmas")) return "Christmas";
     if (lower.includes("halloween")) return "Halloween";
+    if (lower.includes("thanksgiving")) return "Thanksgiving";
+    if (lower.includes("valentines") || lower.includes("valentine's")) return "Valentines";
+    if (lower.includes("st patrick")) return "St Patrick's";
+    if (lower.includes("easter")) return "Easter";
+    if (lower.includes("new years") || lower.includes("new year's")) return "New Years";
     if (lower.includes("cosmetic crate")) return "Crate";
     if (lower.includes("crate")) return "Crate";
     if (lower.includes("shark pass")) return label.replace("Shark Pass level", "Pass Lv.").replace("Shark Pass", "Pass");
@@ -14363,6 +14372,7 @@ function getShortCosmeticSourceLabel(source = "Reward") {
 }
 
 function getThemeCosmeticMeta(theme) {
+    if (theme.id === "advent-2026") return { rarity: "exclusive", category: "reward", source: "Advent 2026" };
     if (theme.retired) return { rarity: theme.legacyLevel >= 20 ? "legendary" : theme.legacyLevel >= 15 ? "epic" : "rare", category: "pass", source: theme.source, passLevel: theme.legacyLevel, passNumber: 1 };
     const passReward = sharkPassRewards.find(reward => reward.type === "theme" && reward.themeId === theme.id);
     const crateReward = getAllCrateRewardPools()

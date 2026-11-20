@@ -8619,6 +8619,10 @@ transform:translateY(-4px);
         linear-gradient(135deg, rgba(14, 131, 173, 0.42), rgba(8, 23, 48, 0.96) 58%, rgba(4, 16, 29, 0.98));
 }
 
+.profile-hero-card.theme-advent-2026 {
+    background: linear-gradient(110deg, rgba(8,20,30,.48), rgba(8,20,30,.14) 55%, rgba(8,20,30,.38)), url("images/christmasEvent/AdventRewards/Presents.jpg") center center / cover no-repeat;
+}
+
 .profile-hero-card.theme-tidal-blue {
     background:
         radial-gradient(circle at 18% 18%, rgba(126, 233, 255, 0.2), transparent 24%),
