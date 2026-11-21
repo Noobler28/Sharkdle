@@ -9048,6 +9048,26 @@ transform:translateY(-4px);
     border-color: rgba(123, 200, 224, 0.26);
 }
 
+.profile-hero-card.theme-egg,
+.profile-hero-card.theme-confetti,
+.profile-hero-card.theme-fireworks,
+.profile-hero-card.theme-newyears2027,
+.profile-hero-card.theme-rainbow,
+.profile-hero-card.theme-shamrock,
+.profile-hero-card.theme-stpatricks {
+    background-position: center center;
+    background-size: cover;
+    background-repeat: no-repeat;
+}
+
+.profile-hero-card.theme-egg { background-image: linear-gradient(180deg, rgba(255,255,255,.12), rgba(47,24,64,.42)), url("images/profileThemes/Easter/Egg.jpg"); border-color: rgba(232,190,244,.42); }
+.profile-hero-card.theme-confetti { background-image: linear-gradient(180deg, rgba(255,255,255,.12), rgba(16,36,72,.48)), url("images/profileThemes/NewYears/Confetti.jpg"); border-color: rgba(255,214,111,.42); }
+.profile-hero-card.theme-fireworks { background-image: linear-gradient(180deg, rgba(255,255,255,.08), rgba(8,18,48,.52)), url("images/profileThemes/NewYears/Fireworks.jpg"); border-color: rgba(159,190,255,.42); }
+.profile-hero-card.theme-newyears2027 { background-image: linear-gradient(180deg, rgba(255,255,255,.08), rgba(8,18,48,.52)), url("images/profileThemes/NewYears/NewYears2027.jpg"); border-color: rgba(255,214,111,.42); }
+.profile-hero-card.theme-rainbow { background-image: linear-gradient(180deg, rgba(255,255,255,.08), rgba(9,48,31,.48)), url("images/profileThemes/StPatricks/Rainbow.jpg"); border-color: rgba(104,230,154,.42); }
+.profile-hero-card.theme-shamrock { background-image: linear-gradient(180deg, rgba(255,255,255,.08), rgba(9,48,31,.48)), url("images/profileThemes/StPatricks/Shamrock.jpg"); border-color: rgba(104,230,154,.42); }
+.profile-hero-card.theme-stpatricks { background-image: linear-gradient(180deg, rgba(255,255,255,.08), rgba(9,48,31,.48)), url("images/profileThemes/StPatricks/StPatricks.jpg"); border-color: rgba(104,230,154,.42); }
+
 .profile-hero-card.theme-default,
 .profile-hero-card.theme-tidal-blue,
 .profile-hero-card.theme-sunken-gold,
@@ -9067,7 +9087,14 @@ transform:translateY(-4px);
 .profile-hero-card.theme-north-pole,
 .profile-hero-card.theme-pumpkin-patch,
 .profile-hero-card.theme-haunted-abyss,
-.profile-hero-card.theme-nightmare-reef {
+.profile-hero-card.theme-nightmare-reef,
+.profile-hero-card.theme-egg,
+.profile-hero-card.theme-confetti,
+.profile-hero-card.theme-fireworks,
+.profile-hero-card.theme-newyears2027,
+.profile-hero-card.theme-rainbow,
+.profile-hero-card.theme-shamrock,
+.profile-hero-card.theme-stpatricks {
     border-color: rgba(255,255,255,0.1);
     box-shadow: 0 18px 38px rgba(0,0,0,0.22), inset 0 1px 0 rgba(255,255,255,0.06);
 }

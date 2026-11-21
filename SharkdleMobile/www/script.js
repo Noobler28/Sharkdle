@@ -1942,9 +1942,16 @@ const sharkPassCardThemes = [
     { id: "caramel", name: "Caramel", preview: "linear-gradient(180deg, rgba(255, 205, 130, 0.08), rgba(35, 18, 8, 0.36)), url(images/profileThemes/Thanksgiving/caramel.png) center center / cover no-repeat" },
     { id: "easter", name: "Easter", preview: "linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(47, 24, 64, 0.34)), url(images/profileThemes/Easter/Easter.jpg) center center / cover no-repeat" },
     { id: "easter-bunny", name: "Bunny", preview: "linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(47, 24, 64, 0.34)), url(images/profileThemes/Easter/Bunny.jpg) center center / cover no-repeat" },
+    { id: "egg", name: "Egg", preview: "linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(47, 24, 64, 0.34)), url(images/profileThemes/Easter/Egg.jpg) center center / cover no-repeat" },
     { id: "valentines", name: "Valentines", preview: "linear-gradient(180deg, rgba(255, 226, 238, 0.12), rgba(74, 19, 48, 0.34)), url(images/profileThemes/Valentines/Valentines.jpg) center center / cover no-repeat" },
     { id: "heart", name: "<3", preview: "linear-gradient(180deg, rgba(255, 226, 238, 0.12), rgba(74, 19, 48, 0.34)), url(images/profileThemes/Valentines/Heart.jpg) center center / cover no-repeat" },
-    { id: "love-letter", name: "Loveletter", preview: "linear-gradient(180deg, rgba(255, 226, 238, 0.12), rgba(74, 19, 48, 0.34)), url(images/profileThemes/Valentines/LoveLetter.jpg) center center / cover no-repeat" }
+    { id: "love-letter", name: "Loveletter", preview: "linear-gradient(180deg, rgba(255, 226, 238, 0.12), rgba(74, 19, 48, 0.34)), url(images/profileThemes/Valentines/LoveLetter.jpg) center center / cover no-repeat" },
+    { id: "confetti", name: "Confetti", preview: "linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(16, 36, 72, 0.38)), url(images/profileThemes/NewYears/Confetti.jpg) center center / cover no-repeat" },
+    { id: "fireworks", name: "Fireworks", preview: "linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(8, 18, 48, 0.46)), url(images/profileThemes/NewYears/Fireworks.jpg) center center / cover no-repeat" },
+    { id: "newyears2027", name: "New Years 2027", preview: "linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(8, 18, 48, 0.46)), url(images/profileThemes/NewYears/NewYears2027.jpg) center center / cover no-repeat" },
+    { id: "rainbow", name: "Rainbow", preview: "linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(9, 48, 31, 0.42)), url(images/profileThemes/StPatricks/Rainbow.jpg) center center / cover no-repeat" },
+    { id: "shamrock", name: "Shamrock", preview: "linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(9, 48, 31, 0.42)), url(images/profileThemes/StPatricks/Shamrock.jpg) center center / cover no-repeat" },
+    { id: "stpatricks", name: "St Patricks", preview: "linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(9, 48, 31, 0.42)), url(images/profileThemes/StPatricks/StPatricks.jpg) center center / cover no-repeat" }
 ];
 
 const CRATE_DROP_CHANCE = 0.5;
@@ -2265,6 +2272,7 @@ const easterCrateRewardPool = [
     { id: "crate-badge-eggy", type: "badge", badgeId: "eggy", name: "Eggy", rarity: "epic", blurb: "Unlock the Eggy badge." },
     { id: "crate-theme-easter-bunny", type: "theme", themeId: "easter-bunny", name: "Bunny", rarity: "epic", blurb: "Unlock the Bunny profile theme." },
     { id: "crate-badge-chick", type: "badge", badgeId: "chick", name: "Chick", rarity: "legendary", blurb: "Unlock the Chick badge." },
+    { id: "crate-theme-egg", type: "theme", themeId: "egg", name: "Egg", rarity: "legendary", blurb: "Unlock the Egg profile theme." },
     { id: "crate-pfp-easter-thorny-skate", type: "pfp", name: "Thorny Skate", imagePath: "images/cratePfp/EasterPfp/ThornySkate.png", rarity: "legendary", blurb: "Unlock the Thorny Skate profile picture." }
 ];
 
@@ -2276,6 +2284,9 @@ const newyearsCrateRewardPool = [
     { id: "crate-pfp-newyears-starry-smooth-hound", type: "pfp", name: "Starry Smooth Hound", imagePath: "images/cratePfp/NewYearsPfp/StarrySmoothHound.png", rarity: "epic", blurb: "Unlock the Starry Smooth Hound profile picture." },
     { id: "crate-badge-confetti", type: "badge", badgeId: "confetti", name: "Confetti", rarity: "epic", blurb: "Unlock the Confetti badge." },
     { id: "crate-pfp-newyears-bull-ray", type: "pfp", name: "Bull Ray", imagePath: "images/cratePfp/NewYearsPfp/BullRay.png", rarity: "legendary", blurb: "Unlock the Bull Ray profile picture." },
+    { id: "crate-theme-confetti", type: "theme", themeId: "confetti", name: "Confetti", rarity: "rare", blurb: "Unlock the Confetti profile theme." },
+    { id: "crate-theme-fireworks", type: "theme", themeId: "fireworks", name: "Fireworks", rarity: "epic", blurb: "Unlock the Fireworks profile theme." },
+    { id: "crate-theme-newyears2027", type: "theme", themeId: "newyears2027", name: "New Years 2027", rarity: "legendary", blurb: "Unlock the New Years 2027 profile theme." },
     { id: "crate-badge-celebration", type: "badge", badgeId: "celebration", name: "Celebration", rarity: "legendary", blurb: "Unlock the Celebration badge." }
 ];
 
@@ -2287,6 +2298,9 @@ const stpatricksCrateRewardPool = [
     { id: "crate-pfp-stpatricks-blackfin-gulper-shark", type: "pfp", name: "Blackfin Gulper Shark", imagePath: "images/cratePfp/StPatricksPfp/BlackfinGulperShark.png", rarity: "epic", blurb: "Unlock the Blackfin Gulper Shark profile picture." },
     { id: "crate-badge-shamrock", type: "badge", badgeId: "shamrock", name: "Shamrock", rarity: "epic", blurb: "Unlock the Shamrock badge." },
     { id: "crate-pfp-stpatricks-shovel-nose-guitarfish", type: "pfp", name: "Shovelnose Guitarfish", imagePath: "images/cratePfp/StPatricksPfp/ShovelNoseGuitarFish.png", rarity: "legendary", blurb: "Unlock the Shovelnose Guitarfish profile picture." },
+    { id: "crate-theme-rainbow", type: "theme", themeId: "rainbow", name: "Rainbow", rarity: "rare", blurb: "Unlock the Rainbow profile theme." },
+    { id: "crate-theme-shamrock", type: "theme", themeId: "shamrock", name: "Shamrock", rarity: "epic", blurb: "Unlock the Shamrock profile theme." },
+    { id: "crate-theme-stpatricks", type: "theme", themeId: "stpatricks", name: "St Patricks", rarity: "legendary", blurb: "Unlock the St Patricks profile theme." },
     { id: "crate-badge-leprechaun", type: "badge", badgeId: "leprechaun", name: "Leprechaun", rarity: "legendary", blurb: "Unlock the Leprechaun badge." }
 ];
 

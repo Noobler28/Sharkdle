@@ -1549,6 +1549,76 @@ window.SHARKDLE_WIKI.cosmetics = [
     "obtainment": "Open a Halloween Crate and roll this theme."
   },
   {
+    "id": "theme-egg",
+    "name": "Egg",
+    "kind": "Profile theme",
+    "preview": "linear-gradient(180deg, rgba(255,255,255,.12), rgba(47,24,64,.42)), url(images/profileThemes/Easter/Egg.jpg) center center / cover no-repeat",
+    "group": "Easter Crate",
+    "rarity": "legendary",
+    "availability": "Seasonal",
+    "obtainment": "Open an Easter Crate and roll this theme."
+  },
+  {
+    "id": "theme-confetti",
+    "name": "Confetti",
+    "kind": "Profile theme",
+    "preview": "linear-gradient(180deg, rgba(255,255,255,.12), rgba(16,36,72,.48)), url(images/profileThemes/NewYears/Confetti.jpg) center center / cover no-repeat",
+    "group": "New Years Crate",
+    "rarity": "rare",
+    "availability": "Seasonal",
+    "obtainment": "Open a New Years Crate and roll this theme."
+  },
+  {
+    "id": "theme-fireworks",
+    "name": "Fireworks",
+    "kind": "Profile theme",
+    "preview": "linear-gradient(180deg, rgba(255,255,255,.08), rgba(8,18,48,.52)), url(images/profileThemes/NewYears/Fireworks.jpg) center center / cover no-repeat",
+    "group": "New Years Crate",
+    "rarity": "epic",
+    "availability": "Seasonal",
+    "obtainment": "Open a New Years Crate and roll this theme."
+  },
+  {
+    "id": "theme-newyears2027",
+    "name": "New Years 2027",
+    "kind": "Profile theme",
+    "preview": "linear-gradient(180deg, rgba(255,255,255,.08), rgba(8,18,48,.52)), url(images/profileThemes/NewYears/NewYears2027.jpg) center center / cover no-repeat",
+    "group": "New Years Crate",
+    "rarity": "legendary",
+    "availability": "Seasonal",
+    "obtainment": "Open a New Years Crate and roll this theme."
+  },
+  {
+    "id": "theme-rainbow",
+    "name": "Rainbow",
+    "kind": "Profile theme",
+    "preview": "linear-gradient(180deg, rgba(255,255,255,.08), rgba(9,48,31,.48)), url(images/profileThemes/StPatricks/Rainbow.jpg) center center / cover no-repeat",
+    "group": "St Patricks Crate",
+    "rarity": "rare",
+    "availability": "Seasonal",
+    "obtainment": "Open a St Patricks Crate and roll this theme."
+  },
+  {
+    "id": "theme-shamrock",
+    "name": "Shamrock",
+    "kind": "Profile theme",
+    "preview": "linear-gradient(180deg, rgba(255,255,255,.08), rgba(9,48,31,.48)), url(images/profileThemes/StPatricks/Shamrock.jpg) center center / cover no-repeat",
+    "group": "St Patricks Crate",
+    "rarity": "epic",
+    "availability": "Seasonal",
+    "obtainment": "Open a St Patricks Crate and roll this theme."
+  },
+  {
+    "id": "theme-stpatricks",
+    "name": "St Patricks",
+    "kind": "Profile theme",
+    "preview": "linear-gradient(180deg, rgba(255,255,255,.08), rgba(9,48,31,.48)), url(images/profileThemes/StPatricks/StPatricks.jpg) center center / cover no-repeat",
+    "group": "St Patricks Crate",
+    "rarity": "legendary",
+    "availability": "Seasonal",
+    "obtainment": "Open a St Patricks Crate and roll this theme."
+  },
+  {
     "id": "item-streak-shield",
     "name": "Streak Shield",
     "kind": "Utility item",
@@ -1571,7 +1641,7 @@ window.SHARKDLE_WIKI.cosmetics = [
     id: 'all-cosmetics',
     category: 'Cosmetics',
     title: 'All cosmetics: the complete collection',
-    summary: '152 cosmetics together: 62 portraits, 61 badges and 29 profile themes. This view includes starter, pass, crate, code, login, wheel, leaderboard, achievement and event rewards, including retired collections.',
+    summary: '159 cosmetics together: 62 portraits, 61 badges and 36 profile themes. This view includes starter, pass, crate, code, login, wheel, leaderboard, achievement and event rewards, including retired collections.',
     related: ['cosmetics', 'cosmetic-portraits', 'cosmetic-badges', 'cosmetic-themes', 'crates'],
     sections: groups.map(group => ({
       title: group,
@@ -2069,6 +2139,37 @@ window.SHARKDLE_WIKI.entries.push(...[
           "theme-candycane",
           "theme-elf",
           "theme-north-pole"
+        ]
+      },
+      {
+        "title": "Easter Crate",
+        "text": [
+          "These seasonal themes are rewards from the Easter Crate."
+        ],
+        "catalog": [
+          "theme-egg"
+        ]
+      },
+      {
+        "title": "New Years Crate",
+        "text": [
+          "These seasonal themes are rewards from the New Years Crate."
+        ],
+        "catalog": [
+          "theme-confetti",
+          "theme-fireworks",
+          "theme-newyears2027"
+        ]
+      },
+      {
+        "title": "St Patricks Crate",
+        "text": [
+          "These seasonal themes are rewards from the St Patricks Crate."
+        ],
+        "catalog": [
+          "theme-rainbow",
+          "theme-shamrock",
+          "theme-stpatricks"
         ]
       },
       {
