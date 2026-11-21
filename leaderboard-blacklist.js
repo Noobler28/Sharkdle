@@ -22,13 +22,15 @@
 
     let dynamicEntries = new Map();
     let ready = null;
+    let hasInitialSnapshot = false;
     function connect(db) {
         if (ready) return ready;
         ready = new Promise((resolve, reject) => {
             db.collection('leaderboardRestrictions').onSnapshot(snapshot => {
                 dynamicEntries = new Map(snapshot.docs.map(doc => [doc.id, doc.data()]));
                 resolve();
-                root.dispatchEvent(new Event('sharkdle-blacklist-changed'));
+                if (hasInitialSnapshot) root.dispatchEvent(new Event('sharkdle-blacklist-changed'));
+                hasInitialSnapshot = true;
             }, error => { ready = null; reject(error); });
         });
         return ready;

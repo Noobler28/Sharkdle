@@ -16,7 +16,7 @@
     <!-- Firebase Auth -->
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
     <script src="Leaderboard/cosmetics-display.js?v=20261121-all-profile-themes"></script>
-    <script src="leaderboard-blacklist.js?v=20261106-admin-accounts"></script>
+    <script src="leaderboard-blacklist.js?v=20261121-duplicate-load-fix"></script>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="page-shell.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -1938,6 +1938,7 @@ body.leaderboards-page #friendProfileModal .profile-modal-content .stat-value {
             }
         };
         let selectedLeaderboardRange = "all_time";
+        let leaderboardLoadGeneration = 0;
 
         function getLocalDateKey(dateValue = new Date()) {
             const date = dateValue instanceof Date ? dateValue : new Date(dateValue);
@@ -2770,6 +2771,7 @@ body.leaderboards-page #friendProfileModal .profile-modal-content .stat-value {
         }
 
         async function loadLeaderboard(rangeKey = selectedLeaderboardRange) {
+            const loadGeneration = ++leaderboardLoadGeneration;
             renderLeaderboardBlacklistNotice();
             selectedLeaderboardRange = rangeKey;
             updateLeaderboardRangeUI(selectedLeaderboardRange);
@@ -2783,8 +2785,10 @@ body.leaderboards-page #friendProfileModal .profile-modal-content .stat-value {
             tbody.innerHTML = '';
             try {
                 await window.SharkdleLeaderboardBlacklist.connect(db);
+                if (loadGeneration !== leaderboardLoadGeneration) return;
                 renderLeaderboardBlacklistNotice();
                 const candidateRows = await getLeaderboardCandidateRows(rangeConfig, LEADERBOARD_SCAN_LIMIT);
+                if (loadGeneration !== leaderboardLoadGeneration || rangeKey !== selectedLeaderboardRange) return;
                 renderPersonalLeaderboardPosition(rangeConfig, candidateRows);
                 if (!candidateRows.length) {
                     loadingDiv.textContent = rangeConfig.emptyState;
@@ -2793,6 +2797,7 @@ body.leaderboards-page #friendProfileModal .profile-modal-content .stat-value {
                     } else if (rangeConfig.id === "monthly") {
                         await processPeriodLeaderReward("monthly", null, getCurrentMonthKey());
                     }
+                    if (loadGeneration !== leaderboardLoadGeneration || rangeKey !== selectedLeaderboardRange) return;
                     loadingDiv.style.display = "";
                     return;
                 }
@@ -2904,10 +2909,12 @@ body.leaderboards-page #friendProfileModal .profile-modal-content .stat-value {
                 } catch (rewardError) {
                     console.warn("Leaderboard reward processing failed:", rewardError);
                 }
+                if (loadGeneration !== leaderboardLoadGeneration || rangeKey !== selectedLeaderboardRange) return;
                 loadingDiv.style.display = 'none';
                 table.style.display = '';
                 
             } catch (err) {
+                if (loadGeneration !== leaderboardLoadGeneration || rangeKey !== selectedLeaderboardRange) return;
                 loadingDiv.textContent = 'Failed to load leaderboard.';
                 showLeaderboardPopup();
                 console.error(err);
