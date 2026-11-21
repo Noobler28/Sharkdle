@@ -9068,7 +9068,7 @@ transform:translateY(-4px);
 .profile-hero-card.theme-volcanic-ember {
     background:
         linear-gradient(180deg, rgba(15, 3, 2, 0.12), rgba(6, 2, 3, 0.58)),
-        url("images/profileThemes/VolcanicEmber.png") center center / cover no-repeat;
+        url("images/profileThemes/Crate/VolcanicEmber.png") center center / cover no-repeat;
 }
 
 .profile-hero-card.theme-lucky-current {
@@ -9082,13 +9082,13 @@ transform:translateY(-4px);
 .profile-hero-card.theme-kelp-canopy {
     background:
         linear-gradient(180deg, rgba(6, 31, 23, 0.08), rgba(3, 22, 21, 0.5)),
-        url("images/profileThemes/KelpCanopy.png") center center / cover no-repeat;
+        url("images/profileThemes/Crate/KelpCanopy.png") center center / cover no-repeat;
 }
 
 .profile-hero-card.theme-glacier-shine {
     background:
         linear-gradient(180deg, rgba(255, 255, 255, 0.2), rgba(18, 69, 95, 0.34)),
-        url("images/profileThemes/GlacierShine.png") center center / cover no-repeat;
+        url("images/profileThemes/Crate/GlacierShine.png") center center / cover no-repeat;
 }
 
 .profile-hero-card.theme-ocean-breeze {
@@ -9217,7 +9217,7 @@ transform:translateY(-4px);
 .profile-hero-card.theme-elf {
     background:
         linear-gradient(180deg, rgba(245, 255, 224, 0.18), rgba(31, 94, 48, 0.26)),
-        url("images/profileThemes/Elf.png") center center / cover no-repeat;
+        url("images/profileThemes/Christmas/Elf.png") center center / cover no-repeat;
     border-color: rgba(34, 139, 34, 0.3);
     position: relative;
     overflow: hidden;
@@ -9303,7 +9303,7 @@ transform:translateY(-4px);
 .profile-hero-card.theme-north-pole {
     background:
         linear-gradient(180deg, rgba(255, 255, 255, 0.42), rgba(120, 188, 220, 0.18)),
-        url("images/profileThemes/Northpole.png") center center / cover no-repeat;
+        url("images/profileThemes/Christmas/Northpole.png") center center / cover no-repeat;
     border-color: rgba(179, 224, 255, 0.3);
     position: relative;
     overflow: hidden;
@@ -9389,7 +9389,7 @@ transform:translateY(-4px);
 .profile-hero-card.theme-pumpkin-patch {
     background:
         linear-gradient(180deg, rgba(6, 20, 12, 0.08), rgba(18, 7, 34, 0.56)),
-        url("images/profileThemes/Goo.png") center top / cover no-repeat;
+        url("images/profileThemes/Halloween/Goo.png") center top / cover no-repeat;
     border-color: rgba(159, 105, 238, 0.34);
     position: relative;
     overflow: hidden;
@@ -9408,14 +9408,14 @@ transform:translateY(-4px);
 .profile-hero-card.theme-haunted-abyss {
     background:
         linear-gradient(180deg, rgba(16, 0, 26, 0.02), rgba(7, 0, 18, 0.5)),
-        url("images/profileThemes/Witchlight.png") center center / cover no-repeat;
+        url("images/profileThemes/Halloween/Witchlight.png") center center / cover no-repeat;
     border-color: rgba(214, 148, 255, 0.3);
 }
 
 .profile-hero-card.theme-nightmare-reef {
     background:
         linear-gradient(180deg, rgba(6, 12, 18, 0.08), rgba(3, 7, 12, 0.56)),
-        url("images/profileThemes/PhantomFog.png") center center / cover no-repeat;
+        url("images/profileThemes/Halloween/PhantomFog.png") center center / cover no-repeat;
     border-color: rgba(123, 200, 224, 0.26);
 }
 
