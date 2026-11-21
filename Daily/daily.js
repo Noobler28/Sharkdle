@@ -56,8 +56,8 @@ function getSpeciesModeConfig(modeKey) {
             title: "Sharkdle - Mixed Daily",
             kicker: "Mixed Daily",
             heading: "Guess the Species",
-            lead: "Sharks and relatives share the board. Make your guess below.",
-            placeholder: "Enter shark or relative name...",
+            lead: "Sharks, rays, skates, and chimaeras share the board. Make your guess below.",
+            placeholder: "Enter a shark, ray, skate, or chimaera...",
             animal: "species",
             animalTitle: "Species",
             shareTitle: "Sharkdle Mixed Daily",
@@ -80,9 +80,11 @@ function getActiveSpeciesPool(modeKey) {
 
 const speciesMode = getSpeciesModeConfig(getRequestedSpeciesMode());
 const maxAttempts = speciesMode.key === "mixed" ? 12 : 8;
-const relativeNames = new Set((window.rays || []).map(species => species.name));
 function getSpeciesType(species) {
-    return relativeNames.has(species.name) ? "relative" : "shark";
+    if (species?.order === "Chimaeriformes") return "chimaera";
+    if (species?.order === "Rajiformes" || /\bskate\b/i.test(`${species?.name || ""} ${species?.family || ""}`)) return "skate";
+    if (species?.order === "Myliobatiformes" || species?.order === "Torpediniformes" || species?.order === "Rhinopristiformes" || (window.rays || []).some(item => item.name === species?.name)) return "ray";
+    return "shark";
 }
 const speciesPool = getActiveSpeciesPool(speciesMode.key);
 

@@ -88,8 +88,8 @@ function getSpeciesModeConfig(modeKey) {
             title: "Sharkdle - Mixed Infinite",
             kicker: "Mixed Infinite",
             heading: "Guess the Species",
-            lead: "Sharks and relatives share the board. Make your guess below.",
-            placeholder: "Enter shark or relative name...",
+            lead: "Sharks, rays, skates, and chimaeras share the board. Make your guess below.",
+            placeholder: "Enter a shark, ray, skate, or chimaera...",
             animal: "species",
             animalTitle: "Species",
             shareTitle: "Sharkdle Mixed Infinite",
@@ -138,9 +138,11 @@ function applySpeciesModeCopy() {
 
 const speciesMode = getSpeciesModeConfig(getRequestedSpeciesMode());
 const maxAttempts = speciesMode.key === "mixed" ? 12 : 8;
-const relativeNames = new Set((window.rays || []).map(species => species.name));
 function getSpeciesType(species) {
-    return relativeNames.has(species.name) ? "relative" : "shark";
+    if (species?.order === "Chimaeriformes") return "chimaera";
+    if (species?.order === "Rajiformes" || /\bskate\b/i.test(`${species?.name || ""} ${species?.family || ""}`)) return "skate";
+    if (species?.order === "Myliobatiformes" || species?.order === "Torpediniformes" || species?.order === "Rhinopristiformes" || (window.rays || []).some(item => item.name === species?.name)) return "ray";
+    return "shark";
 }
 const activeSpecies = getActiveSpeciesPool(speciesMode.key).map(species => ({ ...species, guessed: false }));
 const infiniteLastFamilyKey = speciesMode.key === "sharks" ? "infiniteLastFamily" : `infiniteLastFamily_${speciesMode.key}`;
@@ -159,11 +161,11 @@ document.getElementById("attempts-left").textContent = `Attempts left: ${attempt
 let categoryReveal = null;
 let categoryRevealGameCompleted = false;
 let speciesTrackerGuesses = [];
-const infiniteSpeciesTrackerRoundId = window.SharkdleSpeciesTracker
+let infiniteSpeciesTrackerRoundId = window.SharkdleSpeciesTracker
     ? window.SharkdleSpeciesTracker.createRoundId(`infinite-${speciesMode.key}`)
     : `infinite-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 
-const infiniteFairPlayRound = window.SharkdleFairPlay?.startRound('infinite', speciesMode.key, infiniteSpeciesTrackerRoundId);
+let infiniteFairPlayRound = window.SharkdleFairPlay?.startRound('infinite', speciesMode.key, infiniteSpeciesTrackerRoundId);
 
 function recordInfiniteSpeciesHistory(won) {
     void window.SharkdleFairPlay?.finishRound(infiniteFairPlayRound, won, maxAttempts - attempts);
@@ -1186,6 +1188,61 @@ window.revealShark = function() {
         return;
     }
     console.log(`TESTING ONLY: The target ${speciesMode.animal} is: ${targetShark.name}`);
+};
+
+// Console command for testing: forceShark("Great White Shark") - Dev only
+window.forceShark = function(sharkName) {
+    const DEV_UIDS = ['ETPtQC0VA2NiSnX67rS2P2ma2tC2', 'gOcPqOuyPJRWisE4dxvFkGTOl5g2'];
+    const uid = typeof firebase !== "undefined" ? firebase.auth?.().currentUser?.uid : null;
+    if (!uid || !DEV_UIDS.includes(uid)) {
+        console.log("Access denied. This command is for developers only.");
+        return false;
+    }
+
+    const requestedName = String(sharkName || "").trim();
+    if (!requestedName) {
+        console.log(`Usage: forceShark("${speciesMode.key === "sharks" ? "Great White Shark" : "species name"}")`);
+        return false;
+    }
+
+    const forcedSpecies = activeSpecies.find(species => normalizeInput(species.name) === normalizeInput(requestedName));
+    if (!forcedSpecies) {
+        console.log(`Couldn't find "${requestedName}" in the current ${speciesMode.key} pool.`);
+        return false;
+    }
+
+    targetShark = forcedSpecies;
+    lastFamily = forcedSpecies.family;
+    localStorage.setItem(infiniteLastFamilyKey, forcedSpecies.family);
+    activeSpecies.forEach(species => { species.guessed = false; });
+    attempts = maxAttempts;
+    categoryReveal = null;
+    categoryRevealGameCompleted = false;
+    speciesTrackerGuesses = [];
+    window.clearTimeout(mysteryProfileRevealTimer);
+    infiniteSpeciesTrackerRoundId = window.SharkdleSpeciesTracker
+        ? window.SharkdleSpeciesTracker.createRoundId(`infinite-${speciesMode.key}`)
+        : `infinite-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+    infiniteFairPlayRound = window.SharkdleFairPlay?.startRound('infinite', speciesMode.key, infiniteSpeciesTrackerRoundId);
+
+    document.getElementById("attempts-left").textContent = `Attempts left: ${attempts}`;
+    document.getElementById("guesses").innerHTML = "";
+    document.getElementById("message").textContent = "";
+    const input = document.getElementById("sharkGuess");
+    input.value = "";
+    input.disabled = false;
+    document.getElementById("guessBtn").disabled = false;
+    document.getElementById("suggestions").classList.remove("active");
+    const resultScreen = document.getElementById("win-lose-screen");
+    resultScreen.innerHTML = "";
+    resultScreen.style.display = "none";
+    resultScreen.classList.remove("win", "lose");
+    document.getElementById("show-results-btn").style.display = "none";
+    updateCategoryRevealPanel();
+    updateMysteryProfilePanel();
+
+    console.log(`TESTING ONLY: Infinite target changed to ${forcedSpecies.name}. The round has been reset.`);
+    return true;
 };
 
 // --- Share Results (Infinite) ---
