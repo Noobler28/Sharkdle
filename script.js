@@ -1942,7 +1942,10 @@ const sharkPassCardThemes = [
     { id: "fall", name: "Fall", preview: "linear-gradient(180deg, rgba(255, 195, 108, 0.08), rgba(35, 15, 6, 0.38)), url(images/profileThemes/Thanksgiving/Fall.jpg) center center / cover no-repeat" },
     { id: "caramel", name: "Caramel", preview: "linear-gradient(180deg, rgba(255, 205, 130, 0.08), rgba(35, 18, 8, 0.36)), url(images/profileThemes/Thanksgiving/caramel.png) center center / cover no-repeat" },
     { id: "easter", name: "Easter", preview: "linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(47, 24, 64, 0.34)), url(images/profileThemes/Easter/Easter.jpg) center center / cover no-repeat" },
-    { id: "easter-bunny", name: "Bunny", preview: "linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(47, 24, 64, 0.34)), url(images/profileThemes/Easter/Bunny.jpg) center center / cover no-repeat" }
+    { id: "easter-bunny", name: "Bunny", preview: "linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(47, 24, 64, 0.34)), url(images/profileThemes/Easter/Bunny.jpg) center center / cover no-repeat" },
+    { id: "valentines", name: "Valentines", preview: "linear-gradient(180deg, rgba(255, 226, 238, 0.12), rgba(74, 19, 48, 0.34)), url(images/profileThemes/Valentines/Valentines.jpg) center center / cover no-repeat" },
+    { id: "heart", name: "<3", preview: "linear-gradient(180deg, rgba(255, 226, 238, 0.12), rgba(74, 19, 48, 0.34)), url(images/profileThemes/Valentines/Heart.jpg) center center / cover no-repeat" },
+    { id: "love-letter", name: "Loveletter", preview: "linear-gradient(180deg, rgba(255, 226, 238, 0.12), rgba(74, 19, 48, 0.34)), url(images/profileThemes/Valentines/LoveLetter.jpg) center center / cover no-repeat" }
 ];
 
 const CRATE_DROP_CHANCE = 0.5;
@@ -2291,8 +2294,11 @@ const stpatricksCrateRewardPool = [
 const valentinesCrateRewardPool = [
     { id: "crate-pfp-valentines-elephant-fish", type: "pfp", name: "Elephant Fish", imagePath: "images/cratePfp/ValentinesPfp/ElephantFish.png", rarity: "common", blurb: "Unlock the Elephant Fish profile picture." },
     { id: "crate-badge-valentines", type: "badge", badgeId: "valentines", name: "Valentines", rarity: "common", blurb: "Unlock the Valentines badge." },
+    { id: "crate-theme-valentines", type: "theme", themeId: "valentines", name: "Valentines", rarity: "rare", blurb: "Unlock the Valentines profile theme." },
     { id: "crate-badge-love-letter", type: "badge", badgeId: "love-letter", name: "LoveLetter", rarity: "rare", blurb: "Unlock the LoveLetter badge." },
+    { id: "crate-theme-heart", type: "theme", themeId: "heart", name: "<3", rarity: "epic", blurb: "Unlock the <3 profile theme." },
     { id: "crate-badge-cupid", type: "badge", badgeId: "cupid", name: "Cupid", rarity: "epic", blurb: "Unlock the Cupid badge." },
+    { id: "crate-theme-love-letter", type: "theme", themeId: "love-letter", name: "Loveletter", rarity: "legendary", blurb: "Unlock the Loveletter profile theme." },
     { id: "crate-badge-rose", type: "badge", badgeId: "rose", name: "Rose", rarity: "legendary", blurb: "Unlock the Rose badge." },
     { id: "crate-pfp-valentines-coach-whipray", type: "pfp", name: "Coach Whipray", imagePath: "images/cratePfp/ValentinesPfp/CoachWhipray.png", rarity: "rare", blurb: "Unlock the Coach Whipray profile picture." },
     { id: "crate-pfp-valentines-pink-manta-ray", type: "pfp", name: "Pink Manta Ray", imagePath: "images/cratePfp/ValentinesPfp/PinkMantaRay.png", rarity: "epic", blurb: "Unlock the Pink Manta Ray profile picture." },
@@ -14145,6 +14151,8 @@ function showCommands() {
     console.log("simulateNextLoginDay() - Simulate logging in the day after your last login");
     console.log("skipLoginDay(1) - Simulate missing 1 day and re-run daily login logic");
     console.log("addCrates(3) - Add Cosmetic Crates for testing");
+    console.log("addAllCrates(1) - Add one of every crate type to your account");
+    console.log("addAllCratesToPlayer('uid-or-username', 1) - Give one of every crate type to a player");
     console.log("addCrates(3, 'thanksgiving') or addThanksgivingCrates(3) - Add Thanksgiving Crates for testing");
     console.log("addEasterCrates(3) - Add Easter Crates for testing");
     console.log("addNewYearsCrates(3) - Add New Years Crates for testing");
@@ -14157,6 +14165,7 @@ function showCommands() {
     console.log("addTestStats() - Quick test add (500 XP, 10 wins, 5 losses, 15 games, 75 guesses)");
     console.log("revealShark() - Reveal the currently open duel shark");
     console.log("revealShark('duel_id') - Reveal a specific duel shark by id");
+    console.log("forceShark('Great White Shark') - Set the current Infinite target (dev only)");
     console.log("showStats() - Display current stats");
     console.log("showCommands() - Show this help");
     console.log("================================");
