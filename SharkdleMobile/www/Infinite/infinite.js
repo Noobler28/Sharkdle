@@ -354,7 +354,7 @@ function getMysteryProfileFilterHref() {
 
     if (!Array.from(params.keys()).length) return "";
 
-    const speciesType = { sharks: "shark", rays: "relative", mixed: "all" }[speciesMode.key];
+    const speciesType = { sharks: "shark", rays: "ray", mixed: "all" }[speciesMode.key];
     params.set("speciesType", speciesType);
 
     const path = typeof resolveAppPath === "function" ? resolveAppPath("Library/index.html") : "Library/index.html";
