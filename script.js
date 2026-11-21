@@ -13190,6 +13190,15 @@ const ADMIN_COMPENSATION_TYPES = {
     xp: { max: 1000000, name: "XP" },
     pearls: { max: 1000000, name: "Pearls" },
     crates: { max: 999, name: "Cosmetic Crates" },
+    crate_legacy: { max: 999, name: "Classic Cosmetic Crates" },
+    crate_summer: { max: 999, name: "Summer Crates" },
+    crate_halloween: { max: 999, name: "Halloween Crates" },
+    crate_christmas: { max: 999, name: "Christmas Crates" },
+    crate_thanksgiving: { max: 999, name: "Thanksgiving Crates" },
+    crate_easter: { max: 999, name: "Easter Crates" },
+    crate_newyears: { max: 999, name: "New Years Crates" },
+    crate_stpatricks: { max: 999, name: "St Patricks Crates" },
+    crate_valentines: { max: 999, name: "Valentines Crates" },
     streak_shields: { max: 3, name: "Streak Shields" },
     spins: { max: 999, name: "Daily Spins" }
 };
@@ -13274,17 +13283,19 @@ function buildAdminCompensationPayload(targetUser, type, amount, nowMs) {
             detail: `Pearls ${currentPearls.toLocaleString()} -> ${nextPearls.toLocaleString()}`
         };
         Object.assign(result, { pearlsAdded: amount, pearls: nextPearls });
-    } else if (normalizedType === "crates") {
+    } else if (normalizedType === "crates" || normalizedType.startsWith("crate_")) {
+        const crateId = normalizedType === "crates" ? "reef" : normalizedType.slice("crate_".length);
+        if (!crateDefinitions[crateId]) throw new Error("Unknown crate type.");
         const inventory = normalizeCrateInventory(data.crateInventory || {});
-        inventory.reef = (Number(inventory.reef) || 0) + amount;
+        inventory[crateId] = (Number(inventory[crateId]) || 0) + amount;
         payload.crateInventory = inventory;
         payload.crateInventoryUpdatedAt = nowMs;
         grant = {
-            name: "Cosmetic Crates",
+            name: crateDefinitions[crateId].name + (amount === 1 ? "" : "s"),
             value: formatAdminCompensationValue(amount),
-            detail: `Cosmetic Crates ${inventory.reef.toLocaleString()} total`
+            detail: `${crateDefinitions[crateId].name} ${inventory[crateId].toLocaleString()} total`
         };
-        Object.assign(result, { cratesAdded: amount, crateInventory: inventory });
+        Object.assign(result, { crateId, cratesAdded: amount, crateInventory: inventory });
     } else if (normalizedType === "streak_shields") {
         const currentShields = getStreakShieldCount(data);
         const nextShields = Math.min(3, currentShields + amount);
@@ -13992,6 +14003,73 @@ async function addValentinesCrates(amount = 1) {
     return addCrates(amount, "valentines");
 }
 window.addValentinesCrates = addValentinesCrates;
+
+async function addAllCrates(amount = 1) {
+    if (!firebase.auth().currentUser || !isDeveloperUid(firebase.auth().currentUser.uid) || !currentUser) {
+        console.log("Access denied. Sign in with a developer account first.");
+        return;
+    }
+    const count = Math.floor(Number(amount));
+    if (!Number.isSafeInteger(count) || count <= 0 || count > 999) {
+        console.log("Usage: addAllCrates(1) — amount must be from 1 to 999 per crate type.");
+        return;
+    }
+    try {
+        const profileData = getCurrentProfileData();
+        const inventory = getCrateInventory(profileData);
+        Object.keys(crateDefinitions).forEach(crateId => { inventory[crateId] = (inventory[crateId] || 0) + count; });
+        profileData.crateInventory = normalizeCrateInventory(inventory);
+        markCrateInventoryChanged(profileData);
+        saveUserProfileLocally(profileData);
+        await db.collection("userStats").doc(currentUser.uid).set({
+            crateInventory: profileData.crateInventory,
+            crateInventoryUpdatedAt: getCrateInventoryUpdatedAt(profileData)
+        }, { merge: true });
+        renderCratesButton(); renderCratesModal(); renderHomeCratesModal();
+        console.log(`Added ${count} of every crate type (${Object.keys(crateDefinitions).length} types) to your account.`);
+    } catch (error) {
+        console.error("Could not add all crate types:", error);
+    }
+}
+window.addAllCrates = addAllCrates;
+
+async function addAllCratesToPlayer(target, amount = 1) {
+    if (!isDeveloperSessionActive()) {
+        console.log("Access denied. Sign in with a developer account first.");
+        return;
+    }
+    const count = Math.floor(Number(amount));
+    if (!Number.isSafeInteger(count) || count <= 0 || count > 999) {
+        console.log("Usage: addAllCratesToPlayer('uid-or-username', 1) — amount must be from 1 to 999 per crate type.");
+        return;
+    }
+    try {
+        const targetUser = await resolveAdminTargetUserStats(target);
+        const nowMs = Date.now();
+        const inventory = normalizeCrateInventory(targetUser.data.crateInventory || {});
+        Object.keys(crateDefinitions).forEach(crateId => { inventory[crateId] = (inventory[crateId] || 0) + count; });
+        const grants = Object.values(crateDefinitions).map(crate => ({
+            name: `${crate.name}${count === 1 ? "" : "s"}`,
+            value: formatAdminCompensationValue(count),
+            detail: "Developer crate grant"
+        }));
+        await targetUser.ref.set({
+            crateInventory: inventory,
+            crateInventoryUpdatedAt: Math.max(nowMs, getCrateInventoryUpdatedAt(targetUser.data) + 1),
+            lastUpdated: nowMs,
+            adminCompensationNotice: { id: `admin-all-crates-${nowMs}`, createdAt: nowMs, grantedBy: currentUser.uid, grants },
+            lastAdminCompensation: { type: "all_crates", amount: count, label: `${count} of every crate type`, grantedAt: nowMs, grantedBy: currentUser.uid }
+        }, { merge: true });
+        if (targetUser.uid === currentUser.uid) {
+            await loadUserProfile();
+            renderCratesButton(); renderCratesModal(); renderHomeCratesModal();
+        }
+        console.log(`Added ${count} of every crate type to ${getAdminPlayerLabel(targetUser.uid, targetUser.data)}.`);
+    } catch (error) {
+        console.error("Could not grant all crate types:", error);
+    }
+}
+window.addAllCratesToPlayer = addAllCratesToPlayer;
 
 async function addStreakShields(amount = 1) {
     if (!firebase.auth().currentUser || !isDeveloperUid(firebase.auth().currentUser.uid)) {

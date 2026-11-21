@@ -3,7 +3,11 @@
     const rewardDefs = {
         xp: { label: 'XP', max: 1000000 }, pearls: { label: 'Pearls', max: 1000000 },
         crates: { label: 'Cosmetic Crates', max: 999 }, halloween: { label: 'Halloween Crates', max: 999 },
-        christmas: { label: 'Christmas Crates', max: 999 }, spins: { label: 'Daily Spins', max: 999 },
+        christmas: { label: 'Christmas Crates', max: 999 }, legacy: { label: 'Classic Cosmetic Crates', max: 999 },
+        summer: { label: 'Summer Crates', max: 999 }, thanksgiving: { label: 'Thanksgiving Crates', max: 999 },
+        easter: { label: 'Easter Crates', max: 999 }, newyears: { label: 'New Years Crates', max: 999 },
+        stpatricks: { label: 'St Patricks Crates', max: 999 }, valentines: { label: 'Valentines Crates', max: 999 },
+        spins: { label: 'Daily Spins', max: 999 },
         streak_shields: { label: 'Streak Shields', max: 3 }
     };
     let preview = null;
@@ -30,9 +34,10 @@
         let next = { ...data };
         const payload = {}, grants = [];
         for (const [type, amount] of Object.entries(normalizeRewards(rewards))) {
-            if (type === 'halloween' || type === 'christmas') {
+            const crateId = type === 'crates' ? 'reef' : (crateIds.has(type) ? type : '');
+            if (crateId) {
                 const inventory = normalizeCrateInventory(next.crateInventory || {});
-                inventory[type] = (Number(inventory[type]) || 0) + amount;
+                inventory[crateId] = (Number(inventory[crateId]) || 0) + amount;
                 Object.assign(payload, { crateInventory: inventory, crateInventoryUpdatedAt: now });
                 Object.assign(next, payload);
                 grants.push({ name: rewardDefs[type].label, value: `+${amount}`, detail: 'Developer giveaway' });
@@ -49,6 +54,7 @@
         });
         return { payload, grants };
     }
+    const crateIds = new Set(['legacy', 'summer', 'halloween', 'christmas', 'thanksgiving', 'easter', 'newyears', 'stpatricks', 'valentines']);
     async function onlinePlan(rewards, mode = '') {
         const owner = access(), now = Date.now();
         const snapshot = await db.collection('userStats').where('lastActive', '>=', now - 5 * 60 * 1000).get();
@@ -140,7 +146,8 @@
     });
     window.adminSelfReward = preset => action(async () => {
         const owner = access();
-        const presets = { pearls: { pearls: 10000 }, crates: { crates: 25 }, seasonal: { halloween: 10, christmas: 10 }, spins: { spins: 10 }, shields: { streak_shields: 3 }, xp: { xp: 10000 }, bundle: { pearls: 10000, crates: 25, halloween: 10, christmas: 10, spins: 10, streak_shields: 3 } };
+        const allCrates = { crates: 1, legacy: 1, summer: 1, halloween: 1, christmas: 1, thanksgiving: 1, easter: 1, newyears: 1, stpatricks: 1, valentines: 1 };
+        const presets = { pearls: { pearls: 10000 }, crates: { crates: 25 }, seasonal: { halloween: 10, christmas: 10 }, 'all-crates': allCrates, spins: { spins: 10 }, shields: { streak_shields: 3 }, xp: { xp: 10000 }, bundle: { pearls: 10000, crates: 25, halloween: 10, christmas: 10, spins: 10, streak_shields: 3 } };
         const rewards = normalizeRewards(presets[preset]);
         const now = Date.now();
         const result = await execute({ id: `self-${now}-${Math.random().toString(36).slice(2, 12)}`, createdAt: now, createdBy: owner, rewards, recipients: [{ uid: owner, name: 'You' }], audience: 'developer' });
@@ -154,7 +161,8 @@
     }
     window.adminDropPreset = preset => {
         if (!isDeveloperSessionActive() || busy) return;
-        const presets = { welcome: { pearls: 100, crates: 1 }, party: { xp: 1000, pearls: 250, crates: 2, spins: 1 }, seasonal: { halloween: 1, christmas: 1 }, shields: { streak_shields: 1 } };
+        const allCrates = { crates: 1, legacy: 1, summer: 1, halloween: 1, christmas: 1, thanksgiving: 1, easter: 1, newyears: 1, stpatricks: 1, valentines: 1 };
+        const presets = { welcome: { pearls: 100, crates: 1 }, party: { xp: 1000, pearls: 250, crates: 2, spins: 1 }, seasonal: { halloween: 1, christmas: 1 }, 'all-crates': allCrates, shields: { streak_shields: 1 } };
         for (const type of Object.keys(rewardDefs)) if (byId(`admin-drop-${type}`)) byId(`admin-drop-${type}`).value = presets[preset]?.[type] || 0;
         window.adminInvalidateDrop();
     };

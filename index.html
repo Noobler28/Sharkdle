@@ -1302,6 +1302,7 @@ content="Play Sharkdle, the daily shark guessing game. Guess shark species from 
 <button type="button" data-dev-tool class="admin-abuse-btn" onclick="adminSelfReward('bundle')">Refill test inventory</button>
 <button type="button" data-dev-tool class="admin-abuse-btn" onclick="adminSelfReward('pearls')">+10,000 pearls</button>
 <button type="button" data-dev-tool class="admin-abuse-btn" onclick="adminSelfReward('crates')">+25 cosmetic crates</button>
+<button type="button" data-dev-tool class="admin-abuse-btn" onclick="adminSelfReward('all-crates')">+1 of every crate type</button>
 <button type="button" data-dev-tool class="admin-abuse-btn" onclick="adminSelfReward('seasonal')">+10 Halloween + Christmas crates</button>
 <button type="button" data-dev-tool class="admin-abuse-btn" onclick="adminSelfReward('spins')">+10 daily spins</button>
 <button type="button" data-dev-tool class="admin-abuse-btn" onclick="adminSelfReward('shields')">Fill streak shields</button>
@@ -1317,14 +1318,22 @@ content="Play Sharkdle, the daily shark guessing game. Guess shark species from 
 <button type="button" data-dev-tool class="admin-abuse-btn admin-abuse-btn-secondary" onclick="adminDropPreset('welcome')">Welcome gift</button>
 <button type="button" data-dev-tool class="admin-abuse-btn admin-abuse-btn-secondary" onclick="adminDropPreset('party')">Party pack</button>
 <button type="button" data-dev-tool class="admin-abuse-btn admin-abuse-btn-secondary" onclick="adminDropPreset('seasonal')">Seasonal surprise</button>
+<button type="button" data-dev-tool class="admin-abuse-btn admin-abuse-btn-secondary" onclick="adminDropPreset('all-crates')">All crate types</button>
 <button type="button" data-dev-tool class="admin-abuse-btn admin-abuse-btn-secondary" onclick="adminDropPreset('shields')">Shield everyone</button>
 </div>
 <div class="admin-abuse-grid">
 <label class="admin-abuse-card">XP<input id="admin-drop-xp" data-dev-tool type="number" class="admin-abuse-input" min="0" max="1000000" step="1" value="0" oninput="adminInvalidateDrop()"></label>
 <label class="admin-abuse-card">Pearls<input id="admin-drop-pearls" data-dev-tool type="number" class="admin-abuse-input" min="0" max="1000000" step="1" value="0" oninput="adminInvalidateDrop()"></label>
 <label class="admin-abuse-card">Cosmetic crates<input id="admin-drop-crates" data-dev-tool type="number" class="admin-abuse-input" min="0" max="999" step="1" value="0" oninput="adminInvalidateDrop()"></label>
+<label class="admin-abuse-card">Classic Cosmetic Crate 1<input id="admin-drop-legacy" data-dev-tool type="number" class="admin-abuse-input" min="0" max="999" step="1" value="0" oninput="adminInvalidateDrop()"></label>
+<label class="admin-abuse-card">Summer crates<input id="admin-drop-summer" data-dev-tool type="number" class="admin-abuse-input" min="0" max="999" step="1" value="0" oninput="adminInvalidateDrop()"></label>
 <label class="admin-abuse-card">Halloween crates<input id="admin-drop-halloween" data-dev-tool type="number" class="admin-abuse-input" min="0" max="999" step="1" value="0" oninput="adminInvalidateDrop()"></label>
 <label class="admin-abuse-card">Christmas crates<input id="admin-drop-christmas" data-dev-tool type="number" class="admin-abuse-input" min="0" max="999" step="1" value="0" oninput="adminInvalidateDrop()"></label>
+<label class="admin-abuse-card">Thanksgiving crates<input id="admin-drop-thanksgiving" data-dev-tool type="number" class="admin-abuse-input" min="0" max="999" step="1" value="0" oninput="adminInvalidateDrop()"></label>
+<label class="admin-abuse-card">Easter crates<input id="admin-drop-easter" data-dev-tool type="number" class="admin-abuse-input" min="0" max="999" step="1" value="0" oninput="adminInvalidateDrop()"></label>
+<label class="admin-abuse-card">New Years crates<input id="admin-drop-newyears" data-dev-tool type="number" class="admin-abuse-input" min="0" max="999" step="1" value="0" oninput="adminInvalidateDrop()"></label>
+<label class="admin-abuse-card">St Patricks crates<input id="admin-drop-stpatricks" data-dev-tool type="number" class="admin-abuse-input" min="0" max="999" step="1" value="0" oninput="adminInvalidateDrop()"></label>
+<label class="admin-abuse-card">Valentines crates<input id="admin-drop-valentines" data-dev-tool type="number" class="admin-abuse-input" min="0" max="999" step="1" value="0" oninput="adminInvalidateDrop()"></label>
 <label class="admin-abuse-card">Daily spins<input id="admin-drop-spins" data-dev-tool type="number" class="admin-abuse-input" min="0" max="999" step="1" value="0" oninput="adminInvalidateDrop()"></label>
 <label class="admin-abuse-card">Streak shields<input id="admin-drop-streak_shields" data-dev-tool type="number" class="admin-abuse-input" min="0" max="3" step="1" value="0" oninput="adminInvalidateDrop()"></label>
 </div>
@@ -1411,6 +1420,15 @@ content="Play Sharkdle, the daily shark guessing game. Guess shark species from 
 <option value="xp">XP</option>
 <option value="pearls">Pearls</option>
 <option value="crates">Cosmetic Crates</option>
+<option value="crate_legacy">Classic Cosmetic Crate 1</option>
+<option value="crate_summer">Summer Crates</option>
+<option value="crate_halloween">Halloween Crates</option>
+<option value="crate_christmas">Christmas Crates</option>
+<option value="crate_thanksgiving">Thanksgiving Crates</option>
+<option value="crate_easter">Easter Crates</option>
+<option value="crate_newyears">New Years Crates</option>
+<option value="crate_stpatricks">St Patricks Crates</option>
+<option value="crate_valentines">Valentines Crates</option>
 <option value="streak_shields">Streak Shields</option>
 <option value="spins">Daily Spins</option>
 </select>
@@ -1816,7 +1834,7 @@ content="Play Sharkdle, the daily shark guessing game. Guess shark species from 
 <link rel="stylesheet" href="fair-play.css?v=20261019">
 <script src="fair-play.js?v=20261019"></script>
 <script src="leaderboard-blacklist.js?v=20261106-admin-accounts"></script>
-<script src="script.js?v=20261120-seasonal-crate-sources"></script>
+<script src="script.js?v=20261121-admin-all-crates"></script>
 <script>
 window.addEventListener("sharkdle-home-data-ready", () => {
     window.setTimeout(() => document.getElementById("home-loading-screen")?.classList.add("hidden"), 450);
@@ -1824,7 +1842,7 @@ window.addEventListener("sharkdle-home-data-ready", () => {
 </script>
 <script src="thanksgiving-event.js?v=20261117-completion-reconcile"></script>
 <script src="admin-accounts.js?v=20261106"></script>
-<script src="developer-tools.js?v=1"></script>
+<script src="developer-tools.js?v=20261121-all-crates"></script>
 <script src="christmas-event.js?v=20261120-advent-final"></script>
 <script src="global-broadcast.js"></script>
 <script>
