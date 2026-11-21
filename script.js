@@ -8140,13 +8140,14 @@ function updateProfileBadgeUI() {
 
 const profileTitleDefs = [
     { id: "", name: "No title", description: "Keep your profile title hidden." },
-    { id: "reef-architect", name: "Reef Architect", description: "A developer collection title." },
-    { id: "ocean-overseer", name: "Ocean Overseer", description: "A developer collection title." },
-    { id: "apex-commander", name: "Apex Commander", description: "A developer collection title." }
+    { id: "sharkdle-developer", name: "sharkdle developer", description: "The official Sharkdle developer title." }
 ];
 
+const legacyDeveloperProfileTitleIds = new Set(["reef-architect", "ocean-overseer", "apex-commander"]);
+
 function getProfileTitleMeta(titleId) {
-    return profileTitleDefs.find(title => title.id === titleId) || profileTitleDefs[0];
+    const normalizedTitleId = legacyDeveloperProfileTitleIds.has(titleId) ? "sharkdle-developer" : titleId;
+    return profileTitleDefs.find(title => title.id === normalizedTitleId) || profileTitleDefs[0];
 }
 
 function getUnlockedProfileTitleIds(profileData = getCurrentProfileData()) {
@@ -8165,7 +8166,7 @@ function getUnlockedProfileTitles(profileData = getCurrentProfileData()) {
 }
 
 function getEquippedProfileTitle(profileData = getCurrentProfileData()) {
-    const equippedTitle = profileData.equippedTitle || "";
+    const equippedTitle = getProfileTitleMeta(profileData.equippedTitle || "").id;
     return getUnlockedProfileTitleIds(profileData).includes(equippedTitle) ? equippedTitle : "";
 }
 

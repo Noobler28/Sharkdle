@@ -382,18 +382,31 @@
         return LEADERBOARD_THEME_IDS.has(normalized) ? normalized : "default";
     }
 
+    function normalizeProfileTitleId(titleId) {
+        if (typeof titleId !== "string") return null;
+        const normalized = titleId.trim().toLowerCase();
+        if (["reef-architect", "ocean-overseer", "apex-commander", "sharkdle-developer"].includes(normalized)) {
+            return "sharkdle-developer";
+        }
+        return normalized;
+    }
+
     function mergeRowCosmetics(firestoreData, localProfileData) {
         if (!localProfileData || typeof localProfileData !== "object") {
-            return { ...firestoreData };
+            const row = { ...firestoreData };
+            row.equippedTitle = normalizeProfileTitleId(row.equippedTitle) || "";
+            return row;
         }
         const localPic = localProfileData.profilePicture || localProfileData.profilePic;
         const remotePic = firestoreData.profilePicture || firestoreData.profilePic;
+        const localTitle = normalizeProfileTitleId(localProfileData.equippedTitle);
         return {
             ...firestoreData,
             profilePicture: localPic || remotePic,
             profilePic: localPic || remotePic,
             equippedBadge: localProfileData.equippedBadge || firestoreData.equippedBadge || "starter",
-            equippedCardTheme: localProfileData.equippedCardTheme || firestoreData.equippedCardTheme || "default"
+            equippedCardTheme: localProfileData.equippedCardTheme || firestoreData.equippedCardTheme || "default",
+            equippedTitle: localTitle !== null ? localTitle : normalizeProfileTitleId(firestoreData.equippedTitle) || ""
         };
     }
 
@@ -422,6 +435,7 @@
         }
         if (localProfileData.equippedBadge) payload.equippedBadge = localProfileData.equippedBadge;
         if (localProfileData.equippedCardTheme) payload.equippedCardTheme = localProfileData.equippedCardTheme;
+        if (typeof localProfileData.equippedTitle === "string") payload.equippedTitle = normalizeProfileTitleId(localProfileData.equippedTitle);
         return payload;
     }
 

@@ -15,7 +15,7 @@
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
     <!-- Firebase Auth -->
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
-    <script src="Leaderboard/cosmetics-display.js"></script>
+    <script src="Leaderboard/cosmetics-display.js?v=20261121-developer-title"></script>
     <script src="leaderboard-blacklist.js?v=20261106-admin-accounts"></script>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="page-shell.css">
@@ -621,7 +621,7 @@ color:#ffffff;
 font-size:0.78em;
 font-weight:700;
 letter-spacing:0.08em;
-text-transform:uppercase;
+text-transform:none;
 color:#96ecff;
 }
 
@@ -2829,6 +2829,10 @@ body.leaderboards-page #friendProfileModal .profile-modal-content .stat-value {
                         : `<img src="${profilePicPath}" alt="Profile" onerror="this.onerror=null;this.src='images/pfp/shark1.png';" style="width:38px;height:38px;border-radius:50%;border:2px solid #3e92cc;background:#18304a;object-fit:cover;">`;
                     const username = rowData.username ? rowData.username : 'Anonymous';
                     const safeUsername = escapeLeaderboardHtml(username);
+                    const equippedTitleId = String(rowData.equippedTitle || "").trim().toLowerCase();
+                    const profileTitleDisplay = ["sharkdle-developer", "reef-architect", "ocean-overseer", "apex-commander"].includes(equippedTitleId)
+                        ? '<div class="leaderboard-player-title">sharkdle developer</div>'
+                        : "";
                     let rankCell = '';
                     if (rank === 1) {
                         rankCell = `<span class="rank-pill rank-top-1">🥇</span>`;
@@ -2840,7 +2844,7 @@ body.leaderboards-page #friendProfileModal .profile-modal-content .stat-value {
                         rankCell = `<span class="rank-pill">${rank}</span>`;
                     }
                     const badgeId = rowData.equippedBadge || "starter";
-                    const usernameDisplay = `<div class="leaderboard-player"><div class="leaderboard-player-name">${safeUsername}</div></div>`;
+                    const usernameDisplay = `<div class="leaderboard-player"><div class="leaderboard-player-name">${safeUsername}</div>${profileTitleDisplay}</div>`;
                     const badgeDisplay = cosmetics
                         ? cosmetics.buildBadgeHtml(badgeId)
                         : "";
