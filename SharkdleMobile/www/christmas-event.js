@@ -204,7 +204,10 @@
                 for (const [crate, count] of Object.entries(reward.crates || {})) next.crateInventory[crate] = (next.crateInventory[crate] || 0) + count;
                 if (reward.crates) markCrateInventoryChanged(next);
                 if (reward.spins || reward.premiumSpins) next.dailySpinBonusSpins = Math.max(0, Number(remote.dailySpinBonusSpins) || 0) + (reward.spins || 0) + (reward.premiumSpins || 0);
-                if (reward.shields) next.streakShields = Math.min(3, Math.max(0, Number(remote.streakShields) || 0) + reward.shields);
+                if (reward.shields) {
+                    next.streakShields = Math.min(3, Math.max(0, Number(remote.streakShields) || 0) + reward.shields);
+                    next.streakShieldsUpdatedAt = Date.now();
+                }
                 if (reward.profileIcon) {
                     const cosmetics = Array.isArray(remote.earnedCosmetics) ? remote.earnedCosmetics.slice() : [];
                     if (!cosmetics.some(item => item?.imagePath === "images/christmasEvent/AdventRewards/ZebraShark.png")) cosmetics.push({ name: "Zebra Shark", imagePath: "images/christmasEvent/AdventRewards/ZebraShark.png", calendarReward: true, source: "Advent 2026", rarity: "exclusive" });
@@ -222,7 +225,10 @@
                     pearlBalanceUpdatedAt: getPearlBalanceUpdatedAt(next), lastUpdated: Date.now() };
                 if (reward.crates) Object.assign(payload, { crateInventory: next.crateInventory, crateInventoryUpdatedAt: getCrateInventoryUpdatedAt(next) });
                 if (reward.spins || reward.premiumSpins) payload.dailySpinBonusSpins = next.dailySpinBonusSpins;
-                if (reward.shields) payload.streakShields = next.streakShields;
+                if (reward.shields) {
+                    payload.streakShields = next.streakShields;
+                    payload.streakShieldsUpdatedAt = next.streakShieldsUpdatedAt;
+                }
                 if (reward.profileIcon) payload.earnedCosmetics = next.earnedCosmetics;
                 if (reward.profileTheme) payload.unlockedCardThemes = next.unlockedCardThemes;
                 if (completionBonus) payload.unlockedBadges = next.unlockedBadges;

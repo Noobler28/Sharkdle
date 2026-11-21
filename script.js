@@ -3481,6 +3481,7 @@ function setStreakShieldCount(profileData, nextCount) {
     if (!profileData || typeof profileData !== "object") return 0;
     const normalizedCount = Math.min(3, Math.max(0, Math.floor(Number(nextCount) || 0)));
     profileData.streakShields = normalizedCount;
+    profileData.streakShieldsUpdatedAt = Date.now();
     return normalizedCount;
 }
 
@@ -9930,7 +9931,12 @@ function mergeProfilesSafely(localProfile, firebaseData, options = {}) {
         ...(localProfile.seasonXpBoosts && typeof localProfile.seasonXpBoosts === "object" ? localProfile.seasonXpBoosts : {}),
         ...(firebaseData.seasonXpBoosts && typeof firebaseData.seasonXpBoosts === "object" ? firebaseData.seasonXpBoosts : {})
     };
-    const preferredStreakShields = Math.max(getStreakShieldCount(localProfile), getStreakShieldCount(firebaseData));
+    const localShieldUpdatedAt = Number(localProfile.streakShieldsUpdatedAt) || 0;
+    const remoteShieldUpdatedAt = Number(firebaseData.streakShieldsUpdatedAt) || 0;
+    const preferredStreakShields = localShieldUpdatedAt || remoteShieldUpdatedAt
+        ? (localShieldUpdatedAt > remoteShieldUpdatedAt ? getStreakShieldCount(localProfile) : getStreakShieldCount(firebaseData))
+        : Math.max(getStreakShieldCount(localProfile), getStreakShieldCount(firebaseData));
+    const preferredStreakShieldsUpdatedAt = Math.max(localShieldUpdatedAt, remoteShieldUpdatedAt);
     const preferredDailySpinBonusSpins = Math.max(
         normalizeDailySpinBonusCount(localProfile.dailySpinBonusSpins),
         normalizeDailySpinBonusCount(firebaseData.dailySpinBonusSpins)
@@ -10028,6 +10034,7 @@ function mergeProfilesSafely(localProfile, firebaseData, options = {}) {
         cratesOpened: preferredCratesOpened,
         cratesSinceLegendary: preferredCratesSinceLegendary,
         streakShields: preferredStreakShields,
+        streakShieldsUpdatedAt: preferredStreakShieldsUpdatedAt,
         instantCrateOpen: preferredInstantCrateOpen,
         pearls: preferredPearls,
         pearlBalanceUpdatedAt: preferredPearlBalanceUpdatedAt,
@@ -11903,6 +11910,7 @@ async function syncStatsToFirebase() {
             cratesOpened: mergedProfile.cratesOpened || 0,
             cratesSinceLegendary: getCratesSinceLegendary(mergedProfile),
             streakShields: getStreakShieldCount(mergedProfile),
+            streakShieldsUpdatedAt: Number(mergedProfile.streakShieldsUpdatedAt) || 0,
             instantCrateOpen: getCrateInstantOpenEnabled(mergedProfile),
             pearls: getPearlCount(mergedProfile),
             pearlBalanceUpdatedAt: getPearlBalanceUpdatedAt(mergedProfile),
