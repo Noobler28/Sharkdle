@@ -208,7 +208,17 @@
         "caramel",
         "easter",
         "easter-bunny",
-        "advent-2026"
+        "advent-2026",
+        "egg",
+        "valentines",
+        "heart",
+        "love-letter",
+        "confetti",
+        "fireworks",
+        "newyears2027",
+        "rainbow",
+        "shamrock",
+        "stpatricks"
     ]);
 
     const PFP_OBTAINMENT_MAP = {
