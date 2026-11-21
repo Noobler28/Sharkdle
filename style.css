@@ -21930,6 +21930,46 @@ body.home-v3-page .home-v3-hero-actions .home-v3-ghost-btn:focus-visible {
 .crate-unbox-overlay.crate-theme-newyears .crate-unbox-backdrop,.crate-unbox-overlay.crate-theme-newyears .crate-unbox-stage { background:radial-gradient(circle at 50% 18%,rgba(255,219,112,.22),transparent 36%),linear-gradient(180deg,rgba(70,57,44,.97),rgba(31,28,52,.98)); }
 .crate-unbox-overlay.crate-theme-stpatricks .crate-unbox-backdrop,.crate-unbox-overlay.crate-theme-stpatricks .crate-unbox-stage { background:radial-gradient(circle at 50% 18%,rgba(101,223,143,.22),transparent 36%),linear-gradient(180deg,rgba(33,86,57,.97),rgba(18,43,42,.98)); }
 .crate-unbox-overlay.crate-theme-valentines .crate-unbox-backdrop,.crate-unbox-overlay.crate-theme-valentines .crate-unbox-stage { background:radial-gradient(circle at 50% 18%,rgba(255,143,180,.22),transparent 36%),linear-gradient(180deg,rgba(94,39,67,.97),rgba(41,20,43,.98)); }
+.crate-unbox-overlay.crate-theme-easter .crate-unbox-fx,
+.crate-unbox-overlay.crate-theme-easter .crate-unbox-splash,
+.crate-unbox-overlay.crate-theme-newyears .crate-unbox-fx,
+.crate-unbox-overlay.crate-theme-newyears .crate-unbox-splash,
+.crate-unbox-overlay.crate-theme-stpatricks .crate-unbox-fx,
+.crate-unbox-overlay.crate-theme-stpatricks .crate-unbox-splash,
+.crate-unbox-overlay.crate-theme-valentines .crate-unbox-fx,
+.crate-unbox-overlay.crate-theme-valentines .crate-unbox-splash { display: block; }
+.crate-unbox-overlay.crate-theme-easter .crate-unbox-crate,
+.crate-unbox-overlay.crate-theme-newyears .crate-unbox-crate,
+.crate-unbox-overlay.crate-theme-stpatricks .crate-unbox-crate,
+.crate-unbox-overlay.crate-theme-valentines .crate-unbox-crate { animation: summerCrateFloat 2.1s ease-in-out infinite; }
+.crate-unbox-overlay.crate-theme-easter .crate-unbox-crate-lid { background: linear-gradient(180deg,#fff0ff,#c77bd0); border-color: rgba(255,225,255,.48); }
+.crate-unbox-overlay.crate-theme-easter .crate-unbox-crate-body { color:#fff2ff; background:linear-gradient(180deg,#b977c5,#56366f); border-color:rgba(235,177,239,.36); box-shadow:0 18px 36px rgba(181,103,193,.22); }
+.crate-unbox-overlay.crate-theme-newyears .crate-unbox-crate-lid { background: linear-gradient(180deg,#fff0a8,#d3a53b); border-color:rgba(255,231,157,.5); }
+.crate-unbox-overlay.crate-theme-newyears .crate-unbox-crate-body { color:#fff7d4; background:linear-gradient(180deg,#d6a841,#4b5188); border-color:rgba(255,219,112,.36); box-shadow:0 18px 36px rgba(212,172,74,.22); }
+.crate-unbox-overlay.crate-theme-stpatricks .crate-unbox-crate-lid { background: linear-gradient(180deg,#d6ffe2,#4caf70); border-color:rgba(185,255,208,.48); }
+.crate-unbox-overlay.crate-theme-stpatricks .crate-unbox-crate-body { color:#eaffef; background:linear-gradient(180deg,#31945c,#174b3d); border-color:rgba(101,223,143,.36); box-shadow:0 18px 36px rgba(51,177,104,.22); }
+.crate-unbox-overlay.crate-theme-valentines .crate-unbox-crate-lid { background: linear-gradient(180deg,#ffe0eb,#df6a96); border-color:rgba(255,207,224,.48); }
+.crate-unbox-overlay.crate-theme-valentines .crate-unbox-crate-body { color:#fff0f5; background:linear-gradient(180deg,#c64779,#59284f); border-color:rgba(241,120,155,.36); box-shadow:0 18px 36px rgba(220,82,137,.22); }
+.crate-unbox-overlay.crate-theme-easter .crate-unbox-crate.opening-seasonal,
+.crate-unbox-overlay.crate-theme-newyears .crate-unbox-crate.opening-seasonal,
+.crate-unbox-overlay.crate-theme-stpatricks .crate-unbox-crate.opening-seasonal,
+.crate-unbox-overlay.crate-theme-valentines .crate-unbox-crate.opening-seasonal { animation: summerCratePop .95s cubic-bezier(.34,1.35,.48,1) forwards; }
+.crate-unbox-overlay.crate-theme-easter .crate-unbox-crate.opening-seasonal .crate-unbox-crate-lid,
+.crate-unbox-overlay.crate-theme-newyears .crate-unbox-crate.opening-seasonal .crate-unbox-crate-lid,
+.crate-unbox-overlay.crate-theme-stpatricks .crate-unbox-crate.opening-seasonal .crate-unbox-crate-lid,
+.crate-unbox-overlay.crate-theme-valentines .crate-unbox-crate.opening-seasonal .crate-unbox-crate-lid { animation: summerCrateLidFlip .72s cubic-bezier(.22,1.12,.36,1) forwards; }
+.crate-unbox-burst.active-easter { background:radial-gradient(circle,rgba(235,177,239,.82),rgba(181,103,193,.2) 42%,transparent 70%); animation:summerBurstGlow 1s ease forwards; }
+.crate-unbox-burst.active-newyears { background:radial-gradient(circle,rgba(255,224,119,.84),rgba(92,112,211,.2) 42%,transparent 70%); animation:summerBurstGlow 1s ease forwards; }
+.crate-unbox-burst.active-stpatricks { background:radial-gradient(circle,rgba(115,239,157,.82),rgba(35,140,85,.2) 42%,transparent 70%); animation:summerBurstGlow 1s ease forwards; }
+.crate-unbox-burst.active-valentines { background:radial-gradient(circle,rgba(255,155,191,.84),rgba(196,61,119,.2) 42%,transparent 70%); animation:summerBurstGlow 1s ease forwards; }
+@media (prefers-reduced-motion: reduce) {
+    .crate-unbox-overlay.crate-theme-easter .crate-unbox-crate,.crate-unbox-overlay.crate-theme-newyears .crate-unbox-crate,
+    .crate-unbox-overlay.crate-theme-stpatricks .crate-unbox-crate,.crate-unbox-overlay.crate-theme-valentines .crate-unbox-crate { animation:none!important; }
+    .crate-unbox-overlay.crate-theme-easter .crate-unbox-crate.opening-seasonal .crate-unbox-crate-lid,
+    .crate-unbox-overlay.crate-theme-newyears .crate-unbox-crate.opening-seasonal .crate-unbox-crate-lid,
+    .crate-unbox-overlay.crate-theme-stpatricks .crate-unbox-crate.opening-seasonal .crate-unbox-crate-lid,
+    .crate-unbox-overlay.crate-theme-valentines .crate-unbox-crate.opening-seasonal .crate-unbox-crate-lid { transform:translateY(-20px) rotate(-24deg); }
+}
 .crate-overlay-reveal.crate-reveal-easter { border-color:rgba(234,178,235,.3);background:linear-gradient(180deg,rgba(72,46,91,.98),rgba(31,22,47,.98)); }
 .crate-overlay-reveal.crate-reveal-newyears { border-color:rgba(244,202,82,.3);background:linear-gradient(180deg,rgba(73,59,39,.98),rgba(29,27,47,.98)); }
 .crate-overlay-reveal.crate-reveal-stpatricks { border-color:rgba(87,206,131,.3);background:linear-gradient(180deg,rgba(31,79,54,.98),rgba(17,39,38,.98)); }
