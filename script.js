@@ -4401,7 +4401,7 @@ function getCommunityBossContributionMultiplier() {
 }
 
 function isCommunityBossContributionOpen(nowMs = Date.now()) {
-    return isCommunityBossStarted(nowMs) && !isCommunityBossExpired(nowMs) && !isCommunityBossComplete();
+    return isCommunityBossStarted(nowMs) && !isCommunityBossExpired(nowMs);
 }
 
 function getCommunityBossRewardClaim(profileData = getCurrentProfileData()) {
@@ -4503,7 +4503,7 @@ function getCommunityBossDescription() {
         const goals = getCommunityBossRewardTiers()
             .map(reward => (Number(reward.goal) || 0).toLocaleString())
             .join(", ");
-        return `Daily and Infinite wins count together. Steven is saved at 150 wins, and the event continues with new rewards at ${goals} global wins.${COMMUNITY_BOSS_EVENT.requiresContribution ? ` Contribute just one win to claim every milestone the community reaches. Earn up to ${getCommunityBossTotalRewardCrates()} Christmas Crates in total.` : multiplierCopy}`;
+        return `Daily and Infinite wins count together. Steven is saved at 150 wins, and the community can keep contributing through the event deadline to unlock rewards at ${goals} global wins.${COMMUNITY_BOSS_EVENT.requiresContribution ? ` Contribute at least one win to claim every milestone the community reaches. Earn up to ${getCommunityBossTotalRewardCrates()} Christmas Crates in total.` : multiplierCopy}`;
     }
     return `Daily and Infinite wins from every logged-in player count together.${multiplierCopy} Reach ${COMMUNITY_BOSS_EVENT.targetWins.toLocaleString()} community wins by the event deadline to bring down the ${COMMUNITY_BOSS_EVENT.bossName}.`;
 }
@@ -4669,7 +4669,7 @@ function closeCommunityBossRanksModal() {
 }
 
 function getCommunityBossDisplayState() {
-    const wins = Math.min(getCommunityBossWins(), COMMUNITY_BOSS_EVENT.targetWins);
+    const wins = getCommunityBossWins();
     const target = COMMUNITY_BOSS_EVENT.targetWins;
     const progressPercent = Math.max(0, Math.min(100, (wins / target) * 100));
     const nowMs = Date.now();
@@ -4690,7 +4690,7 @@ function getCommunityBossDisplayState() {
     if (!started) {
         timerText = `Starts in ${formatEventTimeRemaining(COMMUNITY_BOSS_EVENT.startMs - nowMs)}`;
     } else if (complete) {
-        timerText = COMMUNITY_BOSS_EVENT.season === "christmas" ? "Stethacanthus protected. Rewards are unlocked." : "Boss defeated. Rewards are unlocked.";
+        timerText = COMMUNITY_BOSS_EVENT.season === "christmas" ? "Stethacanthus protected. Keep contributing to unlock more rewards!" : "Boss defeated. Rewards are unlocked.";
     } else if (canClaim) {
         timerText = `${pendingRewards.length} reward${pendingRewards.length === 1 ? "" : "s"} unlocked.`;
     } else if (expired) {
@@ -4794,7 +4794,7 @@ function renderCommunityBossEventModal() {
                 <span class="community-boss-kicker">${COMMUNITY_BOSS_EVENT.seasonLabel}</span>
                 <h2 id="community-boss-modal-title">${COMMUNITY_BOSS_EVENT.title}</h2>
                 <p>${getCommunityBossDescription()}</p>
-                ${COMMUNITY_BOSS_EVENT.requiresContribution ? `<div class="community-participation"><span><i class="fa-solid fa-snowflake" aria-hidden="true"></i> 25 crates to earn</span><span>${!currentUser ? "Log in to join" : getCommunityBossPersonalWins() > 0 ? `${getCommunityBossPersonalWins()} contribution${getCommunityBossPersonalWins() === 1 ? "" : "s"} · You qualify` : communityBossParticipation.uid === currentUser.uid && communityBossParticipation.loaded ? "1 win qualifies you" : "Checking your contributions…"}</span></div>` : ""}
+                ${COMMUNITY_BOSS_EVENT.requiresContribution ? `<div class="community-participation"><span><i class="fa-solid fa-snowflake" aria-hidden="true"></i> ${getCommunityBossTotalRewardCrates()} crates to earn</span><span>${!currentUser ? "Log in to join" : getCommunityBossPersonalWins() > 0 ? `${getCommunityBossPersonalWins()} contribution${getCommunityBossPersonalWins() === 1 ? "" : "s"} · You qualify` : communityBossParticipation.uid === currentUser.uid && communityBossParticipation.loaded ? "1 win qualifies you" : "Checking your contributions…"}</span></div>` : ""}
             </div>
             <div class="community-boss-progress-shell community-boss-modal-progress">
                 <div class="community-boss-progress-meta">
@@ -5250,9 +5250,9 @@ function ensureCommunityBossStyles() {
 function renderCommunityBossPanel() {
     const homeCopy = document.getElementById("home-community-boss-copy");
     if (homeCopy) {
-        const wins = Math.min(getCommunityBossWins(), COMMUNITY_BOSS_EVENT.targetWins);
+        const wins = getCommunityBossWins();
         homeCopy.textContent = isCommunityBossComplete(wins)
-            ? "Stethacanthus is protected! Your community rewards are ready."
+            ? "Stethacanthus is protected! Keep winning to unlock more community rewards."
             : wins >= 150
                 ? `Steven was saved! Keep winning to unlock more content and earn up to ${getCommunityBossTotalRewardCrates()} Christmas Crates.`
                 : `Win together to save Steven and earn up to ${getCommunityBossTotalRewardCrates()} Christmas Crates.`;
@@ -5325,7 +5325,7 @@ async function contributeCommunityBossWin(mode = "infinite", options = {}) {
             const snapshot = await transaction.get(eventRef);
             const contributorSnapshot = await transaction.get(contributorRef);
             const currentWins = Math.max(0, Number(snapshot.data()?.wins) || 0);
-            if (currentWins >= COMMUNITY_BOSS_EVENT.targetWins || isCommunityBossExpired()) return;
+            if (isCommunityBossExpired()) return;
             const profileData = getCurrentProfileData();
             const contributorUsername = String(profileData.username || currentUser.email?.split("@")[0] || "Anonymous").slice(0, 32);
             const contributorProfilePicture = resolveCommunityBossProfilePicturePath(
@@ -5396,10 +5396,10 @@ async function claimParticipatingCommunityBossRewards() {
     communityBossClaimInProgress = true;
     renderCommunityBossPanel();
     try {
-        // Once the event target is reached, contributions close and the final ranking is fixed.
+        // The leaderboard is finalized when claiming after the event deadline.
         // Firestore breaks equal win totals by document ID, keeping the winner consistent.
         const finalEvent = await eventRef.get({ source: "server" });
-        const finalRanking = isCommunityBossComplete(Number(finalEvent.data()?.wins) || 0);
+        const finalRanking = isCommunityBossExpired();
         const leaders = finalRanking ? await eventRef.collection("contributors").orderBy("wins", "desc").limit(1).get({ source: "server" }) : null;
         const championUid = leaders?.docs[0]?.id || null;
         const localProfile = getCurrentProfileData();
