@@ -225,7 +225,9 @@ service cloud.firestore {
     }
 
     function communityBossTargetWins(eventId) {
-      return eventId == "christmas-stethacanthus-2026" ? 500 : 150;
+      // 500 remains the final reward milestone for Stethacanthus, but contributions
+      // and contributor rankings can continue until the event closes.
+      return eventId == "christmas-stethacanthus-2026" ? 1000000 : 150;
     }
 
     // Purchases: only server-side code (Cloud Functions using Admin SDK) should create purchase records.
