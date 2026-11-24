@@ -88,8 +88,9 @@ function getSpeciesType(species) {
 }
 const speciesPool = getActiveSpeciesPool(speciesMode.key);
 
-function getDailyStorageKey() {
-    return speciesMode.key === "sharks" ? `daily_${today}` : `daily_${speciesMode.key}_${today}`;
+function getDailyStorageKey(uid = firebase.auth().currentUser?.uid || "guest") {
+    const modeKey = speciesMode.key === "sharks" ? "sharks" : speciesMode.key;
+    return `daily_${uid}_${modeKey}_${today}`;
 }
 
 function getDailyFirestoreState(firebaseData) {
@@ -243,7 +244,7 @@ async function shareDailyResults() {
 
 // Get the next midnight in the user's local timezone
 const today = getTodayInLocalTimezone()
-const dailyStorageKey = getDailyStorageKey()
+let dailyStorageKey = getDailyStorageKey()
 const dailyTargetSeed = speciesMode.key === "sharks" ? today : `${today}:${speciesMode.key}`
 
 // Daily target must be fully deterministic so every player gets the same species.
@@ -829,6 +830,8 @@ async function buyCategoryReveal() {
 
 // Load game state from localStorage and Firestore
 async function loadGameState() {
+    // Keep the local cache aligned with the account active when the game loads.
+    dailyStorageKey = getDailyStorageKey();
     // First, check localStorage for today's game
     const stored = localStorage.getItem(dailyStorageKey)
     if (stored) {
@@ -1344,6 +1347,9 @@ if(shark.name === targetShark.name){
     gameCompleted = true
     gameWon = true
     window.recordThanksgivingEventActivity?.("dailyWin", 1);
+    window.recordNewYearsEventActivity?.("dailyWin", 1, speciesMode.key);
+    window.recordNewYearsEventActivity?.("win", 1);
+    if (speciesMode.key === "sharks") window.recordNewYearsEventActivity?.("species", 1, targetShark.name);
     if (guessesTaken <= 5) window.recordThanksgivingEventActivity?.("dailyFast", 1);
     saveGameState()
     recordDailySpeciesHistory(true)
