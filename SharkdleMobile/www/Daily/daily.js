@@ -257,6 +257,15 @@ let gameCompleted = false
 let gameWon = false
 let lastLoadedDate = today
 let categoryReveal = null
+let dailyAuthReady = null
+if (typeof firebase !== "undefined" && firebase.auth) {
+    dailyAuthReady = new Promise(resolve => {
+        const unsubscribe = firebase.auth().onAuthStateChanged(() => {
+            unsubscribe();
+            resolve();
+        }, () => resolve());
+    });
+}
 const dailySpeciesTrackerRoundId = window.SharkdleSpeciesTracker
     ? window.SharkdleSpeciesTracker.createRoundId("daily", `${today}-${speciesMode.key}`)
     : `daily-${today}-${speciesMode.key}`
@@ -949,6 +958,7 @@ async function saveGameState() {
 
 // Initialize game
 async function initializeGame() {
+    if (dailyAuthReady) await dailyAuthReady;
     await loadGameState()
 
     // Recover today's saved win if event progress was unavailable when the win first occurred.
