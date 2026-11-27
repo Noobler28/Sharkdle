@@ -215,8 +215,9 @@ function getDailyModeHref(modeKey) {
 
 function replayNightmare() {
     const nextRun = String(Math.max(Date.now(), Number(nightmareRunId) + 1));
-    const basePath = typeof resolveAppPath === "function" ? resolveAppPath("NoMercy/index.html") : "../NoMercy/index.html";
-    window.location.href = `${basePath}?run=${nextRun}`;
+    const replayUrl = new URL(window.location.href);
+    replayUrl.searchParams.set("run", nextRun);
+    window.location.href = replayUrl.href;
 }
 
 function acceptNightmareEntry() {
