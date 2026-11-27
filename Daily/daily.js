@@ -1949,7 +1949,8 @@ if(correct) div.classList.add("correct")
 
 if (speciesMode.key === "nightmare" && nightmareKey && guessedShark) {
     div.classList.add(`nightmare-signal-${getNightmareSignal(nightmareKey, guessedShark)}`);
-    div.textContent = "";
+    const label = nightmareKey === "yod" ? "Year" : name;
+    div.textContent = label;
     return div;
 }
 

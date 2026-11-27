@@ -17,6 +17,7 @@
         { id: "spiral-hunter", name: "Spiral Hunter", emoji: "🌀" },
         { id: "frost-anvil", name: "Frost Anvil", emoji: "❄️" },
         { id: "advent-2026", name: "Advent 2026", emoji: "🎁" },
+        { id: "who-needs-mercy", name: "WHO NEEDS MERCY", emoji: "💀" },
         { id: "treasure-keeper", name: "Treasure Keeper", emoji: "🗺️" },
         { id: "rollin", name: "Rollin'", emoji: "🎲" },
         { id: "arrow-to-the-knee", name: "Arrow to the Knee", emoji: "🏹" },
@@ -103,6 +104,7 @@
         "spiral-hunter": "legendary",
         "frost-anvil": "legendary",
         "advent-2026": "legendary",
+        "who-needs-mercy": "legendary",
         "treasure-keeper": "legendary",
         rollin: "special",
         "arrow-to-the-knee": "special",
@@ -218,7 +220,8 @@
         "newyears2027",
         "rainbow",
         "shamrock",
-        "stpatricks"
+        "stpatricks",
+        "blood-and-bones"
     ]);
 
     const PFP_OBTAINMENT_MAP = {
@@ -234,6 +237,7 @@
         "images/codePfp/WhitespottedEagleRay.png": "Instagram 2026 Code Reward — Whitespotted Eagle Ray",
         "images/loginPfp/Shark20.png": "Day 7 Login Streak Reward",
         "images/christmasEvent/AdventRewards/ZebraShark.png": "Advent 2026 Profile Icon",
+        "images/NoMercy/ZebraBullheadShark.png": "No Mercy Mode Victory Reward",
         "images/cratePfp/Shark22.png": "Cosmetic Crate Reward",
         "images/cratePfp/Shark23.png": "Cosmetic Crate Reward",
         "images/cratePfp/Shark24.png": "Cosmetic Crate Reward",
@@ -305,7 +309,9 @@
 
     function getProfilePicBorderColor(profilePicPath, isCurrentUser) {
         let borderColor = "#3e92cc";
-        if (/leaderPfp\/Shark19\.png$/i.test(profilePicPath)) {
+        if (/images\/NoMercy\/ZebraBullheadShark\.png$/i.test(profilePicPath)) {
+            borderColor = "#B5121B";
+        } else if (/leaderPfp\/Shark19\.png$/i.test(profilePicPath)) {
             borderColor = "#D4AF37";
         } else if (/leaderPfp\/Daily\/Shark1\.png$/i.test(profilePicPath)) {
             borderColor = "#6ee7ff";
