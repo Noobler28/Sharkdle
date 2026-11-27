@@ -9042,6 +9042,9 @@ function hasMeaningfulProfileData(profile) {
         profile.totalGuesses ||
         profile.duelGames ||
         profile.duelWins ||
+        profile.nightmareStats?.wins ||
+        profile.nightmareStats?.losses ||
+        profile.nightmareStats?.failures ||
         profile.loginStreak ||
         profile.currentLoginDay ||
         normalizeStoredDateValue(profile.lastLoginDate) ||
@@ -9119,7 +9122,9 @@ function getProfileRecoveryScore(profile = {}) {
         "cratesOpened", "cratesSinceLegendary", "pearls", "tidePearls", "streakShields",
         "loginStreak", "currentLoginDay", "sharkPassXP"
     ];
-    const numericScore = numericKeys.reduce((sum, key) => sum + Math.min(10000, Math.max(0, Number(profile[key]) || 0)), 0);
+    const nightmareScore = ["wins", "losses", "totalGuesses", "failures"].reduce((sum, key) =>
+        sum + Math.min(10000, Math.max(0, Number(profile.nightmareStats?.[key]) || 0)), 0);
+    const numericScore = nightmareScore + numericKeys.reduce((sum, key) => sum + Math.min(10000, Math.max(0, Number(profile[key]) || 0)), 0);
     const arrayKeys = [
         "earnedCosmetics", "unlockedBadges", "unlockedCardThemes", "unlockedTitles",
         "claimedAchievements", "unlockedAchievements", "showcasedAchievements",
@@ -10036,6 +10041,12 @@ function mergeProfilesSafely(localProfile, firebaseData, options = {}) {
         xpToNextLevel: preferredXPToNextLevel,
         duelGames: preferRemoteNumber(localProfile.duelGames, firebaseData.duelGames),
         duelWins: preferRemoteNumber(localProfile.duelWins, firebaseData.duelWins),
+        nightmareStats: {
+            wins: preferRemoteNumber(localProfile.nightmareStats?.wins, firebaseData.nightmareStats?.wins),
+            losses: preferRemoteNumber(localProfile.nightmareStats?.losses, firebaseData.nightmareStats?.losses),
+            totalGuesses: preferRemoteNumber(localProfile.nightmareStats?.totalGuesses, firebaseData.nightmareStats?.totalGuesses),
+            failures: preferRemoteNumber(localProfile.nightmareStats?.failures, firebaseData.nightmareStats?.failures)
+        },
         cratesOpened: preferredCratesOpened,
         cratesSinceLegendary: preferredCratesSinceLegendary,
         streakShields: preferredStreakShields,
@@ -11914,6 +11925,7 @@ async function syncStatsToFirebase() {
             highestStreak: mergedProfile.highestStreak || 0,
             duelGames: mergedProfile.duelGames || 0,
             duelWins: mergedProfile.duelWins || 0,
+            nightmareStats: mergedProfile.nightmareStats,
             cratesOpened: mergedProfile.cratesOpened || 0,
             cratesSinceLegendary: getCratesSinceLegendary(mergedProfile),
             streakShields: getStreakShieldCount(mergedProfile),

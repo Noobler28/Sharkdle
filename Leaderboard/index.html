@@ -1058,7 +1058,7 @@ body.leaderboards-page::before {
 body.leaderboards-page .navbar {
     position: relative;
     z-index: 2;
-    width: min(1380px, calc(100% - 32px));
+    width: calc(100% - 32px);
     margin: 16px auto 0;
     padding: 16px 20px;
     border: 1px solid rgba(44, 196, 196, 0.18);
@@ -1103,8 +1103,8 @@ body.leaderboards-page .nav-btn:hover {
 body.leaderboards-page .leaderboard-container {
     position: relative;
     z-index: 1;
-    width: min(1180px, calc(100% - 40px));
-    max-width: 1180px;
+    width: calc(100% - 32px);
+    max-width: none;
     margin: 22px auto 64px;
     padding: 0;
     border-radius: 12px;
@@ -1220,7 +1220,7 @@ body.leaderboards-page .loading {
 
 body.leaderboards-page .leaderboard-layout {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 320px;
+    grid-template-columns: minmax(0, 1fr) 280px;
     gap: 18px;
     padding: 22px 28px 0;
 }
@@ -1387,6 +1387,8 @@ body.leaderboards-page .winner-history-empty {
 }
 
 body.leaderboards-page .leaderboard-table-shell {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
     margin: 0;
     padding: 10px;
     border-radius: 12px;
@@ -1396,8 +1398,56 @@ body.leaderboards-page .leaderboard-table-shell {
 }
 
 body.leaderboards-page .leaderboard-table {
+    --leaderboard-main-columns: minmax(54px, .72fr) minmax(58px, .78fr) minmax(170px, 2.2fr) repeat(4, minmax(58px, 1fr));
+    display: block;
+    min-width: 900px;
+    overflow: visible;
     border-collapse: separate;
     border-spacing: 0 8px;
+}
+
+body.leaderboards-page .leaderboard-table thead,
+body.leaderboards-page .leaderboard-table tbody {
+    display: block;
+}
+
+body.leaderboards-page .leaderboard-table tr {
+    display: grid;
+    grid-template-columns: var(--leaderboard-main-columns) 250px;
+    align-items: stretch;
+}
+
+body.leaderboards-page .leaderboard-table tbody tr {
+    margin-top: 8px;
+}
+
+body.leaderboards-page .leaderboard-table .no-mercy-header {
+    color: #ff8290;
+    padding-left: 24px;
+}
+
+body.leaderboards-page .leaderboard-table .no-mercy-cell {
+    padding: 0 0 0 12px;
+    min-width: 0;
+}
+
+body.leaderboards-page .no-mercy-cell .no-mercy-stats {
+    height: 100%;
+    min-height: 70px;
+    margin: 0;
+    padding: 10px 12px;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: center;
+    gap: 4px;
+}
+
+body.leaderboards-page .no-mercy-cell .no-mercy-stats h3 {
+    font-size: 13px;
+}
+
+body.leaderboards-page .no-mercy-cell .no-mercy-stats dl {
+    gap: 12px;
 }
 
 body.leaderboards-page .leaderboard-table th {
@@ -1444,6 +1494,7 @@ body.leaderboards-page .leaderboard-table img {
 }
 
 body.leaderboards-page .leaderboard-row-cell {
+    grid-column: 1 / span 7;
     padding: 0 !important;
     border: 0;
     border-radius: 10px !important;
@@ -1454,7 +1505,7 @@ body.leaderboards-page .leaderboard-row-cell {
 body.leaderboards-page .leaderboard-row-card {
     position: relative;
     display: grid;
-    grid-template-columns: minmax(54px, .72fr) minmax(58px, .78fr) minmax(170px, 2.2fr) repeat(4, minmax(58px, 1fr));
+    grid-template-columns: var(--leaderboard-main-columns);
     align-items: stretch;
     min-height: 70px;
     border-radius: 10px;
@@ -1483,6 +1534,58 @@ body.leaderboards-page .leaderboard-row-segment {
 body.leaderboards-page .leaderboard-row-player {
     flex-direction: column;
     gap: 2px;
+}
+
+body.leaderboards-page .no-mercy-stats {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: 6px;
+    padding: 12px 16px;
+    border: 1px solid #a83c48;
+    border-left: 4px solid #f04455;
+    border-radius: 10px;
+    background: linear-gradient(110deg, #3a0c16, #1d0a10);
+    color: #ffd8dc;
+    text-align: left;
+}
+
+body.leaderboards-page .no-mercy-stats h3 {
+    margin: 0;
+    color: #ff8290;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 18px;
+    font-weight: 900;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}
+
+body.leaderboards-page .no-mercy-stats dl {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 20px;
+    margin: 0;
+}
+
+body.leaderboards-page .no-mercy-stats dt {
+    color: #ffb3bc;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+body.leaderboards-page .no-mercy-stats dd {
+    margin: 2px 0 0;
+    color: #fff0f2;
+    font-size: 18px;
+    font-weight: 900;
+    line-height: 1.2;
+    overflow-wrap: anywhere;
+}
+
+body.leaderboards-page #friend-profile-no-mercy {
+    margin-bottom: 20px;
 }
 
 body.leaderboards-page .leaderboard-table tr.lb-theme-volcanic-ember .leaderboard-row-card {
@@ -1653,6 +1756,16 @@ body.leaderboards-page #friendProfileModal .profile-modal-content .stat-value {
     font-size: 24px !important;
 }
 
+@media(max-width:1280px) {
+    body.leaderboards-page .leaderboard-layout {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    body.leaderboards-page .leaderboard-side-panel {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
 @media(max-width:768px) {
     body.leaderboards-page .navbar {
         width: calc(100% - 18px);
@@ -1682,6 +1795,7 @@ body.leaderboards-page #friendProfileModal .profile-modal-content .stat-value {
     }
 
     body.leaderboards-page .leaderboard-side-panel {
+        grid-template-columns: minmax(0, 1fr);
         order: -1;
     }
 
@@ -1751,6 +1865,7 @@ body.leaderboards-page #friendProfileModal .profile-modal-content .stat-value {
                             <th id="level-header">Level</th>
                             <th id="streak-header">Streak</th>
                             <th id="games-header">Games</th>
+                            <th class="no-mercy-header" scope="col">No Mercy</th>
                         </tr>
                     </thead>
                     <tbody id="leaderboard-body">
@@ -1847,6 +1962,8 @@ body.leaderboards-page #friendProfileModal .profile-modal-content .stat-value {
                     <div class="stat-value" id="friend-profile-highest">0</div>
                 </div>
             </div>
+
+            <div id="friend-profile-no-mercy"></div>
 
             <div id="friend-profile-action" style="margin-bottom:12px; display:flex; gap:8px; align-items:center;">
                 <!-- Filled dynamically: add friend button or friends label -->
@@ -2772,6 +2889,24 @@ body.leaderboards-page #friendProfileModal .profile-modal-content .stat-value {
                 .slice(0, maxCandidates);
         }
 
+        function buildNoMercyStatsHtml(profileData = {}) {
+            const stats = profileData.nightmareStats || {};
+            const count = value => {
+                const number = Number(value);
+                return Number.isFinite(number) ? Math.max(0, Math.floor(number)) : 0;
+            };
+            const wins = count(stats.wins);
+            const losses = Math.max(count(stats.losses), count(stats.failures));
+            return `<section class="no-mercy-stats" aria-label="No Mercy lifetime attempts">
+                <h3>No Mercy</h3>
+                <dl>
+                    <div><dt>Attempts</dt><dd>${wins + losses}</dd></div>
+                    <div><dt>Wins</dt><dd>${wins}</dd></div>
+                    <div><dt>Losses</dt><dd>${losses}</dd></div>
+                </dl>
+            </section>`;
+        }
+
         async function loadLeaderboard(rangeKey = selectedLeaderboardRange) {
             const loadGeneration = ++leaderboardLoadGeneration;
             renderLeaderboardBlacklistNotice();
@@ -2870,6 +3005,9 @@ body.leaderboards-page #friendProfileModal .profile-modal-content .stat-value {
                                 <div class="leaderboard-row-segment leaderboard-metric">${rowData.gamesPlayed || 0}</div>
                             </div>
                         </td>
+                        <td class="no-mercy-cell">
+                            ${buildNoMercyStatsHtml(rowData)}
+                        </td>
                     `;
                     tbody.appendChild(tr);
                     // Make rows clickable to view user profile (like friend items)
@@ -2961,6 +3099,8 @@ body.leaderboards-page #friendProfileModal .profile-modal-content .stat-value {
                 if (bestEl) bestEl.textContent = profileData.bestGame ?? 0;
                 if (currentEl) currentEl.textContent = profileData.currentStreak ?? 0;
                 if (highestEl) highestEl.textContent = profileData.highestStreak ?? 0;
+                const noMercyEl = document.getElementById('friend-profile-no-mercy');
+                if (noMercyEl) noMercyEl.innerHTML = buildNoMercyStatsHtml(profileData);
 
                 // Apply theme class if present
                 const themeId = (profileData.equippedCardTheme || 'default');
