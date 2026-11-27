@@ -90,6 +90,10 @@ body.nightmare-mode .home-btn {
     border: 1px solid rgba(255,85,95,.72) !important;
     box-shadow: 0 6px 20px rgba(181,18,27,.25) !important;
 }
+.mode-header-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.nightmare-rules-card { max-height: min(88vh, 760px); overflow-y: auto; }
+.nightmare-rules-list { margin: 20px 0 0; padding-left: 22px; color: #A3A3A3; text-align: left; line-height: 1.55; }
+.nightmare-rules-list li { padding: 5px 0; }
 body.nightmare-mode .mode-header .panel-kicker { color: #fff !important; background: #300609 !important; border-color: rgba(181,18,27,.55) !important; }
 body.nightmare-mode #guessBtn:disabled { opacity: .65; cursor: wait; }
 body.nightmare-mode .status-pill {
@@ -228,4 +232,8 @@ body.nightmare-mode .nightmare-warning-actions button {
     cursor: pointer;
 }
 body.nightmare-mode .nightmare-warning-actions button:hover { filter: brightness(1.15); }
+@media (max-width: 720px) {
+    .mode-header-actions { width: 100%; }
+    body.mode-v3-page .mode-header-actions .home-btn { width: auto; flex: 1; padding-right: 8px; padding-left: 8px; }
+}
 @media (max-width:600px) { .nightmare-dossier { grid-template-columns:1fr; } }

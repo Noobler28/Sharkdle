@@ -176,6 +176,8 @@ function applySpeciesModeCopy() {
     const heroForeground = document.querySelector(".guess-hero-fg");
 
     if (title) title.textContent = speciesMode.title;
+    const nightmareRulesButton = document.getElementById("nightmare-rules-btn");
+    if (nightmareRulesButton) nightmareRulesButton.hidden = speciesMode.key !== "nightmare";
     if (kicker) kicker.textContent = speciesMode.kicker;
     if (heading) heading.textContent = speciesMode.heading;
     if (lead) lead.textContent = speciesMode.lead;
@@ -396,14 +398,16 @@ function getNightmareTimerKey() {
 }
 
 function getNightmareTimerRemaining() {
+    if (nightmarePausedRemainingMs !== null) return nightmarePausedRemainingMs;
     const deadline = Number(localStorage.getItem(getNightmareTimerKey())) || 0;
     return Math.max(0, deadline - Date.now());
 }
 
 let nightmareTimer = null;
+let nightmarePausedRemainingMs = null;
 
 function updateNightmareTimer() {
-    if (speciesMode.key !== "nightmare" || gameCompleted) return;
+    if (speciesMode.key !== "nightmare" || gameCompleted || nightmarePausedRemainingMs !== null) return;
     const remaining = getNightmareTimerRemaining();
     const button = document.getElementById("guessBtn");
     const label = document.getElementById("attempts-left");
@@ -443,11 +447,50 @@ function voidNightmareGuess() {
 }
 
 function startNightmareTimer() {
-    if (speciesMode.key !== "nightmare" || gameCompleted) return;
+    if (speciesMode.key !== "nightmare" || gameCompleted || nightmarePausedRemainingMs !== null) return;
     localStorage.setItem(getNightmareTimerKey(), String(Date.now() + 20000));
     if (nightmareTimer) window.clearTimeout(nightmareTimer);
     updateNightmareTimer();
 }
+
+function pauseNightmareTimer() {
+    if (speciesMode.key !== "nightmare" || gameCompleted || nightmarePausedRemainingMs !== null) return;
+    const timerDeadline = Number(localStorage.getItem(getNightmareTimerKey())) || 0;
+    nightmarePausedRemainingMs = timerDeadline ? getNightmareTimerRemaining() : 20000;
+    if (nightmareTimer) window.clearTimeout(nightmareTimer);
+    nightmareTimer = null;
+}
+
+function resumeNightmareTimer() {
+    if (speciesMode.key !== "nightmare" || gameCompleted || nightmarePausedRemainingMs === null) return;
+    const remaining = nightmarePausedRemainingMs;
+    nightmarePausedRemainingMs = null;
+    localStorage.setItem(getNightmareTimerKey(), String(Date.now() + remaining));
+    updateNightmareTimer();
+}
+
+function openNightmareRules() {
+    if (speciesMode.key !== "nightmare" || !nightmareEntryAccepted || gameCompleted) return;
+    const modal = document.getElementById("nightmare-rules-modal");
+    if (!modal || !modal.hidden) return;
+    pauseNightmareTimer();
+    modal.hidden = false;
+    modal.querySelector("button")?.focus();
+}
+
+function closeNightmareRules() {
+    const modal = document.getElementById("nightmare-rules-modal");
+    if (!modal || modal.hidden) return;
+    modal.hidden = true;
+    resumeNightmareTimer();
+    document.getElementById("nightmare-rules-btn")?.focus();
+}
+
+document.addEventListener("keydown", event => {
+    if (event.key === "Escape" && !document.getElementById("nightmare-rules-modal")?.hidden) {
+        closeNightmareRules();
+    }
+});
 
 function loseNightmareAfterTabSwitch(reason = "You left the tab") {
     if (speciesMode.key !== "nightmare" || !nightmareEntryAccepted || gameCompleted) return;

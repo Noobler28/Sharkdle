@@ -17,7 +17,7 @@
 <link rel="stylesheet" href="page-shell.css">
 <link rel="stylesheet" href="Daily/daily.css">
 <link rel="stylesheet" href="newyears-event.css?v=20261122-story-event">
-<link rel="stylesheet" href="Daily/nightmare.css?v=13">
+<link rel="stylesheet" href="Daily/nightmare.css?v=14">
 
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800;900&family=Barlow:wght@400;500;600;700&family=Montserrat:wght@400;600;700&display=swap" rel="stylesheet">
 
@@ -33,7 +33,10 @@
 <div class="mode-header">
 <p class="panel-kicker mode-kicker" id="mode-kicker">Daily Challenge</p>
 <h1 id="mode-title">Sharkdle - Daily</h1>
+<div class="mode-header-actions">
 <button class="home-btn" type="button" onclick="window.location.href='index.html'">Home</button>
+<button id="nightmare-rules-btn" class="home-btn nightmare-rules-btn" type="button" onclick="openNightmareRules()" hidden>No Mercy Rules</button>
+</div>
 <button id="newyear-event-link" class="home-btn" type="button" onclick="window.location.href='index.html#new-years-event'" hidden>New Year Event</button>
 </div>
 </header>
@@ -119,6 +122,25 @@
     </div>
 </section>
 
+<section id="nightmare-rules-modal" class="nightmare-warning-backdrop nightmare-rules-backdrop" role="dialog" aria-modal="true" aria-labelledby="nightmare-rules-title" aria-describedby="nightmare-rules-copy" hidden onclick="if(event.target===this) closeNightmareRules()">
+    <div class="nightmare-warning-card nightmare-rules-card">
+        <span class="nightmare-warning-kicker">No Mercy Mode</span>
+        <h2 id="nightmare-rules-title">The Rules</h2>
+        <p id="nightmare-rules-copy">Six guesses. You get 20 seconds to name each shark; when time runs out, that guess is used.</p>
+        <ul class="nightmare-rules-list">
+            <li>Guess shark species by common or scientific name.</li>
+            <li>Feedback shows only category names and colors: green is correct, yellow is close, red is incorrect. The shark’s actual information stays hidden.</li>
+            <li>Categories are family, genus, size, depth, and year.</li>
+            <li>Previous guess clues disappear after your next guess.</li>
+            <li>Leaving the page or switching tabs ends the run. The Sharchive is unavailable during No Mercy.</li>
+            <li>No Mercy has its own stats; losses do not affect your normal streak. You can replay whenever you want.</li>
+        </ul>
+        <div class="nightmare-warning-actions">
+            <button type="button" onclick="closeNightmareRules()">Back to the game</button>
+        </div>
+    </div>
+</section>
+
 <div id="win-screen"></div>
 
 <button id="show-results-btn" onclick="document.getElementById('win-screen').style.display='block'; document.getElementById('show-results-btn').style.display='none';" style="display: none; position: fixed; bottom: 20px; right: 20px; padding: 10px 16px; background: #00bcd4; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; transition: background 0.3s; z-index: 999;">👀 Show Results</button>
@@ -137,7 +159,7 @@
 <script src="fair-play.js?v=20261019"></script>
 <script src="Achievements/achievements.js?v=20261127-no-mercy-achievements-v2"></script>
 <script src="wiki-species-titles.js?v=1"></script>
-<script src="Daily/daily.js?v=20261127-no-mercy-achievements-v2"></script>
+<script src="Daily/daily.js?v=20261127-no-mercy-rules-v1"></script>
 
 <script src="global-broadcast.js"></script>
 </body>
