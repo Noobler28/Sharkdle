@@ -220,6 +220,12 @@ body.home-v3-page .home-v3-mode-card.nightmare-mode-card .nightmare-mode-stamp {
 .nightmare-warning-skip { display: inline-flex; align-items: center; justify-content: center; gap: 9px; margin-top: 18px; color: #c9c2c2; font-size: 14px; cursor: pointer; }
 .nightmare-warning-skip input { width: 17px; height: 17px; margin: 0; accent-color: #B5121B; cursor: pointer; }
 .nightmare-warning-actions { display: grid; gap: 10px; margin-top: 24px; }
+body.nightmare-mode .nightmare-warning-actions button.nightmare-warning-rules {
+    border-color: rgba(255,255,255,.35) !important;
+    background: #191919 !important;
+    box-shadow: none !important;
+}
+body.nightmare-mode .nightmare-warning-actions button.nightmare-warning-rules:hover { background: #292929 !important; }
 body.nightmare-mode .nightmare-warning-actions button {
     min-height: 48px;
     padding: 12px 18px;

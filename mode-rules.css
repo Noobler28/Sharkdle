@@ -69,6 +69,26 @@
     line-height: 1.5;
 }
 
+.mode-rules-card ul.mode-rules-list {
+    gap: 12px;
+    padding: 0;
+    list-style: none;
+}
+
+.mode-rules-list li {
+    display: grid;
+    grid-template-columns: 26px minmax(0, 1fr);
+    align-items: start;
+    gap: 10px;
+}
+
+.mode-rules-list li > span:first-child {
+    width: 26px;
+    text-align: center;
+    font-size: 18px;
+    line-height: 1.4;
+}
+
 body.shell-page .mode-rules-card button.mode-rules-close {
     position: absolute;
     top: 14px;

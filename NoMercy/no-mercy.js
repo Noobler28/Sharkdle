@@ -468,10 +468,12 @@ function resumeNightmareTimer() {
 }
 
 function openNightmareRules() {
-    if (speciesMode.key !== "nightmare" || !nightmareEntryAccepted || gameCompleted) return;
+    const warning = document.getElementById("nightmare-warning");
+    const isPreGame = warning && !warning.hidden && !nightmareEntryAccepted;
+    if (speciesMode.key !== "nightmare" || (!isPreGame && (!nightmareEntryAccepted || gameCompleted))) return;
     const modal = document.getElementById("nightmare-rules-modal");
     if (!modal || !modal.hidden) return;
-    pauseNightmareTimer();
+    if (!isPreGame) pauseNightmareTimer();
     modal.hidden = false;
     modal.querySelector("button")?.focus();
 }
@@ -480,8 +482,12 @@ function closeNightmareRules() {
     const modal = document.getElementById("nightmare-rules-modal");
     if (!modal || modal.hidden) return;
     modal.hidden = true;
-    resumeNightmareTimer();
-    document.getElementById("nightmare-rules-btn")?.focus();
+    if (nightmareEntryAccepted) {
+        resumeNightmareTimer();
+        document.getElementById("nightmare-rules-btn")?.focus();
+    } else {
+        document.querySelector("#nightmare-warning .nightmare-warning-rules")?.focus();
+    }
 }
 
 document.addEventListener("keydown", event => {

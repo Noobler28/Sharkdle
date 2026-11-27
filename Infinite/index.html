@@ -16,7 +16,7 @@
 <link rel="stylesheet" href="style.css">
 <link rel="stylesheet" href="page-shell.css">
 <link rel="stylesheet" href="Infinite/infinite.css">
-<link rel="stylesheet" href="mode-rules.css?v=1">
+<link rel="stylesheet" href="mode-rules.css?v=2">
 
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800;900&family=Barlow:wght@400;500;600;700&family=Montserrat:wght@400;600;700&display=swap" rel="stylesheet">
 
@@ -45,13 +45,13 @@
         <span class="mode-rules-kicker">Infinite Mode</span>
         <h2 id="mode-rules-title">How to play</h2>
         <p id="mode-rules-intro">Take on a randomly selected shark, relative, or mixed species, then start another round whenever you’re ready.</p>
-        <ul>
-            <li>Choose Sharks, Relatives, or Mixed. You get 8 guesses for Sharks or Relatives and 12 for Mixed.</li>
-            <li>Type a species name and choose it from the suggestions.</li>
-            <li>Each guess shows its Order, Family, Genus, Size, Depth, and Discovery Year. Mixed also shows whether your guess is a shark, ray, skate, or chimaera.</li>
-            <li>A green clue is an exact match; an uncolored clue differs. The year arrow points toward the target’s discovery year. Hover over Order, Family, or Genus for its common name when available.</li>
-            <li>If you are signed in and have enough pearls, you can reveal one undiscovered category per round for 25 pearls.</li>
-            <li>Wins can award XP and pearls. When signed in, wins and losses update your stats and streak. You can replay for another target at any time.</li>
+        <ul class="mode-rules-list">
+            <li><span aria-hidden="true">🎲</span><span>Choose Sharks, Relatives, or Mixed. You get 8 guesses for Sharks or Relatives and 12 for Mixed.</span></li>
+            <li><span aria-hidden="true">🔎</span><span>Type a species name and choose it from the suggestions.</span></li>
+            <li><span aria-hidden="true">📊</span><span>Each guess shows its Order, Family, Genus, Size, Depth, and Discovery Year. Mixed also shows whether your guess is a shark, ray, skate, or chimaera.</span></li>
+            <li><span aria-hidden="true">🟢</span><span>A green clue is an exact match; an uncolored clue differs. The year arrow points toward the target’s discovery year. Hover over Order, Family, or Genus for its common name when available.</span></li>
+            <li><span aria-hidden="true">💡</span><span>If you are signed in and have enough pearls, you can reveal one undiscovered category per round for 25 pearls.</span></li>
+            <li><span aria-hidden="true">🏆</span><span>Wins can award XP and pearls. When signed in, wins and losses update your stats and streak. You can replay for another target at any time.</span></li>
         </ul>
         <button class="mode-rules-done" type="button" onclick="closeModeRules()">Back to the game</button>
     </div>
