@@ -108,7 +108,7 @@ if (speciesMode.key === "nightmare") {
     nightmareEntryAccepted = localStorage.getItem(noMercySkipWarningKey) === "true"
         || sessionStorage.getItem("nightmareWarningRun") === nightmareRunId;
 }
-const maxAttempts = speciesMode.key === "nightmare" ? 4 : speciesMode.key === "mixed" ? 12 : 8;
+const maxAttempts = speciesMode.key === "nightmare" ? 5 : speciesMode.key === "mixed" ? 12 : 8;
 function getSpeciesType(species) {
     if (species?.order === "Chimaeriformes") return "chimaera";
     if (species?.order === "Rajiformes" || /\bskate\b/i.test(`${species?.name || ""} ${species?.family || ""}`)) return "skate";
@@ -244,7 +244,7 @@ const NIGHTMARE_INSULTS = [
     "The sharks are starting to feel bad for you.",
     "At this point, even the autocomplete is disappointed.",
     "Your guesses are swimming in the wrong direction.",
-    "That was certainly one way to use six guesses.",
+    "That was certainly one way to use five guesses.",
     "The answer was right there. Somewhere. Probably."
 ];
 
