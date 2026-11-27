@@ -244,7 +244,6 @@ const NIGHTMARE_INSULTS = [
     "The sharks are starting to feel bad for you.",
     "At this point, even the autocomplete is disappointed.",
     "Your guesses are swimming in the wrong direction.",
-    "You’re making the sharks look easy to catch.",
     "That was certainly one way to use six guesses.",
     "The answer was right there. Somewhere. Probably."
 ];
