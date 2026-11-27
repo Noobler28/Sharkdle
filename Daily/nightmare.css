@@ -110,6 +110,20 @@ body.nightmare-mode #lose-screen {
     background: #191919 !important;
     border: 1px solid rgba(181,18,27,.55) !important;
 }
+body.nightmare-mode #win-screen aside,
+body.nightmare-mode #lose-screen aside {
+    color: #fff !important;
+    background: #191919 !important;
+    border-color: rgba(181,18,27,.62) !important;
+}
+body.nightmare-mode #win-screen div[style*="background: rgba(255,255,255,0.2)"],
+body.nightmare-mode #lose-screen div[style*="background: rgba(255,255,255,0.2)"] {
+    background: linear-gradient(145deg, #300609, #191919) !important;
+    border: 1px solid rgba(181,18,27,.58) !important;
+    color: #fff !important;
+}
+body.nightmare-mode #win-screen p[style*="#8ff5ef"],
+body.nightmare-mode #lose-screen p[style*="#8ff5ef"] { color: #ff5962 !important; }
 body.nightmare-mode #win-screen button:hover,
 body.nightmare-mode #lose-screen button:hover { filter: brightness(1.15); }
 body.nightmare-mode #sharkGuess,

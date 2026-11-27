@@ -108,7 +108,7 @@ if (speciesMode.key === "nightmare") {
     nightmareEntryAccepted = localStorage.getItem(noMercySkipWarningKey) === "true"
         || sessionStorage.getItem("nightmareWarningRun") === nightmareRunId;
 }
-const maxAttempts = speciesMode.key === "nightmare" ? 6 : speciesMode.key === "mixed" ? 12 : 8;
+const maxAttempts = speciesMode.key === "nightmare" ? 4 : speciesMode.key === "mixed" ? 12 : 8;
 function getSpeciesType(species) {
     if (species?.order === "Chimaeriformes") return "chimaera";
     if (species?.order === "Rajiformes" || /\bskate\b/i.test(`${species?.name || ""} ${species?.family || ""}`)) return "skate";
@@ -469,7 +469,10 @@ function applyNightmareClueMask() {
     const feedback = cards[0].querySelector(".feedback");
     const categories = Array.from(feedback?.querySelectorAll(".category") || []);
     const hiddenIndexes = categories.map((_, index) => index).filter(() => Math.random() < 0.3);
-    if (!hiddenIndexes.length && categories.length) hiddenIndexes.push(Math.floor(Math.random() * categories.length));
+    while (hiddenIndexes.length < Math.min(3, categories.length)) {
+        const nextIndex = Math.floor(Math.random() * categories.length);
+        if (!hiddenIndexes.includes(nextIndex)) hiddenIndexes.push(nextIndex);
+    }
     hiddenIndexes.forEach(index => categories[index].classList.add("nightmare-clue-concealed"));
 }
 
