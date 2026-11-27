@@ -239,7 +239,14 @@ const NIGHTMARE_INSULTS = [
     "I thought you were supposed to be good at this.",
     "This game isn't for everyone... especially you....",
     "Still think it's too easy?",
-    "Don't give up. You're almost there. NOT."
+    "Don't give up. You're almost there. NOT.",
+    "Do you hate yourself yet?",
+    "The sharks are starting to feel bad for you.",
+    "At this point, even the autocomplete is disappointed.",
+    "Your guesses are swimming in the wrong direction.",
+    "You’re making the sharks look easy to catch.",
+    "That was certainly one way to use six guesses.",
+    "The answer was right there. Somewhere. Probably."
 ];
 
 function getNightmareStats() {
