@@ -108,7 +108,7 @@ if (speciesMode.key === "nightmare") {
     nightmareEntryAccepted = localStorage.getItem(noMercySkipWarningKey) === "true"
         || sessionStorage.getItem("nightmareWarningRun") === nightmareRunId;
 }
-const maxAttempts = speciesMode.key === "nightmare" ? 5 : speciesMode.key === "mixed" ? 12 : 8;
+const maxAttempts = speciesMode.key === "nightmare" ? 6 : speciesMode.key === "mixed" ? 12 : 8;
 function getSpeciesType(species) {
     if (species?.order === "Chimaeriformes") return "chimaera";
     if (species?.order === "Rajiformes" || /\bskate\b/i.test(`${species?.name || ""} ${species?.family || ""}`)) return "skate";
@@ -244,7 +244,7 @@ const NIGHTMARE_INSULTS = [
     "The sharks are starting to feel bad for you.",
     "At this point, even the autocomplete is disappointed.",
     "Your guesses are swimming in the wrong direction.",
-    "That was certainly one way to use five guesses.",
+    "That was certainly one way to use six guesses.",
     "The answer was right there. Somewhere. Probably."
 ];
 
@@ -260,6 +260,23 @@ function getNightmareStats() {
 function updateNightmareDossier() {
     if (speciesMode.key !== "nightmare") return;
     const stats = getNightmareStats();
+    [
+        [1, "no_mercy_fail_1"],
+        [5, "no_mercy_fail_5"],
+        [10, "no_mercy_fail_10"],
+        [25, "no_mercy_fail_25"],
+        [50, "no_mercy_fail_50"],
+        [100, "no_mercy_fail_100"]
+    ].forEach(([milestone, achievementId]) => {
+        if (stats.failures >= milestone) window.unlockAchievement?.(achievementId);
+    });
+    [
+        [5, "no_mercy_win_5"],
+        [10, "no_mercy_win_10"],
+        [25, "no_mercy_win_25"]
+    ].forEach(([milestone, achievementId]) => {
+        if (stats.wins >= milestone) window.unlockAchievement?.(achievementId);
+    });
     const record = document.getElementById("nightmare-record");
     const average = document.getElementById("nightmare-average");
     const failures = document.getElementById("nightmare-fails");
@@ -1329,6 +1346,7 @@ async function saveGameState() {
 async function initializeGame() {
     if (!nightmareEntryAccepted) return;
     if (dailyAuthReady) await dailyAuthReady;
+    if (speciesMode.key === "nightmare") window.unlockAchievement?.("no_mercy_signed");
     await loadGameState()
 
     // Recover today's saved win if event progress was unavailable when the win first occurred.
@@ -1994,6 +2012,7 @@ function createBubbles(container) {
 }
 
 function showWin(xpGained, guessesTaken, alreadyCompleted = false, pearlsGained = 0){
+    if (speciesMode.key === "nightmare") window.unlockAchievement?.("no_mercy_first_win");
     if (speciesMode.key !== "nightmare") window.SharkdleCorners?.win('daily', speciesMode.key === 'rays', guessesTaken);
 
 // Check achievements for win conditions (only on first completion)

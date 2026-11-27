@@ -10,6 +10,7 @@ const achievementCategoryMeta = [
     { key: "rng", label: "Shark RNG", icon: "fa-dice" },
     { key: "rescue", label: "Rescue Command", icon: "fa-life-ring" },
     { key: "special", label: "Special", icon: "fa-star" },
+    { key: "nightmare", label: "No Mercy", icon: "fa-skull" },
     { key: "duels", label: "Duels", icon: "fa-handshake" },
     { key: "wins", label: "Wins", icon: "fa-trophy" },
     { key: "games", label: "Games", icon: "fa-gamepad" },
@@ -62,6 +63,8 @@ function getAchievementProgressValue(achievement = {}, profileData = {}) {
     }
     if (metric === "rescueMissions") return Number(getSecretCommandState().missionsCompleted) || 0;
     if (metric === "rescuePrestige") return Number(getSecretCommandState().prestigeCount) || 0;
+    if (metric === "nightmareFailures") return Number(profileData.nightmareStats?.failures) || 0;
+    if (metric === "nightmareWins") return Number(profileData.nightmareStats?.wins) || 0;
     if (metric === "wins" || achievement.id?.includes("wins_")) return Number(profileData.wins) || 0;
     if (metric === "gamesPlayed" || achievement.id?.includes("games_")) return Number(profileData.gamesPlayed ?? profileData.games) || 0;
     if (metric === "currentStreak" || achievement.id?.includes("streak_")) return Number(profileData.currentStreak) || 0;
@@ -588,6 +591,19 @@ const achievementDefinitions = {
             points: 325,
             type: 'worldmap'
         },
+    ],
+    nightmare: [
+        { id: "no_mercy_signed", name: "Your Fate Belongs with Sharkdle Now!", description: "Accept the No Mercy warning and begin a run.", icon: "🩸", points: 50 },
+        { id: "no_mercy_first_win", name: "Mercy? Never Heard of Her", description: "Win a No Mercy Mode run.", icon: "🦈", points: 100 },
+        { id: "no_mercy_win_5", name: "How Are You Doing This?", description: "Win 5 No Mercy Mode games.", icon: "🦈", points: 100, metric: "nightmareWins", milestone: 5 },
+        { id: "no_mercy_win_10", name: "I Call Cheats", description: "Win 10 No Mercy Mode games.", icon: "🕵️", points: 150, metric: "nightmareWins", milestone: 10 },
+        { id: "no_mercy_win_25", name: "Better Than the Developer?", description: "Win 25 No Mercy Mode games.", icon: "👑", points: 250, metric: "nightmareWins", milestone: 25, rarity: "epic" },
+        { id: "no_mercy_fail_1", name: "First Bite", description: "Fail 1 No Mercy Mode game.", icon: "🦷", points: 25, metric: "nightmareFailures", milestone: 1 },
+        { id: "no_mercy_fail_5", name: "They Know Your Name", description: "Fail 5 No Mercy Mode games.", icon: "🐟", points: 50, metric: "nightmareFailures", milestone: 5 },
+        { id: "no_mercy_fail_10", name: "Back for More", description: "Fail 10 No Mercy Mode games.", icon: "🔁", points: 75, metric: "nightmareFailures", milestone: 10 },
+        { id: "no_mercy_fail_25", name: "A Familiar Face", description: "Fail 25 No Mercy Mode games.", icon: "😬", points: 100, metric: "nightmareFailures", milestone: 25 },
+        { id: "no_mercy_fail_50", name: "You Live Here Now", description: "Fail 50 No Mercy Mode games.", icon: "🏚️", points: 150, metric: "nightmareFailures", milestone: 50 },
+        { id: "no_mercy_fail_100", name: "Seriously? Do You Ever Give Up?", description: "Fail 100 No Mercy Mode games.", icon: "💀", points: 250, metric: "nightmareFailures", milestone: 100, rarity: "epic" }
     ],
     // Social Achievements
     milestones: [
