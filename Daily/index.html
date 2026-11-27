@@ -7,6 +7,15 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <base href="../">
+<script>
+const legacyNoMercyParams = new URLSearchParams(window.location.search);
+if (legacyNoMercyParams.get("mode")?.toLowerCase() === "nightmare") {
+    legacyNoMercyParams.delete("mode");
+    const noMercyUrl = new URL("NoMercy/index.html", document.baseURI);
+    noMercyUrl.search = legacyNoMercyParams.toString();
+    window.location.replace(noMercyUrl.href);
+}
+</script>
 
 <title>Sharkdle Daily</title>
 
@@ -35,7 +44,6 @@
 <h1 id="mode-title">Sharkdle - Daily</h1>
 <div class="mode-header-actions">
 <button class="home-btn" type="button" onclick="window.location.href='index.html'">Home</button>
-<button id="nightmare-rules-btn" class="home-btn nightmare-rules-btn" type="button" onclick="openNightmareRules()" hidden>No Mercy Rules</button>
 </div>
 <button id="newyear-event-link" class="home-btn" type="button" onclick="window.location.href='index.html#new-years-event'" hidden>New Year Event</button>
 </div>
@@ -49,7 +57,6 @@
 <a href="Daily/index.html" data-pool-mode="sharks">Sharks</a>
 <a href="Daily/index.html?pool=rays" data-pool-mode="rays">Relatives</a>
 <a href="Daily/index.html?pool=mixed" data-pool-mode="mixed">Mixed</a>
-<a href="Daily/index.html?mode=nightmare" data-pool-mode="nightmare">No Mercy</a>
 </nav>
 <h2 id="guess-heading">Guess the Shark</h2>
 <p class="mode-lead" id="mode-lead">Think you know this shark? Make your guess below.</p>
@@ -100,47 +107,8 @@
 
 <div id="guesses"></div>
 
-<section class="nightmare-dossier" aria-label="No Mercy statistics">
-<div><span>No Mercy record</span><strong id="nightmare-record">0 wins · 0 losses</strong></div>
-<div><span>Average guesses</span><strong id="nightmare-average">—</strong></div>
-<div><span>Failure counter</span><strong id="nightmare-fails">0 failures</strong></div>
-</section>
-
 </div>
 
-
-<section id="nightmare-warning" class="nightmare-warning-backdrop" role="alertdialog" aria-modal="true" aria-labelledby="nightmare-warning-title" aria-describedby="nightmare-warning-copy" hidden>
-    <div class="nightmare-warning-card">
-        <span class="nightmare-warning-kicker">No Mercy Mode</span>
-        <h2 id="nightmare-warning-title">Sign your life to Sharkdle?</h2>
-        <p id="nightmare-warning-copy">You have 20 seconds to name each shark. If the timer expires, you lose a guess. Leave this page and your run ends. Your normal streak is safe.</p>
-        <label class="nightmare-warning-skip"><input id="nightmare-skip-warning" type="checkbox"> Ignore popup for future games</label>
-        <div class="nightmare-warning-actions">
-            <button type="button" class="nightmare-warning-accept" onclick="acceptNightmareEntry()">Sign your life to Sharkdle</button>
-            <button type="button" class="nightmare-warning-decline" onclick="declineNightmareEntry()">Go back</button>
-        </div>
-    </div>
-</section>
-
-<section id="nightmare-rules-modal" class="nightmare-warning-backdrop nightmare-rules-backdrop" role="dialog" aria-modal="true" aria-labelledby="nightmare-rules-title" aria-describedby="nightmare-rules-copy" hidden onclick="if(event.target===this) closeNightmareRules()">
-    <div class="nightmare-warning-card nightmare-rules-card">
-        <span class="nightmare-warning-kicker">No Mercy Mode</span>
-        <h2 id="nightmare-rules-title">The Rules</h2>
-        <p id="nightmare-rules-copy">Six guesses. You get 20 seconds to name each shark; when time runs out, that guess is used. No Mercy is all about skill—only the elite can win.</p>
-        <ul class="nightmare-rules-list">
-            <li>Guess shark species by common or scientific name.</li>
-            <li>🟢 Green means the category matches. 🟡 Yellow means it is close. 🔴 Red means it does not match. Only the category name and color are shown; the shark’s actual information stays hidden.</li>
-            <li>Categories are family, genus, size, depth, and year.</li>
-            <li>Previous guess clues disappear after your next guess.</li>
-            <li>Leaving the page or switching tabs ends the run. The Sharchive is unavailable during No Mercy.</li>
-            <li>No Mercy has its own stats; losses do not affect your normal streak. You can replay whenever you want.</li>
-            <li>Win and earn bragging rights. Send a screenshot of your win to the developer’s Discord DMs to receive a personal message from the developer.</li>
-        </ul>
-        <div class="nightmare-warning-actions">
-            <button type="button" onclick="closeNightmareRules()">Back to the game</button>
-        </div>
-    </div>
-</section>
 
 <div id="win-screen"></div>
 
@@ -160,7 +128,7 @@
 <script src="fair-play.js?v=20261019"></script>
 <script src="Achievements/achievements.js?v=20261127-no-mercy-achievements-v2"></script>
 <script src="wiki-species-titles.js?v=1"></script>
-<script src="Daily/daily.js?v=20261127-no-mercy-rules-v1"></script>
+<script src="Daily/daily.js?v=20261127-dedicated-no-mercy-v1"></script>
 
 <script src="global-broadcast.js"></script>
 </body>

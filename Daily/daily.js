@@ -8,6 +8,8 @@ function getTodayInLocalTimezone() {
 }
 
 function getRequestedSpeciesMode() {
+    const normalizedPath = window.location.pathname.replace(/\\/g, "/").toLowerCase();
+    if (normalizedPath.includes("/nomercy/")) return "nightmare";
     if (new URLSearchParams(window.location.search).get("mode")?.toLowerCase() === "nightmare") return "nightmare";
     const requestedMode = new URLSearchParams(window.location.search).get("pool") || "sharks";
     const normalizedMode = requestedMode.toLowerCase();
@@ -213,7 +215,8 @@ function getDailyModeHref(modeKey) {
 
 function replayNightmare() {
     const nextRun = String(Math.max(Date.now(), Number(nightmareRunId) + 1));
-    window.location.href = `${window.location.pathname}?mode=nightmare&run=${nextRun}`;
+    const basePath = typeof resolveAppPath === "function" ? resolveAppPath("NoMercy/index.html") : "../NoMercy/index.html";
+    window.location.href = `${basePath}?run=${nextRun}`;
 }
 
 function acceptNightmareEntry() {
