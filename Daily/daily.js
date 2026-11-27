@@ -530,7 +530,7 @@ function getDailyVariantSwitcherHtml() {
 
 // --- Share Results (Daily) ---
 function generateDailyShareText() {
-    const title = `${gameWon ? "I conquered Sharkdle!\n" : ""}${speciesMode.shareTitle} ${today} - ${gameWon ? guesses.length : 'X'}/${maxAttempts}`;
+    const title = `${speciesMode.key === "nightmare" && gameWon ? "I conquered Sharkdle!\n" : ""}${speciesMode.shareTitle} ${today} - ${gameWon ? guesses.length : 'X'}/${maxAttempts}`;
     // Build grid: 6 categories per guess -> green for correct, black for incorrect
     const rows = guesses.map(g => {
         if (speciesMode.key === "nightmare") {
@@ -1693,6 +1693,15 @@ if(shark.name === targetShark.name){
         window.applySharkPassXpGain?.(profileData, xpGain);
         var pearlsEarned = window.awardPearlsForWin?.(profileData, { amount: (window.PEARLS_PER_WIN || 50) * 3, deferSave: true, deferUiUpdate: true }) || 0;
         profileData.unlockedCardThemes = [...new Set(["default", ...(profileData.unlockedCardThemes || []), "blood-and-bones"])];
+        const earnedCosmetics = Array.isArray(profileData.earnedCosmetics) ? [...profileData.earnedCosmetics] : [];
+        if (!earnedCosmetics.some(cosmetic => cosmetic.imagePath === "images/NoMercy/ZebraBullheadShark.png")) {
+            earnedCosmetics.push({
+                name: "Zebra Bullhead Shark",
+                imagePath: "images/NoMercy/ZebraBullheadShark.png",
+                source: "No Mercy Mode"
+            });
+        }
+        profileData.earnedCosmetics = earnedCosmetics;
         profileData.lastUpdated = Date.now();
     } else {
     profileData.gamesPlayed = (profileData.gamesPlayed || 0) + 1;
@@ -2004,7 +2013,7 @@ ${speciesMode.key === "nightmare" ? "" : `<p style="margin: 8px 0 14px;"><a href
         <p style="font-size: 16px; margin: 10px 0; opacity: 0.9;">You took ${guessesTaken} guess${guessesTaken !== 1 ? 'es' : ''}.</p>
 ${!firebase.auth().currentUser ? `<aside style="margin: 18px 0; padding: 14px 16px; border-radius: 10px; background: rgba(0,151,167,0.18); border: 1px solid rgba(0,188,212,0.4);"><strong>Sharkdle is better with an account 🦈</strong><p style="margin: 6px 0 10px; font-size: 14px;">Create an account to save your progress and unlock more features.</p><a href="index.html" style="color: inherit; font-weight: 700;">Create a free account →</a></aside>` : ''}
 ${!alreadyCompleted ? `<div style="margin: 20px 0; padding: 15px; background: rgba(255,255,255,0.2); border-radius: 8px;"><p style="font-size: 28px; font-weight: bold; margin: 0; color: inherit;">+${xpGained} XP</p>${pearlsGained ? `<p style="font-size: 20px; font-weight: bold; margin: 8px 0 0; color: #8ff5ef;">+${pearlsGained} Pearls</p>` : ''}</div>` : ''}
-${speciesMode.key === "nightmare" ? '<div class="nightmare-reward-card"><span>WHO NEEDS MERCY · THEME: BLOOD &amp; BONES</span><strong>3× pearls and XP · exclusive badge unlocked</strong><span>Sorry. You were right to doubt me.</span></div>' : '<div style="margin: 20px 0; padding: 12px; background: rgba(255,0,0,0.1); border-radius: 6px; font-size: 14px; text-align: center; color: #ff4444; font-weight: 600;">Next puzzle: <span id="win-countdown">--:--:--</span></div>'}
+${speciesMode.key === "nightmare" ? '<div class="nightmare-reward-card"><span>WHO NEEDS MERCY · THEME: BLOOD &amp; BONES</span><strong>3× pearls and XP · Zebra Bullhead Shark icon · exclusive badge unlocked</strong><span>Sorry. You were right to doubt me.</span></div>' : '<div style="margin: 20px 0; padding: 12px; background: rgba(255,0,0,0.1); border-radius: 6px; font-size: 14px; text-align: center; color: #ff4444; font-weight: 600;">Next puzzle: <span id="win-countdown">--:--:--</span></div>'}
 ${getDailyVariantSwitcherHtml()}
 <div style="display: flex; gap: 10px; margin-top: 25px; justify-content: center;">
     <button onclick="shareDailyResults()" style="padding: 12px 18px; font-size: 15px; cursor: pointer; background: #0097a7; border: none; border-radius: 6px; color: white; font-weight: bold; transition: filter 0.2s;">🦈 Share Results</button>

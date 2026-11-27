@@ -4062,6 +4062,7 @@ function collectAllUnlockablePfps() {
     addEntry("Hammerhead Shark", "images/codePfp/Shark26.png", { codeReward: true });
     addEntry("Bull Shark", "images/loginPfp/Shark20.png", { loginReward: true });
     addEntry("Zebra Shark", "images/christmasEvent/AdventRewards/ZebraShark.png", { calendarReward: true, source: "Advent 2026", rarity: "exclusive" });
+    addEntry("Zebra Bullhead Shark", "images/NoMercy/ZebraBullheadShark.png", { rarity: "legendary", source: "No Mercy Mode" });
     RETIRED_TREASURE_PFPS.forEach(pfp => addEntry(pfp.name, pfp.imagePath, pfp));
 
     return entries;
@@ -11370,6 +11371,7 @@ const STARTER_PROFILE_PFPS = [
 
 const PFP_RARITY_ORDER = ["core", "common", "rare", "epic", "legendary", "special"];
 function inferPfpRarityFromPath(imagePath = "") {
+    if (/images\/NoMercy\/ZebraBullheadShark\.png$/i.test(imagePath)) return "legendary";
     if (/leaderPfp\/Shark19\.png$/i.test(imagePath)) return "legendary";
     if (/leaderPfp\/(Daily|Monthly)\//i.test(imagePath)) return "rare";
     if (/loginPfp\/Login2\/BarndoorSkate\.png$/i.test(imagePath)) return "rare";
@@ -11588,6 +11590,7 @@ function buildProfilePicPickerCatalog() {
     });
 
     const specialRewardDefs = [
+        { imagePath: "images/NoMercy/ZebraBullheadShark.png", name: "Zebra Bullhead Shark", source: "No Mercy Mode" },
         { imagePath: "images/codePfp/Shark17.png", name: "Wobbegong Shark", source: "Redeem code reward" },
         { imagePath: "images/codePfp/Shark18.png", name: "Greenland Shark", source: "Redeem code reward" },
         { imagePath: "images/codePfp/Shark19.png", name: "Goblin Shark", source: "Redeem code reward" },
