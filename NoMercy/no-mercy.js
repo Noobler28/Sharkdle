@@ -589,21 +589,15 @@ function getDailyVariantSwitcherHtml() {
 // --- Share Results (Daily) ---
 function generateDailyShareText() {
     const title = `${speciesMode.key === "nightmare" && gameWon ? "I conquered Sharkdle!\n" : ""}${speciesMode.shareTitle} ${today} - ${gameWon ? guesses.length : 'X'}/${maxAttempts}`;
-    // Build grid: 6 categories per guess -> green for correct, black for incorrect
+    // No Mercy shares its five color signals; standard modes share exact matches only.
     const rows = guesses.map(g => {
         if (speciesMode.key === "nightmare") {
-            const guessIndex = guesses.indexOf(g);
-            const cards = Array.from(document.querySelectorAll("#guesses .guess-card"));
-            const feedbackDiv = cards[guesses.length - 1 - guessIndex]?.querySelector(".feedback");
-            if (!feedbackDiv || feedbackDiv.style.display === "none" || feedbackDiv.dataset.nightmareHidden === "true") {
-                return "⬛⬛⬛⬛⬛";
-            }
             const categoryKeys = ["family", "genus", "size", "depth", "yod"];
-            return categoryKeys.map((key, index) => {
-                const category = feedbackDiv.children[index];
-                if (category?.classList.contains("nightmare-signal-green")) return "🟩";
-                if (category?.classList.contains("nightmare-signal-yellow")) return "🟨";
-                return "🟥";
+            if (!g?.shark) return "⬛⬛⬛⬛⬛";
+            const signalEmoji = { green: "🟩", yellow: "🟨", red: "🟥" };
+            return categoryKeys.map(key => {
+                const signal = getNightmareSignal(key, g.shark);
+                return signalEmoji[signal] || "⬛";
             }).join("");
         }
         const order = [...(speciesMode.key === 'mixed' ? ['type'] : []), 'order','family','genus','size','depth','yod'];
