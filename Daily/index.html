@@ -16,6 +16,7 @@
 <link rel="stylesheet" href="style.css">
 <link rel="stylesheet" href="page-shell.css">
 <link rel="stylesheet" href="Daily/daily.css">
+<link rel="stylesheet" href="Daily/nightmare.css?v=9">
 
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800;900&family=Barlow:wght@400;500;600;700&family=Montserrat:wght@400;600;700&display=swap" rel="stylesheet">
 
@@ -43,6 +44,7 @@
 <a href="Daily/index.html" data-pool-mode="sharks">Sharks</a>
 <a href="Daily/index.html?pool=rays" data-pool-mode="rays">Relatives</a>
 <a href="Daily/index.html?pool=mixed" data-pool-mode="mixed">Mixed</a>
+<a href="Daily/index.html?mode=nightmare" data-pool-mode="nightmare">No Mercy</a>
 </nav>
 <h2 id="guess-heading">Guess the Shark</h2>
 <p class="mode-lead" id="mode-lead">Think you know this shark? Make your guess below.</p>
@@ -52,7 +54,7 @@
 </div>
 <button id="guessBtn">Guess</button>
 <div id="attempts-left" class="status-pill">Attempts left: 8</div>
-<div id="category-reveal-panel" class="category-reveal-panel">
+<div id="category-reveal-panel" class="category-reveal-panel" data-nightmare-hide hidden>
 <div class="category-reveal-copy">
 <span class="category-reveal-kicker">One per game</span>
 <strong id="category-reveal-result">Reveal one undiscovered category.</strong>
@@ -60,7 +62,6 @@
 </div>
 <button id="category-reveal-btn" class="category-reveal-btn" type="button">Reveal Category - 25p</button>
 </div>
-<a class="sharchive-help-link" href="Library/index.html" target="_blank" rel="noopener noreferrer">Need help? Visit the Sharchive!</a>
 </div>
 <div class="guess-hero-art" role="region" aria-label="Confirmed clue profile">
 <div class="mystery-profile-panel">
@@ -94,8 +95,27 @@
 
 <div id="guesses"></div>
 
+<section class="nightmare-dossier" aria-label="No Mercy statistics">
+<div><span>No Mercy record</span><strong id="nightmare-record">0 wins · 0 losses</strong></div>
+<div><span>Average guesses</span><strong id="nightmare-average">—</strong></div>
+<div><span>Failure counter</span><strong id="nightmare-fails">0 failures</strong></div>
+</section>
+
 </div>
 
+
+<section id="nightmare-warning" class="nightmare-warning-backdrop" role="alertdialog" aria-modal="true" aria-labelledby="nightmare-warning-title" aria-describedby="nightmare-warning-copy" hidden>
+    <div class="nightmare-warning-card">
+        <span class="nightmare-warning-kicker">No Mercy Mode</span>
+        <h2 id="nightmare-warning-title">Sign your life to Sharkdle?</h2>
+        <p id="nightmare-warning-copy">You have 20 seconds to name each shark. If the timer expires, you lose a guess. Leave this page and your run ends. Your normal streak is safe.</p>
+        <label class="nightmare-warning-skip"><input id="nightmare-skip-warning" type="checkbox"> Ignore popup for future games</label>
+        <div class="nightmare-warning-actions">
+            <button type="button" class="nightmare-warning-accept" onclick="acceptNightmareEntry()">Sign your life to Sharkdle</button>
+            <button type="button" class="nightmare-warning-decline" onclick="declineNightmareEntry()">Go back</button>
+        </div>
+    </div>
+</section>
 
 <div id="win-screen"></div>
 
@@ -114,7 +134,7 @@
 <script src="fair-play.js?v=20261019"></script>
 <script src="Achievements/achievements.js"></script>
 <script src="wiki-species-titles.js?v=1"></script>
-<script src="Daily/daily.js?v=20261124-account-daily-auth"></script>
+<script src="Daily/daily.js?v=20261127-no-mercy-warning-v5"></script>
 
 <script src="global-broadcast.js"></script>
 </body>

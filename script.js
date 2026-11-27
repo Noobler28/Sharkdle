@@ -1922,6 +1922,7 @@ const sharkPassCardThemes = [
     { id: "storm-current", name: "Storm Current", unlockAchievement: "duel_won", preview: "linear-gradient(135deg, rgba(117, 202, 255, 0.26), rgba(67, 126, 255, 0.2) 34%, rgba(9, 20, 47, 0.98))" },
     { id: "pearl-reef", name: "Pearl Reef", unlockAchievement: "secret_command_found", preview: "linear-gradient(135deg, rgba(250, 240, 214, 0.3), rgba(164, 244, 231, 0.18) 42%, rgba(24, 72, 92, 0.96))" },
     { id: "volcanic-ember", name: "Volcanic Ember", unlockAchievement: "streak_100", preview: "linear-gradient(180deg, rgba(15, 3, 2, 0.12), rgba(6, 2, 3, 0.58)), url(images/profileThemes/Crate/VolcanicEmber.png) center center / cover no-repeat" },
+    { id: "blood-and-bones", name: "Blood & Bones", preview: "linear-gradient(180deg, rgba(30, 0, 4, 0.12), rgba(9, 9, 9, 0.58)), url('images/profileThemes/NoMercy/Blood&Bones.jpg') center center / cover no-repeat" },
     { id: "lucky-current", name: "Lucky Current", preview: "linear-gradient(135deg, rgba(103, 255, 174, 0.3), rgba(255, 220, 92, 0.2) 34%, rgba(13, 83, 75, 0.96) 70%, rgba(6, 27, 38, 1))" },
     { id: "kelp-canopy", name: "Kelp Canopy", preview: "linear-gradient(180deg, rgba(6, 31, 23, 0.08), rgba(3, 22, 21, 0.5)), url(images/profileThemes/Crate/KelpCanopy.png) center center / cover no-repeat" },
     { id: "glacier-shine", name: "Glacier Shine", preview: "linear-gradient(180deg, rgba(255, 255, 255, 0.2), rgba(18, 69, 95, 0.34)), url(images/profileThemes/Crate/GlacierShine.png) center center / cover no-repeat" },
@@ -6279,8 +6280,10 @@ function applyIndexTheme(themeId = "default", force = false) {
     if (!body) return "default";
 
     const resolvedThemeId = normalizeIndexThemeId(themeId);
-    const modePagesUseDefaultTheme = body.classList.contains("mode-v3-page") && resolvedThemeId !== "default";
-    const appliedThemeId = (modePagesUseDefaultTheme || (!force && isSeasonalThemeDisabled() && resolvedThemeId !== "default"))
+    const isNightmareModePage = body.classList.contains("nightmare-mode")
+        || new URLSearchParams(window.location.search).get("mode")?.toLowerCase() === "nightmare";
+    const nightmareIgnoresSeasonalTheme = isNightmareModePage;
+    const appliedThemeId = ((nightmareIgnoresSeasonalTheme || (!force && isSeasonalThemeDisabled())) && resolvedThemeId !== "default")
         ? "default"
         : resolvedThemeId;
     getValidIndexThemeIds().forEach(id => {
@@ -7999,6 +8002,7 @@ allBadges.push(
     { id: "tide-glass", name: "Tide Glass", emoji: "\u{1FAE7}", description: "A badge found in Cosmetic Crates." },
     { id: "fossil-tooth", name: "Fossil Tooth", emoji: "\u{1F9B7}", description: "A badge found in Cosmetic Crates." },
     { id: "deep-anchor", name: "Deep Anchor", emoji: "\u{2693}", description: "A badge found in Cosmetic Crates." },
+    { id: "who-needs-mercy", name: "WHO NEEDS MERCY", emoji: "\u{1F480}", description: "Awarded for beating Nightmare Mode.", rarity: "legendary" },
     { id: "royal-pearl", name: "Royal Pearl", emoji: "\u{1F9AA}", description: "A badge found in Cosmetic Crates." },
     { id: "Tidepool", name: "Tidepool", emoji: "\u{1F300}", description: "A summer crate badge." },
     { id: "Ice Cream", name: "Ice Cream", emoji: "\u{1F366}", description: "A summer crate badge." },

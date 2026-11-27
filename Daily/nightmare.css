@@ -1,0 +1,227 @@
+/* NO MERCY: isolated palette and effects for the optional challenge route. */
+body.mode-v3-page.nightmare-mode {
+    --nightmare-bg: #090909;
+    --nightmare-red: #B5121B;
+    --nightmare-red-dark: #51080D;
+    --nightmare-surface: #191919;
+    --nightmare-white: #FFFFFF;
+    --nightmare-muted: #A3A3A3;
+    --v3-bg-deep: var(--nightmare-bg);
+    --v3-bg-mid: var(--nightmare-surface);
+    --v3-card: var(--nightmare-surface);
+    --v3-card-2: #262020;
+    --v3-teal: var(--nightmare-red);
+    --v3-text: var(--nightmare-white);
+    --v3-muted: var(--nightmare-muted);
+    --v3-border: rgba(181, 18, 27, .35);
+    color: var(--nightmare-white);
+    background: var(--nightmare-bg) !important;
+    background-image: radial-gradient(ellipse at 50% 0, rgba(181,18,27,.16), transparent 58%) !important;
+    filter: none !important;
+}
+
+body.mode-v3-page.nightmare-mode::before {
+    background: radial-gradient(ellipse at 60% 0, rgba(181,18,27,.14), transparent 64%);
+}
+body.mode-v3-page.nightmare-mode::after {
+    opacity: .08;
+    background-image: radial-gradient(circle, rgba(255,255,255,.18) 0 1px, transparent 1.5px);
+}
+body.mode-v3-page.nightmare-mode.newyears-time-travel { filter: none !important; }
+body.mode-v3-page.nightmare-mode .game-container,
+body.mode-v3-page.nightmare-mode .input-panel,
+body.mode-v3-page.nightmare-mode #guesses { color: #fff; background: transparent !important; }
+body.nightmare-mode .topbar,
+body.nightmare-mode .guess-hero,
+body.nightmare-mode .guess-hero-art,
+body.nightmare-mode .mystery-profile-panel,
+body.nightmare-mode .category-reveal-panel,
+body.nightmare-mode .nightmare-dossier,
+body.nightmare-mode .guess-card {
+    background: var(--nightmare-surface) !important;
+    border-color: rgba(181,18,27,.38) !important;
+    box-shadow: 0 14px 40px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.025);
+}
+body.nightmare-mode .guess-hero,
+body.nightmare-mode .guess-hero-art { background-image: none !important; }
+body.nightmare-mode .guess-hero-art[hidden],
+body.nightmare-mode .species-mode-switcher[hidden],
+body.nightmare-mode .category-reveal-panel[hidden] { display: none !important; }
+body.nightmare-mode .guess-hero h2,
+body.nightmare-mode .topbar h1 { color: var(--nightmare-white); }
+body.nightmare-mode .topbar h1 { color: #fff !important; }
+body.nightmare-mode.shell-page .topbar h1,
+body.nightmare-mode .shell-page .topbar h1,
+body.nightmare-mode .topbar #mode-title {
+    background: none !important;
+    background-image: none !important;
+    background-clip: border-box !important;
+    -webkit-background-clip: border-box !important;
+    -webkit-text-fill-color: #fff !important;
+    color: #fff !important;
+}
+body.nightmare-mode .mode-kicker,
+body.nightmare-mode .mode-lead,
+body.nightmare-mode .mystery-profile-target small,
+body.nightmare-mode .mystery-profile-row { color: var(--nightmare-muted) !important; }
+body.nightmare-mode .guess-hero,
+body.nightmare-mode .guess-hero p,
+body.nightmare-mode #message,
+body.nightmare-mode #messageDiv,
+body.nightmare-mode .guess-card,
+body.nightmare-mode .guess-card * { color: var(--nightmare-white); }
+body.nightmare-mode .mode-kicker,
+body.nightmare-mode .mode-lead,
+body.nightmare-mode .guess-card .muted,
+body.nightmare-mode .guess-card small { color: var(--nightmare-muted); }
+body.nightmare-mode .species-mode-switcher,
+body.nightmare-mode .species-mode-switcher a { border-color: rgba(181,18,27,.4); }
+body.nightmare-mode .species-mode-switcher a.active,
+body.nightmare-mode .species-mode-switcher a:hover,
+body.nightmare-mode #guessBtn,
+body.nightmare-mode .home-btn {
+    color: #fff;
+    background: linear-gradient(135deg, var(--nightmare-red), var(--nightmare-red-dark));
+    border-color: var(--nightmare-red);
+}
+body.nightmare-mode .home-btn {
+    color: #fff !important;
+    background: linear-gradient(135deg, #B5121B, #51080D) !important;
+    border: 1px solid rgba(255,85,95,.72) !important;
+    box-shadow: 0 6px 20px rgba(181,18,27,.25) !important;
+}
+body.nightmare-mode .mode-header .panel-kicker { color: #fff !important; background: #300609 !important; border-color: rgba(181,18,27,.55) !important; }
+body.nightmare-mode #guessBtn:disabled { opacity: .65; cursor: wait; }
+body.nightmare-mode .status-pill {
+    color: #fff;
+    background: #300609;
+    border: 1px solid rgba(181,18,27,.55);
+}
+body.nightmare-mode #win-screen button,
+body.nightmare-mode #lose-screen button,
+body.nightmare-mode .nightmare-result-note button {
+    color: #fff !important;
+    background: linear-gradient(135deg, #B5121B, #51080D) !important;
+    border: 1px solid rgba(255, 85, 95, .62) !important;
+}
+body.nightmare-mode #win-screen,
+body.nightmare-mode #lose-screen {
+    color: #fff !important;
+    background: #191919 !important;
+    border: 1px solid rgba(181,18,27,.55) !important;
+}
+body.nightmare-mode #win-screen button:hover,
+body.nightmare-mode #lose-screen button:hover { filter: brightness(1.15); }
+body.nightmare-mode #sharkGuess,
+body.nightmare-mode .suggestions-dropdown {
+    color: #fff;
+    background: #101010;
+    border-color: rgba(181,18,27,.55);
+}
+body.nightmare-mode #sharkGuess::placeholder { color: #8f8f8f; }
+body.nightmare-mode .suggestion-item:hover,
+body.nightmare-mode .suggestion-item.highlighted { background: var(--nightmare-red-dark); }
+body.nightmare-mode .category.correct { border-color: rgba(181,18,27,.62); }
+body.nightmare-mode .nightmare-clue-concealed { color: transparent !important; position: relative; }
+body.nightmare-mode .nightmare-clue-concealed::after {
+    content: "REDACTED";
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    border-radius: inherit;
+    background: #101010;
+    color: var(--nightmare-red);
+    font: 900 10px 'Barlow Condensed', sans-serif;
+    letter-spacing: .16em;
+}
+.nightmare-dossier {
+    z-index: 1;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    width: min(1260px, calc(100% - 8px));
+    gap: 10px;
+    margin-top: 8px;
+    padding: 16px;
+    border: 1px solid rgba(181,18,27,.36);
+    border-radius: 14px;
+    background: #191919;
+}
+.nightmare-dossier > div { display: grid; gap: 4px; text-align: center; }
+.nightmare-dossier span,.nightmare-result-note { color: #a3a3a3; font-size: 11px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
+.nightmare-dossier strong { color: #fff; font-size: 16px; }
+.nightmare-result-note { display:grid; justify-items:center; gap:12px; margin:18px 0; padding:12px; border:1px solid rgba(181,18,27,.35); border-radius:8px; text-align:center; }
+.nightmare-result-note button { padding:11px 16px; border-radius:8px; font-weight:900; cursor:pointer; }
+.nightmare-insult {
+    margin: 20px auto !important;
+    padding: 20px;
+    border: 1px solid rgba(181,18,27,.65);
+    border-radius: 12px;
+    color: #fff !important;
+    background: linear-gradient(145deg, #300609, #111);
+    font: 900 clamp(20px,4vw,34px)/1.1 'Barlow Condensed', sans-serif !important;
+    text-transform: uppercase;
+}
+.nightmare-insult small { color: #a3a3a3; font: 600 13px 'Barlow',sans-serif; text-transform: none; }
+.nightmare-reward-card {
+    display: grid;
+    gap: 8px;
+    margin: 18px auto;
+    padding: 18px;
+    border: 1px solid rgba(181,18,27,.65);
+    border-radius: 12px;
+    color: #fff;
+    background: linear-gradient(145deg,#300609,#111);
+}
+.nightmare-reward-card span { color: #a3a3a3; font-size: 12px; letter-spacing: .08em; }
+.nightmare-reward-card strong { color: #fff; font-size: 20px; }
+body.nightmare-mode #win-screen {
+    border-color: rgba(181,18,27,.7);
+    background: radial-gradient(circle at 20% 0,rgba(181,18,27,.2),transparent 40%),linear-gradient(180deg,#191919,#090909);
+    box-shadow: 0 0 0 100vmax rgba(0,0,0,.82),0 30px 90px rgba(0,0,0,.7);
+}
+body.nightmare-mode #win-screen h2 { text-shadow: 0 0 24px rgba(181,18,27,.5); }
+.nightmare-mode-card { border-color: rgba(181,18,27,.65) !important; }
+.nightmare-mode-stamp { position:absolute; top:12px; right:10px; padding:7px 9px; border:1px solid #B5121B; border-radius:5px; color:white; background:#51080D; font-size:11px; font-weight:900; letter-spacing:.12em; }
+body.home-v3-page .home-v3-mode-card.nightmare-mode-card .nightmare-mode-stamp { display: none !important; }
+.nightmare-warning-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 10000;
+    display: grid;
+    place-items: center;
+    padding: 22px;
+    background: rgba(0,0,0,.88);
+    backdrop-filter: blur(8px);
+}
+.nightmare-warning-backdrop[hidden] { display: none !important; }
+.nightmare-warning-card {
+    width: min(520px, 100%);
+    padding: clamp(24px, 6vw, 42px);
+    border: 1px solid rgba(181,18,27,.8);
+    border-top: 5px solid #B5121B;
+    border-radius: 14px;
+    background: #191919;
+    color: #fff;
+    box-shadow: 0 24px 90px rgba(0,0,0,.75), 0 0 42px rgba(181,18,27,.2);
+    text-align: center;
+}
+.nightmare-warning-kicker { color: #ff5962; font-size: 12px; font-weight: 900; letter-spacing: .2em; text-transform: uppercase; }
+.nightmare-warning-card h2 { margin: 12px 0; color: #fff; font: 900 clamp(28px, 7vw, 42px)/1 'Barlow Condensed', sans-serif; text-transform: uppercase; }
+.nightmare-warning-card p { margin: 0 auto; max-width: 420px; color: #c9c2c2; line-height: 1.6; }
+.nightmare-warning-skip { display: inline-flex; align-items: center; justify-content: center; gap: 9px; margin-top: 18px; color: #c9c2c2; font-size: 14px; cursor: pointer; }
+.nightmare-warning-skip input { width: 17px; height: 17px; margin: 0; accent-color: #B5121B; cursor: pointer; }
+.nightmare-warning-actions { display: grid; gap: 10px; margin-top: 24px; }
+body.nightmare-mode .nightmare-warning-actions button {
+    min-height: 48px;
+    padding: 12px 18px;
+    border: 1px solid rgba(255,85,95,.72) !important;
+    border-radius: 8px;
+    color: #fff !important;
+    background: linear-gradient(135deg, #B5121B, #51080D) !important;
+    box-shadow: 0 8px 24px rgba(181,18,27,.25) !important;
+    font: 800 15px 'Barlow', sans-serif;
+    cursor: pointer;
+}
+body.nightmare-mode .nightmare-warning-actions button:hover { filter: brightness(1.15); }
+@media (max-width:600px) { .nightmare-dossier { grid-template-columns:1fr; } }

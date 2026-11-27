@@ -8,6 +8,7 @@ function getTodayInLocalTimezone() {
 }
 
 function getRequestedSpeciesMode() {
+    if (new URLSearchParams(window.location.search).get("mode")?.toLowerCase() === "nightmare") return "nightmare";
     const requestedMode = new URLSearchParams(window.location.search).get("pool") || "sharks";
     const normalizedMode = requestedMode.toLowerCase();
     if (["ray", "rays"].includes(normalizedMode)) return "rays";
@@ -64,6 +65,20 @@ function getSpeciesModeConfig(modeKey) {
             recentMode: "Daily Mixed",
             heroBackground: HERO_ART.sharkBg,
             heroForeground: HERO_ART.manta
+        },
+        nightmare: {
+            key: "nightmare",
+            title: "No Mercy Mode",
+            kicker: "No Mercy Mode",
+            heading: "Name the shark. No second chances.",
+            lead: "Blame Gillsy if you lose your mind.",
+            placeholder: "Enter shark name...",
+            animal: "shark",
+            animalTitle: "Shark",
+            shareTitle: "Sharkdle No Mercy",
+            recentMode: "No Mercy",
+            heroBackground: HERO_ART.sharkBg,
+            heroForeground: HERO_ART.sharkFg
         }
     };
 
@@ -73,13 +88,27 @@ function getSpeciesModeConfig(modeKey) {
 function getActiveSpeciesPool(modeKey) {
     const sharkPool = Array.isArray(window.sharks) ? window.sharks : [];
     const rayPool = Array.isArray(window.rays) ? window.rays : [];
+    if (modeKey === "nightmare") return sharkPool;
     if (modeKey === "rays") return rayPool.length ? rayPool : sharkPool;
     if (modeKey === "mixed") return [...sharkPool, ...rayPool];
     return sharkPool;
 }
 
 const speciesMode = getSpeciesModeConfig(getRequestedSpeciesMode());
-const maxAttempts = speciesMode.key === "mixed" ? 12 : 8;
+const nightmareParams = new URLSearchParams(window.location.search);
+const noMercySkipWarningKey = "noMercySkipWarning";
+let nightmareRunId = nightmareParams.get("run") || "";
+let nightmareEntryAccepted = speciesMode.key !== "nightmare";
+if (speciesMode.key === "nightmare") {
+    if (!/^\d{1,16}$/.test(nightmareRunId)) {
+        nightmareRunId = String(Date.now());
+        nightmareParams.set("run", nightmareRunId);
+        history.replaceState(null, "", `${window.location.pathname}?${nightmareParams.toString()}`);
+    }
+    nightmareEntryAccepted = localStorage.getItem(noMercySkipWarningKey) === "true"
+        || sessionStorage.getItem("nightmareWarningRun") === nightmareRunId;
+}
+const maxAttempts = speciesMode.key === "nightmare" ? 6 : speciesMode.key === "mixed" ? 12 : 8;
 function getSpeciesType(species) {
     if (species?.order === "Chimaeriformes") return "chimaera";
     if (species?.order === "Rajiformes" || /\bskate\b/i.test(`${species?.name || ""} ${species?.family || ""}`)) return "skate";
@@ -90,15 +119,19 @@ const speciesPool = getActiveSpeciesPool(speciesMode.key);
 
 function getDailyStorageKey(uid = firebase.auth().currentUser?.uid || "guest") {
     const modeKey = speciesMode.key === "sharks" ? "sharks" : speciesMode.key;
-    return `daily_${uid}_${modeKey}_${today}`;
+    return `${speciesMode.key === "nightmare" ? `nightmare_${nightmareRunId}` : "daily"}_${uid}_${modeKey}_${today}`;
 }
 
 function getDailyFirestoreState(firebaseData) {
+    if (speciesMode.key === "nightmare") return firebaseData?.modes?.nightmare || null;
     if (speciesMode.key === "sharks") return firebaseData;
     return firebaseData?.modes?.[speciesMode.key] || null;
 }
 
 function getDailyFirestorePayload(state) {
+    if (speciesMode.key === "nightmare") {
+        return { modes: { nightmare: { ...state, lastUpdated: firebase.firestore.FieldValue.serverTimestamp() } } };
+    }
     if (speciesMode.key === "sharks") {
         return {
             ...state,
@@ -120,6 +153,15 @@ function applySpeciesModeCopy() {
     document.title = speciesMode.title;
     document.body.classList.remove("species-mode-sharks", "species-mode-rays", "species-mode-mixed");
     document.body.classList.add(`species-mode-${speciesMode.key}`);
+    document.body.classList.toggle("nightmare-mode", speciesMode.key === "nightmare");
+    if (speciesMode.key === "nightmare") {
+        Array.from(document.body.classList).forEach(className => {
+            if ((className.startsWith("index-theme-") || className.startsWith("global-ui-theme-")) && !className.endsWith("-default")) {
+                document.body.classList.remove(className);
+            }
+        });
+        document.body.classList.add("index-theme-default", "global-ui-theme-default");
+    }
 
     document.querySelectorAll("[data-pool-mode]").forEach(link => {
         link.classList.toggle("active", link.dataset.poolMode === speciesMode.key);
@@ -138,6 +180,15 @@ function applySpeciesModeCopy() {
     if (heading) heading.textContent = speciesMode.heading;
     if (lead) lead.textContent = speciesMode.lead;
     if (input) input.placeholder = speciesMode.placeholder;
+    const nightmareDossier = document.querySelector(".nightmare-dossier");
+    if (nightmareDossier) nightmareDossier.hidden = speciesMode.key !== "nightmare";
+    document.querySelectorAll("[data-nightmare-hide]").forEach(element => {
+        element.hidden = speciesMode.key === "nightmare";
+    });
+    const modeSwitcher = document.querySelector(".species-mode-switcher");
+    if (modeSwitcher) modeSwitcher.hidden = speciesMode.key === "nightmare";
+    const mysteryProfile = document.querySelector(".guess-hero-art");
+    if (mysteryProfile) mysteryProfile.hidden = speciesMode.key === "nightmare";
     if (heroBackground) heroBackground.src = speciesMode.heroBackground;
     if (heroForeground) heroForeground.src = speciesMode.heroForeground;
 }
@@ -156,6 +207,264 @@ function getDailyModeHref(modeKey) {
         ? "Daily/index.html"
         : `Daily/index.html?pool=${modeKey}`;
     return typeof resolveAppPath === "function" ? resolveAppPath(path) : path;
+}
+
+function replayNightmare() {
+    const nextRun = String(Math.max(Date.now(), Number(nightmareRunId) + 1));
+    window.location.href = `${window.location.pathname}?mode=nightmare&run=${nextRun}`;
+}
+
+function acceptNightmareEntry() {
+    if (speciesMode.key !== "nightmare" || nightmareEntryAccepted) return;
+    if (document.getElementById("nightmare-skip-warning")?.checked) {
+        localStorage.setItem(noMercySkipWarningKey, "true");
+    }
+    nightmareEntryAccepted = true;
+    sessionStorage.setItem("nightmareWarningRun", nightmareRunId);
+    document.getElementById("nightmare-warning")?.setAttribute("hidden", "");
+    const input = document.getElementById("sharkGuess");
+    const button = document.getElementById("guessBtn");
+    if (input) input.disabled = false;
+    if (button) button.disabled = false;
+    void initializeGame();
+}
+
+function declineNightmareEntry() {
+    window.location.replace(typeof resolveAppPath === "function" ? resolveAppPath("index.html") : "../index.html");
+}
+
+const NIGHTMARE_INSULTS = [
+    "Go back to normal mode. You aren't cut out for this.",
+    "Do you even know what sharks are?",
+    "I thought you were supposed to be good at this.",
+    "This game isn't for everyone... especially you....",
+    "Still think it's too easy?",
+    "Don't give up. You're almost there. NOT."
+];
+
+function getNightmareStats() {
+    try {
+        const userId = firebase.auth().currentUser?.uid || "guest";
+        const profileStats = typeof getBestLocalProfile === "function" ? getBestLocalProfile()?.nightmareStats : null;
+        const stats = profileStats || JSON.parse(localStorage.getItem(`nightmareStats_${userId}`) || localStorage.getItem("nightmareStats") || "{}");
+        return { wins: 0, losses: 0, totalGuesses: 0, failures: 0, ...(stats && typeof stats === "object" ? stats : {}) };
+    } catch { return { wins: 0, losses: 0, totalGuesses: 0, failures: 0 }; }
+}
+
+function updateNightmareDossier() {
+    if (speciesMode.key !== "nightmare") return;
+    const stats = getNightmareStats();
+    const record = document.getElementById("nightmare-record");
+    const average = document.getElementById("nightmare-average");
+    const failures = document.getElementById("nightmare-fails");
+    if (record) record.textContent = `${stats.wins} wins · ${stats.losses} losses`;
+    if (average) average.textContent = stats.wins ? (stats.totalGuesses / stats.wins).toFixed(2) : "—";
+    if (failures) failures.textContent = `${stats.failures} ${stats.failures === 1 ? "failure" : "failures"}`;
+}
+
+function recordNightmareResult(won, guessesTaken) {
+    const stats = getNightmareStats();
+    stats[won ? "wins" : "losses"] += 1;
+    stats.totalGuesses += guessesTaken;
+    if (!won) stats.failures += 1;
+    localStorage.setItem(`nightmareStats_${firebase.auth().currentUser?.uid || "guest"}`, JSON.stringify(stats));
+    const profile = typeof getBestLocalProfile === "function" ? getBestLocalProfile() : JSON.parse(localStorage.getItem("userProfile") || "{}");
+    profile.nightmareStats = stats;
+    if (typeof saveUserProfileLocally === "function") saveUserProfileLocally({ ...profile, uid: window.currentUser?.uid || firebase.auth().currentUser?.uid || profile.uid });
+    else localStorage.setItem("userProfile", JSON.stringify(profile));
+    updateNightmareDossier();
+}
+
+function getNightmareCompletionKey() {
+    return `nightmareResultRecorded_${firebase.auth().currentUser?.uid || "guest"}_${today}_${nightmareRunId}`;
+}
+
+function recordNightmareCompletion(won, guessesTaken) {
+    const completionKey = getNightmareCompletionKey();
+    if (localStorage.getItem(completionKey) === "true") return;
+    localStorage.setItem(completionKey, "true");
+    recordNightmareResult(won, guessesTaken);
+    const recent = JSON.parse(localStorage.getItem("nightmareRecentGames") || "[]");
+    recent.unshift({
+        date: new Date().toLocaleDateString(),
+        time: new Date().toLocaleTimeString(),
+        result: won ? "Win" : "Loss",
+        guesses: won ? guessesTaken : "X",
+        sharkName: targetShark.name,
+        mode: "No Mercy"
+    });
+    localStorage.setItem("nightmareRecentGames", JSON.stringify(recent.slice(0, 20)));
+}
+
+let nightmareGuardRef = null;
+let nightmareGuardUnsubscribe = null;
+let nightmareGuardHeartbeat = null;
+let nightmareGuardStartPromise = Promise.resolve();
+
+function finishNightmareCrossDeviceGuard(status) {
+    if (!nightmareGuardRef) return;
+    const ref = nightmareGuardRef;
+    if (nightmareGuardHeartbeat) window.clearInterval(nightmareGuardHeartbeat);
+    nightmareGuardHeartbeat = null;
+    nightmareGuardStartPromise.then(async () => {
+        try {
+            const snapshot = await ref.get();
+            const guard = snapshot.data()?.modes?.nightmareGuard;
+            if (guard?.runId !== nightmareRunId || guard.status !== "active") return;
+            await ref.update({
+                "modes.nightmareGuard.status": status,
+                "modes.nightmareGuard.endedAt": Date.now(),
+                "modes.nightmareGuard.expiresAt": 0
+            });
+        } catch (error) {
+            console.warn("Could not update the Nightmare session guard.", error);
+        }
+        if (nightmareGuardUnsubscribe) nightmareGuardUnsubscribe();
+        nightmareGuardUnsubscribe = null;
+    }).catch(() => {});
+}
+
+async function startNightmareCrossDeviceGuard() {
+    const user = firebase.auth().currentUser;
+    if (speciesMode.key !== "nightmare" || !user?.emailVerified || typeof db === "undefined" || !db) return;
+    const ref = db.collection("userDaily").doc(user.uid);
+    nightmareGuardRef = ref;
+    const writeActive = () => ref.set({ modes: { nightmareGuard: {
+        runId: nightmareRunId,
+        status: "active",
+        heartbeatAt: Date.now(),
+        expiresAt: Date.now() + 35000
+    } } }, { merge: true });
+    nightmareGuardStartPromise = writeActive().then(() => {
+        if (gameCompleted) {
+            finishNightmareCrossDeviceGuard(gameWon ? "finished" : "forfeit");
+            return;
+        }
+        nightmareGuardUnsubscribe = ref.onSnapshot(snapshot => {
+            const guard = snapshot.data()?.modes?.nightmareGuard;
+            if (guard && (guard.runId !== nightmareRunId || guard.status === "forfeit")) {
+                loseNightmareAfterTabSwitch("The Sharchive was opened while Nightmare was active.");
+            }
+        }, error => console.warn("Nightmare session guard listener failed.", error));
+        nightmareGuardHeartbeat = window.setInterval(async () => {
+            try {
+                const stillActive = await db.runTransaction(async transaction => {
+                    const snapshot = await transaction.get(ref);
+                    const guard = snapshot.data()?.modes?.nightmareGuard;
+                    if (!guard || guard.runId !== nightmareRunId || guard.status !== "active") return false;
+                    transaction.update(ref, {
+                        "modes.nightmareGuard.heartbeatAt": Date.now(),
+                        "modes.nightmareGuard.expiresAt": Date.now() + 35000
+                    });
+                    return true;
+                });
+                if (!stillActive) loseNightmareAfterTabSwitch("The Nightmare session ended on another device.");
+            } catch (error) {
+                console.warn("Nightmare session heartbeat failed.", error);
+            }
+        }, 10000);
+    }).catch(error => {
+        console.warn("Nightmare cross-device session guard is unavailable.", error);
+    });
+}
+
+function getNightmareTimerKey() {
+    return `nightmareTimer_${firebase.auth().currentUser?.uid || "guest"}_${today}_${nightmareRunId}`;
+}
+
+function getNightmareTimerRemaining() {
+    const deadline = Number(localStorage.getItem(getNightmareTimerKey())) || 0;
+    return Math.max(0, deadline - Date.now());
+}
+
+let nightmareTimer = null;
+
+function updateNightmareTimer() {
+    if (speciesMode.key !== "nightmare" || gameCompleted) return;
+    const remaining = getNightmareTimerRemaining();
+    const button = document.getElementById("guessBtn");
+    const label = document.getElementById("attempts-left");
+    if (label) label.textContent = `00:${String(Math.ceil(remaining / 1000)).padStart(2, "0")} · ${attempts} guesses left`;
+    if (button) button.textContent = `Guess · ${Math.ceil(remaining / 1000)}s`;
+    if (!remaining) {
+        voidNightmareGuess();
+        return;
+    }
+    nightmareTimer = window.setTimeout(updateNightmareTimer, Math.min(200, remaining));
+}
+
+function voidNightmareGuess() {
+    if (speciesMode.key !== "nightmare" || gameCompleted) return;
+    if (getNightmareTimerRemaining() > 0) return;
+    attempts = Math.max(0, attempts - 1);
+    const input = document.getElementById("sharkGuess");
+    if (input) input.value = "";
+    document.getElementById("suggestions")?.classList.remove("active");
+    document.getElementById("attempts-left").textContent = `${attempts} guesses left · time expired`;
+    if (messageDiv) messageDiv.textContent = "Time expired. One guess was used.";
+    saveGameState();
+    if (attempts <= 0) {
+        gameCompleted = true;
+        gameWon = false;
+        recordNightmareCompletion(false, guesses.length);
+        finishNightmareCrossDeviceGuard("finished");
+        saveGameState();
+        document.getElementById("sharkGuess").disabled = true;
+        document.getElementById("guessBtn").disabled = true;
+        document.getElementById("attempts-left").textContent = "Run complete · replay anytime";
+        showLose();
+        return;
+    }
+    localStorage.setItem(getNightmareTimerKey(), String(Date.now() + 20000));
+    updateNightmareTimer();
+}
+
+function startNightmareTimer() {
+    if (speciesMode.key !== "nightmare" || gameCompleted) return;
+    localStorage.setItem(getNightmareTimerKey(), String(Date.now() + 20000));
+    if (nightmareTimer) window.clearTimeout(nightmareTimer);
+    updateNightmareTimer();
+}
+
+function loseNightmareAfterTabSwitch(reason = "You left the tab") {
+    if (speciesMode.key !== "nightmare" || !nightmareEntryAccepted || gameCompleted) return;
+    if (nightmareTimer) window.clearTimeout(nightmareTimer);
+    gameCompleted = true;
+    gameWon = false;
+    attempts = 0;
+    recordNightmareCompletion(false, guesses.length);
+    saveGameState();
+    finishNightmareCrossDeviceGuard("forfeit");
+    const input = document.getElementById("sharkGuess");
+    const button = document.getElementById("guessBtn");
+    if (input) input.disabled = true;
+    if (button) button.disabled = true;
+    const label = document.getElementById("attempts-left");
+    if (label) label.textContent = `Run ended: ${reason}`;
+    showLose();
+}
+
+function handleNightmareVisibilityChange() {
+    if (document.visibilityState === "hidden") loseNightmareAfterTabSwitch();
+}
+
+function hidePreviousNightmareFeedback() {
+    if (speciesMode.key !== "nightmare") return;
+    document.querySelectorAll("#guesses .guess-card .feedback").forEach(feedback => {
+        feedback.style.display = "none";
+        feedback.dataset.nightmareHidden = "true";
+    });
+}
+
+function applyNightmareClueMask() {
+    if (speciesMode.key !== "nightmare") return;
+    const cards = Array.from(document.querySelectorAll("#guesses .guess-card"));
+    if (!cards.length) return;
+    const feedback = cards[0].querySelector(".feedback");
+    const categories = Array.from(feedback?.querySelectorAll(".category") || []);
+    const hiddenIndexes = categories.map((_, index) => index).filter(() => Math.random() < 0.3);
+    if (!hiddenIndexes.length && categories.length) hiddenIndexes.push(Math.floor(Math.random() * categories.length));
+    hiddenIndexes.forEach(index => categories[index].classList.add("nightmare-clue-concealed"));
 }
 
 function getSharchiveReviewHref() {
@@ -179,6 +488,7 @@ function appendSharchiveReviewButton(container) {
 }
 
 function getDailyVariantSwitcherHtml() {
+    if (speciesMode.key === "nightmare") return '<div class="nightmare-result-note"><span>Your normal streak is safe. Start another No Mercy run whenever you want.</span><button type="button" onclick="replayNightmare()">Play No Mercy Again</button></div>';
     const variants = [
         { key: "sharks", label: "Sharks" },
         { key: "rays", label: "Relatives" },
@@ -200,9 +510,23 @@ function getDailyVariantSwitcherHtml() {
 
 // --- Share Results (Daily) ---
 function generateDailyShareText() {
-    const title = `${speciesMode.shareTitle} ${today} - ${gameWon ? guesses.length : 'X'}/${maxAttempts}`;
+    const title = `${gameWon ? "I conquered Sharkdle!\n" : ""}${speciesMode.shareTitle} ${today} - ${gameWon ? guesses.length : 'X'}/${maxAttempts}`;
     // Build grid: 6 categories per guess -> green for correct, black for incorrect
     const rows = guesses.map(g => {
+        if (speciesMode.key === "nightmare") {
+            const guessIndex = guesses.indexOf(g);
+            const cards = Array.from(document.querySelectorAll("#guesses .guess-card"));
+            const feedbackDiv = cards[guesses.length - 1 - guessIndex]?.querySelector(".feedback");
+            if (!feedbackDiv || feedbackDiv.style.display === "none" || feedbackDiv.dataset.nightmareHidden === "true") {
+                return "⬛⬛⬛⬛⬛⬛";
+            }
+            const categoryKeys = ["order", "family", "genus", "size", "depth", "yod"];
+            return categoryKeys.map((key, index) => {
+                const category = feedbackDiv.children[index];
+                const redacted = category?.classList.contains("nightmare-clue-concealed");
+                return !redacted && g.feedback?.[key] ? "🟩" : "⬛";
+            }).join("");
+        }
         const order = [...(speciesMode.key === 'mixed' ? ['type'] : []), 'order','family','genus','size','depth','yod'];
         return order.map(cat => (g.feedback && g.feedback[cat]) ? '🟩' : '⬛').join('');
     });
@@ -245,7 +569,7 @@ async function shareDailyResults() {
 // Get the next midnight in the user's local timezone
 const today = getTodayInLocalTimezone()
 let dailyStorageKey = getDailyStorageKey()
-const dailyTargetSeed = speciesMode.key === "sharks" ? today : `${today}:${speciesMode.key}`
+const dailyTargetSeed = speciesMode.key === "sharks" ? today : speciesMode.key === "nightmare" ? `${today}:nightmare:${nightmareRunId}` : `${today}:${speciesMode.key}`
 
 // Daily target must be fully deterministic so every player gets the same species.
 const dailySharkIndex = hashDate(dailyTargetSeed) % speciesPool.length
@@ -257,6 +581,9 @@ let gameCompleted = false
 let gameWon = false
 let lastLoadedDate = today
 let categoryReveal = null
+if (speciesMode.key === "nightmare") {
+    document.addEventListener("visibilitychange", handleNightmareVisibilityChange);
+}
 let dailyAuthReady = null
 if (typeof firebase !== "undefined" && firebase.auth) {
     dailyAuthReady = new Promise(resolve => {
@@ -270,9 +597,18 @@ const dailySpeciesTrackerRoundId = window.SharkdleSpeciesTracker
     ? window.SharkdleSpeciesTracker.createRoundId("daily", `${today}-${speciesMode.key}`)
     : `daily-${today}-${speciesMode.key}`
 
-const dailyFairPlayRound = window.SharkdleFairPlay?.startRound('daily', speciesMode.key, dailySpeciesTrackerRoundId);
+if (speciesMode.key === "nightmare" && !nightmareEntryAccepted) {
+    document.getElementById("nightmare-warning")?.removeAttribute("hidden");
+    const input = document.getElementById("sharkGuess");
+    const button = document.getElementById("guessBtn");
+    if (input) input.disabled = true;
+    if (button) button.disabled = true;
+}
+
+const dailyFairPlayRound = speciesMode.key === "nightmare" ? null : window.SharkdleFairPlay?.startRound('daily', speciesMode.key, dailySpeciesTrackerRoundId);
 
 function recordDailySpeciesHistory(won) {
+    if (speciesMode.key === "nightmare") return;
     void window.SharkdleFairPlay?.finishRound(dailyFairPlayRound, won, guesses.length);
     if (!window.SharkdleSpeciesTracker) return;
     void window.SharkdleSpeciesTracker.recordRound({
@@ -480,6 +816,7 @@ function getMysteryProfileFilterState() {
 }
 
 function getMysteryProfileFilterHref() {
+    if (speciesMode.key === "nightmare") return "";
     const state = getMysteryProfileFilterState();
     const params = new URLSearchParams();
 
@@ -525,7 +862,7 @@ function showSharchiveFilterToast(message = "Sharchive updated") {
 }
 
 function openOrUpdateMysteryProfileFilter(href) {
-    if (!href) return;
+    if (speciesMode.key === "nightmare" || !href) return;
 
     if (sharchiveFilterWindow && !sharchiveFilterWindow.closed) {
         try {
@@ -549,6 +886,7 @@ function openOrUpdateMysteryProfileFilter(href) {
 }
 
 function updateMysteryProfileFilterButton(panel) {
+    if (speciesMode.key === "nightmare") return;
     const button = panel.querySelector("#profile-sharchive-filter-btn");
     if (!button) return;
 
@@ -564,6 +902,7 @@ function updateMysteryProfileFilterButton(panel) {
 }
 
 function updateMysteryProfilePanel(animate = false) {
+    if (speciesMode.key === "nightmare") return;
     const panel = document.querySelector(".mystery-profile-panel");
     if (!panel) return;
 
@@ -717,6 +1056,10 @@ function setCategoryRevealMessage(text, type = "info") {
 function updateCategoryRevealPanel() {
     const panel = document.getElementById("category-reveal-panel");
     if (!panel) return;
+    if (speciesMode.key === "nightmare") {
+        panel.hidden = true;
+        return;
+    }
 
     const result = document.getElementById("category-reveal-result");
     const balance = document.getElementById("category-reveal-balance");
@@ -786,6 +1129,7 @@ function updateCategoryRevealPanel() {
 }
 
 async function buyCategoryReveal() {
+    if (speciesMode.key === "nightmare") return;
     if (gameCompleted) {
         setCategoryRevealMessage("Category reveal is unavailable after the game ends.", "error");
         updateCategoryRevealPanel();
@@ -859,6 +1203,8 @@ async function loadGameState() {
             localStorage.removeItem(dailyStorageKey);
         }
     }
+
+    if (speciesMode.key === "nightmare") return;
 
     // If user is logged in, also load from Firestore for cross-device persistence
     const currentUser = firebase.auth().currentUser;
@@ -943,6 +1289,8 @@ async function saveGameState() {
     // Save to localStorage
     localStorage.setItem(dailyStorageKey, JSON.stringify(state))
 
+    if (speciesMode.key === "nightmare") return;
+
     // Save to Firestore if user is logged in
     // Use firebase.auth().currentUser for more reliable auth check
     const currentUser = firebase.auth().currentUser;
@@ -958,13 +1306,16 @@ async function saveGameState() {
 
 // Initialize game
 async function initializeGame() {
+    if (!nightmareEntryAccepted) return;
     if (dailyAuthReady) await dailyAuthReady;
     await loadGameState()
 
     // Recover today's saved win if event progress was unavailable when the win first occurred.
     if (gameCompleted && gameWon) {
-        window.recordThanksgivingEventActivity?.("dailyWin", 1);
-        if (guesses.length <= 5) window.recordThanksgivingEventActivity?.("dailyFast", 1);
+        if (speciesMode.key !== "nightmare") {
+            window.recordThanksgivingEventActivity?.("dailyWin", 1);
+            if (guesses.length <= 5) window.recordThanksgivingEventActivity?.("dailyFast", 1);
+        }
     }
 
     if (!gameCompleted && attempts === 0) {
@@ -973,6 +1324,8 @@ async function initializeGame() {
         saveGameState();
     }
 
+    if (speciesMode.key === "nightmare" && !gameCompleted) void startNightmareCrossDeviceGuard();
+
     // Set attempts display if game not completed
     if (!gameCompleted) {
         document.getElementById("attempts-left").textContent = "Attempts left: " + attempts;
@@ -980,6 +1333,7 @@ async function initializeGame() {
 
     // If game already completed, show the result
     if (gameCompleted) {
+        if (speciesMode.key === "nightmare") finishNightmareCrossDeviceGuard(gameWon ? "finished" : "forfeit");
         if (gameWon) {
             showWin(0, guesses.length, true) // XP already gained, alreadyCompleted = true
         } else {
@@ -988,7 +1342,7 @@ async function initializeGame() {
         // Disable input
         document.getElementById("sharkGuess").disabled = true
         document.getElementById("guessBtn").disabled = true
-        document.getElementById("attempts-left").textContent = "Game completed for today"
+        document.getElementById("attempts-left").textContent = speciesMode.key === "nightmare" ? "Run complete · replay anytime" : "Game completed for today"
     }
 
     // Render existing guesses
@@ -996,18 +1350,31 @@ async function initializeGame() {
         renderGuess(guess.shark, guess.feedback)
     })
 
-    // Close guesses with no correct information
+    // Nightmare shows only the newest guess; older feedback stays hidden.
     const cards = document.querySelectorAll('#guesses .guess-card');
     cards.forEach(card => {
         const feedbackDiv = card.querySelector('.feedback');
-        const correctCount = feedbackDiv.querySelectorAll('.correct').length;
-        if (correctCount === 0) {
-            feedbackDiv.style.display = 'none';
+        if (speciesMode.key === "nightmare") {
+            const isNewest = card === cards[0];
+            feedbackDiv.style.display = isNewest || gameCompleted ? "flex" : "none";
+            if (!isNewest && !gameCompleted) feedbackDiv.dataset.nightmareHidden = "true";
+        } else {
+            const correctCount = feedbackDiv.querySelectorAll('.correct').length;
+            if (correctCount === 0) feedbackDiv.style.display = 'none';
         }
     });
 
     updateCategoryRevealPanel();
     updateMysteryProfilePanel();
+    if (speciesMode.key === "nightmare") {
+        updateNightmareDossier();
+        applyNightmareClueMask();
+        if (gameCompleted) recordNightmareCompletion(gameWon, guesses.length);
+        if (!gameCompleted) {
+            if (!localStorage.getItem(getNightmareTimerKey())) startNightmareTimer();
+            else updateNightmareTimer();
+        }
+    }
 }
 
 // Start the initialization when the page loads
@@ -1140,9 +1507,7 @@ sharkGuessInput.addEventListener("input", function() {
     }
 
     // Filter species that match the input
-    const matches = speciesPool.filter(shark =>
-        normalizeInput(shark.name).includes(input)
-    );
+    const matches = speciesPool.filter(shark => normalizeInput(shark.name).includes(input));
 
     if (matches.length === 0) {
         suggestionsDiv.classList.remove("active");
@@ -1199,6 +1564,7 @@ let mysteryProfileRevealTimer = null;
 
 function scheduleMysteryProfileReveal() {
     window.clearTimeout(mysteryProfileRevealTimer);
+    if (speciesMode.key === "nightmare") return;
     mysteryProfileRevealTimer = window.setTimeout(() => {
         mysteryProfileRevealTimer = null;
         updateMysteryProfilePanel(true);
@@ -1209,6 +1575,10 @@ function scheduleMysteryProfileReveal() {
 function makeGuess(){
 
 if (gameCompleted) return
+if (speciesMode.key === "nightmare" && getNightmareTimerRemaining() <= 0) {
+    voidNightmareGuess();
+    return;
+}
 
 const input = document.getElementById("sharkGuess")
 const guess = normalizeInput(input.value)
@@ -1235,6 +1605,7 @@ if (guesses.some(g => g.shark.name === shark.name)) {
 }
 
 attempts--
+hidePreviousNightmareFeedback();
 
 document.getElementById("attempts-left").textContent="Attempts left: "+attempts
 
@@ -1267,8 +1638,11 @@ cards.forEach(card => {
 // Open the newest (first) guess
 if (cards.length > 0) {
     const newestFeedback = cards[0].querySelector('.feedback');
-    openGuessFeedback(newestFeedback, true);
+    if (speciesMode.key === "nightmare") newestFeedback.style.display = "flex";
+    else openGuessFeedback(newestFeedback, true);
 }
+applyNightmareClueMask();
+startNightmareTimer();
 
 updateCategoryRevealPanel();
 scheduleMysteryProfileReveal();
@@ -1283,7 +1657,7 @@ if(shark.name === targetShark.name){
     const xpAward = typeof window.applyLimitedTimeXpBonus === 'function'
         ? window.applyLimitedTimeXpBonus(baseXpGain)
         : { totalXp: baseXpGain };
-    const xpGain = xpAward.totalXp;
+    const xpGain = speciesMode.key === "nightmare" ? xpAward.totalXp * 3 : xpAward.totalXp;
 
     // Save stats to localStorage
     let profileData = typeof getBestLocalProfile === 'function'
@@ -1291,9 +1665,17 @@ if(shark.name === targetShark.name){
         : JSON.parse(localStorage.getItem("userProfile") || "{}");
 
     // Track total guesses accumulated
-    profileData.totalGuesses = (profileData.totalGuesses || 0) + guessesTaken;
+    if (speciesMode.key !== "nightmare") profileData.totalGuesses = (profileData.totalGuesses || 0) + guessesTaken;
 
     // Update stats
+    if (speciesMode.key === "nightmare") {
+        profileData.nightmareStats = getNightmareStats();
+        profileData.totalXP = (Number(profileData.totalXP) || 0) + xpGain;
+        window.applySharkPassXpGain?.(profileData, xpGain);
+        var pearlsEarned = window.awardPearlsForWin?.(profileData, { amount: (window.PEARLS_PER_WIN || 50) * 3, deferSave: true, deferUiUpdate: true }) || 0;
+        profileData.unlockedCardThemes = [...new Set(["default", ...(profileData.unlockedCardThemes || []), "blood-and-bones"])];
+        profileData.lastUpdated = Date.now();
+    } else {
     profileData.gamesPlayed = (profileData.gamesPlayed || 0) + 1;
     profileData.wins = (profileData.wins || 0) + 1;
     profileData.currentStreak = (profileData.currentStreak || 0) + 1;
@@ -1326,6 +1708,7 @@ if(shark.name === targetShark.name){
         ? window.awardPearlsForWin(profileData, { deferSave: true, deferUiUpdate: true })
         : 0;
     profileData.lastUpdated = Date.now();
+    }
 
     if (typeof saveUserProfileLocally === 'function') {
         saveUserProfileLocally({
@@ -1335,46 +1718,51 @@ if(shark.name === targetShark.name){
     } else {
         localStorage.setItem("userProfile", JSON.stringify(profileData));
     }
+    if (speciesMode.key === "nightmare") window.unlockProfileBadge?.("nightmare-victory", "who-needs-mercy");
 
     // Add to recent games (for profile modal)
-    const recentGames = JSON.parse(localStorage.getItem('recentGames') || '[]');
-    const now = new Date();
-    recentGames.unshift({
-        date: now.toLocaleDateString(),
-        time: now.toLocaleTimeString(),
-        result: 'Win',
-        guesses: guessesTaken,
-        sharkName: targetShark.name,
-        mode: speciesMode.recentMode
-    });
-    localStorage.setItem('recentGames', JSON.stringify(recentGames.slice(0, 20)));
+    if (speciesMode.key !== "nightmare") {
+        const recentGames = JSON.parse(localStorage.getItem('recentGames') || '[]');
+        const now = new Date();
+        recentGames.unshift({ date: now.toLocaleDateString(), time: now.toLocaleTimeString(), result: 'Win', guesses: guessesTaken, sharkName: targetShark.name, mode: speciesMode.recentMode });
+        localStorage.setItem('recentGames', JSON.stringify(recentGames.slice(0, 20)));
+    }
 
     // Sync to Firebase
-    if (typeof syncStatsToFirebase !== 'undefined') {
+    if (speciesMode.key !== "nightmare" && typeof syncStatsToFirebase !== 'undefined') {
         syncStatsToFirebase();
     }
 
     gameCompleted = true
     gameWon = true
-    window.recordThanksgivingEventActivity?.("dailyWin", 1);
-    window.recordNewYearsEventActivity?.("dailyWin", 1, speciesMode.key);
-    window.recordNewYearsEventActivity?.("win", 1);
-    if (speciesMode.key === "sharks") window.recordNewYearsEventActivity?.("species", 1, targetShark.name);
-    if (guessesTaken <= 5) window.recordThanksgivingEventActivity?.("dailyFast", 1);
+    if (speciesMode.key === "nightmare") {
+        if (nightmareTimer) window.clearTimeout(nightmareTimer);
+        document.getElementById("sharkGuess").disabled = true;
+        document.getElementById("guessBtn").disabled = true;
+        document.getElementById("attempts-left").textContent = "Run complete · replay anytime";
+        recordNightmareCompletion(true, guessesTaken);
+        finishNightmareCrossDeviceGuard("finished");
+    } else {
+        window.recordThanksgivingEventActivity?.("dailyWin", 1);
+        window.recordNewYearsEventActivity?.("dailyWin", 1, speciesMode.key);
+        window.recordNewYearsEventActivity?.("win", 1);
+        if (speciesMode.key === "sharks") window.recordNewYearsEventActivity?.("species", 1, targetShark.name);
+        if (guessesTaken <= 5) window.recordThanksgivingEventActivity?.("dailyFast", 1);
+    }
     saveGameState()
     recordDailySpeciesHistory(true)
     updateCategoryRevealPanel()
 
     // Update display
-    if (typeof window.updateIndexStats !== 'undefined') {
+    if (speciesMode.key !== "nightmare" && typeof window.updateIndexStats !== 'undefined') {
         window.updateIndexStats();
     }
 
-    if (typeof window.maybeAwardCrateDrop === 'function') {
+    if (speciesMode.key !== "nightmare" && typeof window.maybeAwardCrateDrop === 'function') {
         window.maybeAwardCrateDrop(`${speciesMode.recentMode.toLowerCase()} win`);
     }
 
-    if (typeof window.contributeCommunityBossWin === 'function') {
+    if (speciesMode.key !== "nightmare" && typeof window.contributeCommunityBossWin === 'function') {
         window.SharkdleChristmas?.recordWin('daily');
         const contributionKey = speciesMode.key === "sharks" ? today : `${today}_${speciesMode.key}`;
         window.contributeCommunityBossWin('daily', { contributionKey });
@@ -1386,7 +1774,7 @@ if(shark.name === targetShark.name){
 
 if(attempts===0 && !gameWon){
 
-    if (window.currentUser) {
+    if (window.currentUser && speciesMode.key !== "nightmare") {
         let profileData = typeof getBestLocalProfile === 'function'
             ? getBestLocalProfile()
             : JSON.parse(localStorage.getItem("userProfile") || "{}");
@@ -1436,30 +1824,34 @@ if(attempts===0 && !gameWon){
         // Add to recent games (for profile modal)
         const recentGames = JSON.parse(localStorage.getItem('recentGames') || '[]');
         const now = new Date();
-        recentGames.unshift({
-            date: now.toLocaleDateString(),
-            time: now.toLocaleTimeString(),
-            result: 'Loss',
-            guesses: 'X',
-            sharkName: targetShark.name,
-            mode: speciesMode.recentMode
-        });
+        recentGames.unshift({ date: now.toLocaleDateString(), time: now.toLocaleTimeString(), result: 'Loss', guesses: 'X', sharkName: targetShark.name, mode: speciesMode.recentMode });
         localStorage.setItem('recentGames', JSON.stringify(recentGames.slice(0, 20)));
 
         // Sync to Firebase
-        if (typeof syncStatsToFirebase !== 'undefined') {
+        if (speciesMode.key !== "nightmare" && typeof syncStatsToFirebase !== 'undefined') {
             syncStatsToFirebase();
         }
     }
 
+    if (speciesMode.key === "nightmare") {
+        recordNightmareCompletion(false, guesses.length);
+    }
+
     gameCompleted = true
     gameWon = false
+    if (speciesMode.key === "nightmare") {
+        if (nightmareTimer) window.clearTimeout(nightmareTimer);
+        document.getElementById("sharkGuess").disabled = true;
+        document.getElementById("guessBtn").disabled = true;
+        document.getElementById("attempts-left").textContent = "Run complete · replay anytime";
+        finishNightmareCrossDeviceGuard("finished");
+    }
     saveGameState()
     recordDailySpeciesHistory(false)
     updateCategoryRevealPanel()
 
     // Update display
-    if (typeof window.updateIndexStats !== 'undefined') {
+    if (speciesMode.key !== "nightmare" && typeof window.updateIndexStats !== 'undefined') {
         window.updateIndexStats();
     }
 
@@ -1507,13 +1899,14 @@ card.appendChild(feedbackDiv)
 card.onclick = ()=>{
 
 const isOpen = feedbackDiv.style.display === "flex"
-feedbackDiv.style.display = isOpen ? "none" : "flex"
+feedbackDiv.style.display = speciesMode.key === "nightmare" && feedbackDiv.dataset.nightmareHidden ? "none" : isOpen ? "none" : "flex"
 if (isOpen) feedbackDiv.classList.remove("feedback-revealing")
 
 }
 
 
 document.getElementById("guesses").prepend(card)
+if (speciesMode.key === "nightmare") feedbackDiv.style.display = gameCompleted ? "flex" : "none"
 
 }
 
@@ -1566,31 +1959,31 @@ function createBubbles(container) {
 }
 
 function showWin(xpGained, guessesTaken, alreadyCompleted = false, pearlsGained = 0){
-    window.SharkdleCorners?.win('daily', speciesMode.key === 'rays', guessesTaken);
+    if (speciesMode.key !== "nightmare") window.SharkdleCorners?.win('daily', speciesMode.key === 'rays', guessesTaken);
 
 // Check achievements for win conditions (only on first completion)
-if (!alreadyCompleted && window.checkAchievements) {
+if (speciesMode.key !== "nightmare" && !alreadyCompleted && window.checkAchievements) {
     window.checkAchievements(true, guessesTaken, true);
 }
 
 const win = document.getElementById("win-screen")
 
-let headerText = alreadyCompleted ? "✓ Already Discovered" : "🎉 You Guessed It!";
+let headerText = speciesMode.key === "nightmare" ? "NO MERCY. YOU WON." : alreadyCompleted ? "✓ Already Discovered" : "🎉 You Guessed It!";
 
 win.innerHTML = `
 <button onclick="document.getElementById('win-screen').style.display='none'; document.getElementById('show-results-btn').style.display='block';" style="position: absolute; top: 8px; right: 8px; width: 32px; height: 32px; background: rgba(0,0,0,0.3); border: none; border-radius: 50%; color: inherit; font-size: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.2s; font-weight: bold;">×</button>
 <h2 style="margin-top: 0; font-size: 32px; margin-bottom: 20px;">${headerText}</h2>
 <p style="font-size: 18px; margin: 10px 0; color: inherit;">The ${speciesMode.animal} was <b>${targetShark.name}</b></p>
-<p style="margin: 8px 0 14px;"><a href="${getSharkdleWikipediaUrl(targetShark.name)}" target="_blank" rel="noopener noreferrer" style="color: inherit; font-weight: 700; text-decoration: underline;">Learn more about the ${speciesMode.animal} on Wikipedia ↗</a></p>
+${speciesMode.key === "nightmare" ? "" : `<p style="margin: 8px 0 14px;"><a href="${getSharkdleWikipediaUrl(targetShark.name)}" target="_blank" rel="noopener noreferrer" style="color: inherit; font-weight: 700; text-decoration: underline;">Learn more about the ${speciesMode.animal} on Wikipedia ↗</a></p>`}
 <p style="font-size: 16px; margin: 10px 0; opacity: 0.9;">Discovered in ${targetShark.yod}</p>
-<p style="font-size: 16px; margin: 10px 0; opacity: 0.9;">You took ${guessesTaken} guess${guessesTaken !== 1 ? 'es' : ''}.</p>
+        <p style="font-size: 16px; margin: 10px 0; opacity: 0.9;">You took ${guessesTaken} guess${guessesTaken !== 1 ? 'es' : ''}.</p>
 ${!firebase.auth().currentUser ? `<aside style="margin: 18px 0; padding: 14px 16px; border-radius: 10px; background: rgba(0,151,167,0.18); border: 1px solid rgba(0,188,212,0.4);"><strong>Sharkdle is better with an account 🦈</strong><p style="margin: 6px 0 10px; font-size: 14px;">Create an account to save your progress and unlock more features.</p><a href="index.html" style="color: inherit; font-weight: 700;">Create a free account →</a></aside>` : ''}
 ${!alreadyCompleted ? `<div style="margin: 20px 0; padding: 15px; background: rgba(255,255,255,0.2); border-radius: 8px;"><p style="font-size: 28px; font-weight: bold; margin: 0; color: inherit;">+${xpGained} XP</p>${pearlsGained ? `<p style="font-size: 20px; font-weight: bold; margin: 8px 0 0; color: #8ff5ef;">+${pearlsGained} Pearls</p>` : ''}</div>` : ''}
-<div style="margin: 20px 0; padding: 12px; background: rgba(255,0,0,0.1); border-radius: 6px; font-size: 14px; text-align: center; color: #ff4444; font-weight: 600;">Next puzzle: <span id="win-countdown">--:--:--</span></div>
+${speciesMode.key === "nightmare" ? '<div class="nightmare-reward-card"><span>WHO NEEDS MERCY · THEME: BLOOD &amp; BONES</span><strong>3× pearls and XP · exclusive badge unlocked</strong><span>Sorry. You were right to doubt me.</span></div>' : '<div style="margin: 20px 0; padding: 12px; background: rgba(255,0,0,0.1); border-radius: 6px; font-size: 14px; text-align: center; color: #ff4444; font-weight: 600;">Next puzzle: <span id="win-countdown">--:--:--</span></div>'}
 ${getDailyVariantSwitcherHtml()}
 <div style="display: flex; gap: 10px; margin-top: 25px; justify-content: center;">
     <button onclick="shareDailyResults()" style="padding: 12px 18px; font-size: 15px; cursor: pointer; background: #0097a7; border: none; border-radius: 6px; color: white; font-weight: bold; transition: filter 0.2s;">🦈 Share Results</button>
-    <button onclick="window.location.href='${getInfiniteModeHref()}'" style="padding: 12px 25px; font-size: 15px; cursor: pointer; background: rgba(255,255,255,0.3); border: none; border-radius: 6px; color: inherit; font-weight: bold; transition: background 0.3s;">Play Infinite</button>
+    ${speciesMode.key === "nightmare" ? '<button onclick="shareDailyResults()" style="padding: 12px 18px; font-size: 15px; cursor: pointer; background: #B5121B; border: none; border-radius: 6px; color: white; font-weight: bold;">Bragging rights: share your win</button>' : `<button onclick="window.location.href='${getInfiniteModeHref()}'" style="padding: 12px 25px; font-size: 15px; cursor: pointer; background: rgba(255,255,255,0.3); border: none; border-radius: 6px; color: inherit; font-weight: bold; transition: background 0.3s;">Play Infinite</button>`}
     <button onclick="window.location.href=resolveAppPath('index.html')" style="padding: 12px 25px; font-size: 15px; cursor: pointer; background: rgba(0,0,0,0.3); border: none; border-radius: 6px; color: inherit; font-weight: bold; transition: background 0.3s;">Back to Home</button>
 </div>
 `
@@ -1607,30 +2000,33 @@ createBubbles(win);
 function showLose(alreadyCompleted = false){
 
 // Check achievements for loss conditions (only on first completion)
-if (!alreadyCompleted && window.checkAchievements) {
+if (speciesMode.key !== "nightmare" && !alreadyCompleted && window.checkAchievements) {
     window.checkAchievements(false, maxAttempts, false);
 }
 
 const win = document.getElementById("win-screen")
 
-let headerText = alreadyCompleted ? `✗ You could not discover today's Daily ${speciesMode.animalTitle}` : "😢 You Lost";
+const failureCount = getNightmareStats().failures;
+const insult = NIGHTMARE_INSULTS[Math.min(Math.floor(Math.log2(Math.max(1, failureCount))), NIGHTMARE_INSULTS.length - 1)];
+let headerText = speciesMode.key === "nightmare" ? "YOU RAN OUT OF MERCY." : alreadyCompleted ? `✗ You could not discover today's Daily ${speciesMode.animalTitle}` : "😢 You Lost";
 
 win.innerHTML = `
 <button onclick="document.getElementById('win-screen').style.display='none'; document.getElementById('show-results-btn').style.display='block';" style="position: absolute; top: 8px; right: 8px; width: 32px; height: 32px; background: rgba(0,0,0,0.3); border: none; border-radius: 50%; color: inherit; font-size: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.2s; font-weight: bold;">×</button>
 <h2 style="margin-top: 0; font-size: 32px; margin-bottom: 20px;">${headerText}</h2>
 <p style="font-size: 18px; margin: 10px 0; color: inherit;">The ${speciesMode.animal} was <b>${targetShark.name}</b></p>
+${speciesMode.key === "nightmare" ? `<p class="nightmare-insult">${insult}<br><small>Failure #${failureCount} · your normal streak is safe.</small></p>` : ""}
 <p style="font-size: 16px; margin: 10px 0; opacity: 0.9;">Discovered in ${targetShark.yod}</p>
-<div style="margin: 20px 0; padding: 12px; background: rgba(255,0,0,0.1); border-radius: 6px; font-size: 14px; text-align: center; color: #ff4444; font-weight: 600;">Next puzzle: <span id="win-countdown">--:--:--</span></div>
+${speciesMode.key === "nightmare" ? "" : '<div style="margin: 20px 0; padding: 12px; background: rgba(255,0,0,0.1); border-radius: 6px; font-size: 14px; text-align: center; color: #ff4444; font-weight: 600;">Next puzzle: <span id="win-countdown">--:--:--</span></div>'}
 ${getDailyVariantSwitcherHtml()}
 <div style="display: flex; gap: 10px; margin-top: 25px; justify-content: center;">
     <button onclick="shareDailyResults()" style="padding: 12px 18px; font-size: 15px; cursor: pointer; background: #0097a7; border: none; border-radius: 6px; color: white; font-weight: bold; transition: filter 0.2s;">🦈 Share Results</button>
-    <button onclick="window.location.href='${getInfiniteModeHref()}'" style="padding: 12px 25px; font-size: 15px; cursor: pointer; background: rgba(255,255,255,0.3); border: none; border-radius: 6px; color: inherit; font-weight: bold; transition: background 0.3s;">Play Infinite</button>
+    ${speciesMode.key === "nightmare" ? "" : `<button onclick="window.location.href='${getInfiniteModeHref()}'" style="padding: 12px 25px; font-size: 15px; cursor: pointer; background: rgba(255,255,255,0.3); border: none; border-radius: 6px; color: inherit; font-weight: bold; transition: background 0.3s;">Play Infinite</button>`}
     <button onclick="window.location.href=resolveAppPath('index.html')" style="padding: 12px 25px; font-size: 15px; cursor: pointer; background: rgba(0,0,0,0.3); border: none; border-radius: 6px; color: inherit; font-weight: bold; transition: background 0.3s;">Back to Home</button>
 </div>
 `
 
 win.style.display="block"
-appendSharchiveReviewButton(win)
+if (speciesMode.key !== "nightmare") appendSharchiveReviewButton(win)
 win.classList.add("lose")
 win.classList.remove("win")
 }

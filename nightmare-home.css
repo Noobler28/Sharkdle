@@ -1,0 +1,31 @@
+body.home-v3-page .home-v3-mode-card.nightmare-mode-card {
+    border: 2px solid rgba(181, 18, 27, .9) !important;
+    background: #090909 !important;
+    box-shadow: 0 0 24px rgba(181, 18, 27, .22), inset 0 0 28px rgba(181, 18, 27, .12) !important;
+}
+
+body.home-v3-page .home-v3-mode-card.nightmare-mode-card::before {
+    filter: none !important;
+}
+
+body.home-v3-page .home-v3-mode-card.nightmare-mode-card::after {
+    background:
+        linear-gradient(to top, rgba(9, 9, 9, .98) 0%, rgba(40, 3, 7, .88) 48%, rgba(181, 18, 27, .24) 100%),
+        radial-gradient(ellipse at 50% 4%, rgba(181, 18, 27, .5), transparent 68%) !important;
+}
+
+body.home-v3-page .home-v3-mode-card.nightmare-mode-card span,
+body.home-v3-page .home-v3-mode-card.nightmare-mode-card strong { color: #fff !important; }
+body.home-v3-page .home-v3-mode-card.nightmare-mode-card p { color: rgba(255,255,255,.82) !important; }
+
+body.home-v3-page .home-v3-mode-card.nightmare-mode-card:hover,
+body.home-v3-page .home-v3-mode-card.nightmare-mode-card:focus-visible {
+    border-color: #ff3b45 !important;
+    box-shadow: 0 0 30px rgba(181, 18, 27, .5), inset 0 0 30px rgba(181, 18, 27, .2) !important;
+}
+
+body.home-v3-page .home-v3-mode-card.nightmare-mode-card .nightmare-mode-stamp {
+    color: white !important;
+    background: #B5121B !important;
+    border-color: #ff6870 !important;
+}
