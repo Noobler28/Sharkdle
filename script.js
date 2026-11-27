@@ -8469,6 +8469,7 @@ const APP_ROUTE_FOLDERS = Object.freeze([
     "achievements",
     "daily",
     "infinite",
+    "nomercy",
     "practice",
     "leaderboard",
     "library",
