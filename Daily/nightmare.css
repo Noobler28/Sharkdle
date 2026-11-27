@@ -135,27 +135,10 @@ body.nightmare-mode .suggestions-dropdown {
 body.nightmare-mode #sharkGuess::placeholder { color: #8f8f8f; }
 body.nightmare-mode .suggestion-item:hover,
 body.nightmare-mode .suggestion-item.highlighted { background: var(--nightmare-red-dark); }
+body.nightmare-mode .category.nightmare-signal-green { background: #247a42 !important; color: #fff !important; }
+body.nightmare-mode .category.nightmare-signal-yellow { background: #a97b08 !important; color: #fff !important; }
+body.nightmare-mode .category.nightmare-signal-red { background: #8e1720 !important; color: #fff !important; }
 body.nightmare-mode .category.correct { border-color: rgba(181,18,27,.62); }
-body.nightmare-mode .nightmare-clue-concealed,
-body.nightmare-mode .category.correct.nightmare-clue-concealed {
-    position: relative;
-    border: 1px solid rgba(255,255,255,.08) !important;
-    background: #101010 !important;
-    box-shadow: none !important;
-    color: transparent !important;
-}
-body.nightmare-mode .nightmare-clue-concealed::after {
-    content: "REDACTED";
-    position: absolute;
-    inset: 0;
-    display: grid;
-    place-items: center;
-    border-radius: inherit;
-    background: #101010;
-    color: var(--nightmare-red);
-    font: 900 10px 'Barlow Condensed', sans-serif;
-    letter-spacing: .16em;
-}
 .nightmare-dossier {
     z-index: 1;
     display: grid;

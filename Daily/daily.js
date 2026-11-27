@@ -462,18 +462,29 @@ function hidePreviousNightmareFeedback() {
     });
 }
 
-function applyNightmareClueMask() {
-    if (speciesMode.key !== "nightmare") return;
-    const cards = Array.from(document.querySelectorAll("#guesses .guess-card"));
-    if (!cards.length) return;
-    const feedback = cards[0].querySelector(".feedback");
-    const categories = Array.from(feedback?.querySelectorAll(".category") || []);
-    const hiddenIndexes = categories.map((_, index) => index).filter(() => Math.random() < 0.3);
-    while (hiddenIndexes.length < Math.min(3, categories.length)) {
-        const nextIndex = Math.floor(Math.random() * categories.length);
-        if (!hiddenIndexes.includes(nextIndex)) hiddenIndexes.push(nextIndex);
+function getNightmareSignal(key, guessedShark) {
+    const target = targetShark;
+    const actualValue = key === "size" ? guessedShark.size
+        : key === "depth" ? guessedShark.depth
+        : key === "yod" ? Number(guessedShark.yod)
+        : guessedShark[key];
+    const targetValue = key === "size" ? target.size
+        : key === "depth" ? target.depth
+        : key === "yod" ? Number(target.yod)
+        : target[key];
+    if (actualValue === targetValue) return "green";
+
+    if (key === "genus" && guessedShark.family === target.family) return "yellow";
+    if (key === "size" || key === "depth") {
+        const ranks = key === "size"
+            ? ["Tiny", "Small", "Medium", "Large", "Giant"]
+            : ["Epipelagic", "Mesopelagic", "Bathypelagic"];
+        const guessRank = ranks.indexOf(actualValue);
+        const targetRank = ranks.indexOf(targetValue);
+        if (guessRank >= 0 && targetRank >= 0 && Math.abs(guessRank - targetRank) === 1) return "yellow";
     }
-    hiddenIndexes.forEach(index => categories[index].classList.add("nightmare-clue-concealed"));
+    if (key === "yod" && Number.isFinite(actualValue) && Number.isFinite(targetValue) && Math.abs(actualValue - targetValue) <= 25) return "yellow";
+    return "red";
 }
 
 function getSharchiveReviewHref() {
@@ -527,13 +538,14 @@ function generateDailyShareText() {
             const cards = Array.from(document.querySelectorAll("#guesses .guess-card"));
             const feedbackDiv = cards[guesses.length - 1 - guessIndex]?.querySelector(".feedback");
             if (!feedbackDiv || feedbackDiv.style.display === "none" || feedbackDiv.dataset.nightmareHidden === "true") {
-                return "⬛⬛⬛⬛⬛⬛";
+                return "⬛⬛⬛⬛⬛";
             }
-            const categoryKeys = ["order", "family", "genus", "size", "depth", "yod"];
+            const categoryKeys = ["family", "genus", "size", "depth", "yod"];
             return categoryKeys.map((key, index) => {
                 const category = feedbackDiv.children[index];
-                const redacted = category?.classList.contains("nightmare-clue-concealed");
-                return !redacted && g.feedback?.[key] ? "🟩" : "⬛";
+                if (category?.classList.contains("nightmare-signal-green")) return "🟩";
+                if (category?.classList.contains("nightmare-signal-yellow")) return "🟨";
+                return "🟥";
             }).join("");
         }
         const order = [...(speciesMode.key === 'mixed' ? ['type'] : []), 'order','family','genus','size','depth','yod'];
@@ -1377,7 +1389,6 @@ async function initializeGame() {
     updateMysteryProfilePanel();
     if (speciesMode.key === "nightmare") {
         updateNightmareDossier();
-        applyNightmareClueMask();
         if (gameCompleted) recordNightmareCompletion(gameWon, guesses.length);
         if (!gameCompleted) {
             if (!localStorage.getItem(getNightmareTimerKey())) startNightmareTimer();
@@ -1650,7 +1661,6 @@ if (cards.length > 0) {
     if (speciesMode.key === "nightmare") newestFeedback.style.display = "flex";
     else openGuessFeedback(newestFeedback, true);
 }
-applyNightmareClueMask();
 startNightmareTimer();
 
 updateCategoryRevealPanel();
@@ -1888,18 +1898,18 @@ feedbackDiv.className="feedback"
 
 if (speciesMode.key === "mixed") feedbackDiv.appendChild(createCategory("Type", getSpeciesType(shark), feedback.type))
 
-feedbackDiv.appendChild(createCategory("Order", shark.order, feedback.order))
-feedbackDiv.appendChild(createCategory("Family", shark.family, feedback.family))
-feedbackDiv.appendChild(createCategory("Genus", shark.genus, feedback.genus))
-feedbackDiv.appendChild(createCategory("Size", getSizeWithThreshold(shark.size), feedback.size))
-feedbackDiv.appendChild(createCategory("Depth", getDepthWithClue(shark.depth ?? "Unknown"), feedback.depth))
+if (speciesMode.key !== "nightmare") feedbackDiv.appendChild(createCategory("Order", shark.order, feedback.order))
+feedbackDiv.appendChild(createCategory("Family", shark.family, feedback.family, "", "family", shark))
+feedbackDiv.appendChild(createCategory("Genus", shark.genus, feedback.genus, "", "genus", shark))
+feedbackDiv.appendChild(createCategory("Size", getSizeWithThreshold(shark.size), feedback.size, "", "size", shark))
+feedbackDiv.appendChild(createCategory("Depth", getDepthWithClue(shark.depth ?? "Unknown"), feedback.depth, "", "depth", shark))
 
 // Calculate arrow for year of discovery
 let yodArrow = ""
 if (shark.yod !== targetShark.yod) {
     yodArrow = shark.yod < targetShark.yod ? "⬆️" : "⬇️"
 }
-feedbackDiv.appendChild(createCategory("Year of Discovery", shark.yod, feedback.yod, yodArrow))
+feedbackDiv.appendChild(createCategory("Year of Discovery", shark.yod, feedback.yod, yodArrow, "yod", shark))
 
 
 card.appendChild(feedbackDiv)
@@ -1920,13 +1930,19 @@ if (speciesMode.key === "nightmare") feedbackDiv.style.display = gameCompleted ?
 }
 
 
-function createCategory(name, value, correct, arrow = ""){
+function createCategory(name, value, correct, arrow = "", nightmareKey = "", guessedShark = null){
 
 const div = document.createElement("div")
 
 div.className="category"
 
 if(correct) div.classList.add("correct")
+
+if (speciesMode.key === "nightmare" && nightmareKey && guessedShark) {
+    div.classList.add(`nightmare-signal-${getNightmareSignal(nightmareKey, guessedShark)}`);
+    div.textContent = "";
+    return div;
+}
 
 const displayText = arrow ? `${name}: ${value} ${arrow}` : `${name}: ${value}`
 const shouldShowCommonName = name === "Family" || name === "Order" || name === "Genus"
