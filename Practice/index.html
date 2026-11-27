@@ -13,6 +13,7 @@
 <link rel="stylesheet" href="style.css">
 <link rel="stylesheet" href="page-shell.css">
 <link rel="stylesheet" href="Infinite/infinite.css">
+<link rel="stylesheet" href="mode-rules.css?v=1">
 
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800;900&family=Barlow:wght@400;500;600;700&family=Montserrat:wght@400;600;700&display=swap" rel="stylesheet">
 
@@ -28,9 +29,29 @@
 <div class="mode-header">
 <p class="panel-kicker mode-kicker" id="mode-kicker">Practice Mode</p>
 <h1 id="mode-title">Sharkdle - Practice</h1>
+<div class="mode-header-actions">
 <button class="home-btn" type="button" onclick="window.location.href='index.html'">Home</button>
+<button class="home-btn mode-rules-button" type="button" onclick="openModeRules()">Practice Rules</button>
+</div>
 </div>
 </header>
+
+<section id="mode-rules-modal" class="mode-rules-backdrop" role="dialog" aria-modal="true" aria-labelledby="mode-rules-title" aria-describedby="mode-rules-intro" hidden onclick="if(event.target===this) closeModeRules()">
+    <div class="mode-rules-card">
+        <button class="mode-rules-close" type="button" aria-label="Close rules" onclick="closeModeRules()">×</button>
+        <span class="mode-rules-kicker">Practice Mode</span>
+        <h2 id="mode-rules-title">How to practice</h2>
+        <p id="mode-rules-intro">Practice with a randomly selected shark, relative, or mixed species at your own pace.</p>
+        <ul>
+            <li>Choose Sharks, Relatives, or Mixed. There is no guess limit; keep guessing until you find the target.</li>
+            <li>Type a species name and choose it from the suggestions.</li>
+            <li>Each guess shows its Order, Family, Genus, Size, Depth, and Discovery Year. Mixed also shows whether your guess is a shark, ray, skate, or chimaera.</li>
+            <li>A green clue is an exact match; an uncolored clue differs. The year arrow points toward the target’s discovery year. Hover over Order, Family, or Genus for its common name when available.</li>
+            <li>Practice does not record your game stats or award XP. Find the target and choose Play Again to try another.</li>
+        </ul>
+        <button class="mode-rules-done" type="button" onclick="closeModeRules()">Back to practice</button>
+    </div>
+</section>
 
 
 <div class="game-container">
@@ -78,6 +99,7 @@
 <script src="thanksgiving-event.js?v=20261117-completion-reconcile"></script>
 <script src="Achievements/achievements.js"></script>
 <script src="Practice/practice.js?v=20261121-mixed-type-labels"></script>
+<script src="mode-rules.js?v=1"></script>
 
 <script src="global-broadcast.js"></script>
 </body>

@@ -16,6 +16,7 @@
 <link rel="stylesheet" href="style.css">
 <link rel="stylesheet" href="page-shell.css">
 <link rel="stylesheet" href="Daily/daily.css">
+<link rel="stylesheet" href="mode-rules.css?v=1">
 
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800;900&family=Barlow:wght@400;500;600;700&family=Montserrat:wght@400;600;700&display=swap" rel="stylesheet">
 
@@ -31,9 +32,30 @@
 <div class="mode-header">
 <p class="panel-kicker mode-kicker" id="mode-kicker">Daily Challenge</p>
 <h1 id="mode-title">Sharkdle - Daily</h1>
+<div class="mode-header-actions">
 <button class="home-btn" type="button" onclick="window.location.href='index.html'">Home</button>
+<button class="home-btn mode-rules-button" type="button" onclick="openModeRules()">Daily Rules</button>
+</div>
 </div>
 </header>
+
+<section id="mode-rules-modal" class="mode-rules-backdrop" role="dialog" aria-modal="true" aria-labelledby="mode-rules-title" aria-describedby="mode-rules-intro" hidden>
+    <div class="mode-rules-card">
+        <button class="mode-rules-close" type="button" aria-label="Close rules" onclick="closeModeRules()">×</button>
+        <span class="mode-rules-kicker">Daily Mode</span>
+        <h2 id="mode-rules-title">How to play</h2>
+        <p id="mode-rules-intro">Everyone gets the same target for each daily pool. Solve it before the day changes.</p>
+        <ul>
+            <li>Choose Sharks, Relatives, or Mixed. Sharks and Relatives give you 8 guesses; Mixed gives you 12.</li>
+            <li>Type a species name and choose it from the suggestions.</li>
+            <li>Each guess shows its Order, Family, Genus, Size, Depth, and Discovery Year. Mixed also shows whether your guess is a shark, ray, skate, or chimaera.</li>
+            <li>A green clue is an exact match; an uncolored clue differs. The year arrow points toward the target’s discovery year. Hover over Order, Family, or Genus for its common name when available.</li>
+            <li>If you are signed in and have enough pearls, you can reveal one undiscovered category per game for 25 pearls.</li>
+            <li>Your daily result counts toward your Sharkdle stats. Sharks, Relatives, and Mixed each have their own target for the day.</li>
+        </ul>
+        <button class="mode-rules-done" type="button" onclick="closeModeRules()">Back to the game</button>
+    </div>
+</section>
 
 
 <div class="game-container">
@@ -115,6 +137,7 @@
 <script src="Achievements/achievements.js?v=20261127-no-mercy-achievements-v2"></script>
 <script src="wiki-species-titles.js?v=1"></script>
 <script src="Daily/daily.js?v=20261124-account-daily-auth"></script>
+<script src="mode-rules.js?v=1"></script>
 
 <script src="global-broadcast.js"></script>
 </body>
